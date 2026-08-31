@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# --- [ SLACKY-UPDATE TRAY LAUNCHER ] ---
+
+set -euo pipefail
+
+TARGET_BIN="/usr/share/slacky-update/lib/slacky-update-tray"
+if [ ! -f "${TARGET_BIN}" ]; then
+    TARGET_BIN="$(dirname "$(readlink -f "$0")")/../lib/slacky-update-tray"
+fi
+
+if [ "${1:-}" = "--restart" ] || [ "${1:-}" = "-r" ]; then
+    pkill -f "python3.*slacky-update-tray" 2>/dev/null || true
+    sleep 0.5
+elif pgrep -f "python3.*slacky-update-tray" >/dev/null 2>&1; then
+    exit 0
+fi
+
+python3 "${TARGET_BIN}" </dev/null >/dev/null 2>&1 &
+disown

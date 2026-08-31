@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Slacky Update
+Comment=System Update and Maintenance Suite for Slackware
+Exec=/usr/local/bin/slacky-update
+Icon=slacky-update
+Terminal=true
+Categories=System;PackageManager;Utility;
+Keywords=update;upgrade;slackpkg;kernel;cachyos;flatpak;

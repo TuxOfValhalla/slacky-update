@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ------------------------------------------------------------------------------
+# SLACKWARE BACKGROUND STATUS VERIFIER
+# ------------------------------------------------------------------------------
+CHECK_BIN="/usr/share/slacky-update/lib/check_backend.sh"
+STATUS_FILE="/var/cache/slacky-update/status.json"
+
+if [ -x "${CHECK_BIN}" ]; then
+    "${CHECK_BIN}" >/dev/null 2>&1 || true
+fi
+
+if [ -f "${STATUS_FILE}" ] && command -v notify-send >/dev/null 2>&1; then
+    ACTIVE_USER=$(who | awk '{print $1}' | head -n1 || true)
+    if [ -n "${ACTIVE_USER}" ]; then
+        USER_ID=$(id -u "${ACTIVE_USER}" 2>/dev/null || echo "1000")
+        export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${USER_ID}/bus"
+
+        HAS_UPDATES=$(python3 -c "
+import json, os
+try:
+    with open('${STATUS_FILE}', 'r') as f:
+        d = json.load(f)
+    total = len(d.get('slackware_updates', [])) + len(d.get('flatpak_updates', [])) + len(d.get('cachyos_kernel_updates', [])) + len(d.get('nvidia_driver_updates', []))
+    print('true' if total > 0 else 'false')
+except Exception:
+    print('false')
+" 2>/dev/null || echo "false")
+
+        if [ "${HAS_UPDATES}" = "true" ]; then
+            sudo -u "${ACTIVE_USER}" DBUS_SESSION_BUS_ADDRESS="${DBUS_SESSION_BUS_ADDRESS}" \
+                notify-send "Slacky Update" \
+                "Pending system updates are ready for installation." \
+                --icon="/usr/share/icons/hicolor/128x128/apps/slacky-update-pending.png" 2>/dev/null || true
+        fi
+    fi
+fi

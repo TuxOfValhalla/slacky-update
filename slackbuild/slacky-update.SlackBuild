@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+# --- [ SLACKWARE BUILD SCRIPT ] ---
+
+set -euo pipefail
+
+PRGNAM="slacky-update"
+VERSION="0.5.0"
+ARCH="noarch"
+BUILD="1_tux"
+
+SRC_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+BUILD_DIR="/tmp/build-${PRGNAM}"
+PKG_DIR="/tmp/package-${PRGNAM}"
+OUTPUT_DIR="${SRC_DIR}"
+
+PKG_NAME="${PRGNAM}-${VERSION}-${ARCH}-${BUILD}.txz"
+
+# --- [ CLEANUP PREVIOUS BUILDS ] ---
+rm -rf "${BUILD_DIR}" "${PKG_DIR}"
+mkdir -p "${BUILD_DIR}" "${PKG_DIR}" "${OUTPUT_DIR}"
+
+# --- [ STAGING FILES ] ---
+mkdir -p "${PKG_DIR}/usr/local/bin"
+mkdir -p "${PKG_DIR}/usr/local/lib/slacky-update"
+mkdir -p "${PKG_DIR}/usr/share/slacky-update/lib"
+mkdir -p "${PKG_DIR}/usr/share/slacky-update/lib/compat"
+mkdir -p "${PKG_DIR}/usr/share/slacky-update/locales"
+mkdir -p "${PKG_DIR}/usr/share/slacky-update/efi"
+mkdir -p "${PKG_DIR}/usr/share/applications"
+mkdir -p "${PKG_DIR}/usr/share/icons/hicolor/128x128/apps"
+mkdir -p "${PKG_DIR}/etc/xdg/autostart"
+mkdir -p "${PKG_DIR}/etc/cron.weekly"
+mkdir -p "${PKG_DIR}/var/cache/slacky-update"
+mkdir -p "${PKG_DIR}/install"
+
+chmod 0777 "${PKG_DIR}/var/cache/slacky-update"
+
+# --- [ FILE INSTALLATION ] ---
+install -m 0755 "${SRC_DIR}/bin/slacky-update" "${PKG_DIR}/usr/local/bin/"
+install -m 0755 "${SRC_DIR}/bin/slacky-update-tray" "${PKG_DIR}/usr/local/bin/"
+install -m 0755 "${SRC_DIR}"/lib/*.sh "${PKG_DIR}/usr/local/lib/slacky-update/"
+
+install -m 0755 "${SRC_DIR}/lib/slacky-update-tray" "${PKG_DIR}/usr/share/slacky-update/lib/"
+install -m 0755 "${SRC_DIR}/lib/check_backend.sh" "${PKG_DIR}/usr/share/slacky-update/lib/"
+install -m 0644 "${SRC_DIR}/lib/slacky_update_i18n.py" "${PKG_DIR}/usr/share/slacky-update/lib/"
+install -m 0644 "${SRC_DIR}"/locales/*.json "${PKG_DIR}/usr/share/slacky-update/locales/"
+
+if [ -d "${SRC_DIR}/assets/efi" ]; then
+    install -m 0644 "${SRC_DIR}"/assets/efi/*.efi "${PKG_DIR}/usr/share/slacky-update/efi/" 2>/dev/null || true
+fi
+
+if [ -d "${SRC_DIR}/assets/compat" ]; then
+    install -m 0755 "${SRC_DIR}"/assets/compat/*.so* "${PKG_DIR}/usr/share/slacky-update/lib/compat/" 2>/dev/null || true
+fi
+
+install -m 0644 "${SRC_DIR}/desktop/slacky-update.desktop" "${PKG_DIR}/usr/share/applications/"
+install -m 0644 "${SRC_DIR}/desktop/slacky-update-tray.desktop" "${PKG_DIR}/usr/share/applications/"
+install -m 0644 "${SRC_DIR}/desktop/slacky-update-tray.desktop" "${PKG_DIR}/etc/xdg/autostart/"
+
+install -m 0755 "${SRC_DIR}/cron/slacky-update-check" "${PKG_DIR}/etc/cron.weekly/"
+
+if [ -d "${SRC_DIR}/assets" ]; then
+    mkdir -p "${PKG_DIR}/usr/share/slacky-update/assets"
+    install -m 0644 "${SRC_DIR}"/assets/*.png "${PKG_DIR}/usr/share/icons/hicolor/128x128/apps/" 2>/dev/null || true
+    install -m 0644 "${SRC_DIR}"/assets/*.png "${PKG_DIR}/usr/share/slacky-update/assets/" 2>/dev/null || true
+fi
+
+# --- [ POST-INSTALL SCRIPT (doinst.sh) ] ---
+cat << 'DOINST_EOF' > "${PKG_DIR}/install/doinst.sh"
+#!/bin/sh
+
+mkdir -p /var/cache/slacky-update
+chmod 0777 /var/cache/slacky-update 2>/dev/null || true
+
+if [ -f /etc/cron.weekly/slacky-update-check ]; then
+    chmod 0755 /etc/cron.weekly/slacky-update-check 2>/dev/null || true
+fi
+
+if [ -x /usr/bin/update-desktop-database ]; then
+    /usr/bin/update-desktop-database -q /usr/share/applications >/dev/null 2>&1 || true
+fi
+
+if [ -x /usr/bin/gtk-update-icon-cache ]; then
+    /usr/bin/gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor >/dev/null 2>&1 || true
+fi
+
+ACTIVE_GUI_USER=$(who | awk '{if ($2 ~ /:[0-9]/ || $5 ~ /:[0-9]/) print $1}' | head -n1 || true)
+if [ -n "${ACTIVE_GUI_USER}" ] && [ -x /usr/local/bin/slacky-update-tray ]; then
+    if ! pgrep -u "${ACTIVE_GUI_USER}" -f "slacky-update-tray" >/dev/null 2>&1; then
+        su - "${ACTIVE_GUI_USER}" -c "nohup /usr/local/bin/slacky-update-tray >/dev/null 2>&1 &" 2>/dev/null || true
+    fi
+fi
+
+exit 0
+DOINST_EOF
+chmod 755 "${PKG_DIR}/install/doinst.sh"
+
+# --- [ PACKAGE COMPILATION ] ---
+cd "${PKG_DIR}"
+/sbin/makepkg -l y -c n "${OUTPUT_DIR}/${PKG_NAME}"
+cp -f "${OUTPUT_DIR}/${PKG_NAME}" "${OUTPUT_DIR}/${PRGNAM}.txz"
+
+rm -rf "${BUILD_DIR}" "${PKG_DIR}"
+echo "==> Package build completed: ${OUTPUT_DIR}/${PKG_NAME}"

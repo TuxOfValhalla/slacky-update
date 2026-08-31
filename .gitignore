@@ -1,0 +1,7 @@
+*.txz
+*.tar.gz
+*.tar.xz
+/tmp/
+__pycache__/
+*.pyc
+.DS_Store

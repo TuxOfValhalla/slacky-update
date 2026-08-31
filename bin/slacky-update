@@ -1,0 +1,489 @@
+#!/usr/bin/env bash
+# --- [ SLACKY-UPDATE CLI INTERFACE & MAIN CONTROLLER ] ---
+
+set -euo pipefail
+
+CURRENT_VERSION="0.5.0"
+
+SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+if [ -d "${SCRIPT_DIR}/../lib" ] && [ -f "${SCRIPT_DIR}/../lib/common.sh" ]; then
+    APP_DIR="${SCRIPT_DIR}/../lib"
+elif [ -d "/usr/local/lib/slacky-update" ]; then
+    APP_DIR="/usr/local/lib/slacky-update"
+else
+    APP_DIR="${SCRIPT_DIR}/../lib"
+fi
+
+# shellcheck source=/dev/null
+source "${APP_DIR}/common.sh"
+# shellcheck source=/dev/null
+source "${APP_DIR}/mod_nvidia.sh"
+# shellcheck source=/dev/null
+source "${APP_DIR}/mod_packages.sh"
+# shellcheck source=/dev/null
+source "${APP_DIR}/mod_kernel.sh"
+# shellcheck source=/dev/null
+source "${APP_DIR}/mod_armor.sh"
+# shellcheck source=/dev/null
+source "${APP_DIR}/mod_clean.sh"
+
+if [ -f "${SCRIPT_DIR}/../lib/slacky_update_i18n.py" ]; then
+    I18N_PY="${SCRIPT_DIR}/../lib/slacky_update_i18n.py"
+elif [ -f "/usr/share/slacky-update/lib/slacky_update_i18n.py" ]; then
+    I18N_PY="/usr/share/slacky-update/lib/slacky_update_i18n.py"
+else
+    I18N_PY="${SCRIPT_DIR}/../lib/slacky_update_i18n.py"
+fi
+
+if [ -f "${SCRIPT_DIR}/../lib/check_backend.sh" ]; then
+    CHECK_BIN="${SCRIPT_DIR}/../lib/check_backend.sh"
+elif [ -f "/usr/share/slacky-update/lib/check_backend.sh" ]; then
+    CHECK_BIN="/usr/share/slacky-update/lib/check_backend.sh"
+else
+    CHECK_BIN="${SCRIPT_DIR}/../lib/check_backend.sh"
+fi
+
+_() {
+    python3 "$I18N_PY" "$@"
+}
+
+INTERACTIVE_SESSION=0
+
+cleanup_on_exit() {
+    local exit_code=$?
+    if [ "${INTERACTIVE_SESSION}" -eq 1 ] && [ -t 0 ] && [ "${exit_code}" -ne 0 ]; then
+        echo ""
+        read -r -p "$(_ PRESS_ENTER_EXIT)" || true
+    fi
+}
+trap cleanup_on_exit EXIT
+
+# --- [ STATUS SUMMARY DISPLAY ] ---
+display_pending_status() {
+    local status_file="/var/cache/slacky-update/status.json"
+    if [ -f "${status_file}" ]; then
+        echo -e "${CYAN}${BOLD}$(_ CLI_UPDATES_HEADER)${RESET}"
+        python3 -c '
+import json, sys, os
+sys.path.insert(0, "/usr/share/slacky-update/lib")
+try:
+    from slacky_update_i18n import _
+except ImportError:
+    def _(k, **kw): return k
+
+status_file = "/var/cache/slacky-update/status.json"
+if not os.path.exists(status_file):
+    sys.exit(0)
+
+try:
+    with open(status_file, "r", encoding="utf-8") as f:
+        data = json.load(f)
+except Exception:
+    sys.exit(0)
+
+def print_cat(title, items):
+    if items:
+        print(f"\033[1;33m{title}:\033[0m")
+        for item in items:
+            print(f"  \033[32m•\033[0m {item}")
+
+print_cat(_("CAT_SLACKWARE"), data.get("slackware_updates", []))
+print_cat(_("CAT_FLATPAK"), data.get("flatpak_updates", []))
+print_cat(_("CAT_KERNEL"), data.get("cachyos_kernel_updates", []))
+print_cat(_("CAT_NVIDIA"), data.get("nvidia_driver_updates", []))
+
+if data.get("nvidia_gl_mismatch", False):
+    print("\033[1;31m• " + _("NVIDIA_SYNC_FAIL") + "\033[0m")
+
+sb = data.get("secure_boot", {})
+if sb.get("state") == "enabled":
+    for w in sb.get("warnings", []):
+        print(f"\033[1;31m• Secure Boot Warning: {w}\033[0m")
+
+total = len(data.get("slackware_updates", [])) + len(data.get("flatpak_updates", [])) + len(data.get("cachyos_kernel_updates", [])) + len(data.get("nvidia_driver_updates", []))
+if total == 0 and not data.get("nvidia_gl_mismatch", False):
+    print("\033[1;32m" + _("NO_PENDING_UPDATES") + "\033[0m")
+'
+        echo ""
+    fi
+}
+
+# --- [ FULL SYSTEM UPDATE TRANSACTION ] ---
+get_full_pkg_snapshot() {
+    python3 -c "
+import os
+pkgs = os.listdir('/var/log/packages') if os.path.exists('/var/log/packages') else []
+print(';'.join(sorted(pkgs)))
+" 2>/dev/null || echo ""
+}
+
+get_kernel_driver_snapshot() {
+    python3 -c "
+import os
+pkgs = os.listdir('/var/log/packages') if os.path.exists('/var/log/packages') else []
+k_pkgs = sorted([p for p in pkgs if p.startswith(('kernel-', 'linux-', 'dkms', 'nvidia'))])
+print(';'.join(k_pkgs))
+" 2>/dev/null || echo ""
+}
+
+prompt_reboot_or_close() {
+    local pkgs_before="$1"
+    local pkgs_after="$2"
+
+    local needs_reboot=0
+    if python3 -c "
+import sys
+b = set('${pkgs_before}'.split(';'))
+a = set('${pkgs_after}'.split(';'))
+diff = a - b
+crit_keywords = ['glibc', 'plasma-', 'kwin-', 'sddm-', 'wayland-', 'nvidia-', 'kernel-']
+active_k = '$(uname -r)'
+for p in diff:
+    for kw in crit_keywords:
+        if kw in p:
+            if kw == 'kernel-' and active_k not in p:
+                continue
+            sys.exit(1)
+sys.exit(0)
+" 2>/dev/null; then
+        needs_reboot=0
+    else
+        needs_reboot=1
+    fi
+
+    if [ "${needs_reboot}" -eq 1 ]; then
+        echo ""
+        echo -e "${YELLOW}${BOLD}🔄 $(_ REBOOT_RECOMMENDED_TITLE)${RESET}"
+        echo -e "$(_ REBOOT_RECOMMENDED_DESC)"
+        echo ""
+        read -r -p "$(_ PROMPT_REBOOT_NOW)" reply_reboot
+        reply_reboot=${reply_reboot:-N}
+        if [[ "$reply_reboot" =~ ^[YyJjSsOo]$ ]]; then
+            log_info "Initiating system reboot..."
+            sudo /sbin/reboot
+            exit 0
+        fi
+    else
+        echo ""
+        echo -e "${GREEN}${BOLD}$(_ ALL_DONE_CLOSE_PROMPT)${RESET}"
+        read -r -p "$(_ PRESS_ENTER_TO_CLOSE)" || true
+    fi
+    exit 0
+}
+
+run_full_update() {
+    echo -e "\n${CYAN}$(_ VALIDATING_ADMIN)${RESET}"
+    validate_privileges
+
+    local full_snap_before full_snap_after
+    full_snap_before=$(get_full_pkg_snapshot)
+
+    local k_snap_before k_snap_after
+    k_snap_before=$(get_kernel_driver_snapshot)
+
+    read -r -p "$(_ PROMPT_UPGRADE_SLACKWARE)" reply_slack
+    reply_slack=${reply_slack:-Y}
+    if [[ "$reply_slack" =~ ^[YyJjSsOo]$ ]]; then
+        echo -e "\n${BLUE}${BOLD}$(_ UPGRADING_SLACKWARE)${RESET}"
+        update_slackware_core
+    fi
+
+    if command -v flatpak >/dev/null 2>&1; then
+        read -r -p "$(_ PROMPT_UPGRADE_FLATPAK)" reply_flatpak
+        reply_flatpak=${reply_flatpak:-Y}
+        if [[ "$reply_flatpak" =~ ^[YyJjSsOo]$ ]]; then
+            echo -e "\n${BLUE}${BOLD}$(_ UPGRADING_FLATPAK)${RESET}"
+            update_flatpaks
+        fi
+    fi
+
+    register_flatpak_gl_sync
+
+    k_snap_after=$(get_kernel_driver_snapshot)
+    full_snap_after=$(get_full_pkg_snapshot)
+
+    if [ "${k_snap_before}" != "${k_snap_after}" ]; then
+        log_info "Kernel or driver package changes detected. Rebuilding modules, initramfs and Secure Boot armor..."
+        local active_kver
+        active_kver=$(uname -r)
+        build_nvidia_modules "${active_kver}"
+        generate_kernel_initramfs "ALL"
+        if command -v purge_old_slackware_kernels >/dev/null 2>&1; then
+            purge_old_slackware_kernels
+        fi
+        if command -v purge_old_cachyos_kernels >/dev/null 2>&1; then
+            purge_old_cachyos_kernels
+        fi
+        enforce_secure_boot_armor
+        sync_bootloader_configuration "${active_kver}"
+    else
+        log_info "No kernel or driver changes detected. Skipping initramfs generation and signing."
+    fi
+
+    echo -e "\n${CYAN}$(_ REFRESHING_CACHE)${RESET}"
+    "${CHECK_BIN}" 2>/dev/null || true
+
+    echo -e "\n${GREEN}${BOLD}$(_ UPGRADE_COMPLETE_SYSTEM)${RESET}"
+
+    prompt_reboot_or_close "${full_snap_before}" "${full_snap_after}"
+}
+
+# --- [ CACHYOS KERNEL MANAGEMENT ROUTINE ] ---
+manage_cachyos_kernel_interactive() {
+    log_info "Inspecting CachyOS kernel upstream repository..."
+    
+    local tier
+    tier=$(detect_cpu_tier)
+    if [ "${tier}" = "znver4" ]; then
+        log_info "CPU Architecture Tier: x86_64_v4 (znver4)"
+    else
+        log_info "CPU Architecture Tier: x86_64_${tier}"
+    fi
+
+    local installed
+    installed=$(is_cachyos_kernel_installed)
+
+    read -r latest_ver k_url h_url <<< "$(check_latest_cachyos_upstream || echo "NONE NONE NONE")"
+    local active_kver
+    active_kver=$(uname -r)
+    local installed_kver
+    installed_kver=$(get_newest_installed_cachyos_version 2>/dev/null || echo "NONE")
+    if [ "${installed_kver}" = "NONE" ]; then
+        installed_kver="${active_kver}"
+    fi
+
+    if [ "${installed}" = "false" ]; then
+        echo -e "\n${YELLOW}$(_ KERNEL_NOT_INSTALLED)${RESET}"
+        if [ "${latest_ver}" != "NONE" ] && [ -n "${latest_ver}" ]; then
+            echo -e "${GREEN}Latest upstream release available: ${latest_ver}${RESET}"
+            read -r -p "$(_ PROMPT_INSTALL_CACHY_KERNEL)" reply_install
+            reply_install=${reply_install:-Y}
+            if [[ "$reply_install" =~ ^[YyJjSsOo]$ ]]; then
+                validate_privileges
+                deploy_cachyos_kernel_packages "${latest_ver}" "${k_url}" "${h_url}"
+                if command -v purge_old_cachyos_kernels >/dev/null 2>&1; then
+                    purge_old_cachyos_kernels
+                fi
+                return 0
+            fi
+        fi
+        return 0
+    fi
+
+    if [ "${latest_ver}" != "NONE" ] && [ -n "${latest_ver}" ]; then
+        local is_newer
+        is_newer=$(compare_versions_strictly_greater "${latest_ver}" "${installed_kver}")
+
+        if [ "${is_newer}" = "true" ]; then
+            echo -e "\n${GREEN}${BOLD}New CachyOS Kernel Available: ${latest_ver} (Installed: ${installed_kver}, Active: ${active_kver})${RESET}"
+            read -r -p "$(_ PROMPT_INSTALL_NEW_KERNEL version="${latest_ver}")" reply
+            reply=${reply:-Y}
+            if [[ "$reply" =~ ^[YyJjSsOo]$ ]]; then
+                validate_privileges
+                deploy_cachyos_kernel_packages "${latest_ver}" "${k_url}" "${h_url}"
+                if command -v purge_old_cachyos_kernels >/dev/null 2>&1; then
+                    purge_old_cachyos_kernels
+                fi
+                return 0
+            fi
+        else
+            if [ "${installed_kver}" = "${active_kver}" ] || [ "${installed_kver}" = "${active_kver%-cachyos}" ]; then
+                log_info "Active kernel (${active_kver}) is up to date with upstream (${latest_ver})."
+            else
+                log_info "Installed kernel (${installed_kver}-cachyos) is up to date with upstream (${latest_ver}). (Active booted: ${active_kver})"
+            fi
+        fi
+    else
+        log_warn "Unable to fetch metadata from CachyOS mirror."
+    fi
+
+    echo ""
+    read -r -p "$(_ PROMPT_REBUILD_INITRD_ACTIVE active="${active_kver}")" rebuild_reply
+    rebuild_reply=${rebuild_reply:-N}
+    if [[ "$rebuild_reply" =~ ^[YyJjSsOo]$ ]]; then
+        validate_privileges
+        generate_kernel_initramfs "${active_kver}"
+        build_nvidia_modules "${active_kver}"
+        enforce_secure_boot_armor
+        sync_bootloader_configuration "${active_kver}"
+    fi
+}
+
+# --- [ NVIDIA DRIVER MANAGEMENT ROUTINE ] ---
+manage_nvidia_interactive() {
+    local gpu_gen
+    gpu_gen=$(detect_nvidia_gpu)
+    log_info "Detected GPU Architecture: ${gpu_gen}"
+
+    echo ""
+    echo -e "${BOLD}$(_ NVIDIA_BRANCH_SELECT)${RESET}"
+    echo -e "  $(_ NVIDIA_BRANCH_LEGACY)"
+    echo -e "  $(_ NVIDIA_BRANCH_PRODUCTION)"
+    echo -e "  $(_ NVIDIA_BRANCH_FEATURE)"
+    echo -e "  $(_ NVIDIA_OPTION_REBUILD)"
+    echo -e "  $(_ NVIDIA_OPTION_RETURN)"
+    echo ""
+    echo -n "$(_ SELECT_OPERATION_RANGE range="1-5")"
+    read -r n_choice || n_choice="5"
+
+    case "${n_choice}" in
+        1)
+            validate_privileges
+            install_nvidia_run_driver "legacy"
+            ;;
+        2)
+            validate_privileges
+            install_nvidia_run_driver "production"
+            ;;
+        3)
+            validate_privileges
+            install_nvidia_run_driver "feature"
+            ;;
+        4)
+            validate_privileges
+            build_nvidia_modules "ALL"
+            generate_kernel_initramfs "ALL"
+            enforce_secure_boot_armor
+            sync_bootloader_configuration "$(uname -r)"
+            register_flatpak_gl_sync
+            ;;
+        5)
+            return 0
+            ;;
+        *)
+            log_warn "Invalid selection. Returning to main menu."
+            return 0
+            ;;
+    esac
+}
+
+# --- [ INTERACTIVE TERMINAL MENU ] ---
+interactive_menu() {
+    INTERACTIVE_SESSION=1
+    probe_gpu_hardware
+
+    while true; do
+        echo ""
+        echo -e "${BOLD}Slacky-Update (v${CURRENT_VERSION})${RESET}"
+        echo ""
+        display_pending_status
+        echo -e "${BOLD}$(_ CLI_ACTIONS_HEADER)${RESET}"
+
+        if [ "${HAS_NVIDIA}" = "true" ]; then
+            echo -e "  $(_ MENU_FULL_UPDATE)"
+            echo -e "  $(_ MENU_KERNEL)"
+            echo -e "  $(_ MENU_NVIDIA)"
+            echo -e "  $(_ MENU_CLEAN)"
+            echo -e "  $(_ MENU_ARMOR)"
+            echo -e "  $(_ MENU_EXIT)"
+            echo ""
+            echo -n "$(_ SELECT_OPERATION_RANGE range="1-6")"
+            read -r choice || choice="6"
+
+            case "${choice}" in
+                1)
+                    echo ""
+                    run_full_update
+                    ;;
+                2)
+                    echo ""
+                    ensure_dkms_installed_interactive
+                    manage_cachyos_kernel_interactive
+                    echo ""
+                    read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                    ;;
+                3)
+                    echo ""
+                    ensure_dkms_installed_interactive
+                    manage_nvidia_interactive
+                    echo ""
+                    read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                    ;;
+                4)
+                    echo ""
+                    clean_system_cache_and_orphans
+                    echo ""
+                    read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                    ;;
+                5)
+                    echo ""
+                    manage_armor_interactive
+                    echo ""
+                    read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                    ;;
+                6)
+                    echo -e "\n${GREEN}$(_ SESSION_TERMINATED)${RESET}"
+                    exit 0
+                    ;;
+                *)
+                    echo -e "\n${YELLOW}$(_ INVALID_SELECTION)${RESET}"
+                    sleep 1
+                    ;;
+            esac
+        else
+            # AMD / Intel Tailored Menu (NVIDIA option cleanly hidden)
+            echo -e "  1. $(_ MENU_FULL_UPDATE | sed -E 's/^[0-9]+\.\s*//')"
+            echo -e "  2. $(_ MENU_KERNEL | sed -E 's/^[0-9]+\.\s*//')"
+            echo -e "  3. $(_ MENU_CLEAN | sed -E 's/^[0-9]+\.\s*//')"
+            echo -e "  4. $(_ MENU_ARMOR | sed -E 's/^[0-9]+\.\s*//')"
+            echo -e "  5. $(_ MENU_EXIT | sed -E 's/^[0-9]+\.\s*//')"
+            echo ""
+            echo -n "$(_ SELECT_OPERATION_RANGE range="1-5")"
+            read -r choice || choice="5"
+
+            case "${choice}" in
+                1)
+                    echo ""
+                    run_full_update
+                    ;;
+                2)
+                    echo ""
+                    manage_cachyos_kernel_interactive
+                    echo ""
+                    read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                    ;;
+                3)
+                    echo ""
+                    clean_system_cache_and_orphans
+                    echo ""
+                    read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                    ;;
+                4)
+                    echo ""
+                    manage_armor_interactive
+                    echo ""
+                    read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                    ;;
+                5)
+                    echo -e "\n${GREEN}$(_ SESSION_TERMINATED)${RESET}"
+                    exit 0
+                    ;;
+                *)
+                    echo -e "\n${YELLOW}$(_ INVALID_SELECTION)${RESET}"
+                    sleep 1
+                    ;;
+            esac
+        fi
+    done
+}
+
+# --- [ ENTRY POINT ] ---
+if [ "${1:-}" = "--non-interactive" ] || [ "${1:-}" = "-y" ]; then
+    run_full_update
+elif [ "${1:-}" = "--check" ]; then
+    "${CHECK_BIN}"
+    display_pending_status
+elif [ "${1:-}" = "--lang" ] || [ "${1:-}" = "--set-lang" ]; then
+    if [ -n "${2:-}" ]; then
+        python3 -c "import sys; sys.path.insert(0, '${APP_DIR}'); from slacky_update_i18n import i18n; i18n.save_language_override('${2}')"
+        echo "Language set to: ${2}"
+    else
+        echo "Usage: slacky-update --lang <lang_code>"
+        echo "Available languages:"
+        python3 -c "import sys; sys.path.insert(0, '${APP_DIR}'); from slacky_update_i18n import i18n; print('\n'.join([f'  • {k:12}: {v}' for k, v in i18n.get_available_languages().items()]))"
+    fi
+elif [ "${1:-}" = "--list-langs" ]; then
+    python3 -c "import sys; sys.path.insert(0, '${APP_DIR}'); from slacky_update_i18n import i18n; print('\n'.join([f'  • {k:12}: {v}' for k, v in i18n.get_available_languages().items()]))"
+else
+    interactive_menu
+fi

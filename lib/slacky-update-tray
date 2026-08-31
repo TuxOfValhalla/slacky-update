@@ -1,0 +1,397 @@
+#!/usr/bin/env python3
+# --- [ SYSTEM TRAY MONITOR ] ---
+
+import sys
+import json
+import os
+import subprocess
+import time
+import shutil
+import signal
+from PyQt5.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QAction, QActionGroup
+from PyQt5.QtGui import QIcon, QPixmap, QPainter, QDesktopServices
+from PyQt5.QtCore import QFileSystemWatcher, QTimer, Qt, QUrl
+
+# --- [ SIGNAL HANDLING ] ---
+if hasattr(signal, 'SIGHUP'):
+    signal.signal(signal.SIGHUP, signal.SIG_IGN)
+
+# --- [ LOCALIZATION ENGINE INITIALIZATION ] ---
+sys.path.insert(0, "/usr/share/slacky-update/lib")
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "lib"))
+try:
+    from slacky_update_i18n import i18n, _
+except ImportError:
+    def _(key, **kwargs):
+        return key
+
+# --- [ CONSTANTS & PATHS ] ---
+STATUS_FILE = "/var/cache/slacky-update/status.json"
+ICON_OK = "/usr/share/icons/hicolor/128x128/apps/slacky-update-ok.png"
+ICON_PENDING = "/usr/share/icons/hicolor/128x128/apps/slacky-update-pending.png"
+ICON_CHECKING = "/usr/share/icons/hicolor/128x128/apps/slacky-update-checking.png"
+ICON_KOFI = "/usr/share/icons/hicolor/128x128/apps/ko-fi.png"
+CHECKER_BIN = "/usr/share/slacky-update/lib/check_backend.sh"
+INTERVAL_6_HOURS_MS = 21600000
+
+DEV_DIR = os.path.dirname(os.path.abspath(__file__))
+if not os.path.exists(CHECKER_BIN):
+    CHECKER_BIN = os.path.join(DEV_DIR, "check_backend.sh")
+
+DEV_ASSETS = os.path.join(DEV_DIR, "..", "assets")
+if not os.path.exists(ICON_OK) and os.path.exists(DEV_ASSETS):
+    ICON_OK = os.path.join(DEV_ASSETS, "slacky-update-ok.png")
+    ICON_PENDING = os.path.join(DEV_ASSETS, "slacky-update-pending.png")
+    ICON_CHECKING = os.path.join(DEV_ASSETS, "slacky-update-checking.png")
+
+if not os.path.exists(ICON_KOFI) and os.path.exists(DEV_ASSETS):
+    ICON_KOFI = os.path.join(DEV_ASSETS, "ko-fi.png")
+
+KOFI_SETTINGS_FILE = os.path.expanduser("~/.config/slacky-update/kofi.json")
+
+def should_display_kofi():
+    try:
+        os.makedirs(os.path.dirname(KOFI_SETTINGS_FILE), exist_ok=True)
+        first_ts = None
+        if os.path.exists(KOFI_SETTINGS_FILE):
+            try:
+                with open(KOFI_SETTINGS_FILE, "r", encoding="utf-8") as f:
+                    d = json.load(f)
+                    first_ts = float(d.get("first_install_ts", 0))
+            except Exception:
+                pass
+        if not first_ts:
+            first_ts = time.time()
+            with open(KOFI_SETTINGS_FILE, "w", encoding="utf-8") as f:
+                json.dump({"first_install_ts": first_ts}, f)
+        elapsed = max(0, time.time() - first_ts)
+        cycle_position = elapsed % (30 * 86400) # seconds into 30-day window
+        return cycle_position < 86400 # True for first 24 hours of every 30-day cycle
+    except Exception:
+        return False
+
+# --- [ TIME PARSING UTILITIES ] ---
+def get_time_since_last_check(data):
+    if not data or "last_check_ts" not in data:
+        if os.path.exists(STATUS_FILE):
+            try:
+                mtime = os.path.getmtime(STATUS_FILE)
+                diff = max(0, time.time() - mtime)
+            except Exception:
+                return _("UNKNOWN")
+        else:
+            return _("NEVER")
+    else:
+        try:
+            diff = max(0, time.time() - float(data["last_check_ts"]))
+        except Exception:
+            return _("UNKNOWN")
+
+    if diff < 60:
+        return _("JUST_NOW")
+    mins = int(diff // 60)
+    hours = mins // 60
+    days = hours // 24
+
+    if days > 0:
+        return _("AGO_DAYS_HOURS", days=days, hours=hours % 24)
+    elif hours > 0:
+        return _("AGO_HOURS_MINS", hours=hours, mins=mins % 60)
+    else:
+        return _("AGO_MINS", mins=mins)
+
+def get_next_check_in(timer):
+    rem_ms = timer.remainingTime()
+    if rem_ms < 0:
+        return _("UNKNOWN")
+    rem_s = int(rem_ms // 1000)
+    hours = rem_s // 3600
+    mins = (rem_s % 3600) // 60
+    if hours > 0:
+        return f"{hours}h {mins}m"
+    elif mins > 0:
+        return f"{mins}m"
+    else:
+        return f"{rem_s}s"
+
+# --- [ TRAY CONTROLLER CLASS ] ---
+class SlackyUpdateTray(QSystemTrayIcon):
+    def __init__(self, app):
+        super().__init__()
+        self.app = app
+        self.last_notified_count = 0
+
+        self.icon_ok = QIcon(ICON_OK)
+        self.icon_pending_full = QIcon(ICON_PENDING)
+        self.icon_checking = QIcon(ICON_CHECKING)
+        self.icon_pending_80 = self.create_scaled_icon(ICON_PENDING, 0.80)
+
+        self.pulse_timer = QTimer()
+        self.pulse_timer.timeout.connect(self.toggle_pulse_frame)
+        self.pulse_state = False
+
+        self.pulse_stop_timer = QTimer()
+        self.pulse_stop_timer.setSingleShot(True)
+        self.pulse_stop_timer.timeout.connect(self.stop_pulse)
+
+        self.menu = QMenu()
+        self.setContextMenu(self.menu)
+        self.menu.aboutToShow.connect(self.build_menu)
+        self.activated.connect(self.on_activated)
+
+        cache_dir = os.path.dirname(STATUS_FILE)
+        os.makedirs(cache_dir, exist_ok=True)
+
+        self.watcher = QFileSystemWatcher()
+        if os.path.exists(cache_dir):
+            self.watcher.addPath(cache_dir)
+            self.watcher.directoryChanged.connect(self.update_status)
+            self.watcher.fileChanged.connect(self.update_status)
+
+        self.poll_timer = QTimer()
+        self.poll_timer.timeout.connect(self.update_status)
+        self.poll_timer.start(15000)
+
+        self.check_timer = QTimer()
+        self.check_timer.timeout.connect(self.trigger_check)
+        self.check_timer.start(INTERVAL_6_HOURS_MS)
+
+        QTimer.singleShot(15000, self.trigger_check)
+
+        self.update_status()
+
+    def create_scaled_icon(self, icon_path, scale_factor=0.80):
+        if not os.path.exists(icon_path):
+            return QIcon(icon_path)
+        base_pix = QPixmap(icon_path)
+        w, h = base_pix.width(), base_pix.height()
+        if w <= 0 or h <= 0:
+            return QIcon(icon_path)
+        scaled_w, scaled_h = max(1, int(w * scale_factor)), max(1, int(h * scale_factor))
+        offset_x, offset_y = (w - scaled_w) // 2, (h - scaled_h) // 2
+        scaled_sub = base_pix.scaled(scaled_w, scaled_h, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        canvas = QPixmap(w, h)
+        canvas.fill(Qt.transparent)
+        painter = QPainter(canvas)
+        painter.drawPixmap(offset_x, offset_y, scaled_sub)
+        painter.end()
+        return QIcon(canvas)
+
+    def start_pulse(self, duration_ms=6000):
+        self.pulse_state = False
+        self.pulse_timer.start(350)
+        self.pulse_stop_timer.start(duration_ms)
+
+    def toggle_pulse_frame(self):
+        self.pulse_state = not self.pulse_state
+        if self.pulse_state:
+            self.setIcon(self.icon_pending_80)
+        else:
+            self.setIcon(self.icon_pending_full)
+
+    def stop_pulse(self):
+        if self.pulse_timer.isActive():
+            self.pulse_timer.stop()
+        data = self.load_status()
+        total_updates = 0
+        if data:
+            total_updates = len(data.get("slackware_updates", [])) + len(data.get("flatpak_updates", [])) + len(data.get("cachyos_kernel_updates", [])) + len(data.get("nvidia_driver_updates", []))
+        if total_updates > 0 or (data and data.get("nvidia_gl_mismatch", False)):
+            self.setIcon(self.icon_pending_full)
+        else:
+            self.setIcon(self.icon_ok)
+
+    def on_activated(self, reason):
+        if reason == QSystemTrayIcon.Trigger:
+            self.launch_upgrade()
+
+    def set_language(self, lang_code):
+        i18n.save_language_override(lang_code)
+
+    def load_status(self):
+        if not os.path.exists(STATUS_FILE):
+            return None
+        try:
+            with open(STATUS_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except (json.JSONDecodeError, OSError):
+            return None
+
+    def update_status(self):
+        data = self.load_status()
+
+        slack_list = data.get("slackware_updates", []) if data else []
+        flatpak_list = data.get("flatpak_updates", []) if data else []
+        cachy_list = data.get("cachyos_kernel_updates", []) if data else []
+        nvidia_list = data.get("nvidia_driver_updates", []) if data else []
+        nvidia_mismatch = data.get("nvidia_gl_mismatch", False) if data else False
+
+        total_updates = len(slack_list) + len(flatpak_list) + len(cachy_list) + len(nvidia_list)
+
+        if not self.pulse_timer.isActive():
+            if nvidia_mismatch or total_updates > 0:
+                self.setIcon(self.icon_pending_full)
+            else:
+                self.setIcon(self.icon_ok)
+
+        if nvidia_mismatch:
+            self.setToolTip(_("NVIDIA_SYNC_FAIL"))
+        elif total_updates > 0:
+            tooltip = _("UPDATES_AVAILABLE", count=total_updates)
+            details = []
+            if slack_list:
+                details.append(f"{_('CAT_SLACKWARE')}: {len(slack_list)}")
+            if flatpak_list:
+                details.append(f"{_('CAT_FLATPAK')}: {len(flatpak_list)}")
+            if cachy_list:
+                details.append(f"{_('CAT_KERNEL')}: {len(cachy_list)}")
+            if nvidia_list:
+                details.append(f"{_('CAT_NVIDIA')}: {len(nvidia_list)}")
+            if details:
+                tooltip += "\n• " + "\n• ".join(details)
+            self.setToolTip(tooltip)
+        else:
+            self.setToolTip(_("SYSTEM_UP_TO_DATE"))
+
+        if not self.isVisible() and QSystemTrayIcon.isSystemTrayAvailable():
+            self.show()
+
+        if total_updates > 0 and total_updates != self.last_notified_count:
+            self.showMessage(_("SLACKY_UPDATE_TITLE"), _("UPDATES_AVAILABLE_COUNT", count=total_updates), self.icon_pending_full, 6000)
+            self.last_notified_count = total_updates
+            self.start_pulse(6000)
+        elif total_updates == 0:
+            self.last_notified_count = 0
+            self.stop_pulse()
+
+    def build_menu(self):
+        data = self.load_status()
+        self.menu.clear()
+
+        slack_list = data.get("slackware_updates", []) if data else []
+        flatpak_list = data.get("flatpak_updates", []) if data else []
+        cachy_list = data.get("cachyos_kernel_updates", []) if data else []
+        nvidia_list = data.get("nvidia_driver_updates", []) if data else []
+        total_updates = len(slack_list) + len(flatpak_list) + len(cachy_list) + len(nvidia_list)
+
+        pending_menu = self.menu.addMenu(_("UPDATES_AVAILABLE", count=total_updates))
+
+        if total_updates > 0:
+            pipeline = [
+                (_("CAT_SLACKWARE"), slack_list),
+                (_("CAT_FLATPAK"), flatpak_list),
+                (_("CAT_KERNEL"), cachy_list),
+                (_("CAT_NVIDIA"), nvidia_list)
+            ]
+            for title, pkgs in pipeline:
+                if pkgs:
+                    pending_menu.addSection(f"{title} ({len(pkgs)})")
+                    for pkg in pkgs:
+                        action = QAction(f"  {pkg}", pending_menu)
+                        action.setEnabled(False)
+                        pending_menu.addAction(action)
+        else:
+            no_up = QAction(_("ALL_PACKAGES_UP_TO_DATE"), pending_menu)
+            no_up.setEnabled(False)
+            pending_menu.addAction(no_up)
+
+        time_since = get_time_since_last_check(data)
+        next_in = get_next_check_in(self.check_timer)
+
+        last_action = QAction(_("TIME_SINCE_LAST_CHECK", time=time_since), self.menu)
+        last_action.setEnabled(False)
+        self.menu.addAction(last_action)
+
+        next_action = QAction(_("NEXT_CHECK_IN", time=next_in), self.menu)
+        next_action.setEnabled(False)
+        self.menu.addAction(next_action)
+
+        self.menu.addSeparator()
+
+        check_action = QAction(_("CHECK_FOR_UPDATES"), self.menu)
+        check_action.triggered.connect(self.trigger_check)
+        self.menu.addAction(check_action)
+
+        upgrade_action = QAction(_("UPDATE_NOW"), self.menu)
+        upgrade_action.triggered.connect(self.launch_upgrade)
+        self.menu.addAction(upgrade_action)
+
+        self.menu.addSeparator()
+
+        lang_menu = self.menu.addMenu(_("LANGUAGE_SELECTION"))
+        group = QActionGroup(lang_menu)
+        group.setExclusive(True)
+
+        sys_action = QAction(_("SYSTEM_DEFAULT_LANG"), lang_menu)
+        sys_action.setCheckable(True)
+        if not i18n.manual_override:
+            sys_action.setChecked(True)
+        sys_action.triggered.connect(lambda: self.set_language("system"))
+        group.addAction(sys_action)
+        lang_menu.addAction(sys_action)
+        lang_menu.addSeparator()
+
+        avail_langs = i18n.get_available_languages()
+        for code, name in avail_langs.items():
+            l_action = QAction(name, lang_menu)
+            l_action.setCheckable(True)
+            if i18n.manual_override == code:
+                l_action.setChecked(True)
+            l_action.triggered.connect(lambda checked, c=code: self.set_language(c))
+            group.addAction(l_action)
+            lang_menu.addAction(l_action)
+
+        if should_display_kofi():
+            self.menu.addSeparator()
+            kofi_icon = QIcon(ICON_KOFI) if os.path.exists(ICON_KOFI) else QIcon()
+            kofi_action = QAction(kofi_icon, _("SUPPORT_KOFI"), self.menu)
+            kofi_action.triggered.connect(lambda: QDesktopServices.openUrl(QUrl("https://ko-fi.com/tuxofvalhalla")))
+            self.menu.addAction(kofi_action)
+
+        self.menu.addSeparator()
+
+        quit_action = QAction(_("QUIT"), self.menu)
+        quit_action.triggered.connect(self.app.quit)
+        self.menu.addAction(quit_action)
+
+    def trigger_check(self):
+        self.setIcon(QIcon(ICON_CHECKING))
+        self.setToolTip(_("CHECKING_FOR_UPDATES"))
+        self.app.processEvents()
+        self.check_timer.start(INTERVAL_6_HOURS_MS)
+        if os.path.exists(CHECKER_BIN):
+            try:
+                subprocess.Popen([CHECKER_BIN])
+            except Exception:
+                pass
+
+    def launch_upgrade(self):
+        self.launch_in_terminal(["/usr/local/bin/slacky-update"], "Slacky-Update")
+
+    def launch_in_terminal(self, cmd, title):
+        term = os.environ.get("TERMINAL")
+        if term and shutil.which(term):
+            try:
+                subprocess.Popen([term, "-e"] + cmd)
+                return
+            except Exception:
+                pass
+
+        for fallback in ["konsole", "xfce4-terminal", "gnome-terminal", "xterm"]:
+            if shutil.which(fallback):
+                try:
+                    subprocess.Popen([fallback, "-e"] + cmd)
+                    return
+                except Exception:
+                    continue
+
+# --- [ MAIN ENTRY POINT ] ---
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    app.setApplicationName("slacky-update")
+    app.setDesktopFileName("slacky-update-tray")
+    app.setQuitOnLastWindowClosed(False)
+
+    tray = SlackyUpdateTray(app)
+    tray.show()
+    sys.exit(app.exec_())
