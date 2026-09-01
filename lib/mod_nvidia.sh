@@ -183,17 +183,29 @@ build_nvidia_modules() {
     fi
 
     if [ "${target_kver}" = "ALL" ]; then
-        log_info "Rebuilding NVIDIA DKMS modules for all installed kernels..."
+        log_info "Rebuilding NVIDIA DKMS modules for installed Slackware kernels..."
         if [ -d "/lib/modules" ]; then
             for kdir in /lib/modules/*; do
                 [ -d "${kdir}" ] || continue
                 local kver
                 kver=$(basename "${kdir}")
-                log_info "Building NVIDIA modules for kernel: ${kver}"
+                if [[ "${kver}" =~ cachyos ]]; then
+                    if find "${kdir}" "/usr/lib/modules/${kver}" -name "nvidia*.ko*" 2>/dev/null | grep -q "nvidia"; then
+                        log_info "Kernel ${kver} (CachyOS) has dedicated prebuilt NVIDIA modules. Skipping DKMS build."
+                        continue
+                    fi
+                fi
+                log_info "Building NVIDIA DKMS modules for kernel: ${kver}..."
                 sudo "${dkms_bin}" autoinstall -k "${kver}" || log_warn "DKMS build warning for kernel: ${kver}"
             done
         fi
     else
+        if [[ "${target_kver}" =~ cachyos ]]; then
+            if find "/lib/modules/${target_kver}" "/usr/lib/modules/${target_kver}" -name "nvidia*.ko*" 2>/dev/null | grep -q "nvidia"; then
+                log_info "Kernel ${target_kver} (CachyOS) has dedicated prebuilt NVIDIA modules. Skipping DKMS build."
+                return 0
+            fi
+        fi
         log_info "Building NVIDIA DKMS modules for kernel: ${target_kver}..."
         sudo "${dkms_bin}" autoinstall -k "${target_kver}" || log_warn "DKMS build warning for kernel: ${target_kver}"
     fi
