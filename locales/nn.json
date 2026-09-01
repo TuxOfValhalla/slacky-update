@@ -93,5 +93,14 @@
   "REBOOT_RECOMMENDED_DESC": "Kjernebibliotek, skrivebordsmiljø eller aktiv kjerne vart oppdatert.",
   "ALL_DONE_CLOSE_PROMPT": "Systemoppdatering fullført.",
   "PRESS_ENTER_TO_CLOSE": "Trykk [ENTER] for å lukke...",
-  "SUPPORT_KOFI": "Støtt utviklaren (Ko-Fi)"
+  "SUPPORT_KOFI": "Støtt utviklaren (Ko-Fi)",
+  "PROMPT_SELF_UPDATE": "Ein ny versjon av Slacky-Update er tilgjengeleg. Vil du oppdatere no? [J/n] ",
+  "CACHY_MENU_UPGRADE_INSTALLED": "1. Sjekk og oppgrader installerte CachyOS-kjernar",
+  "CACHY_MENU_PICKER": "2. CachyOS Kjerneveljar (Standard, BORE, BORE-LTO)",
+  "CACHY_MENU_REBUILD_ACTIVE": "3. Bygg initramfs og signer aktiv kjerne ({active})",
+  "CACHY_PICKER_TITLE": "CachyOS Kjerneveljar",
+  "CACHY_FLAVOR_STANDARD": "Standard CachyOS allsidig kjerne",
+  "CACHY_FLAVOR_BORE": "BORE scheduler med låg latens for spel",
+  "CACHY_FLAVOR_LTO": "LTO-kjerne for maksimal gjennomstrøyming",
+  "CACHY_PICKER_EXIT": "4. Attende til meny"
 }

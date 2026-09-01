@@ -93,5 +93,14 @@
   "REBOOT_RECOMMENDED_DESC": "Core libraries, desktop environment, graphics drivers, or active kernel were updated.",
   "ALL_DONE_CLOSE_PROMPT": "System update process completed successfully.",
   "PRESS_ENTER_TO_CLOSE": "Press [ENTER] to close this window...",
-  "SUPPORT_KOFI": "Support the Developer (Ko-Fi)"
+  "SUPPORT_KOFI": "Support the Developer (Ko-Fi)",
+  "PROMPT_SELF_UPDATE": "A new version of Slacky-Update is available. Would you like to update now? [Y/n] ",
+  "CACHY_MENU_UPGRADE_INSTALLED": "1. Check & Upgrade Installed CachyOS Kernels",
+  "CACHY_MENU_PICKER": "2. CachyOS Kernel Selector (Flavors: Standard, BORE, BORE-LTO)",
+  "CACHY_MENU_REBUILD_ACTIVE": "3. Rebuild Initramfs & Sign Active Kernel ({active})",
+  "CACHY_PICKER_TITLE": "CachyOS Kernel Selector",
+  "CACHY_FLAVOR_STANDARD": "Standard CachyOS general purpose optimized kernel",
+  "CACHY_FLAVOR_BORE": "BORE scheduler low latency gaming optimized kernel",
+  "CACHY_FLAVOR_LTO": "Link-Time Optimization kernel for maximum compute throughput",
+  "CACHY_PICKER_EXIT": "4. Cancel and return to menu"
 }

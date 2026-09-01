@@ -49,22 +49,41 @@ if not os.path.exists(ICON_KOFI) and os.path.exists(DEV_ASSETS):
 
 KOFI_SETTINGS_FILE = os.path.expanduser("~/.config/slacky-update/kofi.json")
 
-def should_display_kofi():
+def record_kofi_update_event():
     try:
         os.makedirs(os.path.dirname(KOFI_SETTINGS_FILE), exist_ok=True)
-        first_ts = None
+        d = {}
         if os.path.exists(KOFI_SETTINGS_FILE):
             try:
                 with open(KOFI_SETTINGS_FILE, "r", encoding="utf-8") as f:
                     d = json.load(f)
-                    first_ts = float(d.get("first_install_ts", 0))
             except Exception:
                 pass
-        if not first_ts:
-            first_ts = time.time()
+        d["last_update_ts"] = time.time()
+        with open(KOFI_SETTINGS_FILE, "w", encoding="utf-8") as f:
+            json.dump(d, f)
+    except Exception:
+        pass
+
+def should_display_kofi():
+    try:
+        os.makedirs(os.path.dirname(KOFI_SETTINGS_FILE), exist_ok=True)
+        base_ts = None
+        if os.path.exists(KOFI_SETTINGS_FILE):
+            try:
+                with open(KOFI_SETTINGS_FILE, "r", encoding="utf-8") as f:
+                    d = json.load(f)
+                    if "last_update_ts" in d and float(d.get("last_update_ts", 0)) > 0:
+                        base_ts = float(d["last_update_ts"])
+                    elif "first_install_ts" in d and float(d.get("first_install_ts", 0)) > 0:
+                        base_ts = float(d["first_install_ts"])
+            except Exception:
+                pass
+        if not base_ts:
+            base_ts = time.time()
             with open(KOFI_SETTINGS_FILE, "w", encoding="utf-8") as f:
-                json.dump({"first_install_ts": first_ts}, f)
-        elapsed = max(0, time.time() - first_ts)
+                json.dump({"first_install_ts": base_ts, "last_update_ts": base_ts}, f)
+        elapsed = max(0, time.time() - base_ts)
         cycle_position = elapsed % (30 * 86400) # seconds into 30-day window
         return cycle_position < 86400 # True for first 24 hours of every 30-day cycle
     except Exception:

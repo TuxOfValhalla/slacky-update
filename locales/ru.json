@@ -93,5 +93,14 @@
   "REBOOT_RECOMMENDED_DESC": "Обновлены системные библиотеки, рабочий стол или активное ядро.",
   "ALL_DONE_CLOSE_PROMPT": "Обновление системы завершено.",
   "PRESS_ENTER_TO_CLOSE": "Нажмите [ENTER] для закрытия...",
-  "SUPPORT_KOFI": "Поддержать разработчика (Ko-Fi)"
+  "SUPPORT_KOFI": "Поддержать разработчика (Ko-Fi)",
+  "PROMPT_SELF_UPDATE": "Доступна новая версия Slacky-Update. Обновить сейчас? [Д/н] ",
+  "CACHY_MENU_UPGRADE_INSTALLED": "1. Проверить и обновить установленные ядра CachyOS",
+  "CACHY_MENU_PICKER": "2. Выбор ядер CachyOS (Standard, BORE, BORE-LTO)",
+  "CACHY_MENU_REBUILD_ACTIVE": "3. Пересобрать initramfs и подписать активное ядро ({active})",
+  "CACHY_PICKER_TITLE": "Выбор ядер CachyOS",
+  "CACHY_FLAVOR_STANDARD": "Стандартное оптимизированное ядро CachyOS",
+  "CACHY_FLAVOR_BORE": "Планировщик BORE с низкой задержкой для игр",
+  "CACHY_FLAVOR_LTO": "Ядро с LTO-оптимизацией для максимальной производительности",
+  "CACHY_PICKER_EXIT": "4. Вернуться в меню"
 }

@@ -93,5 +93,14 @@
   "REBOOT_RECOMMENDED_DESC": "Core libraries, desktop environment, graphics drivers, or active kernel were updated.",
   "ALL_DONE_CLOSE_PROMPT": "⚡ All system updates completed successfully. Everything is righteous!",
   "PRESS_ENTER_TO_CLOSE": "Press [ENTER] to close this window...",
-  "SUPPORT_KOFI": "☕ Buy Me A Coffee (Ko-Fi)"
+  "SUPPORT_KOFI": "☕ Buy Me A Coffee (Ko-Fi)",
+  "PROMPT_SELF_UPDATE": "Do you want slacky-update to become next level, dude? [Y/n] ",
+  "CACHY_MENU_UPGRADE_INSTALLED": "1. Check & Upgrade Installed CachyOS Kernels",
+  "CACHY_MENU_PICKER": "2. CachyOS Kernel Picker (Choose flavor: standard, bore, bore-lto)",
+  "CACHY_MENU_REBUILD_ACTIVE": "3. Rebuild Initramfs & Secure Boot Armor for Active Kernel ({active})",
+  "CACHY_PICKER_TITLE": "🏎️ CACHYOS KERNEL PICKER",
+  "CACHY_FLAVOR_STANDARD": "(Most triumphant general purpose optimized kernel)",
+  "CACHY_FLAVOR_BORE": "(Super ninja moves low latency gaming kernel)",
+  "CACHY_FLAVOR_LTO": "(Let the mojo flow, kernel optimized for maximum throughput)",
+  "CACHY_PICKER_EXIT": "4. Not right now, dude (Return to menu)"
 }

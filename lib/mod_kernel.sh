@@ -56,6 +56,77 @@ is_cachyos_kernel_installed() {
     echo "false"
 }
 
+get_installed_cachyos_flavors() {
+    python3 -c "
+import os, re
+
+def get_flavor(k_str):
+    if '-cachyos-bore-lto' in k_str or '-cachyos-lto' in k_str:
+        return 'lto'
+    elif '-cachyos-bore' in k_str:
+        return 'bore'
+    elif '-cachyos' in k_str:
+        return 'standard'
+    return None
+
+flavors = set()
+if os.path.exists('/boot'):
+    for f in os.listdir('/boot'):
+        if 'cachyos' in f and f.startswith('vmlinuz-') and not os.path.islink(os.path.join('/boot', f)):
+            flv = get_flavor(f)
+            if flv: flavors.add(flv)
+
+if os.path.exists('/lib/modules'):
+    for d in os.listdir('/lib/modules'):
+        if 'cachyos' in d:
+            flv = get_flavor(d)
+            if flv: flavors.add(flv)
+
+print(' '.join(sorted(list(flavors))))
+" 2>/dev/null || echo ""
+}
+
+get_installed_cachyos_flavor_version() {
+    local flavor="$1"
+    python3 -c "
+import os, re
+
+def get_flavor(k_str):
+    if '-cachyos-bore-lto' in k_str or '-cachyos-lto' in k_str:
+        return 'lto'
+    elif '-cachyos-bore' in k_str:
+        return 'bore'
+    elif '-cachyos' in k_str:
+        return 'standard'
+    return None
+
+def parse_ver(v_str):
+    return [int(x) for x in re.findall(r'\d+', v_str.split('-cachyos')[0])]
+
+cachy_vers = set()
+target_flv = '$flavor'
+
+if os.path.exists('/boot'):
+    for f in os.listdir('/boot'):
+        if 'cachyos' in f and f.startswith('vmlinuz-') and not os.path.islink(os.path.join('/boot', f)):
+            if get_flavor(f) == target_flv:
+                v = f.replace('vmlinuz-', '').split('-cachyos')[0]
+                if v: cachy_vers.add(v)
+
+if os.path.exists('/lib/modules'):
+    for d in os.listdir('/lib/modules'):
+        if 'cachyos' in d and get_flavor(d) == target_flv:
+            v = d.split('-cachyos')[0]
+            if v: cachy_vers.add(v)
+
+if cachy_vers:
+    sorted_vers = sorted(list(cachy_vers), key=parse_ver, reverse=True)
+    print(sorted_vers[0])
+else:
+    print('NONE')
+" 2>/dev/null || echo "NONE"
+}
+
 get_newest_installed_cachyos_version() {
     python3 -c "
 import os, re
@@ -112,7 +183,8 @@ sys.exit(1)
 " && echo "true" || echo "false"
 }
 
-check_latest_cachyos_upstream() {
+check_cachyos_upstream_flavor() {
+    local flavor="${1:-standard}"
     local tier
     tier=$(detect_cpu_tier)
     local repo_urls=()
@@ -131,6 +203,16 @@ check_latest_cachyos_upstream() {
             ;;
     esac
 
+    local k_prefix="linux-cachyos"
+    local h_prefix="linux-cachyos-headers"
+    if [ "${flavor}" = "bore" ]; then
+        k_prefix="linux-cachyos-bore"
+        h_prefix="linux-cachyos-bore-headers"
+    elif [ "${flavor}" = "lto" ]; then
+        k_prefix="linux-cachyos-bore-lto"
+        h_prefix="linux-cachyos-bore-lto-headers"
+    fi
+
     for repo_url in "${repo_urls[@]}"; do
         local result
         result=$(curl -sSL -m 15 "${repo_url}" 2>/dev/null | python3 -c "
@@ -138,16 +220,20 @@ import re, sys
 
 html = sys.stdin.read()
 if not html:
-    print('NONE NONE NONE')
+    print('NONE NONE NONE NONE')
     sys.exit(0)
 
 repo_url = '${repo_url}'
+k_pref = '${k_prefix}'
+h_pref = '${h_prefix}'
+nv_pref = k_pref + '-nvidia-open'
 
-k_matches = re.findall(r'href=[\'\"]?(linux-cachyos-([0-9]+\.[0-9]+\.[0-9]+-[0-9]+)[^\'\">]*\.pkg\.tar\.zst)', html)
-h_matches = re.findall(r'href=[\'\"]?(linux-cachyos-headers-([0-9]+\.[0-9]+\.[0-9]+-[0-9]+)[^\'\">]*\.pkg\.tar\.zst)', html)
+k_matches = re.findall(r'href=[\'\"]?(' + re.escape(k_pref) + r'-([0-9]+\.[0-9]+\.[0-9]+-[0-9]+)[^\'\">]*\.pkg\.tar\.zst)', html)
+h_matches = re.findall(r'href=[\'\"]?(' + re.escape(h_pref) + r'-([0-9]+\.[0-9]+\.[0-9]+-[0-9]+)[^\'\">]*\.pkg\.tar\.zst)', html)
+nv_matches = re.findall(r'href=[\'\"]?(' + re.escape(nv_pref) + r'-([0-9]+\.[0-9]+\.[0-9]+-[0-9]+)[^\'\">]*\.pkg\.tar\.zst)', html)
 
 if not k_matches or not h_matches:
-    print('NONE NONE NONE')
+    print('NONE NONE NONE NONE')
     sys.exit(0)
 
 def parse_ver_key(v_str):
@@ -159,16 +245,108 @@ latest_ver = available_versions[0]
 k_pkg = next(m[0] for m in k_matches if m[1] == latest_ver)
 h_pkg = next(m[0] for m in h_matches if m[1] == latest_ver)
 
-print(f'{latest_ver} {repo_url}{k_pkg} {repo_url}{h_pkg}')
-" 2>/dev/null || echo "NONE NONE NONE")
+nv_url = 'NONE'
+if nv_matches:
+    try:
+        nv_pkg = next(m[0] for m in nv_matches if m[1] == latest_ver)
+        nv_url = f'{repo_url}{nv_pkg}'
+    except StopIteration:
+        pass
 
-        if [ "${result}" != "NONE NONE NONE" ] && [ -n "${result}" ]; then
+print(f'{latest_ver} {repo_url}{k_pkg} {repo_url}{h_pkg} {nv_url}')
+" 2>/dev/null || echo "NONE NONE NONE NONE")
+
+        if [ "${result}" != "NONE NONE NONE NONE" ] && [ -n "${result}" ]; then
             echo "${result}"
             return 0
         fi
     done
 
-    echo "NONE NONE NONE"
+    echo "NONE NONE NONE NONE"
+}
+
+check_latest_cachyos_upstream() {
+    check_cachyos_upstream_flavor "standard"
+}
+
+deploy_cachyos_kernel_flavor() {
+    local flavor="$1"
+    validate_privileges
+    probe_gpu_hardware
+
+    log_info "Fetching latest ${flavor} CachyOS kernel metadata from upstream..."
+    local latest_ver k_url h_url nv_url
+    read -r latest_ver k_url h_url nv_url <<< "$(check_cachyos_upstream_flavor "${flavor}" || echo "NONE NONE NONE NONE")"
+
+    if [ "${latest_ver}" = "NONE" ] || [ -z "${k_url}" ]; then
+        log_error "Could not resolve CachyOS ${flavor} kernel from mirrors."
+        return 1
+    fi
+
+    log_info "Deploying CachyOS ${flavor} kernel (v${latest_ver})..."
+    deploy_cachyos_kernel_packages "${latest_ver}" "${k_url}" "${h_url}" "${flavor}" "${nv_url}"
+    if command -v purge_old_cachyos_kernels >/dev/null 2>&1; then
+        purge_old_cachyos_kernels
+    fi
+}
+
+cachyos_kernel_picker_interactive() {
+    while true; do
+        local st_ver bo_ver lto_ver
+        st_ver=$(get_installed_cachyos_flavor_version "standard")
+        bo_ver=$(get_installed_cachyos_flavor_version "bore")
+        lto_ver=$(get_installed_cachyos_flavor_version "lto")
+
+        local st_tag="[NOT INSTALLED]"
+        local bo_tag="[NOT INSTALLED]"
+        local lto_tag="[NOT INSTALLED]"
+        [ "${st_ver}" != "NONE" ] && st_tag="[INSTALLED: ${st_ver}]"
+        [ "${bo_ver}" != "NONE" ] && bo_tag="[INSTALLED: ${bo_ver}]"
+        [ "${lto_ver}" != "NONE" ] && lto_tag="[INSTALLED: ${lto_ver}]"
+
+        echo ""
+        echo -e "${CYAN}============================================================${RESET}"
+        echo -e "${YELLOW}${BOLD}$(_ CACHY_PICKER_TITLE)${RESET}"
+        echo -e "${CYAN}============================================================${RESET}"
+        echo -e "  1. \033[1;32mlinux-cachyos\033[0m ${st_tag}"
+        echo -e "     $(_ CACHY_FLAVOR_STANDARD)"
+        echo -e "  2. \033[1;32mlinux-cachyos-bore\033[0m ${bo_tag}"
+        echo -e "     $(_ CACHY_FLAVOR_BORE)"
+        echo -e "  3. \033[1;32mlinux-cachyos-bore-lto\033[0m ${lto_tag}"
+        echo -e "     $(_ CACHY_FLAVOR_LTO)"
+        echo -e "  4. $(_ CACHY_PICKER_EXIT | sed -E 's/^[0-9]+\.\s*//')"
+        echo ""
+        echo -n "$(_ SELECT_OPERATION_RANGE range="1-4") "
+        read -r pchoice || pchoice="4"
+
+        case "${pchoice}" in
+            1)
+                echo ""
+                deploy_cachyos_kernel_flavor "standard"
+                echo ""
+                read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                ;;
+            2)
+                echo ""
+                deploy_cachyos_kernel_flavor "bore"
+                echo ""
+                read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                ;;
+            3)
+                echo ""
+                deploy_cachyos_kernel_flavor "lto"
+                echo ""
+                read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                ;;
+            4)
+                return 0
+                ;;
+            *)
+                echo -e "\n${YELLOW}$(_ INVALID_SELECTION)${RESET}"
+                sleep 1
+                ;;
+        esac
+    done
 }
 
 # --- [ ROOT FILESYSTEM & DEVICE RESOLUTION ] ---
@@ -294,16 +472,24 @@ deploy_cachyos_kernel_packages() {
     local ver="$1"
     local k_url="$2"
     local h_url="$3"
+    local flavor="${4:-standard}"
+    local nv_url="${5:-NONE}"
     validate_privileges
+    probe_gpu_hardware
 
     local dest_dir="/var/cache/slacky-update/kernel"
     sudo mkdir -p "${dest_dir}"
-    local k_file="${dest_dir}/linux-cachyos-${ver}.pkg.tar.zst"
-    local h_file="${dest_dir}/linux-cachyos-headers-${ver}.pkg.tar.zst"
 
-    log_info "Downloading kernel package (${ver})..."
+    local k_filename h_filename
+    k_filename=$(basename "${k_url}")
+    h_filename=$(basename "${h_url}")
+
+    local k_file="${dest_dir}/${k_filename}"
+    local h_file="${dest_dir}/${h_filename}"
+
+    log_info "Downloading kernel package (${k_filename})..."
     sudo curl -sSL -o "${k_file}" "${k_url}"
-    log_info "Downloading kernel headers package (${ver})..."
+    log_info "Downloading kernel headers package (${h_filename})..."
     sudo curl -sSL -o "${h_file}" "${h_url}"
 
     log_info "Extracting kernel package to system root..."
@@ -312,16 +498,28 @@ deploy_cachyos_kernel_packages() {
     log_info "Extracting kernel headers package to system root..."
     sudo tar --zstd -xf "${h_file}" -C /
 
-    local kver_full="${ver}-cachyos"
-
-    if [ -d "/usr/lib/modules" ] && [ ! -d "/lib/modules/${kver_full}" ]; then
-        if [ -d "/usr/lib/modules/${kver_full}" ]; then
-            sudo mkdir -p /lib/modules
-            sudo ln -sf "/usr/lib/modules/${kver_full}" "/lib/modules/${kver_full}"
+    local kver_full=""
+    if [ "${flavor}" = "bore" ]; then
+        kver_full="${ver}-cachyos-bore"
+    elif [ "${flavor}" = "lto" ]; then
+        kver_full="${ver}-cachyos-bore-lto"
+        if [ ! -d "/usr/lib/modules/${kver_full}" ] && [ -d "/usr/lib/modules/${ver}-cachyos-lto" ]; then
+            kver_full="${ver}-cachyos-lto"
         fi
+    else
+        kver_full="${ver}-cachyos"
     fi
 
-    if [ -f "/boot/vmlinuz-linux-cachyos" ]; then
+    if [ -d "/usr/lib/modules/${kver_full}" ] && [ ! -d "/lib/modules/${kver_full}" ]; then
+        sudo mkdir -p /lib/modules
+        sudo ln -sf "/usr/lib/modules/${kver_full}" "/lib/modules/${kver_full}"
+    fi
+
+    if [ -f "/boot/vmlinuz-linux-cachyos-bore-lto" ] && [ "${flavor}" = "lto" ]; then
+        sudo cp -f "/boot/vmlinuz-linux-cachyos-bore-lto" "/boot/vmlinuz-${kver_full}"
+    elif [ -f "/boot/vmlinuz-linux-cachyos-bore" ] && [ "${flavor}" = "bore" ]; then
+        sudo cp -f "/boot/vmlinuz-linux-cachyos-bore" "/boot/vmlinuz-${kver_full}"
+    elif [ -f "/boot/vmlinuz-linux-cachyos" ] && [ "${flavor}" = "standard" ]; then
         sudo cp -f "/boot/vmlinuz-linux-cachyos" "/boot/vmlinuz-${kver_full}"
     elif [ -f "/usr/lib/modules/${kver_full}/vmlinuz" ]; then
         sudo cp -f "/usr/lib/modules/${kver_full}/vmlinuz" "/boot/vmlinuz-${kver_full}"
@@ -336,14 +534,39 @@ deploy_cachyos_kernel_packages() {
         sudo ln -sf "/usr/lib/modules/${kver_full}/build" "/lib/modules/${kver_full}/source"
     fi
 
+    # Fetch and deploy matching CachyOS NVIDIA Open driver package if on modern NVIDIA GPU
+    if [ "${HAS_NVIDIA}" = "true" ]; then
+        local gpu_arch="MODERN"
+        if command -v detect_nvidia_gpu >/dev/null 2>&1; then
+            gpu_arch=$(detect_nvidia_gpu)
+        fi
+
+        if [ "${gpu_arch}" = "PASCAL" ]; then
+            log_info "Pascal GPU architecture detected (GTX 10-series / legacy):"
+            log_info "NVIDIA Open modules are unsupported on pre-Turing hardware. Routing to proprietary DKMS module builder..."
+        elif [ "${nv_url}" != "NONE" ] && [ -n "${nv_url}" ]; then
+            local nv_filename
+            nv_filename=$(basename "${nv_url}")
+            local nv_file="${dest_dir}/${nv_filename}"
+            log_info "Modern NVIDIA GPU detected. Downloading prebuilt matching CachyOS NVIDIA Open driver (${nv_filename})..."
+            sudo curl -sSL -o "${nv_file}" "${nv_url}"
+            log_info "Extracting NVIDIA driver package to system root..."
+            sudo tar --zstd -xf "${nv_file}" -C /
+        fi
+    fi
+
     local depmod_bin
     depmod_bin=$(command -v depmod 2>/dev/null || echo "/sbin/depmod")
     sudo "${depmod_bin}" -a "${kver_full}"
     log_success "Kernel deployed: ${kver_full}"
 
-    # 1. Build DKMS out-of-tree modules (NVIDIA) first so they exist in /lib/modules before initramfs & signing
-    if command -v build_nvidia_modules >/dev/null 2>&1; then
-        build_nvidia_modules "${kver_full}"
+    # 1. Build DKMS out-of-tree modules (NVIDIA) if not already provided by prebuilt packages
+    if [ ! -d "/usr/lib/modules/${kver_full}/kernel/drivers/video" ] && [ ! -d "/lib/modules/${kver_full}/kernel/drivers/video" ]; then
+        if command -v build_nvidia_modules >/dev/null 2>&1; then
+            build_nvidia_modules "${kver_full}"
+        fi
+    else
+        log_info "Matching CachyOS NVIDIA driver modules active in kernel tree."
     fi
 
     # 2. Generate initramfs image (Dracut / mkinitrd)

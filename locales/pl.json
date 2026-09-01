@@ -93,5 +93,14 @@
   "REBOOT_RECOMMENDED_DESC": "Zaktualizowano biblioteki systemowe, pulpit lub aktywne jądro.",
   "ALL_DONE_CLOSE_PROMPT": "Aktualizacja systemu zakończona.",
   "PRESS_ENTER_TO_CLOSE": "Naciśnij [ENTER], aby zamknąć...",
-  "SUPPORT_KOFI": "Wesprzyj twórcę (Ko-Fi)"
+  "SUPPORT_KOFI": "Wesprzyj twórcę (Ko-Fi)",
+  "PROMPT_SELF_UPDATE": "Dostępna jest nowa wersja Slacky-Update. Czy chcesz zaktualizować teraz? [T/n] ",
+  "CACHY_MENU_UPGRADE_INSTALLED": "1. Sprawdź i zaktualizuj zainstalowane jądra CachyOS",
+  "CACHY_MENU_PICKER": "2. Selektor jąder CachyOS (Standard, BORE, BORE-LTO)",
+  "CACHY_MENU_REBUILD_ACTIVE": "3. Przebuduj initramfs i podpisz aktywne jądro ({active})",
+  "CACHY_PICKER_TITLE": "Selektor jąder CachyOS",
+  "CACHY_FLAVOR_STANDARD": "Standardowe zoptymalizowane jądro CachyOS",
+  "CACHY_FLAVOR_BORE": "Planista BORE o niskim opóźnieniu do gier",
+  "CACHY_FLAVOR_LTO": "Jądro zoptymalizowane LTO dla maksymalnej wydajności",
+  "CACHY_PICKER_EXIT": "4. Powrót do menu"
 }

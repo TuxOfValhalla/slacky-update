@@ -93,5 +93,14 @@
   "REBOOT_RECOMMENDED_DESC": "Vuogádatgirjerádjosat, čállinbeavdi dahje aktiiva váibmos leat ođasmahttojuvvon.",
   "ALL_DONE_CLOSE_PROMPT": "Vuogádatođasmahttin lea gearggus.",
   "PRESS_ENTER_TO_CLOSE": "Covkkal [ENTER] giddejeddjiid...",
-  "SUPPORT_KOFI": "Doarjjut ovddideaddji (Ko-Fi)"
+  "SUPPORT_KOFI": "Doarjjut ovddideaddji (Ko-Fi)",
+  "PROMPT_SELF_UPDATE": "Ođđa Slacky-Update-veršuvdna gávdno. Háliidat go ođasmahttit dál? [J/e] ",
+  "CACHY_MENU_UPGRADE_INSTALLED": "1. Dárkkis ja ođasmahte sajáiduhttojuvvon CachyOS-váibmogiid",
+  "CACHY_MENU_PICKER": "2. CachyOS Váibmosválljejeaddji (Standard, BORE, BORE-LTO)",
+  "CACHY_MENU_REBUILD_ACTIVE": "3. Hukse initramfs ja vuolláičále aktiiva váibmosa ({active})",
+  "CACHY_PICKER_TITLE": "CachyOS Váibmosválljejeaddji",
+  "CACHY_FLAVOR_STANDARD": "Standard CachyOS heivehuvvon váibmos",
+  "CACHY_FLAVOR_BORE": "BORE plánejeaddji speallamii",
+  "CACHY_FLAVOR_LTO": "LTO-heivehuvvon váibmos",
+  "CACHY_PICKER_EXIT": "4. Máhccat fallui"
 }

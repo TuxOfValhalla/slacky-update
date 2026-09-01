@@ -49,6 +49,63 @@ log_error() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] [ERROR] ${msg}" >> "${LOG_FILE}" 2>/dev/null || true
 }
 
+check_slacky_update_self_update() {
+    local current_ver="${1:-0.6.0}"
+    local rel_json
+    rel_json=$(curl -sSL -m 2 -H "User-Agent: slacky-update" "https://api.github.com/repos/TuxOfValhalla/slacky-update/releases/latest" 2>/dev/null || true)
+    [ -n "${rel_json}" ] || return 0
+
+    local update_info
+    update_info=$(python3 -c "
+import json, sys, re
+
+def parse_v(v_str):
+    return [int(x) for x in re.findall(r'\d+', v_str)]
+
+try:
+    data = json.loads('''${rel_json}''')
+    tag = data.get('tag_name', '').lstrip('v')
+    cur = '${current_ver}'.lstrip('v')
+    if tag and parse_v(tag) > parse_v(cur):
+        dl_url = ''
+        for asset in data.get('assets', []):
+            name = asset.get('name', '')
+            if name.endswith('.txz') or name.endswith('.tgz'):
+                dl_url = asset.get('browser_download_url', '')
+                break
+        if not dl_url:
+            dl_url = data.get('tarball_url', '')
+        print(f'{tag}|{dl_url}')
+except Exception:
+    pass
+" 2>/dev/null || true)
+
+    [ -n "${update_info}" ] || return 0
+
+    local new_tag dl_url
+    IFS='|' read -r new_tag dl_url <<< "${update_info}"
+
+    echo ""
+    echo -e "${YELLOW}${BOLD}⚡ New Slacky-Update Release Available: v${new_tag} (Current: v${current_ver})${RESET}"
+    read -r -p "$(_ PROMPT_SELF_UPDATE)" reply_update
+    reply_update=${reply_update:-Y}
+    if [[ "$reply_update" =~ ^[YyJjSsOo]$ ]]; then
+        validate_privileges
+        log_info "Downloading Slacky-Update v${new_tag} from GitHub..."
+        local tmp_pkg="/tmp/slacky-update-${new_tag}.txz"
+        if [[ "${dl_url}" =~ \.txz$|\.tgz$ ]]; then
+            sudo curl -sSL -o "${tmp_pkg}" "${dl_url}"
+            if [ -f "${tmp_pkg}" ] && [ -s "${tmp_pkg}" ]; then
+                sudo /sbin/upgradepkg --reinstall "${tmp_pkg}"
+                sudo rm -f "${tmp_pkg}"
+                log_success "Slacky-Update upgraded to v${new_tag}!"
+                command -v slacky-update-tray >/dev/null 2>&1 && slacky-update-tray --restart 2>/dev/null || true
+                exec /usr/local/bin/slacky-update "$@"
+            fi
+        fi
+    fi
+}
+
 init_storage() {
     if [ ! -d "${CACHE_DIR}" ]; then
         mkdir -p "${CACHE_DIR}" 2>/dev/null || sudo mkdir -p "${CACHE_DIR}" 2>/dev/null || true

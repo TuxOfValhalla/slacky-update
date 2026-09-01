@@ -141,23 +141,29 @@ PYSLACK
     # shellcheck source=/dev/null
     source "${APP_DIR}/mod_kernel.sh" 2>/dev/null || true
 
-    if command -v check_latest_cachyos_upstream >/dev/null 2>&1; then
-        read -r LATEST_VER K_URL H_URL <<< "$(check_latest_cachyos_upstream || echo "NONE NONE NONE")"
+    if command -v get_installed_cachyos_flavors >/dev/null 2>&1; then
+        local installed_flavors
+        installed_flavors=$(get_installed_cachyos_flavors 2>/dev/null || echo "")
 
-        INSTALLED_VER=$(get_newest_installed_cachyos_version 2>/dev/null || echo "NONE")
-        if [ "${INSTALLED_VER}" = "NONE" ]; then
-            INSTALLED_VER="${ACTIVE_KVER}"
-        fi
+        if [ -n "${installed_flavors}" ]; then
+            for flv in ${installed_flavors}; do
+                local cur_flv_ver latest_flv_ver k_url h_url
+                cur_flv_ver=$(get_installed_cachyos_flavor_version "${flv}" 2>/dev/null || echo "NONE")
+                read -r latest_flv_ver k_url h_url <<< "$(check_cachyos_upstream_flavor "${flv}" || echo "NONE NONE NONE")"
 
-        if [ "${LATEST_VER}" != "NONE" ] && [ -n "${LATEST_VER}" ]; then
-            IS_GREATER=$(compare_versions_strictly_greater "${LATEST_VER}" "${INSTALLED_VER}")
-            if [ "${IS_GREATER}" = "true" ]; then
-                CACHY_UPDATES+=("linux-cachyos-${LATEST_VER} (Installed: ${INSTALLED_VER}, Active: ${ACTIVE_KVER})")
-            fi
+                if [ "${latest_flv_ver}" != "NONE" ] && [ -n "${latest_flv_ver}" ] && [ "${cur_flv_ver}" != "NONE" ]; then
+                    local is_flv_newer
+                    is_flv_newer=$(compare_versions_strictly_greater "${latest_flv_ver}" "${cur_flv_ver}" 2>/dev/null || echo "false")
+                    if [ "${is_flv_newer}" = "true" ]; then
+                        local flv_name="linux-cachyos"
+                        [ "${flv}" = "bore" ] && flv_name="linux-cachyos-bore"
+                        [ "${flv}" = "lto" ] && flv_name="linux-cachyos-bore-lto"
+                        CACHY_UPDATES+=("${flv_name}-${latest_flv_ver} (Installed: ${cur_flv_ver})")
+                    fi
+                fi
+            done
             printf "%s\n" "${CACHY_UPDATES[@]:-}" > "${TMP_DIR}/cachy_updates"
             echo "SUCCESS" > "${TMP_DIR}/cachy_status"
-        else
-            echo "FAILED" > "${TMP_DIR}/cachy_status"
         fi
     fi
 ) &

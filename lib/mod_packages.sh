@@ -29,7 +29,7 @@ update_slackware_core() {
     }
 
     log_info "Installing newly added distribution packages (install-new)..."
-    sudo "${slackpkg_bin}" install-new || {
+    sudo "${slackpkg_bin}" -postinst=off install-new || {
         log_warn "slackpkg install-new completed."
     }
 
@@ -42,7 +42,7 @@ update_slackware_core() {
         local tools_before tools_after
         tools_before=$(get_slackpkg_tools_snapshot)
 
-        sudo "${slackpkg_bin}" upgrade-all || {
+        sudo "${slackpkg_bin}" -postinst=off upgrade-all || {
             log_warn "slackpkg upgrade-all completed pass ${current_pass}."
         }
 

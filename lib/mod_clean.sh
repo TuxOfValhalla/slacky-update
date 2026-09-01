@@ -6,11 +6,21 @@ set -euo pipefail
 purge_old_cachyos_kernels() {
     validate_privileges
 
-    log_info "Auditing installed CachyOS kernels for retention policy (keep 2 newest)..."
+    log_info "Auditing installed CachyOS kernels for retention policy (keep 2 newest per flavor)..."
 
     local remove_list
     remove_list=$(python3 -c "
 import os, re
+from collections import defaultdict
+
+def get_flavor(k_str):
+    if '-cachyos-bore-lto' in k_str or '-cachyos-lto' in k_str:
+        return 'lto'
+    elif '-cachyos-bore' in k_str:
+        return 'bore'
+    elif '-cachyos' in k_str:
+        return 'standard'
+    return 'other'
 
 def parse_ver(v_str):
     return [int(x) for x in re.findall(r'\d+', v_str.split('-cachyos')[0])]
@@ -27,14 +37,19 @@ if os.path.exists('/lib/modules'):
             cachy_kernels.add(d)
 
 active = os.uname().release
-sorted_k = sorted(list(cachy_kernels), key=parse_ver, reverse=True)
+by_flavor = defaultdict(list)
+for k in cachy_kernels:
+    by_flavor[get_flavor(k)].append(k)
 
-keep_count = 2
-to_keep = set(sorted_k[:keep_count])
+to_keep = set()
 if active in cachy_kernels:
     to_keep.add(active)
 
-to_remove = [k for k in sorted_k if k not in to_keep]
+for flv, klist in by_flavor.items():
+    sorted_k = sorted(klist, key=parse_ver, reverse=True)
+    to_keep.update(sorted_k[:2])
+
+to_remove = [k for k in cachy_kernels if k not in to_keep]
 for k in to_remove:
     print(k)
 " 2>/dev/null || true)

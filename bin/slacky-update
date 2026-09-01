@@ -3,7 +3,7 @@
 
 set -euo pipefail
 
-CURRENT_VERSION="0.5.0"
+CURRENT_VERSION="0.6.0"
 
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 if [ -d "${SCRIPT_DIR}/../lib" ] && [ -f "${SCRIPT_DIR}/../lib/common.sh" ]; then
@@ -223,6 +223,22 @@ run_full_update() {
     echo -e "\n${CYAN}$(_ REFRESHING_CACHE)${RESET}"
     "${CHECK_BIN}" 2>/dev/null || true
 
+    python3 -c "
+import os, json, time
+kofi_file = os.path.expanduser('~/.config/slacky-update/kofi.json')
+try:
+    os.makedirs(os.path.dirname(kofi_file), exist_ok=True)
+    d = {}
+    if os.path.exists(kofi_file):
+        with open(kofi_file, 'r', encoding='utf-8') as f:
+            d = json.load(f)
+    d['last_update_ts'] = time.time()
+    with open(kofi_file, 'w', encoding='utf-8') as f:
+        json.dump(d, f)
+except Exception:
+    pass
+" 2>/dev/null || true
+
     echo -e "\n${GREEN}${BOLD}$(_ UPGRADE_COMPLETE_SYSTEM)${RESET}"
 
     prompt_reboot_or_close "${full_snap_before}" "${full_snap_after}"
@@ -230,83 +246,107 @@ run_full_update() {
 
 # --- [ CACHYOS KERNEL MANAGEMENT ROUTINE ] ---
 manage_cachyos_kernel_interactive() {
-    log_info "Inspecting CachyOS kernel upstream repository..."
-    
     local tier
     tier=$(detect_cpu_tier)
     if [ "${tier}" = "znver4" ]; then
-        log_info "CPU Architecture Tier: x86_64_v4 (znver4)"
+        log_info "CPU Architecture Tier: x86_64_v4 (znver4 - AMD Zen 4/5 Optimized)"
+    elif [ "${tier}" = "v4" ]; then
+        log_info "CPU Architecture Tier: x86_64_v4 (Intel/Generic AVX-512 Optimized)"
+    elif [ "${tier}" = "v3" ]; then
+        log_info "CPU Architecture Tier: x86_64_v3 (AVX2/FMA Optimized)"
     else
-        log_info "CPU Architecture Tier: x86_64_${tier}"
+        log_info "CPU Architecture Tier: x86_64 (Generic Baseline)"
     fi
 
-    local installed
-    installed=$(is_cachyos_kernel_installed)
-
-    read -r latest_ver k_url h_url <<< "$(check_latest_cachyos_upstream || echo "NONE NONE NONE")"
     local active_kver
     active_kver=$(uname -r)
-    local installed_kver
-    installed_kver=$(get_newest_installed_cachyos_version 2>/dev/null || echo "NONE")
-    if [ "${installed_kver}" = "NONE" ]; then
-        installed_kver="${active_kver}"
-    fi
 
-    if [ "${installed}" = "false" ]; then
-        echo -e "\n${YELLOW}$(_ KERNEL_NOT_INSTALLED)${RESET}"
-        if [ "${latest_ver}" != "NONE" ] && [ -n "${latest_ver}" ]; then
-            echo -e "${GREEN}Latest upstream release available: ${latest_ver}${RESET}"
-            read -r -p "$(_ PROMPT_INSTALL_CACHY_KERNEL)" reply_install
-            reply_install=${reply_install:-Y}
-            if [[ "$reply_install" =~ ^[YyJjSsOo]$ ]]; then
-                validate_privileges
-                deploy_cachyos_kernel_packages "${latest_ver}" "${k_url}" "${h_url}"
-                if command -v purge_old_cachyos_kernels >/dev/null 2>&1; then
-                    purge_old_cachyos_kernels
-                fi
-                return 0
-            fi
-        fi
-        return 0
-    fi
+    local installed_flavors
+    installed_flavors=$(get_installed_cachyos_flavors)
 
-    if [ "${latest_ver}" != "NONE" ] && [ -n "${latest_ver}" ]; then
-        local is_newer
-        is_newer=$(compare_versions_strictly_greater "${latest_ver}" "${installed_kver}")
-
-        if [ "${is_newer}" = "true" ]; then
-            echo -e "\n${GREEN}${BOLD}New CachyOS Kernel Available: ${latest_ver} (Installed: ${installed_kver}, Active: ${active_kver})${RESET}"
-            read -r -p "$(_ PROMPT_INSTALL_NEW_KERNEL version="${latest_ver}")" reply
-            reply=${reply:-Y}
-            if [[ "$reply" =~ ^[YyJjSsOo]$ ]]; then
-                validate_privileges
-                deploy_cachyos_kernel_packages "${latest_ver}" "${k_url}" "${h_url}"
-                if command -v purge_old_cachyos_kernels >/dev/null 2>&1; then
-                    purge_old_cachyos_kernels
-                fi
-                return 0
-            fi
+    while true; do
+        echo ""
+        echo -e "${CYAN}============================================================${RESET}"
+        echo -e "${YELLOW}${BOLD}$(_ MENU_KERNEL)${RESET}"
+        echo -e "${CYAN}============================================================${RESET}"
+        
+        if [ -n "${installed_flavors}" ]; then
+            echo -e "${BOLD}Installed CachyOS Kernel Flavors:${RESET}"
+            for flv in ${installed_flavors}; do
+                local cur_ver
+                cur_ver=$(get_installed_cachyos_flavor_version "${flv}")
+                echo -e "  • \033[1;32m${flv}\033[0m: v${cur_ver}"
+            done
         else
-            if [ "${installed_kver}" = "${active_kver}" ] || [ "${installed_kver}" = "${active_kver%-cachyos}" ]; then
-                log_info "Active kernel (${active_kver}) is up to date with upstream (${latest_ver})."
-            else
-                log_info "Installed kernel (${installed_kver}-cachyos) is up to date with upstream (${latest_ver}). (Active booted: ${active_kver})"
-            fi
+            echo -e "${YELLOW}$(_ KERNEL_NOT_INSTALLED)${RESET}"
         fi
-    else
-        log_warn "Unable to fetch metadata from CachyOS mirror."
-    fi
 
-    echo ""
-    read -r -p "$(_ PROMPT_REBUILD_INITRD_ACTIVE active="${active_kver}")" rebuild_reply
-    rebuild_reply=${rebuild_reply:-N}
-    if [[ "$rebuild_reply" =~ ^[YyJjSsOo]$ ]]; then
-        validate_privileges
-        generate_kernel_initramfs "${active_kver}"
-        build_nvidia_modules "${active_kver}"
-        enforce_secure_boot_armor
-        sync_bootloader_configuration "${active_kver}"
-    fi
+        echo ""
+        echo -e "${BOLD}Actions:${RESET}"
+        echo -e "  1. $(_ CACHY_MENU_UPGRADE_INSTALLED | sed -E 's/^[0-9]+\.\s*//')"
+        echo -e "  2. $(_ CACHY_MENU_PICKER | sed -E 's/^[0-9]+\.\s*//')"
+        echo -e "  3. $(_ CACHY_MENU_REBUILD_ACTIVE active="${active_kver}" | sed -E 's/^[0-9]+\.\s*//')"
+        echo -e "  4. $(_ MOK_OPTION_RETURN | sed -E 's/^[0-9]+\.\s*//')"
+        echo ""
+        echo -n "$(_ SELECT_OPERATION_RANGE range="1-4") "
+        read -r kchoice || kchoice="4"
+
+        case "${kchoice}" in
+            1)
+                echo ""
+                if [ -z "${installed_flavors}" ]; then
+                    log_warn "No CachyOS kernels currently installed. Use CachyOS Kernel Picker to install your first flavor!"
+                    cachyos_kernel_picker_interactive
+                    installed_flavors=$(get_installed_cachyos_flavors)
+                else
+                    log_info "Scanning for upstream updates across installed CachyOS flavors..."
+                    local updated_any=0
+                    for flv in ${installed_flavors}; do
+                        local cur_ver latest_ver k_url h_url
+                        cur_ver=$(get_installed_cachyos_flavor_version "${flv}")
+                        read -r latest_ver k_url h_url <<< "$(check_cachyos_upstream_flavor "${flv}" || echo "NONE NONE NONE")"
+                        if [ "${latest_ver}" != "NONE" ] && [ -n "${latest_ver}" ] && [ "${cur_ver}" != "NONE" ]; then
+                            if [ "$(compare_versions_strictly_greater "${latest_ver}" "${cur_ver}")" = "true" ]; then
+                                echo -e "\n${GREEN}${BOLD}Upgrade available for ${flv}: v${cur_ver} -> v${latest_ver}${RESET}"
+                                read -r -p "$(_ PROMPT_INSTALL_NEW_KERNEL version="${latest_ver}")" reply_up
+                                reply_up=${reply_up:-Y}
+                                if [[ "$reply_up" =~ ^[YyJjSsOo]$ ]]; then
+                                    deploy_cachyos_kernel_flavor "${flv}"
+                                    updated_any=1
+                                fi
+                            else
+                                log_info "Flavor '${flv}' (v${cur_ver}) is up to date with upstream."
+                            fi
+                        fi
+                    done
+                fi
+                echo ""
+                read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                ;;
+            2)
+                echo ""
+                cachyos_kernel_picker_interactive
+                installed_flavors=$(get_installed_cachyos_flavors)
+                ;;
+            3)
+                echo ""
+                validate_privileges
+                generate_kernel_initramfs "${active_kver}"
+                build_nvidia_modules "${active_kver}"
+                enforce_secure_boot_armor
+                sync_bootloader_configuration "${active_kver}"
+                echo ""
+                read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                ;;
+            4)
+                return 0
+                ;;
+            *)
+                echo -e "\n${YELLOW}$(_ INVALID_SELECTION)${RESET}"
+                sleep 1
+                ;;
+        esac
+    done
 }
 
 # --- [ NVIDIA DRIVER MANAGEMENT ROUTINE ] ---
@@ -361,6 +401,7 @@ manage_nvidia_interactive() {
 interactive_menu() {
     INTERACTIVE_SESSION=1
     probe_gpu_hardware
+    check_slacky_update_self_update "${CURRENT_VERSION}"
 
     while true; do
         echo ""

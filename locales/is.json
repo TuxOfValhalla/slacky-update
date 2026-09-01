@@ -93,5 +93,14 @@
   "REBOOT_RECOMMENDED_DESC": "Grunnskrár, skjáborð eða virkur kjarni voru uppfærðir.",
   "ALL_DONE_CLOSE_PROMPT": "Kerfisuppfærslu lokið.",
   "PRESS_ENTER_TO_CLOSE": "Ýttu á [ENTER] til að loka...",
-  "SUPPORT_KOFI": "Styðja forritarann (Ko-Fi)"
+  "SUPPORT_KOFI": "Styðja forritarann (Ko-Fi)",
+  "PROMPT_SELF_UPDATE": "Ný útgáfa af Slacky-Update er í boði. Viltu uppfæra núna? [J/n] ",
+  "CACHY_MENU_UPGRADE_INSTALLED": "1. Athuga og uppfæra uppsetta CachyOS-kjarna",
+  "CACHY_MENU_PICKER": "2. CachyOS Kjarnaval (Standard, BORE, BORE-LTO)",
+  "CACHY_MENU_REBUILD_ACTIVE": "3. Endurbyggja initramfs og undirrita virkan kjarna ({active})",
+  "CACHY_PICKER_TITLE": "CachyOS Kjarnaval",
+  "CACHY_FLAVOR_STANDARD": "Staðlaður CachyOS fínstilltur kjarni",
+  "CACHY_FLAVOR_BORE": "BORE tímaáætlun fyrir lága biðtíma í leikjum",
+  "CACHY_FLAVOR_LTO": "LTO-fínstilltur kjarni fyrir hámarksafköst",
+  "CACHY_PICKER_EXIT": "4. Aftur í valmynd"
 }

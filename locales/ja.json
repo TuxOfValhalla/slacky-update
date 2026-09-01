@@ -93,5 +93,14 @@
   "REBOOT_RECOMMENDED_DESC": "コアライブラリ、デスクトップ、またはアクティブなカーネルが更新されました。",
   "ALL_DONE_CLOSE_PROMPT": "システムアップデートが完了しました。",
   "PRESS_ENTER_TO_CLOSE": "[ENTER] キーを押して閉じてください...",
-  "SUPPORT_KOFI": "開発者を支援 (Ko-Fi)"
+  "SUPPORT_KOFI": "開発者を支援 (Ko-Fi)",
+  "PROMPT_SELF_UPDATE": "Slacky-Update の新しいバージョンが利用可能です。今すぐ更新しますか？ [Y/n] ",
+  "CACHY_MENU_UPGRADE_INSTALLED": "1. インストール済み CachyOS カーネルの確認と更新",
+  "CACHY_MENU_PICKER": "2. CachyOS カーネルセレクター (Standard, BORE, BORE-LTO)",
+  "CACHY_MENU_REBUILD_ACTIVE": "3. initramfs の再構築とアクティブカーネルの署名 ({active})",
+  "CACHY_PICKER_TITLE": "CachyOS カーネルセレクター",
+  "CACHY_FLAVOR_STANDARD": "汎用最適化された標準 CachyOS カーネル",
+  "CACHY_FLAVOR_BORE": "低遅延ゲーム向け BORE スケジューラーカーネル",
+  "CACHY_FLAVOR_LTO": "最大スループット向け LTO 最適化カーネル",
+  "CACHY_PICKER_EXIT": "4. メニューに戻る"
 }

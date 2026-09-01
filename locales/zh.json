@@ -93,5 +93,14 @@
   "REBOOT_RECOMMENDED_DESC": "核心库、桌面环境或当前运行的内核已更新。",
   "ALL_DONE_CLOSE_PROMPT": "系统更新已成功完成。",
   "PRESS_ENTER_TO_CLOSE": "按 [ENTER] 键关闭此窗口...",
-  "SUPPORT_KOFI": "赞助开发者 (Ko-Fi)"
+  "SUPPORT_KOFI": "赞助开发者 (Ko-Fi)",
+  "PROMPT_SELF_UPDATE": "Slacky-Update 有新版本可用。是否立即更新？ [Y/n] ",
+  "CACHY_MENU_UPGRADE_INSTALLED": "1. 检查并升级已安装的 CachyOS 内核",
+  "CACHY_MENU_PICKER": "2. CachyOS 内核选择器 (Standard, BORE, BORE-LTO)",
+  "CACHY_MENU_REBUILD_ACTIVE": "3. 重建 initramfs 并签名当前内核 ({active})",
+  "CACHY_PICKER_TITLE": "CachyOS 内核选择器",
+  "CACHY_FLAVOR_STANDARD": "标准通用优化 CachyOS 内核",
+  "CACHY_FLAVOR_BORE": "低延迟游戏优化 BORE 调度器内核",
+  "CACHY_FLAVOR_LTO": "针对最大吞吐量优化的 LTO 内核",
+  "CACHY_PICKER_EXIT": "4. 返回菜单"
 }

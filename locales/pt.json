@@ -93,5 +93,14 @@
   "REBOOT_RECOMMENDED_DESC": "Bibliotecas de sistema, desktop ou kernel ativo atualizados.",
   "ALL_DONE_CLOSE_PROMPT": "Atualização do sistema concluída.",
   "PRESS_ENTER_TO_CLOSE": "Pressione [ENTER] para fechar...",
-  "SUPPORT_KOFI": "Apoiar o desenvolvedor (Ko-Fi)"
+  "SUPPORT_KOFI": "Apoiar o desenvolvedor (Ko-Fi)",
+  "PROMPT_SELF_UPDATE": "Uma nova versão do Slacky-Update está disponível. Deseja atualizar agora? [S/n] ",
+  "CACHY_MENU_UPGRADE_INSTALLED": "1. Verificar e atualizar kernels CachyOS instalados",
+  "CACHY_MENU_PICKER": "2. Seletor de Kernel CachyOS (Standard, BORE, BORE-LTO)",
+  "CACHY_MENU_REBUILD_ACTIVE": "3. Reconstruir initramfs e assinar kernel ativo ({active})",
+  "CACHY_PICKER_TITLE": "Seletor de Kernel CachyOS",
+  "CACHY_FLAVOR_STANDARD": "Kernel CachyOS padrão otimizado",
+  "CACHY_FLAVOR_BORE": "Agendador BORE de baixa latência para jogos",
+  "CACHY_FLAVOR_LTO": "Kernel com LTO para máxima taxa de transferência",
+  "CACHY_PICKER_EXIT": "4. Voltar ao menu"
 }

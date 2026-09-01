@@ -6,7 +6,7 @@
 [![Slackware -current](https://img.shields.io/badge/Slackware--current-15.0%2B-blue?style=for-the-badge&logo=slackware&logoColor=white)](http://www.slackware.com/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-green.svg?style=for-the-badge)](LICENSE)
 [![Ko-Fi](https://img.shields.io/badge/Ko--fi-Buy%20Me%20A%20Coffee-ff5f5f?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/tuxofvalhalla)
-[![Language](https://img.shields.io/badge/Locales-22%20Languages%20(94%20Keys)-yellow?style=for-the-badge)](locales/)
+[![Language](https://img.shields.io/badge/Locales-22%20Languages%20(104%20Keys)-yellow?style=for-the-badge)](locales/)
 [![Stack](https://img.shields.io/badge/Stack-Bash%20%7C%20Python3%20%7C%20PyQt5-orange?style=for-the-badge)](bin/)
 
 ---
@@ -14,7 +14,7 @@
 ### *Party on, Wayne! / Party on, Garth!*
 **Slacky-Update** is an all-in-one, high-octane maintenance station and background system monitor engineered specifically for **Slackware Linux (-current / 15.0+)**. 
 
-It bridges the gap between pure Slackware simplicity and modern powerhouse capabilities: automated upstream **CachyOS kernel deployment** with CPU architecture optimization (*znver4 / v4*), interactive **NVIDIA driver branch selection & DKMS compilation**, automated **Dracut initramfs generation**, **1-Click Microsoft-signed UEFI Secure Boot setup**, **silent bootloader self-healing**, **Smart `.new` configuration reconciliation**, **smart reboot evaluation**, **Flatpak GL runtime synchronization**, and intelligent **retention policies** for your bootloader.
+It bridges the gap between pure Slackware simplicity and modern powerhouse capabilities: **CachyOS Kernel Picker** (*Standard, BORE, and BORE-LTO flavors*), automated upstream **CachyOS kernel deployment** with CPU architecture optimization (*znver4 / v4*), interactive **NVIDIA driver branch selection & DKMS compilation**, automated **Dracut initramfs generation**, **1-Click Microsoft-signed UEFI Secure Boot setup**, **silent bootloader self-healing**, **Smart `.new` configuration reconciliation**, **smart reboot evaluation**, **GitHub self-updater**, **Flatpak GL runtime synchronization**, and intelligent **retention policies** for your bootloader.
 
 *Slacky-Update is designed to keep Slackware Linux effortlessly maintained, rock-solid, and 100% ready for high-performance gaming and seamless Windows 11 dual-booting with UEFI Secure Boot permanently enabled—without requiring a PhD in UNIX sysadmin work!*
 
@@ -136,6 +136,8 @@ Slacky-Update features native hardware inspection (`probe_gpu_hardware`) via PCI
 
 ### 3. 🏎️ CachyOS Time Machine (Kernel Engine)
 * **Automatic CPU Tier Detection:** Identifies your CPU microarchitecture (*x86_64_v4 / znver4, x86_64_v3, x86_64_v2*) and pulls high-performance, optimized CachyOS Linux kernel binaries and headers directly from upstream Arch/CachyOS package repositories.
+* **Instant NVIDIA Driver Package Sync:** When deploying a CachyOS kernel on a system with an NVIDIA GPU, Slacky-Update automatically detects your hardware and fetches the corresponding precompiled `linux-cachyos-*-nvidia-open` package directly from upstream repositories—providing lightning-fast, zero-compilation graphics setup ready on first boot!
+* **Hardware Architecture Safeguard:** Intelligently checks GPU capabilities. For legacy hardware like the Pascal architecture (GTX 10-series / 1060/1070/1080), it automatically bypasses `nvidia-open` (which requires Turing+ GSP hardware) and routes directly to the proprietary 580xx branch via DKMS, preventing black screens and ensuring flawless compatibility across GPU generations.
 * **Dual-Kernel Retention:** Safely keeps the **2 newest CachyOS kernels** plus your active running kernel, preventing `/boot` clutter.
 * **Automatic Bootloader Registration:** Links kernels to GRUB (`/boot/grub/grub.cfg`) and Limine bootloader configurations automatically.
 
@@ -162,7 +164,7 @@ Slacky-Update features native hardware inspection (`probe_gpu_hardware`) via PCI
 
 ## 🌍 The Tower of Babel (22 Multi-Lingual Locales)
 
-Slacky-Update includes full internationalization across **22 languages** with **100% key parity (94/94 keys)**.
+Slacky-Update includes full internationalization across **22 languages** with **100% key parity (104/104 keys)**.
 
 Choose between radical **90's pop-culture theme** (*English* and *Norsk Bokmål*) or **dry, corporate, formal tone** across all languages:
 

@@ -93,5 +93,14 @@
   "REBOOT_RECOMMENDED_DESC": "Ydinkirjastot, työpöytä tai aktiivinen ydin päivitettiin.",
   "ALL_DONE_CLOSE_PROMPT": "Järjestelmäpäivitys suoritettu.",
   "PRESS_ENTER_TO_CLOSE": "Paina [ENTER] sulkeaksesi...",
-  "SUPPORT_KOFI": "Tue kehittäjää (Ko-Fi)"
+  "SUPPORT_KOFI": "Tue kehittäjää (Ko-Fi)",
+  "PROMPT_SELF_UPDATE": "Uusi Slacky-Update-versio on saatavilla. Haluatko päivittää nyt? [K/e] ",
+  "CACHY_MENU_UPGRADE_INSTALLED": "1. Tarkista ja päivitä asennetut CachyOS-ytimet",
+  "CACHY_MENU_PICKER": "2. CachyOS-ydinvalitsin (Standard, BORE, BORE-LTO)",
+  "CACHY_MENU_REBUILD_ACTIVE": "3. Rakenna initramfs ja allekirjoita aktiivinen ydin ({active})",
+  "CACHY_PICKER_TITLE": "CachyOS-ydinvalitsin",
+  "CACHY_FLAVOR_STANDARD": "CachyOS-vakio-optimoitu ydin",
+  "CACHY_FLAVOR_BORE": "BORE-aikatauluttaja matalan viiveen pelaamiseen",
+  "CACHY_FLAVOR_LTO": "LTO-optimoitu ydin maksimaaliseen suorituskykyyn",
+  "CACHY_PICKER_EXIT": "4. Palaa valikkoon"
 }

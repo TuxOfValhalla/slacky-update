@@ -93,5 +93,14 @@
   "REBOOT_RECOMMENDED_DESC": "핵심 라이브러리, 데스크톱 또는 활성 커널이 업데이트되었습니다.",
   "ALL_DONE_CLOSE_PROMPT": "시스템 업데이트가 성공적으로 완료되었습니다.",
   "PRESS_ENTER_TO_CLOSE": "[ENTER] 를 눌러 이 창을 닫으세요...",
-  "SUPPORT_KOFI": "개발자 후원하기 (Ko-Fi)"
+  "SUPPORT_KOFI": "개발자 후원하기 (Ko-Fi)",
+  "PROMPT_SELF_UPDATE": "Slacky-Update 새 버전을 사용할 수 있습니다. 지금 업데이트하시겠습니까? [Y/n] ",
+  "CACHY_MENU_UPGRADE_INSTALLED": "1. 설치된 CachyOS 커널 확인 및 업그레이드",
+  "CACHY_MENU_PICKER": "2. CachyOS 커널 선택기 (Standard, BORE, BORE-LTO)",
+  "CACHY_MENU_REBUILD_ACTIVE": "3. initramfs 재생성 및 활성 커널 서명 ({active})",
+  "CACHY_PICKER_TITLE": "CachyOS 커널 선택기",
+  "CACHY_FLAVOR_STANDARD": "표준 범용 최적화 CachyOS 커널",
+  "CACHY_FLAVOR_BORE": "게임용 초저지연 BORE 스케줄러 커널",
+  "CACHY_FLAVOR_LTO": "최대 처리량을 위한 LTO 최적화 커널",
+  "CACHY_PICKER_EXIT": "4. 메뉴로 돌아가기"
 }

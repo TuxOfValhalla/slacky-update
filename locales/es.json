@@ -93,5 +93,14 @@
   "REBOOT_RECOMMENDED_DESC": "Se actualizaron librerías centrales, entorno o núcleo activo.",
   "ALL_DONE_CLOSE_PROMPT": "Actualización del sistema completada.",
   "PRESS_ENTER_TO_CLOSE": "Presione [ENTER] para cerrar...",
-  "SUPPORT_KOFI": "Apoyar al desarrollador (Ko-Fi)"
+  "SUPPORT_KOFI": "Apoyar al desarrollador (Ko-Fi)",
+  "PROMPT_SELF_UPDATE": "Hay una nueva versión de Slacky-Update disponible. ¿Desea actualizar ahora? [S/n] ",
+  "CACHY_MENU_UPGRADE_INSTALLED": "1. Comprobar y actualizar núcleos CachyOS instalados",
+  "CACHY_MENU_PICKER": "2. Selector de núcleos CachyOS (Standard, BORE, BORE-LTO)",
+  "CACHY_MENU_REBUILD_ACTIVE": "3. Reconstruir initramfs y firmar núcleo activo ({active})",
+  "CACHY_PICKER_TITLE": "Selector de núcleos CachyOS",
+  "CACHY_FLAVOR_STANDARD": "Núcleo optimizado estándar CachyOS",
+  "CACHY_FLAVOR_BORE": "Planificador BORE de baja latencia para juegos",
+  "CACHY_FLAVOR_LTO": "Núcleo optimizado con LTO para máximo rendimiento",
+  "CACHY_PICKER_EXIT": "4. Volver al menú"
 }

@@ -93,5 +93,14 @@
   "REBOOT_RECOMMENDED_DESC": "Bibliothèques de base, bureau ou noyau actif mis à jour.",
   "ALL_DONE_CLOSE_PROMPT": "Mise à jour du système terminée.",
   "PRESS_ENTER_TO_CLOSE": "Appuyez sur [ENTRÉE] pour fermer...",
-  "SUPPORT_KOFI": "Soutenir le développeur (Ko-Fi)"
+  "SUPPORT_KOFI": "Soutenir le développeur (Ko-Fi)",
+  "PROMPT_SELF_UPDATE": "Une nouvelle version de Slacky-Update est disponible. Mettre à jour maintenant ? [O/n] ",
+  "CACHY_MENU_UPGRADE_INSTALLED": "1. Vérifier et mettre à jour les noyaux CachyOS installés",
+  "CACHY_MENU_PICKER": "2. Sélecteur de noyau CachyOS (Standard, BORE, BORE-LTO)",
+  "CACHY_MENU_REBUILD_ACTIVE": "3. Reconstruire initramfs et signer le noyau actif ({active})",
+  "CACHY_PICKER_TITLE": "Sélecteur de noyau CachyOS",
+  "CACHY_FLAVOR_STANDARD": "Noyau CachyOS standard optimisé",
+  "CACHY_FLAVOR_BORE": "Planificateur BORE faible latence pour le jeu",
+  "CACHY_FLAVOR_LTO": "Noyau optimisé LTO pour débit maximal",
+  "CACHY_PICKER_EXIT": "4. Retour au menu"
 }

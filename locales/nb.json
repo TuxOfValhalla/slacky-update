@@ -93,5 +93,14 @@
   "REBOOT_RECOMMENDED_DESC": "Kjernebiblioteker, skrivebord, grafikkdrivere eller aktiv kjerne ble oppdatert.",
   "ALL_DONE_CLOSE_PROMPT": "⚡ Alle systemoppdateringer er fullført. Alt er i skjønneste orden!",
   "PRESS_ENTER_TO_CLOSE": "Trykk [ENTER] for å lukke dette vinduet...",
-  "SUPPORT_KOFI": "☕ Kjøp meg en kaffe (Ko-Fi)"
+  "SUPPORT_KOFI": "☕ Kjøp meg en kaffe (Ko-Fi)",
+  "PROMPT_SELF_UPDATE": "Ikke vær døll, gi oss en upgrade a' mann! [J/n] ",
+  "CACHY_MENU_UPGRADE_INSTALLED": "1. Sjekk & oppgrader installerte CachyOS-kjerner",
+  "CACHY_MENU_PICKER": "2. CachyOS Kjernevelger (Velg variant: standard, bore, bore-lto)",
+  "CACHY_MENU_REBUILD_ACTIVE": "3. Bygg initramfs & Secure Boot-brynje for aktiv kjerne ({active})",
+  "CACHY_PICKER_TITLE": "🏎️ CACHYOS KJERNEVELGER",
+  "CACHY_FLAVOR_STANDARD": "(Eksepsjonelt optimalisert allround-kjerne med rå kraft)",
+  "CACHY_FLAVOR_BORE": "(Super-ninja gaming-kjerne med lynrask respons og lav latens)",
+  "CACHY_FLAVOR_LTO": "(La godfølelsen flyte, kjerne optimalisert for maksimal ytelse)",
+  "CACHY_PICKER_EXIT": "4. Ikke akkurat nå, mann (Tilbake til menyen)"
 }

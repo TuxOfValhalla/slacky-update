@@ -93,5 +93,14 @@
   "REBOOT_RECOMMENDED_DESC": "Kernbibliotheken, desktopomgeving of actieve kernel bijgewerkt.",
   "ALL_DONE_CLOSE_PROMPT": "Systeemupdate voltooid.",
   "PRESS_ENTER_TO_CLOSE": "Druk op [ENTER] om te sluiten...",
-  "SUPPORT_KOFI": "Steun de ontwikkelaar (Ko-Fi)"
+  "SUPPORT_KOFI": "Steun de ontwikkelaar (Ko-Fi)",
+  "PROMPT_SELF_UPDATE": "Er is een nieuwe versie van Slacky-Update beschikbaar. Nu bijwerken? [J/n] ",
+  "CACHY_MENU_UPGRADE_INSTALLED": "1. Geïnstalleerde CachyOS-kernels controleren en bijwerken",
+  "CACHY_MENU_PICKER": "2. CachyOS Kernel-kiezer (Standard, BORE, BORE-LTO)",
+  "CACHY_MENU_REBUILD_ACTIVE": "3. Initramfs opnieuw opbouwen en actieve kernel ondertekenen ({active})",
+  "CACHY_PICKER_TITLE": "CachyOS Kernel-kiezer",
+  "CACHY_FLAVOR_STANDARD": "Standaard geoptimaliseerde CachyOS-kernel",
+  "CACHY_FLAVOR_BORE": "BORE scheduler lage latentie gaming-kernel",
+  "CACHY_FLAVOR_LTO": "LTO-geoptimaliseerde kernel voor maximale prestaties",
+  "CACHY_PICKER_EXIT": "4. Terug naar menu"
 }

@@ -93,9 +93,10 @@ provision_mok_keypair() {
 
 sign_modules_for_kernel() {
     local target_kver="$1"
-    local module_dir="/lib/modules/${target_kver}"
+    resolve_mok_keypair
+    local cert_for_sign="${MOK_CRT:-${MOK_DER}}"
 
-    if [ ! -d "${module_dir}" ]; then
+    if [ -z "${cert_for_sign}" ] || [ -z "${MOK_KEY}" ]; then
         return 0
     fi
 
@@ -120,12 +121,37 @@ sign_modules_for_kernel() {
         return 0
     fi
 
+    local search_dirs=()
+    [ -d "/lib/modules/${target_kver}" ] && search_dirs+=("/lib/modules/${target_kver}")
+    [ -d "/usr/lib/modules/${target_kver}" ] && search_dirs+=("/usr/lib/modules/${target_kver}")
+    [ ${#search_dirs[@]} -gt 0 ] || return 0
+
     local found_modules=0
     while IFS= read -r mod; do
         [ -f "${mod}" ] || continue
         found_modules=1
-        sudo "${sign_bin}" sha256 "${MOK_KEY}" "${MOK_CERT}" "${mod}" 2>/dev/null || true
-    done < <(find "${module_dir}" -name "nvidia*.ko*" 2>/dev/null || true)
+        if [[ "${mod}" =~ \.ko\.zst$ ]]; then
+            local raw_mod="${mod%.zst}"
+            if sudo unzstd -f -q "${mod}" -o "${raw_mod}" 2>/dev/null; then
+                sudo "${sign_bin}" sha256 "${MOK_KEY}" "${cert_for_sign}" "${raw_mod}" 2>/dev/null || true
+                sudo zstd -f -q --rm "${raw_mod}" -o "${mod}" 2>/dev/null || true
+            fi
+        elif [[ "${mod}" =~ \.ko\.xz$ ]]; then
+            local raw_mod="${mod%.xz}"
+            if sudo unxz -f -q -c "${mod}" > "${raw_mod}" 2>/dev/null; then
+                sudo "${sign_bin}" sha256 "${MOK_KEY}" "${cert_for_sign}" "${raw_mod}" 2>/dev/null || true
+                sudo xz -f -q "${raw_mod}" 2>/dev/null || true
+            fi
+        elif [[ "${mod}" =~ \.ko\.gz$ ]]; then
+            local raw_mod="${mod%.gz}"
+            if sudo gunzip -f -q -c "${mod}" > "${raw_mod}" 2>/dev/null; then
+                sudo "${sign_bin}" sha256 "${MOK_KEY}" "${cert_for_sign}" "${raw_mod}" 2>/dev/null || true
+                sudo gzip -f -q "${raw_mod}" 2>/dev/null || true
+            fi
+        elif [[ "${mod}" =~ \.ko$ ]]; then
+            sudo "${sign_bin}" sha256 "${MOK_KEY}" "${cert_for_sign}" "${mod}" 2>/dev/null || true
+        fi
+    done < <(find "${search_dirs[@]}" -name "nvidia*.ko*" 2>/dev/null || true)
 
     if [ "${found_modules}" -eq 1 ]; then
         log_success "Applied MOK signature to kernel modules for: ${target_kver}"
@@ -272,10 +298,45 @@ verify_secure_boot_status_interactive() {
     echo ""
 }
 
+detect_esp_mount() {
+    local detected
+    detected=$(findmnt -n -o TARGET -t vfat 2>/dev/null | grep -E '^/(boot/efi|boot/EFI|efi|boot)$' | head -n1 || true)
+    if [ -n "${detected}" ] && [ -d "${detected}" ]; then
+        echo "${detected}"
+        return 0
+    fi
+
+    for candidate in /boot/efi /boot/EFI /efi /boot; do
+        if mountpoint -q "${candidate}" 2>/dev/null || [ -d "${candidate}/EFI" ]; then
+            echo "${candidate}"
+            return 0
+        fi
+    done
+
+    echo "/boot/efi"
+}
+
+get_bootloader_uuid_and_prefix() {
+    local boot_uuid=""
+    local boot_prefix="/boot/grub"
+
+    if mountpoint -q "/boot" 2>/dev/null; then
+        boot_uuid=$(findmnt -n -o UUID /boot 2>/dev/null || true)
+        boot_prefix="/grub"
+    fi
+
+    if [ -z "${boot_uuid}" ]; then
+        boot_uuid=$(findmnt -n -o UUID / 2>/dev/null || blkid -s UUID -o value "$(findmnt -n -o SOURCE / 2>/dev/null)" 2>/dev/null || true)
+        boot_prefix="/boot/grub"
+    fi
+
+    echo "${boot_uuid} ${boot_prefix}"
+}
+
 deploy_maximum_armor_interactive() {
+    local is_silent="${1:-}"
     validate_privileges
     setup_compat_library_env
-    local is_silent="${1:-}"
 
     if [ "${is_silent}" != "--silent" ]; then
         echo -e "\n${CYAN}${BOLD}$(_ MOK_OPTION_DEPLOY_SHIM)${RESET}"
@@ -289,13 +350,11 @@ deploy_maximum_armor_interactive() {
     fi
 
     log_info "Locating EFI System Partition (ESP)..."
-    local esp_mount="/boot/efi"
-    if [ ! -d "${esp_mount}" ] || ! mountpoint -q "${esp_mount}" 2>/dev/null; then
-        esp_mount="/boot/EFI"
-    fi
+    local esp_mount
+    esp_mount=$(detect_esp_mount)
 
     if [ ! -d "${esp_mount}" ]; then
-        log_warn "EFI System Partition not mounted at /boot/efi or /boot/EFI. Aborting."
+        log_warn "EFI System Partition not detected. Aborting."
         return 1
     fi
 
@@ -370,15 +429,15 @@ deploy_maximum_armor_interactive() {
         sudo cp -af "${grub_src}" "${target_efi_dir}/grubx64.efi"
     fi
 
-    # Create early grub.cfg redirector with Slackware root UUID
-    local root_uuid
-    root_uuid=$(findmnt -n -o UUID / 2>/dev/null || blkid -s UUID -o value "$(findmnt -n -o SOURCE / 2>/dev/null)" 2>/dev/null || true)
+    # Create early grub.cfg redirector with Slackware root/boot UUID & prefix
+    local root_uuid boot_prefix
+    read -r root_uuid boot_prefix <<< "$(get_bootloader_uuid_and_prefix)"
 
     if [ -n "${root_uuid}" ]; then
-        log_info "Configuring early GRUB loader for Slackware root (UUID=${root_uuid})..."
+        log_info "Configuring early GRUB loader for Slackware (UUID=${root_uuid}, prefix=${boot_prefix})..."
         cat << GCFG_EOF | sudo tee "${target_efi_dir}/grub.cfg" >/dev/null
 search --no-floppy --fs-uuid --set=root ${root_uuid}
-set prefix=(\$root)/boot/grub
+set prefix=(\$root)${boot_prefix}
 configfile \$prefix/grub.cfg
 GCFG_EOF
         sudo chmod 644 "${target_efi_dir}/grub.cfg"
@@ -422,10 +481,8 @@ GCFG_EOF
 
 self_heal_secure_boot_guard() {
     # Guard runs 100% silent unless corruption or missing files are detected
-    local esp_mount="/boot/efi"
-    if [ ! -d "${esp_mount}" ] || ! mountpoint -q "${esp_mount}" 2>/dev/null; then
-        esp_mount="/boot/EFI"
-    fi
+    local esp_mount
+    esp_mount=$(detect_esp_mount)
     [ -d "${esp_mount}/EFI/Slackware" ] || return 0
 
     local target_efi_dir="${esp_mount}/EFI/Slackware"

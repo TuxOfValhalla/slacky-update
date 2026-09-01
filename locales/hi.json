@@ -93,5 +93,14 @@
   "REBOOT_RECOMMENDED_DESC": "कोर लाइब्रेरी, डेस्कटॉप या सक्रिय कर्नेल अपडेट किए गए थे।",
   "ALL_DONE_CLOSE_PROMPT": "सिस्टम अपडेट सफलतापूर्वक पूर्ण हुआ।",
   "PRESS_ENTER_TO_CLOSE": "इस विंडो को बंद करने के लिए [ENTER] दबाएं...",
-  "SUPPORT_KOFI": "डेवलपर का समर्थन करें (Ko-Fi)"
+  "SUPPORT_KOFI": "डेवलपर का समर्थन करें (Ko-Fi)",
+  "PROMPT_SELF_UPDATE": "Slacky-Update का नया संस्करण उपलब्ध है। क्या आप अभी अपडेट करना चाहते हैं? [Y/n] ",
+  "CACHY_MENU_UPGRADE_INSTALLED": "1. स्थापित CachyOS कर्नेल जांचें और अपग्रेड करें",
+  "CACHY_MENU_PICKER": "2. CachyOS कर्नेल पिकर (Standard, BORE, BORE-LTO)",
+  "CACHY_MENU_REBUILD_ACTIVE": "3. initramfs पुनर्निर्माण और सक्रिय कर्नेल पर हस्ताक्षर ({active})",
+  "CACHY_PICKER_TITLE": "CachyOS कर्नेल पिकर",
+  "CACHY_FLAVOR_STANDARD": "मानक सामान्य प्रयोजन अनुकूलित कर्नेल",
+  "CACHY_FLAVOR_BORE": "गेमिंग के लिए कम विलंबता BORE शेड्यूलर कर्नेल",
+  "CACHY_FLAVOR_LTO": "अधिकतम थ्रूपुट के लिए LTO अनुकूलित कर्नेल",
+  "CACHY_PICKER_EXIT": "4. मेनू पर वापस जाएँ"
 }
