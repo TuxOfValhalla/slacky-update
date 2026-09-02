@@ -28,47 +28,37 @@ It bridges the gap between pure Slackware simplicity and modern powerhouse capab
 ### 🖥️ Interactive Terminal Command Center
 *Rich ANSI color-coded menus, real-time pending update audits, and atomic one-click maintenance operations.*
 
-<p align="center">
-  <img src="assets/screenshots/04_interactive-CLI-interface.png" alt="Slacky-Update CLI Interface" width="850">
-</p>
+![Slacky-Update CLI Interface](assets/screenshots/04_interactive-CLI-interface.png)
 
 ---
 
 ### 🛡️ Secure Boot MOK Forcefield & 1-Click Setup
 *Automated Microsoft-signed Shim & Fedora GRUB deployment, MOK key generation, DKMS & kernel signing.*
 
-<p align="center">
-  <img src="assets/screenshots/05_secure-boot-handling-with-one-click-setup.png" alt="Secure Boot MOK Forcefield" width="850">
-</p>
+![Secure Boot MOK Forcefield](assets/screenshots/05_secure-boot-handling-with-one-click-setup.png)
 
 ---
 
 ### 🏎️ CachyOS Time Machine & Kernel Management
 *CPU microarchitecture auto-detection (znver4 / AVX-512), upstream CachyOS deployment, and dual-kernel retention.*
 
-<p align="center">
-  <img src="assets/screenshots/06_cachyos-kernel-management.png" alt="CachyOS Kernel Management" width="850">
-</p>
+![CachyOS Kernel Management](assets/screenshots/06_cachyos-kernel-management.png)
 
 ---
 
 ### 🎮 Nvidia Mojo Station & Branch Selection
 *Instant driver branch selection (580/595/610), automated DKMS compilation, and Flatpak GL synchronization.*
 
-<p align="center">
-  <img src="assets/screenshots/07_nvidia_driver_management.png" alt="NVIDIA Driver Management" width="850">
-</p>
+![NVIDIA Driver Management](assets/screenshots/07_nvidia_driver_management.png)
 
 ---
 
 ### 🔔 System Tray Monitor & Status Applet
 *Lightweight Qt5 tray icon with real-time filesystem watchers, pulsing notification animation, and quick launch triggers.*
 
-<p align="center">
-  <img src="assets/screenshots/01_systray-applet-icon.png" alt="Tray Icon Alert" width="220">&nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="assets/screenshots/02_systray-applet-icon-menu.png" alt="Context Action Menu" width="220">&nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="assets/screenshots/03_systray-applet-icon-menu-language-selection.png" alt="Tower of Babel Language Selector" width="220">
-</p>
+| Tray Icon Alert | Context Action Menu | Tower of Babel Language Selector |
+| :---: | :---: | :---: |
+| ![Tray Icon](assets/screenshots/01_systray-applet-icon.png) | ![Tray Menu](assets/screenshots/02_systray-applet-icon-menu.png) | ![Tray Language Selection](assets/screenshots/03_systray-applet-icon-menu-language-selection.png) |
 
 ---
 
