@@ -50,10 +50,9 @@ log_error() {
 }
 
 check_slacky_update_self_update() {
-    local current_ver="${1:-0.6.0}"
+    local current_ver="${1:-0.7}"
     local rel_json
     rel_json=$(curl -sSL -m 2 -H "User-Agent: slacky-update" "https://api.github.com/repos/TuxOfValhalla/slacky-update/releases/latest" 2>/dev/null || true)
-    [ -n "${rel_json}" ] || return 0
 
     local update_info
     update_info=$(python3 -c "
@@ -62,47 +61,56 @@ import json, sys, re
 def parse_v(v_str):
     return [int(x) for x in re.findall(r'\d+', v_str)]
 
+cur = '${current_ver}'.lstrip('v')
 try:
-    data = json.loads('''${rel_json}''')
-    tag = data.get('tag_name', '').lstrip('v')
-    cur = '${current_ver}'.lstrip('v')
-    if tag and parse_v(tag) > parse_v(cur):
-        dl_url = ''
-        for asset in data.get('assets', []):
-            name = asset.get('name', '')
-            if name.endswith('.txz') or name.endswith('.tgz'):
-                dl_url = asset.get('browser_download_url', '')
-                break
-        if not dl_url:
-            dl_url = data.get('tarball_url', '')
-        print(f'{tag}|{dl_url}')
+    if '''${rel_json}''':
+        data = json.loads('''${rel_json}''')
+        tag = data.get('tag_name', '').lstrip('v')
+        if tag and parse_v(tag) > parse_v(cur):
+            dl_url = ''
+            for asset in data.get('assets', []):
+                name = asset.get('name', '')
+                if name.endswith(('.txz', '.tgz')):
+                    dl_url = asset.get('browser_download_url', '')
+                    break
+            if not dl_url:
+                dl_url = data.get('tarball_url', '')
+            print(f'UPDATE|{tag}|{dl_url}')
+            sys.exit(0)
 except Exception:
     pass
-" 2>/dev/null || true)
+print(f'UP_TO_DATE|{cur}')
+" 2>/dev/null || echo "UP_TO_DATE|${current_ver}")
 
-    [ -n "${update_info}" ] || return 0
+    local status_type rest
+    IFS='|' read -r status_type rest <<< "${update_info}"
 
-    local new_tag dl_url
-    IFS='|' read -r new_tag dl_url <<< "${update_info}"
+    if [ "${status_type}" = "UPDATE" ]; then
+        local new_tag dl_url
+        IFS='|' read -r new_tag dl_url <<< "${rest}"
 
-    echo ""
-    echo -e "${YELLOW}${BOLD}⚡ New Slacky-Update Release Available: v${new_tag} (Current: v${current_ver})${RESET}"
-    read -r -p "$(_ PROMPT_SELF_UPDATE)" reply_update
-    reply_update=${reply_update:-Y}
-    if [[ "$reply_update" =~ ^[YyJjSsOo]$ ]]; then
-        validate_privileges
-        log_info "Downloading Slacky-Update v${new_tag} from GitHub..."
-        local tmp_pkg="/tmp/slacky-update-${new_tag}.txz"
-        if [[ "${dl_url}" =~ \.txz$|\.tgz$ ]]; then
-            sudo curl -sSL -o "${tmp_pkg}" "${dl_url}"
-            if [ -f "${tmp_pkg}" ] && [ -s "${tmp_pkg}" ]; then
-                sudo /sbin/upgradepkg --reinstall "${tmp_pkg}"
-                sudo rm -f "${tmp_pkg}"
-                log_success "Slacky-Update upgraded to v${new_tag}!"
-                command -v slacky-update-tray >/dev/null 2>&1 && slacky-update-tray --restart 2>/dev/null || true
-                exec /usr/local/bin/slacky-update "$@"
+        echo ""
+        echo -e "${YELLOW}${BOLD}⚡ New Slacky-Update Release Available: v${new_tag} (Current: v${current_ver})${RESET}"
+        read -r -p "$(_ PROMPT_SELF_UPDATE)" reply_update
+        reply_update=${reply_update:-Y}
+        if [[ "$reply_update" =~ ^[YyJjSsOo]$ ]]; then
+            validate_privileges
+            log_info "Downloading Slacky-Update v${new_tag} from GitHub..."
+            local tmp_pkg="/tmp/slacky-update-${new_tag}.txz"
+            if [[ "${dl_url}" =~ \.txz$|\.tgz$ ]]; then
+                sudo curl -sSL -o "${tmp_pkg}" "${dl_url}"
+                if [ -f "${tmp_pkg}" ] && [ -s "${tmp_pkg}" ]; then
+                    sudo /sbin/upgradepkg --reinstall "${tmp_pkg}"
+                    sudo rm -f "${tmp_pkg}"
+                    log_success "Slacky-Update upgraded to v${new_tag}!"
+                    killall slacky-update-tray 2>/dev/null || pkill -f slacky-update-tray || true
+                    nohup /usr/local/bin/slacky-update-tray >/dev/null 2>&1 &
+                    exec /usr/local/bin/slacky-update "$@"
+                fi
             fi
         fi
+    else
+        echo -e "  \033[1;32m✓\033[0m $(_ APP_UP_TO_DATE tag="v${current_ver}")"
     fi
 }
 

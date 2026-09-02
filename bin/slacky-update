@@ -3,7 +3,7 @@
 
 set -euo pipefail
 
-CURRENT_VERSION="0.6.1"
+CURRENT_VERSION="0.7"
 
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 if [ -d "${SCRIPT_DIR}/../lib" ] && [ -f "${SCRIPT_DIR}/../lib/common.sh" ]; then
@@ -20,6 +20,8 @@ source "${APP_DIR}/common.sh"
 source "${APP_DIR}/mod_nvidia.sh"
 # shellcheck source=/dev/null
 source "${APP_DIR}/mod_packages.sh"
+# shellcheck source=/dev/null
+source "${APP_DIR}/mod_sbo.sh"
 # shellcheck source=/dev/null
 source "${APP_DIR}/mod_kernel.sh"
 # shellcheck source=/dev/null
@@ -89,6 +91,7 @@ def print_cat(title, items):
 
 print_cat(_("CAT_SLACKWARE"), data.get("slackware_updates", []))
 print_cat(_("CAT_FLATPAK"), data.get("flatpak_updates", []))
+print_cat(_("CAT_SBO"), data.get("sbo_updates", []))
 print_cat(_("CAT_KERNEL"), data.get("cachyos_kernel_updates", []))
 print_cat(_("CAT_NVIDIA"), data.get("nvidia_driver_updates", []))
 
@@ -100,7 +103,7 @@ if sb.get("state") == "enabled":
     for w in sb.get("warnings", []):
         print(f"\033[1;31m• Secure Boot Warning: {w}\033[0m")
 
-total = len(data.get("slackware_updates", [])) + len(data.get("flatpak_updates", [])) + len(data.get("cachyos_kernel_updates", [])) + len(data.get("nvidia_driver_updates", []))
+total = len(data.get("slackware_updates", [])) + len(data.get("flatpak_updates", [])) + len(data.get("sbo_updates", [])) + len(data.get("cachyos_kernel_updates", [])) + len(data.get("nvidia_driver_updates", []))
 if total == 0 and not data.get("nvidia_gl_mismatch", False):
     print("\033[1;32m" + _("NO_PENDING_UPDATES") + "\033[0m")
 '
@@ -109,12 +112,9 @@ if total == 0 and not data.get("nvidia_gl_mismatch", False):
 }
 
 # --- [ FULL SYSTEM UPDATE TRANSACTION ] ---
-get_full_pkg_snapshot() {
-    python3 -c "
-import os
-pkgs = os.listdir('/var/log/packages') if os.path.exists('/var/log/packages') else []
-print(';'.join(sorted(pkgs)))
-" 2>/dev/null || echo ""
+get_full_pkg_snapshot_file() {
+    local target_file="$1"
+    ls /var/log/packages 2>/dev/null | sort > "${target_file}" || true
 }
 
 get_kernel_driver_snapshot() {
@@ -127,17 +127,24 @@ print(';'.join(k_pkgs))
 }
 
 prompt_reboot_or_close() {
-    local pkgs_before="$1"
-    local pkgs_after="$2"
+    local snap_before_file="$1"
+    local snap_after_file="$2"
 
     local needs_reboot=0
-    if python3 -c "
-import sys
-b = set('${pkgs_before}'.split(';'))
-a = set('${pkgs_after}'.split(';'))
+    if [ -f "${snap_before_file}" ] && [ -f "${snap_after_file}" ]; then
+        if python3 -c "
+import sys, os
+b_file = sys.argv[1]
+a_file = sys.argv[2]
+active_k = sys.argv[3] if len(sys.argv) > 3 else ''
+
+with open(b_file, 'r', encoding='utf-8', errors='ignore') as f:
+    b = set(line.strip() for line in f if line.strip())
+with open(a_file, 'r', encoding='utf-8', errors='ignore') as f:
+    a = set(line.strip() for line in f if line.strip())
+
 diff = a - b
 crit_keywords = ['glibc', 'plasma-', 'kwin-', 'sddm-', 'wayland-', 'nvidia-', 'kernel-']
-active_k = '$(uname -r)'
 for p in diff:
     for kw in crit_keywords:
         if kw in p:
@@ -145,10 +152,12 @@ for p in diff:
                 continue
             sys.exit(1)
 sys.exit(0)
-" 2>/dev/null; then
-        needs_reboot=0
-    else
-        needs_reboot=1
+" "${snap_before_file}" "${snap_after_file}" "$(uname -r)" 2>/dev/null; then
+            needs_reboot=0
+        else
+            needs_reboot=1
+        fi
+        rm -f "${snap_before_file}" "${snap_after_file}"
     fi
 
     if [ "${needs_reboot}" -eq 1 ]; then
@@ -175,8 +184,10 @@ run_full_update() {
     echo -e "\n${CYAN}$(_ VALIDATING_ADMIN)${RESET}"
     validate_privileges
 
-    local full_snap_before full_snap_after
-    full_snap_before=$(get_full_pkg_snapshot)
+    local snap_before_file snap_after_file
+    snap_before_file=$(mktemp /tmp/slacky-snap-before.XXXXXX)
+    snap_after_file=$(mktemp /tmp/slacky-snap-after.XXXXXX)
+    get_full_pkg_snapshot_file "${snap_before_file}"
 
     local k_snap_before k_snap_after
     k_snap_before=$(get_kernel_driver_snapshot)
@@ -197,10 +208,22 @@ run_full_update() {
         fi
     fi
 
+    if is_sbotools_installed; then
+        local sbo_count
+        sbo_count=$(python3 -c "import json, os; d=json.load(open('/var/cache/slacky-update/status.json')) if os.path.exists('/var/cache/slacky-update/status.json') else {}; print(len(d.get('sbo_updates', [])))" 2>/dev/null || echo 0)
+        if [ "${sbo_count}" -gt 0 ]; then
+            read -r -p "$(_ PROMPT_UPGRADE_SBO)" reply_sbo
+            reply_sbo=${reply_sbo:-Y}
+            if [[ "$reply_sbo" =~ ^[YyJjSsOo]$ ]]; then
+                update_sbo_packages
+            fi
+        fi
+    fi
+
     register_flatpak_gl_sync
 
     k_snap_after=$(get_kernel_driver_snapshot)
-    full_snap_after=$(get_full_pkg_snapshot)
+    get_full_pkg_snapshot_file "${snap_after_file}"
 
     if [ "${k_snap_before}" != "${k_snap_after}" ]; then
         log_info "Kernel or driver package changes detected. Rebuilding modules, initramfs and Secure Boot armor..."
@@ -241,7 +264,7 @@ except Exception:
 
     echo -e "\n${GREEN}${BOLD}$(_ UPGRADE_COMPLETE_SYSTEM)${RESET}"
 
-    prompt_reboot_or_close "${full_snap_before}" "${full_snap_after}"
+    prompt_reboot_or_close "${snap_before_file}" "${snap_after_file}"
 }
 
 # --- [ CACHYOS KERNEL MANAGEMENT ROUTINE ] ---
@@ -401,11 +424,10 @@ manage_nvidia_interactive() {
 interactive_menu() {
     INTERACTIVE_SESSION=1
     probe_gpu_hardware
-    check_slacky_update_self_update "${CURRENT_VERSION}"
-
     while true; do
         echo ""
         echo -e "${BOLD}Slacky-Update (v${CURRENT_VERSION})${RESET}"
+        check_slacky_update_self_update "${CURRENT_VERSION}"
         echo ""
         display_pending_status
         echo -e "${BOLD}$(_ CLI_ACTIONS_HEADER)${RESET}"
@@ -514,6 +536,9 @@ if [ "${1:-}" = "--non-interactive" ] || [ "${1:-}" = "-y" ]; then
 elif [ "${1:-}" = "--check" ]; then
     "${CHECK_BIN}"
     display_pending_status
+elif [ "${1:-}" = "--slackbuilds" ] || [ "${1:-}" = "-s" ]; then
+    INTERACTIVE_SESSION=1
+    manage_slackbuilds_interactive
 elif [ "${1:-}" = "--lang" ] || [ "${1:-}" = "--set-lang" ]; then
     if [ -n "${2:-}" ]; then
         python3 -c "import sys; sys.path.insert(0, '${APP_DIR}'); from slacky_update_i18n import i18n; i18n.save_language_override('${2}')"

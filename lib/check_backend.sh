@@ -13,10 +13,12 @@ trap 'rm -rf "${TMP_DIR}"' EXIT
 
 touch "${TMP_DIR}/slackware_updates"
 touch "${TMP_DIR}/flatpak_updates"
+touch "${TMP_DIR}/sbo_updates"
 touch "${TMP_DIR}/cachy_updates"
 touch "${TMP_DIR}/nvidia_updates"
 touch "${TMP_DIR}/slackware_status"
 touch "${TMP_DIR}/flatpak_status"
+touch "${TMP_DIR}/sbo_status"
 touch "${TMP_DIR}/cachy_status"
 
 # --- [ 1. SLACKWARE REPOSITORY INSPECTION (UNPRIVILEGED) ] ---
@@ -117,7 +119,8 @@ PYSLACK
 # --- [ 2. FLATPAK REPOSITORY INSPECTION ] ---
 (
     if command -v flatpak >/dev/null 2>&1; then
-        if timeout 30s flatpak remote-ls --updates --columns=ref 2>/dev/null > "${TMP_DIR}/flatpak_updates"; then
+        if raw_fp=$(timeout 30s flatpak remote-ls --updates --columns=name,branch,ref 2>/dev/null); then
+            echo "${raw_fp}" | awk -F'\t' '{if ($1 != "") print $1 " [" $2 "]"; else if ($3 != "") print $3}' > "${TMP_DIR}/flatpak_updates"
             echo "SUCCESS" > "${TMP_DIR}/flatpak_status"
         else
             echo "FAILED" > "${TMP_DIR}/flatpak_status"
@@ -125,8 +128,22 @@ PYSLACK
     fi
 ) &
 
-# --- [ 3. CACHYOS KERNEL UPSTREAM CHECK ] ---
+# --- [ 2.5. SBOTOOLS REPOSITORY INSPECTION ] ---
 (
+    if command -v sbocheck >/dev/null 2>&1; then
+        if raw_sbo=$(timeout 30s sbocheck -n -o --nocolor 2>/dev/null); then
+            echo "${raw_sbo}" | (grep -i "needs updating" || true) | awk '{print $1 " (" $2 " -> " substr($6, 2) ")"}' > "${TMP_DIR}/sbo_updates"
+            echo "SUCCESS" > "${TMP_DIR}/sbo_status"
+        else
+            echo "FAILED" > "${TMP_DIR}/sbo_status"
+        fi
+    else
+        echo "SUCCESS" > "${TMP_DIR}/sbo_status"
+    fi
+) &
+
+# --- [ 3. CACHYOS KERNEL UPSTREAM CHECK ] ---
+check_cachyos_background() {
     CACHY_UPDATES=()
     ACTIVE_KVER=$(uname -r)
     
@@ -166,7 +183,8 @@ PYSLACK
             echo "SUCCESS" > "${TMP_DIR}/cachy_status"
         fi
     fi
-) &
+}
+check_cachyos_background &
 
 # --- [ 4. NVIDIA HARDWARE & DRIVER CHECK ] ---
 (
@@ -288,6 +306,7 @@ def read_file_content(filename, default=""):
 
 slackware_updates = get_persisted_list("slackware_updates", "slackware_status", "slackware_updates")
 flatpak_updates = get_persisted_list("flatpak_updates", "flatpak_status", "flatpak_updates")
+sbo_updates = get_persisted_list("sbo_updates", "sbo_status", "sbo_updates")
 cachy_updates = get_persisted_list("cachy_updates", "cachy_status", "cachyos_kernel_updates")
 nvidia_updates = read_file_lines("nvidia_updates")
 nvidia_mismatch = read_file_content("nvidia_mismatch", "false").lower() == "true"
@@ -298,6 +317,7 @@ now_dt = datetime.now(timezone.utc)
 data = {
     "slackware_updates": slackware_updates,
     "flatpak_updates": flatpak_updates,
+    "sbo_updates": sbo_updates,
     "cachyos_kernel_updates": cachy_updates,
     "nvidia_driver_updates": nvidia_updates,
     "reboot_required": False,

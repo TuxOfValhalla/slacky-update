@@ -3,7 +3,8 @@
 
 set -euo pipefail
 
-VERSION="0.6.1"
+PRGNAM="slacky-update"
+VERSION="0.7"
 ARCH="noarch"
 BUILD="1_tux"
 

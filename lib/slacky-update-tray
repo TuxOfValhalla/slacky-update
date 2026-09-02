@@ -10,7 +10,7 @@ import shutil
 import signal
 from PyQt5.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QAction, QActionGroup
 from PyQt5.QtGui import QIcon, QPixmap, QPainter, QDesktopServices
-from PyQt5.QtCore import QFileSystemWatcher, QTimer, Qt, QUrl
+from PyQt5.QtCore import QFileSystemWatcher, QTimer, Qt, QUrl, QProcess
 
 # --- [ SIGNAL HANDLING ] ---
 if hasattr(signal, 'SIGHUP'):
@@ -139,6 +139,8 @@ class SlackyUpdateTray(QSystemTrayIcon):
         super().__init__()
         self.app = app
         self.last_notified_count = 0
+        self.is_checking = False
+        self.checker_proc = None
 
         self.icon_ok = QIcon(ICON_OK)
         self.icon_pending_full = QIcon(ICON_PENDING)
@@ -211,10 +213,12 @@ class SlackyUpdateTray(QSystemTrayIcon):
     def stop_pulse(self):
         if self.pulse_timer.isActive():
             self.pulse_timer.stop()
+        if self.is_checking:
+            return
         data = self.load_status()
         total_updates = 0
         if data:
-            total_updates = len(data.get("slackware_updates", [])) + len(data.get("flatpak_updates", [])) + len(data.get("cachyos_kernel_updates", [])) + len(data.get("nvidia_driver_updates", []))
+            total_updates = len(data.get("slackware_updates", [])) + len(data.get("flatpak_updates", [])) + len(data.get("sbo_updates", [])) + len(data.get("cachyos_kernel_updates", [])) + len(data.get("nvidia_driver_updates", []))
         if total_updates > 0 or (data and data.get("nvidia_gl_mismatch", False)):
             self.setIcon(self.icon_pending_full)
         else:
@@ -241,36 +245,40 @@ class SlackyUpdateTray(QSystemTrayIcon):
 
         slack_list = data.get("slackware_updates", []) if data else []
         flatpak_list = data.get("flatpak_updates", []) if data else []
+        sbo_list = data.get("sbo_updates", []) if data else []
         cachy_list = data.get("cachyos_kernel_updates", []) if data else []
         nvidia_list = data.get("nvidia_driver_updates", []) if data else []
         nvidia_mismatch = data.get("nvidia_gl_mismatch", False) if data else False
 
-        total_updates = len(slack_list) + len(flatpak_list) + len(cachy_list) + len(nvidia_list)
+        total_updates = len(slack_list) + len(flatpak_list) + len(sbo_list) + len(cachy_list) + len(nvidia_list)
 
-        if not self.pulse_timer.isActive():
+        if not self.is_checking and not self.pulse_timer.isActive():
             if nvidia_mismatch or total_updates > 0:
                 self.setIcon(self.icon_pending_full)
             else:
                 self.setIcon(self.icon_ok)
 
-        if nvidia_mismatch:
-            self.setToolTip(_("NVIDIA_SYNC_FAIL"))
-        elif total_updates > 0:
-            tooltip = _("UPDATES_AVAILABLE", count=total_updates)
-            details = []
-            if slack_list:
-                details.append(f"{_('CAT_SLACKWARE')}: {len(slack_list)}")
-            if flatpak_list:
-                details.append(f"{_('CAT_FLATPAK')}: {len(flatpak_list)}")
-            if cachy_list:
-                details.append(f"{_('CAT_KERNEL')}: {len(cachy_list)}")
-            if nvidia_list:
-                details.append(f"{_('CAT_NVIDIA')}: {len(nvidia_list)}")
-            if details:
-                tooltip += "\n• " + "\n• ".join(details)
-            self.setToolTip(tooltip)
-        else:
-            self.setToolTip(_("SYSTEM_UP_TO_DATE"))
+        if not self.is_checking:
+            if nvidia_mismatch:
+                self.setToolTip(_("NVIDIA_SYNC_FAIL"))
+            elif total_updates > 0:
+                tooltip = _("UPDATES_AVAILABLE", count=total_updates)
+                details = []
+                if slack_list:
+                    details.append(f"{_('CAT_SLACKWARE')}: {len(slack_list)}")
+                if flatpak_list:
+                    details.append(f"{_('CAT_FLATPAK')}: {len(flatpak_list)}")
+                if sbo_list:
+                    details.append(f"{_('CAT_SBO')}: {len(sbo_list)}")
+                if cachy_list:
+                    details.append(f"{_('CAT_KERNEL')}: {len(cachy_list)}")
+                if nvidia_list:
+                    details.append(f"{_('CAT_NVIDIA')}: {len(nvidia_list)}")
+                if details:
+                    tooltip += "\n• " + "\n• ".join(details)
+                self.setToolTip(tooltip)
+            else:
+                self.setToolTip(_("SYSTEM_UP_TO_DATE"))
 
         if not self.isVisible() and QSystemTrayIcon.isSystemTrayAvailable():
             self.show()
@@ -289,9 +297,10 @@ class SlackyUpdateTray(QSystemTrayIcon):
 
         slack_list = data.get("slackware_updates", []) if data else []
         flatpak_list = data.get("flatpak_updates", []) if data else []
+        sbo_list = data.get("sbo_updates", []) if data else []
         cachy_list = data.get("cachyos_kernel_updates", []) if data else []
         nvidia_list = data.get("nvidia_driver_updates", []) if data else []
-        total_updates = len(slack_list) + len(flatpak_list) + len(cachy_list) + len(nvidia_list)
+        total_updates = len(slack_list) + len(flatpak_list) + len(sbo_list) + len(cachy_list) + len(nvidia_list)
 
         pending_menu = self.menu.addMenu(_("UPDATES_AVAILABLE", count=total_updates))
 
@@ -299,6 +308,7 @@ class SlackyUpdateTray(QSystemTrayIcon):
             pipeline = [
                 (_("CAT_SLACKWARE"), slack_list),
                 (_("CAT_FLATPAK"), flatpak_list),
+                (_("CAT_SBO"), sbo_list),
                 (_("CAT_KERNEL"), cachy_list),
                 (_("CAT_NVIDIA"), nvidia_list)
             ]
@@ -334,6 +344,10 @@ class SlackyUpdateTray(QSystemTrayIcon):
         upgrade_action = QAction(_("UPDATE_NOW"), self.menu)
         upgrade_action.triggered.connect(self.launch_upgrade)
         self.menu.addAction(upgrade_action)
+
+        slackbuilds_action = QAction(_("MENU_SLACKBUILDS_TRAY"), self.menu)
+        slackbuilds_action.triggered.connect(self.launch_slackbuilds)
+        self.menu.addAction(slackbuilds_action)
 
         self.menu.addSeparator()
 
@@ -374,18 +388,36 @@ class SlackyUpdateTray(QSystemTrayIcon):
         self.menu.addAction(quit_action)
 
     def trigger_check(self):
-        self.setIcon(QIcon(ICON_CHECKING))
+        if self.is_checking:
+            return
+        self.is_checking = True
+        self.stop_pulse()
+        self.setIcon(self.icon_checking)
         self.setToolTip(_("CHECKING_FOR_UPDATES"))
         self.app.processEvents()
         self.check_timer.start(INTERVAL_6_HOURS_MS)
+
+        if hasattr(self, "checker_proc") and self.checker_proc is not None:
+            if self.checker_proc.state() != QProcess.NotRunning:
+                return
+
         if os.path.exists(CHECKER_BIN):
-            try:
-                subprocess.Popen([CHECKER_BIN])
-            except Exception:
-                pass
+            self.checker_proc = QProcess(self)
+            self.checker_proc.finished.connect(self.on_check_finished)
+            self.checker_proc.start(CHECKER_BIN)
+        else:
+            self.is_checking = False
+            self.update_status()
+
+    def on_check_finished(self, exit_code=0, exit_status=0):
+        self.is_checking = False
+        self.update_status()
 
     def launch_upgrade(self):
         self.launch_in_terminal(["/usr/local/bin/slacky-update"], "Slacky-Update")
+
+    def launch_slackbuilds(self):
+        self.launch_in_terminal(["/usr/local/bin/slacky-update", "--slackbuilds"], "Slacky-SlackBuilds")
 
     def launch_in_terminal(self, cmd, title):
         term = os.environ.get("TERMINAL")
