@@ -3,23 +3,7 @@
 
 set -euo pipefail
 
-setup_compat_library_env() {
-    local compat_dirs=(
-        "/usr/share/slacky-update/lib/compat"
-        "${APP_DIR}/../assets/compat"
-    )
-    for c in "${compat_dirs[@]}"; do
-        if [ -d "$c" ] && [ -f "$c/libcrypto.so.1.1" ]; then
-            if ! echo "${LD_LIBRARY_PATH:-}" | grep -q "$c"; then
-                export LD_LIBRARY_PATH="${c}:${LD_LIBRARY_PATH:-}"
-            fi
-            break
-        fi
-    done
-}
-
 audit_secure_boot_readiness() {
-    setup_compat_library_env
     local mokutil_bin
     mokutil_bin=$(command -v mokutil 2>/dev/null || echo "/usr/bin/mokutil")
 
@@ -333,10 +317,58 @@ get_bootloader_uuid_and_prefix() {
     echo "${boot_uuid} ${boot_prefix}"
 }
 
+fetch_official_signed_shim_interactive() {
+    local esp_mount="${1:-/boot/efi}"
+    local target_efi_dir="${esp_mount}/EFI/Slackware"
+    sudo mkdir -p "${target_efi_dir}"
+
+    if [ -f "${target_efi_dir}/shimx64.efi" ] && [ -f "${target_efi_dir}/mmx64.efi" ] && [ -f "${target_efi_dir}/grubx64.efi" ]; then
+        return 0
+    fi
+
+    log_info "Fetching official Microsoft-signed Shim and GRUB from Fedora repositories..."
+    local efi_tmp="/tmp/slacky-efi-bootstrap"
+    rm -rf "${efi_tmp}"
+    mkdir -p "${efi_tmp}"
+    pushd "${efi_tmp}" >/dev/null
+
+    local shim_url="https://kojipkgs.fedoraproject.org/packages/shim/15.8/3/x86_64/shim-x64-15.8-3.x86_64.rpm"
+    local grub_url="https://kojipkgs.fedoraproject.org/packages/grub2/2.12/9.fc41/x86_64/grub2-efi-x64-2.12-9.fc41.x86_64.rpm"
+
+    local dl_ok=true
+    if ! curl -sSL --fail -o shim.rpm "${shim_url}"; then
+        dl_ok=false
+    fi
+    if ! curl -sSL --fail -o grub.rpm "${grub_url}"; then
+        dl_ok=false
+    fi
+
+    if [ "${dl_ok}" = "true" ]; then
+        bsdtar -xf shim.rpm ./boot/efi/EFI/fedora/shimx64.efi ./boot/efi/EFI/fedora/mmx64.efi 2>/dev/null || \
+        bsdtar -xf shim.rpm 2>/dev/null || true
+
+        bsdtar -xf grub.rpm ./boot/efi/EFI/fedora/grubx64.efi 2>/dev/null || \
+        bsdtar -xf grub.rpm 2>/dev/null || true
+
+        if [ -f "boot/efi/EFI/fedora/shimx64.efi" ]; then
+            sudo cp -af "boot/efi/EFI/fedora/shimx64.efi" "${target_efi_dir}/shimx64.efi"
+            sudo cp -af "boot/efi/EFI/fedora/mmx64.efi" "${target_efi_dir}/mmx64.efi"
+        fi
+        if [ -f "boot/efi/EFI/fedora/grubx64.efi" ]; then
+            sudo cp -af "boot/efi/EFI/fedora/grubx64.efi" "${target_efi_dir}/grubx64.efi"
+        fi
+        log_success "Official Microsoft-signed Shim & GRUB deployed to ${target_efi_dir}!"
+    else
+        log_warn "Could not download official Shim RPMs. Checking local fallback paths..."
+    fi
+
+    popd >/dev/null
+    rm -rf "${efi_tmp}"
+}
+
 deploy_maximum_armor_interactive() {
     local is_silent="${1:-}"
     validate_privileges
-    setup_compat_library_env
 
     if [ "${is_silent}" != "--silent" ]; then
         echo -e "\n${CYAN}${BOLD}$(_ MOK_OPTION_DEPLOY_SHIM)${RESET}"
@@ -361,14 +393,14 @@ deploy_maximum_armor_interactive() {
     local target_efi_dir="${esp_mount}/EFI/Slackware"
     sudo mkdir -p "${target_efi_dir}"
 
+    fetch_official_signed_shim_interactive "${esp_mount}"
+
     # Search for Microsoft-signed shimx64.efi & mmx64.efi candidates
     local shim_src=""
     local mm_src=""
     local grub_src=""
 
     local shim_candidates=(
-        "${APP_DIR}/../assets/efi/shimx64.efi"
-        "/usr/share/slacky-update/efi/shimx64.efi"
         "${esp_mount}/EFI/Slackware/shimx64.efi"
         "${esp_mount}/EFI/fedora/shimx64.efi"
         "${esp_mount}/EFI/debian/shimx64.efi"
@@ -384,8 +416,6 @@ deploy_maximum_armor_interactive() {
     done
 
     local mm_candidates=(
-        "${APP_DIR}/../assets/efi/mmx64.efi"
-        "/usr/share/slacky-update/efi/mmx64.efi"
         "${esp_mount}/EFI/Slackware/mmx64.efi"
         "${esp_mount}/EFI/fedora/mmx64.efi"
         "${esp_mount}/EFI/debian/mmx64.efi"
@@ -399,8 +429,6 @@ deploy_maximum_armor_interactive() {
     done
 
     local grub_candidates=(
-        "${APP_DIR}/../assets/efi/grubx64.efi"
-        "/usr/share/slacky-update/efi/grubx64.efi"
         "${esp_mount}/EFI/Slackware/grubx64.efi"
         "/boot/grub/x86_64-efi/core.efi"
         "/boot/grub/x86_64-efi/grub.efi"
@@ -504,7 +532,6 @@ self_heal_secure_boot_guard() {
 
 fix_my_damn_secure_boot_wizard() {
     validate_privileges
-    setup_compat_library_env
 
     echo ""
     echo -e "${CYAN}============================================================${RESET}"
@@ -583,7 +610,6 @@ fix_my_damn_secure_boot_wizard() {
 
 manage_armor_interactive() {
     validate_privileges
-    setup_compat_library_env
 
     while true; do
         echo ""

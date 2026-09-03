@@ -4,7 +4,7 @@
 set -euo pipefail
 
 PRGNAM="slacky-update"
-VERSION="0.7"
+VERSION="0.7.1"
 ARCH="noarch"
 BUILD="1_tux"
 
@@ -23,9 +23,7 @@ mkdir -p "${BUILD_DIR}" "${PKG_DIR}" "${OUTPUT_DIR}"
 mkdir -p "${PKG_DIR}/usr/local/bin"
 mkdir -p "${PKG_DIR}/usr/local/lib/slacky-update"
 mkdir -p "${PKG_DIR}/usr/share/slacky-update/lib"
-mkdir -p "${PKG_DIR}/usr/share/slacky-update/lib/compat"
 mkdir -p "${PKG_DIR}/usr/share/slacky-update/locales"
-mkdir -p "${PKG_DIR}/usr/share/slacky-update/efi"
 mkdir -p "${PKG_DIR}/usr/share/applications"
 mkdir -p "${PKG_DIR}/usr/share/icons/hicolor/128x128/apps"
 mkdir -p "${PKG_DIR}/etc/xdg/autostart"
@@ -44,14 +42,6 @@ install -m 0755 "${SRC_DIR}/lib/slacky-update-tray" "${PKG_DIR}/usr/share/slacky
 install -m 0755 "${SRC_DIR}/lib/check_backend.sh" "${PKG_DIR}/usr/share/slacky-update/lib/"
 install -m 0644 "${SRC_DIR}/lib/slacky_update_i18n.py" "${PKG_DIR}/usr/share/slacky-update/lib/"
 install -m 0644 "${SRC_DIR}"/locales/*.json "${PKG_DIR}/usr/share/slacky-update/locales/"
-
-if [ -d "${SRC_DIR}/assets/efi" ]; then
-    install -m 0644 "${SRC_DIR}"/assets/efi/*.efi "${PKG_DIR}/usr/share/slacky-update/efi/" 2>/dev/null || true
-fi
-
-if [ -d "${SRC_DIR}/assets/compat" ]; then
-    install -m 0755 "${SRC_DIR}"/assets/compat/*.so* "${PKG_DIR}/usr/share/slacky-update/lib/compat/" 2>/dev/null || true
-fi
 
 install -m 0644 "${SRC_DIR}/desktop/slacky-update.desktop" "${PKG_DIR}/usr/share/applications/"
 install -m 0644 "${SRC_DIR}/desktop/slacky-update-tray.desktop" "${PKG_DIR}/usr/share/applications/"

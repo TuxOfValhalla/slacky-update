@@ -4,9 +4,9 @@
 ### *The Most Tubular System Update Station, Kernel Time Machine, SBo SlackBuild Hub & Driver Mojo Command Center for Slackware Linux*
 
 [![Slackware -current](https://img.shields.io/badge/Slackware--current-15.0%2B-blue?style=for-the-badge&logo=slackware&logoColor=white)](http://www.slackware.com/)
-[![Release](https://img.shields.io/badge/Release-v0.7%20'The%20Spy%20Who%20Slacked%20Me'-purple?style=for-the-badge)](https://github.com/TuxOfValhalla/slacky-update/releases)
+[![Release](https://img.shields.io/badge/Release-v0.7.1%20'Zero--Binary%20Liberation'-purple?style=for-the-badge)](https://github.com/TuxOfValhalla/slacky-update/releases)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-green.svg?style=for-the-badge)](LICENSE)
-[![Ko-Fi](https://img.shields.io/badge/Ko--fi-Buy%20Me%20A%20Coffee-ff5f5f?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/tuxofvalhalla)
+[![Zero-Binary](https://img.shields.io/badge/Architecture-100%25%20Pure%20Source%20(Zero--Binary)-brightgreen?style=for-the-badge)](lib/)
 [![Language](https://img.shields.io/badge/Locales-22%20Languages%20(105%20Keys)-yellow?style=for-the-badge)](locales/)
 [![Stack](https://img.shields.io/badge/Stack-Bash%20%7C%20Python3%20%7C%20PyQt5-orange?style=for-the-badge)](bin/)
 
@@ -262,20 +262,6 @@ slacky-update --list-langs
 # Start or restart the background system tray applet
 slacky-update-tray --restart
 ```
-
----
-
-## ☕ Support the Author
-
-If **Slacky-Update** helps keep your Slackware rig humming like a finely tuned cyber-beast, consider buying me a coffee! Your support fuels further development, performance tuning, and new features:
-
-<div align="center">
-
-[![Buy Me A Coffee](https://img.shields.io/badge/Ko--Fi-Buy%20Me%20A%20Coffee-ff5f5f?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/tuxofvalhalla)
-
-👉 **[https://ko-fi.com/tuxofvalhalla](https://ko-fi.com/tuxofvalhalla)** 👈
-
-</div>
 
 ---
 
