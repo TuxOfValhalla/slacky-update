@@ -199,7 +199,17 @@ check_cachyos_background &
     fi
 
     if [ -n "${NVIDIA_ACTIVE_VER}" ]; then
-        LATEST_NVIDIA=$(curl -sSL -m 8 "https://download.nvidia.com/XFree86/Linux-x86_64/latest.txt" 2>/dev/null | awk '{print $1}' || true)
+        HAS_CACHY_LOCAL="false"
+        if ls /boot/vmlinuz*cachyos* 1>/dev/null 2>&1 || ls -d /lib/modules/*cachyos* 1>/dev/null 2>&1; then
+            HAS_CACHY_LOCAL="true"
+        fi
+
+        if [ "${HAS_CACHY_LOCAL}" = "true" ]; then
+            LATEST_NVIDIA=$(curl -sSL -m 10 "https://mirror.cachyos.org/repo/x86_64/cachyos/" 2>/dev/null | grep -o -E 'nvidia-utils-[0-9]+\.[0-9]+(\.[0-9]+)?' | sed 's/nvidia-utils-//' | sort -V | tail -n 1 || true)
+        else
+            LATEST_NVIDIA=$(curl -sSL -m 8 "https://download.nvidia.com/XFree86/Linux-x86_64/latest.txt" 2>/dev/null | awk '{print $1}' || true)
+        fi
+
         if [ -n "${LATEST_NVIDIA}" ]; then
             IS_NEWER=$(python3 -c "
 import sys, re
@@ -208,7 +218,18 @@ sys.exit(0 if p('$LATEST_NVIDIA') > p('$NVIDIA_ACTIVE_VER') else 1)
 " && echo "true" || echo "false")
 
             if [ "${IS_NEWER}" = "true" ]; then
-                NVIDIA_UPDATES+=("nvidia-driver-${LATEST_NVIDIA} (Installed: ${NVIDIA_ACTIVE_VER})")
+                if [ "${HAS_CACHY_LOCAL}" = "true" ]; then
+                    NVIDIA_UPDATES+=("CachyOS NVIDIA Complete Suite ${LATEST_NVIDIA} (64-bit, 32-bit Multilib, OpenCL & VA-API) [CachyOS Master Update]")
+                else
+                    NVIDIA_UPDATES+=("nvidia-driver-${LATEST_NVIDIA} (Installed: ${NVIDIA_ACTIVE_VER})")
+                fi
+            elif [ "${HAS_CACHY_LOCAL}" = "true" ]; then
+                # Version matches, but user is on untracked .run user-space or missing OpenCL / VA-API
+                if ! ls /var/log/packages/cachyos-nvidia-utils-* 1>/dev/null 2>&1; then
+                    NVIDIA_UPDATES+=("CachyOS NVIDIA Complete Suite ${LATEST_NVIDIA} (64-bit, 32-bit Multilib, OpenCL & VA-API) [CachyOS Master Migration]")
+                elif [ ! -f "/etc/OpenCL/vendors/nvidia.icd" ] || [ ! -f "/usr/lib64/dri/nvidia_drv_video.so" ]; then
+                    NVIDIA_UPDATES+=("CachyOS NVIDIA Complete Suite ${LATEST_NVIDIA} (OpenCL & VA-API Hardware Acceleration) [Complete Suite Upgrade]")
+                fi
             fi
         fi
 

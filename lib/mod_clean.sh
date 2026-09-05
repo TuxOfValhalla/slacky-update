@@ -18,6 +18,10 @@ def get_flavor(k_str):
         return 'lto'
     elif '-cachyos-bore' in k_str:
         return 'bore'
+    elif '-cachyos-rc' in k_str:
+        return 'rc'
+    elif '-cachyos-lts' in k_str:
+        return 'lts'
     elif '-cachyos' in k_str:
         return 'standard'
     return 'other'

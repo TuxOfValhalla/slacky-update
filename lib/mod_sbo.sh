@@ -329,19 +329,13 @@ install_curated_slackbuild() {
 }
 
 manage_curated_suite_interactive() {
-    local suite_dir=""
-    if [ -d "/home/tux/development/slacky-slackbuilds" ]; then
-        suite_dir="/home/tux/development/slacky-slackbuilds"
+    local suite_dir="${SLACKY_SLACKBUILDS_DIR:-/var/cache/slacky-update/slacky-slackbuilds}"
+    if [ ! -d "${suite_dir}" ]; then
+        log_info "Fetching curated Slacky-SlackBuilds repository..."
+        sudo mkdir -p "$(dirname "${suite_dir}")"
+        sudo git clone https://github.com/TuxOfValhalla/slacky-slackbuilds.git "${suite_dir}" 2>/dev/null || true
     else
-        suite_dir="/var/cache/slacky-update/slacky-slackbuilds"
-        if [ ! -d "${suite_dir}" ]; then
-            log_info "Cloning curated Slacky-SlackBuilds repository..."
-            sudo mkdir -p "$(dirname "${suite_dir}")"
-            sudo git clone https://github.com/TuxOfValhalla/slacky-slackbuilds.git "${suite_dir}" 2>/dev/null || true
-            sudo chown -R tux:users "${suite_dir}" 2>/dev/null || true
-        else
-            (cd "${suite_dir}" && git pull 2>/dev/null || true)
-        fi
+        (cd "${suite_dir}" && sudo git pull 2>/dev/null || true)
     fi
 
     while true; do

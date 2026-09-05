@@ -65,6 +65,10 @@ def get_flavor(k_str):
         return 'lto'
     elif '-cachyos-bore' in k_str:
         return 'bore'
+    elif '-cachyos-rc' in k_str:
+        return 'rc'
+    elif '-cachyos-lts' in k_str:
+        return 'lts'
     elif '-cachyos' in k_str:
         return 'standard'
     return None
@@ -96,6 +100,10 @@ def get_flavor(k_str):
         return 'lto'
     elif '-cachyos-bore' in k_str:
         return 'bore'
+    elif '-cachyos-rc' in k_str:
+        return 'rc'
+    elif '-cachyos-lts' in k_str:
+        return 'lts'
     elif '-cachyos' in k_str:
         return 'standard'
     return None
@@ -211,6 +219,12 @@ check_cachyos_upstream_flavor() {
     elif [ "${flavor}" = "lto" ]; then
         k_prefix="linux-cachyos-bore-lto"
         h_prefix="linux-cachyos-bore-lto-headers"
+    elif [ "${flavor}" = "rc" ]; then
+        k_prefix="linux-cachyos-rc"
+        h_prefix="linux-cachyos-rc-headers"
+    elif [ "${flavor}" = "lts" ]; then
+        k_prefix="linux-cachyos-lts"
+        h_prefix="linux-cachyos-lts-headers"
     fi
 
     for repo_url in "${repo_urls[@]}"; do
@@ -228,9 +242,9 @@ k_pref = '${k_prefix}'
 h_pref = '${h_prefix}'
 nv_pref = k_pref + '-nvidia-open'
 
-k_matches = re.findall(r'href=[\'\"]?(' + re.escape(k_pref) + r'-([0-9]+\.[0-9]+\.[0-9]+-[0-9]+)[^\'\">]*\.pkg\.tar\.zst)', html)
-h_matches = re.findall(r'href=[\'\"]?(' + re.escape(h_pref) + r'-([0-9]+\.[0-9]+\.[0-9]+-[0-9]+)[^\'\">]*\.pkg\.tar\.zst)', html)
-nv_matches = re.findall(r'href=[\'\"]?(' + re.escape(nv_pref) + r'-([0-9]+\.[0-9]+\.[0-9]+-[0-9]+)[^\'\">]*\.pkg\.tar\.zst)', html)
+k_matches = re.findall(r'href=[\'\"]?(' + re.escape(k_pref) + r'-([0-9]+\.[0-9]+[a-zA-Z0-9\._]*-[0-9]+)[^\'\">]*\.pkg\.tar\.zst)', html)
+h_matches = re.findall(r'href=[\'\"]?(' + re.escape(h_pref) + r'-([0-9]+\.[0-9]+[a-zA-Z0-9\._]*-[0-9]+)[^\'\">]*\.pkg\.tar\.zst)', html)
+nv_matches = re.findall(r'href=[\'\"]?(' + re.escape(nv_pref) + r'-([0-9]+\.[0-9]+[a-zA-Z0-9\._]*-[0-9]+)[^\'\">]*\.pkg\.tar\.zst)', html)
 
 if not k_matches or not h_matches:
     print('NONE NONE NONE NONE')
@@ -288,21 +302,185 @@ deploy_cachyos_kernel_flavor() {
     if command -v purge_old_cachyos_kernels >/dev/null 2>&1; then
         purge_old_cachyos_kernels
     fi
+
+    # Smart Prompt: Check if system is eligible for pure CachyOS transition
+    prompt_stock_kernel_removal_if_eligible "${flavor}"
+}
+
+update_cachyos_kernels() {
+    validate_privileges
+    local installed_flavors
+    installed_flavors=$(get_installed_cachyos_flavors 2>/dev/null || echo "")
+    if [ -z "${installed_flavors}" ]; then
+        log_info "No CachyOS kernels currently installed."
+        return 0
+    fi
+
+    log_info "Scanning for upstream updates across installed CachyOS flavors..."
+    local updated_any=0
+    for flv in ${installed_flavors}; do
+        local cur_ver latest_ver k_url h_url nv_url
+        cur_ver=$(get_installed_cachyos_flavor_version "${flv}" 2>/dev/null || echo "NONE")
+        read -r latest_ver k_url h_url nv_url <<< "$(check_cachyos_upstream_flavor "${flv}" || echo "NONE NONE NONE NONE")"
+        if [ "${latest_ver}" != "NONE" ] && [ -n "${latest_ver}" ] && [ "${cur_ver}" != "NONE" ]; then
+            if [ "$(compare_versions_strictly_greater "${latest_ver}" "${cur_ver}")" = "true" ]; then
+                echo -e "\n${GREEN}${BOLD}Upgrade available for ${flv}: v${cur_ver} -> v${latest_ver}${RESET}"
+                deploy_cachyos_kernel_flavor "${flv}"
+                updated_any=1
+            else
+                log_info "Flavor '${flv}' (v${cur_ver}) is up to date with upstream."
+            fi
+        fi
+    done
+
+    if [ "${updated_any}" -eq 1 ]; then
+        log_success "CachyOS kernel upgrade completed."
+    else
+        log_info "All installed CachyOS kernels are already up to date."
+    fi
+}
+
+remove_stock_slackware_kernels() {
+    validate_privileges
+    log_info "Transitioning system to Pure CachyOS Mode..."
+
+    local stock_pkgs=("kernel-generic" "kernel-huge" "kernel-modules" "kernel-source")
+    for pkg in "${stock_pkgs[@]}"; do
+        local installed
+        installed=$(ls /var/log/packages/${pkg}-* 2>/dev/null || true)
+        if [ -n "${installed}" ]; then
+            for p in ${installed}; do
+                local base_p
+                base_p=$(basename "${p}")
+                log_info "Removing stock Slackware package: ${base_p}..."
+                sudo /sbin/removepkg "${base_p}" 2>/dev/null || true
+            done
+        fi
+    done
+
+    # Add to blacklist if not already present
+    local blacklist_file="/etc/slackpkg/blacklist"
+    if [ -f "${blacklist_file}" ]; then
+        if ! grep -q "Slacky-Update Pure CachyOS Mode" "${blacklist_file}"; then
+            echo -e "\n# [Slacky-Update Pure CachyOS Mode]\nkernel-generic*\nkernel-huge*\nkernel-modules*\nkernel-source*" | sudo tee -a "${blacklist_file}" >/dev/null
+            log_info "Stock kernels blacklisted in ${blacklist_file} (kernel-headers preserved)."
+        fi
+    fi
+
+    log_success "System is now running on Pure CachyOS kernels!"
+    sync_bootloader_configuration "$(uname -r)"
+}
+
+restore_stock_slackware_kernels() {
+    validate_privileges
+
+    echo ""
+    echo -e "${CYAN}============================================================${RESET}"
+    echo -e "${YELLOW}${BOLD}$(_ CACHY_PICKER_RESTORE_STOCK | sed -E 's/^[0-9]+\.\s*//')${RESET}"
+    echo -e "${CYAN}============================================================${RESET}"
+    echo -e "${YELLOW}${BOLD}$(_ PROMPT_CONFIRM_RESTORE_STOCK)${RESET}"
+    read -r confirm_restore
+    confirm_restore=${confirm_restore:-N}
+    if [[ ! "${confirm_restore}" =~ ^[YyJjSsOo]$ ]]; then
+        log_info "Operation cancelled by user."
+        return 0
+    fi
+
+    log_info "Restoring stock Slackware kernel infrastructure..."
+    local blacklist_file="/etc/slackpkg/blacklist"
+    if [ -f "${blacklist_file}" ]; then
+        sudo sed -i '/kernel-generic\*/d; /kernel-huge\*/d; /kernel-modules\*/d; /kernel-source\*/d; /\[Slacky-Update Pure CachyOS Mode\]/d' "${blacklist_file}" 2>/dev/null || true
+        log_info "Un-blacklisted stock kernels in ${blacklist_file}."
+    fi
+
+    local slackpkg_bin
+    slackpkg_bin=$(command -v slackpkg 2>/dev/null || echo "/usr/sbin/slackpkg")
+    if [ -x "${slackpkg_bin}" ]; then
+        log_info "Updating slackpkg repository index..."
+        sudo "${slackpkg_bin}" update || true
+
+        log_info "Installing official Slackware kernel-generic and kernel-modules..."
+        sudo "${slackpkg_bin}" -batch=on -default_answer=y install kernel-generic kernel-modules || true
+    fi
+
+    local stock_kver=""
+    for mod_d in /lib/modules/*; do
+        [ -d "${mod_d}" ] || continue
+        local bname
+        bname=$(basename "${mod_d}")
+        if [[ ! "${bname}" =~ cachyos ]]; then
+            stock_kver="${bname}"
+        fi
+    done
+
+    if [ -n "${stock_kver}" ]; then
+        log_info "Regenerating initrd for stock kernel: ${stock_kver}..."
+        generate_kernel_initramfs "${stock_kver}"
+        sync_bootloader_configuration "${stock_kver}"
+    else
+        sync_bootloader_configuration "$(uname -r)"
+    fi
+
+    log_success "Official Slackware stock kernels successfully restored and integrated!"
+}
+
+prompt_stock_kernel_removal_if_eligible() {
+    local just_deployed_flavor="$1"
+    validate_privileges
+
+    local has_stock=0
+    if ls /var/log/packages/kernel-generic-* /var/log/packages/kernel-modules-* 2>/dev/null | grep -q 'kernel-'; then
+        has_stock=1
+    fi
+    [ "${has_stock}" -eq 1 ] || return 0
+
+    local installed_flavors
+    installed_flavors=$(get_installed_cachyos_flavors)
+
+    local has_lts=0
+    local has_perf=0
+    for flv in ${installed_flavors}; do
+        [ "${flv}" = "lts" ] && has_lts=1
+        [[ "${flv}" =~ ^(bore|lto|standard|rc)$ ]] && has_perf=1
+    done
+
+    # Guardrail: Must have BOTH LTS and a Performance/RC kernel to offer stock removal
+    if [ "${has_lts}" -eq 1 ] && [ "${has_perf}" -eq 1 ]; then
+        echo ""
+        local reply_remove="N"
+        if [ "${just_deployed_flavor}" = "lts" ]; then
+            echo -e "${YELLOW}${BOLD}$(_ PROMPT_REMOVE_STOCK_MULTIPLE)${RESET}"
+            read -r reply_remove
+        else
+            echo -e "${YELLOW}${BOLD}$(_ PROMPT_REMOVE_STOCK_DUAL)${RESET}"
+            read -r reply_remove
+        fi
+        reply_remove=${reply_remove:-N}
+        if [[ "${reply_remove}" =~ ^[YyJjSsOo]$ ]]; then
+            remove_stock_slackware_kernels
+        fi
+    fi
 }
 
 cachyos_kernel_picker_interactive() {
     while true; do
-        local st_ver bo_ver lto_ver
+        local st_ver bo_ver lto_ver rc_ver lts_ver
         st_ver=$(get_installed_cachyos_flavor_version "standard")
         bo_ver=$(get_installed_cachyos_flavor_version "bore")
         lto_ver=$(get_installed_cachyos_flavor_version "lto")
+        rc_ver=$(get_installed_cachyos_flavor_version "rc")
+        lts_ver=$(get_installed_cachyos_flavor_version "lts")
 
         local st_tag="[NOT INSTALLED]"
         local bo_tag="[NOT INSTALLED]"
         local lto_tag="[NOT INSTALLED]"
+        local rc_tag="[NOT INSTALLED]"
+        local lts_tag="[NOT INSTALLED]"
         [ "${st_ver}" != "NONE" ] && st_tag="[INSTALLED: ${st_ver}]"
         [ "${bo_ver}" != "NONE" ] && bo_tag="[INSTALLED: ${bo_ver}]"
         [ "${lto_ver}" != "NONE" ] && lto_tag="[INSTALLED: ${lto_ver}]"
+        [ "${rc_ver}" != "NONE" ] && rc_tag="[INSTALLED: ${rc_ver}]"
+        [ "${lts_ver}" != "NONE" ] && lts_tag="[INSTALLED: ${lts_ver}]"
 
         echo ""
         echo -e "${CYAN}============================================================${RESET}"
@@ -314,10 +492,15 @@ cachyos_kernel_picker_interactive() {
         echo -e "     $(_ CACHY_FLAVOR_BORE)"
         echo -e "  3. \033[1;32mlinux-cachyos-bore-lto\033[0m ${lto_tag}"
         echo -e "     $(_ CACHY_FLAVOR_LTO)"
-        echo -e "  4. $(_ CACHY_PICKER_EXIT | sed -E 's/^[0-9]+\.\s*//')"
+        echo -e "  4. \033[1;32mlinux-cachyos-rc\033[0m ${rc_tag}"
+        echo -e "     $(_ CACHY_FLAVOR_RC)"
+        echo -e "  5. \033[1;32mlinux-cachyos-lts\033[0m ${lts_tag}"
+        echo -e "     $(_ CACHY_FLAVOR_LTS)"
+        echo -e "  $(_ CACHY_PICKER_RESTORE_STOCK)"
+        echo -e "  $(_ CACHY_PICKER_EXIT)"
         echo ""
-        echo -n "$(_ SELECT_OPERATION_RANGE range="1-4") "
-        read -r pchoice || pchoice="4"
+        echo -n "$(_ SELECT_OPERATION_RANGE range="1-7") "
+        read -r pchoice || pchoice="7"
 
         case "${pchoice}" in
             1)
@@ -339,6 +522,24 @@ cachyos_kernel_picker_interactive() {
                 read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
                 ;;
             4)
+                echo ""
+                deploy_cachyos_kernel_flavor "rc"
+                echo ""
+                read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                ;;
+            5)
+                echo ""
+                deploy_cachyos_kernel_flavor "lts"
+                echo ""
+                read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                ;;
+            6)
+                echo ""
+                restore_stock_slackware_kernels
+                echo ""
+                read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                ;;
+            7)
                 return 0
                 ;;
             *)
@@ -387,6 +588,49 @@ detect_root_filesystem_details() {
     echo "${root_dev}|${root_fs}|${root_uuid}|${root_flags}"
 }
 
+set_grub_smart_default_priority() {
+    local top_dog
+    top_dog=$(python3 -c "
+import os, re
+
+def rank_kernel(k):
+    tier = -2
+    if '-cachyos-bore-lto' in k or '-cachyos-lto' in k:
+        tier = 4
+    elif '-cachyos-bore' in k:
+        tier = 5
+    elif '-cachyos-rc' in k:
+        tier = 3
+    elif '-cachyos-lts' in k:
+        tier = 1
+    elif '-cachyos' in k:
+        tier = 2
+    elif 'vmlinuz-generic' in k:
+        tier = 0
+    elif 'vmlinuz-huge' in k:
+        tier = -1
+    nums = [int(x) for x in re.findall(r'\d+', k)]
+    return (tier, nums)
+
+kernels = [f for f in os.listdir('/boot') if f.startswith('vmlinuz') and not os.path.islink(os.path.join('/boot', f))]
+ranked = sorted(kernels, key=rank_kernel, reverse=True)
+if ranked:
+    print('/boot/' + ranked[0])
+" 2>/dev/null || echo "")
+
+    if [ -n "${top_dog}" ] && [ -f "${top_dog}" ]; then
+        log_info "Smart Boot Priority: Setting Top Dog default in GRUB (${top_dog})..."
+        local grub_default_file="/etc/default/grub"
+        if [ -f "${grub_default_file}" ]; then
+            if grep -q "^GRUB_TOP_LEVEL=" "${grub_default_file}"; then
+                sudo sed -i "s|^GRUB_TOP_LEVEL=.*|GRUB_TOP_LEVEL=\"${top_dog}\"|" "${grub_default_file}"
+            else
+                echo "GRUB_TOP_LEVEL=\"${top_dog}\"" | sudo tee -a "${grub_default_file}" >/dev/null
+            fi
+        fi
+    fi
+}
+
 # --- [ BOOTLOADER SYNCHRONIZATION & CMDLINE INJECTION ] ---
 sync_bootloader_configuration() {
     local kver_full="$1"
@@ -415,6 +659,51 @@ sync_bootloader_configuration() {
     local grub_mkconfig_bin
     grub_mkconfig_bin=$(command -v grub-mkconfig 2>/dev/null || command -v grub2-mkconfig 2>/dev/null || echo "/usr/sbin/grub-mkconfig")
     if [ -x "${grub_mkconfig_bin}" ]; then
+        local grub_default_file="/etc/default/grub"
+        if [ -f "${grub_default_file}" ]; then
+            python3 - << PYGRUB
+import os, re
+
+cfg_path = "${grub_default_file}"
+try:
+    with open(cfg_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    m = re.search(r'^(GRUB_CMDLINE_LINUX_DEFAULT=\")([^\"]*)(\")', content, re.MULTILINE)
+    if m:
+        prefix, cmdline, suffix = m.group(1), m.group(2), m.group(3)
+        tokens = cmdline.strip().split()
+        seen = set()
+        result = []
+        for t in tokens:
+            norm = t
+            if norm.startswith("nvidia-drm."):
+                norm = "nvidia_drm." + norm[len("nvidia-drm."):]
+            elif norm.startswith("nvidia-modeset."):
+                norm = "nvidia_modeset." + norm[len("nvidia-modeset."):]
+            elif norm.startswith("nvidia-uvm."):
+                norm = "nvidia_uvm." + norm[len("nvidia-uvm."):]
+            if norm not in seen:
+                seen.add(norm)
+                result.append(norm)
+
+        has_nv = "${HAS_NVIDIA}".lower() == "true"
+        if has_nv:
+            for req in ["nvidia_drm.modeset=1", "nvidia_drm.fbdev=1", "nvidia.NVreg_PreserveVideoMemoryAllocations=1"]:
+                if req not in seen:
+                    seen.add(req)
+                    result.append(req)
+
+        new_cmdline = " ".join(result)
+        if new_cmdline != cmdline:
+            new_content = content[:m.start()] + prefix + new_cmdline + suffix + content[m.end():]
+            with open(cfg_path, "w", encoding="utf-8") as f:
+                f.write(new_content)
+except Exception:
+    pass
+PYGRUB
+        fi
+        set_grub_smart_default_priority
         if [ -f "/boot/grub/grub.cfg" ]; then
             log_info "Synchronizing GRUB bootloader configuration (/boot/grub/grub.cfg)..."
             sudo "${grub_mkconfig_bin}" -o /boot/grub/grub.cfg >/dev/null 2>&1 || true
@@ -506,6 +795,10 @@ deploy_cachyos_kernel_packages() {
         if [ ! -d "/usr/lib/modules/${kver_full}" ] && [ -d "/usr/lib/modules/${ver}-cachyos-lto" ]; then
             kver_full="${ver}-cachyos-lto"
         fi
+    elif [ "${flavor}" = "rc" ]; then
+        kver_full="${ver}-cachyos-rc"
+    elif [ "${flavor}" = "lts" ]; then
+        kver_full="${ver}-cachyos-lts"
     else
         kver_full="${ver}-cachyos"
     fi
@@ -519,6 +812,10 @@ deploy_cachyos_kernel_packages() {
         sudo cp -f "/boot/vmlinuz-linux-cachyos-bore-lto" "/boot/vmlinuz-${kver_full}"
     elif [ -f "/boot/vmlinuz-linux-cachyos-bore" ] && [ "${flavor}" = "bore" ]; then
         sudo cp -f "/boot/vmlinuz-linux-cachyos-bore" "/boot/vmlinuz-${kver_full}"
+    elif [ -f "/boot/vmlinuz-linux-cachyos-rc" ] && [ "${flavor}" = "rc" ]; then
+        sudo cp -f "/boot/vmlinuz-linux-cachyos-rc" "/boot/vmlinuz-${kver_full}"
+    elif [ -f "/boot/vmlinuz-linux-cachyos-lts" ] && [ "${flavor}" = "lts" ]; then
+        sudo cp -f "/boot/vmlinuz-linux-cachyos-lts" "/boot/vmlinuz-${kver_full}"
     elif [ -f "/boot/vmlinuz-linux-cachyos" ] && [ "${flavor}" = "standard" ]; then
         sudo cp -f "/boot/vmlinuz-linux-cachyos" "/boot/vmlinuz-${kver_full}"
     elif [ -f "/usr/lib/modules/${kver_full}/vmlinuz" ]; then
@@ -534,24 +831,47 @@ deploy_cachyos_kernel_packages() {
         sudo ln -sf "/usr/lib/modules/${kver_full}/build" "/lib/modules/${kver_full}/source"
     fi
 
-    # Fetch and deploy matching CachyOS NVIDIA Open driver package if on modern NVIDIA GPU
+    # Fetch and deploy matching CachyOS NVIDIA driver if on supported NVIDIA GPU
     if [ "${HAS_NVIDIA}" = "true" ]; then
         local gpu_arch="MODERN"
         if command -v detect_nvidia_gpu >/dev/null 2>&1; then
             gpu_arch=$(detect_nvidia_gpu)
         fi
 
-        if [ "${gpu_arch}" = "PASCAL" ]; then
-            log_info "Pascal GPU architecture detected (GTX 10-series / legacy):"
-            log_info "NVIDIA Open modules are unsupported on pre-Turing hardware. Routing to proprietary DKMS module builder..."
-        elif [ "${nv_url}" != "NONE" ] && [ -n "${nv_url}" ]; then
-            local nv_filename
-            nv_filename=$(basename "${nv_url}")
-            local nv_file="${dest_dir}/${nv_filename}"
-            log_info "Modern NVIDIA GPU detected. Downloading prebuilt matching CachyOS NVIDIA Open driver (${nv_filename})..."
-            sudo curl -sSL -o "${nv_file}" "${nv_url}"
-            log_info "Extracting NVIDIA driver package to system root..."
-            sudo tar --zstd -xf "${nv_file}" -C /
+        if [ "${gpu_arch}" = "LEGACY" ]; then
+            log_warn "NVIDIA GPU is older than Pascal (pre-GTX 10-series). CachyOS kernels do not support legacy proprietary drivers."
+        elif [ "${gpu_arch}" = "PASCAL" ]; then
+            log_info "Pascal GPU architecture detected (GTX 10-series):"
+            log_info "NVIDIA Open modules are unsupported on pre-Turing hardware."
+            log_info "Fetching matching nvidia-580xx-dkms from CachyOS repository..."
+            local cachy_base="https://mirror.cachyos.org/repo/x86_64/cachyos"
+            local dkms_pkg
+            dkms_pkg=$(curl -sSL -m 10 "${cachy_base}/" 2>/dev/null | grep -o -E 'nvidia-580xx-dkms-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst' | head -n 1 || echo "")
+            if [ -n "${dkms_pkg}" ]; then
+                local dkms_file="${dest_dir}/${dkms_pkg}"
+                log_info "Downloading ${dkms_pkg}..."
+                sudo curl -sSL -o "${dkms_file}" "${cachy_base}/${dkms_pkg}"
+                sudo tar --zstd -xf "${dkms_file}" -C /
+                if command -v dkms >/dev/null 2>&1; then
+                    local dkms_ver
+                    dkms_ver=$(dkms status 2>/dev/null | grep -E '^nvidia/' | awk -F'[,/]' '{print $2}' | tr -d ' ' | head -n 1 || echo "580.178.04")
+                    log_info "Building nvidia ${dkms_ver} for kernel ${kver_full} via DKMS..."
+                    sudo dkms build -m nvidia -v "${dkms_ver}" -k "${kver_full}" 2>/dev/null || true
+                    sudo dkms install -m nvidia -v "${dkms_ver}" -k "${kver_full}" 2>/dev/null || true
+                fi
+            else
+                log_warn "Could not resolve nvidia-580xx-dkms package from CachyOS repository."
+            fi
+        elif [ "${gpu_arch}" = "MODERN" ]; then
+            if [ "${nv_url}" != "NONE" ] && [ -n "${nv_url}" ]; then
+                local nv_filename
+                nv_filename=$(basename "${nv_url}")
+                local nv_file="${dest_dir}/${nv_filename}"
+                log_info "Modern NVIDIA GPU detected (Turing 20-series+). Downloading prebuilt matching CachyOS NVIDIA Open driver (${nv_filename})..."
+                sudo curl -sSL -o "${nv_file}" "${nv_url}"
+                log_info "Extracting NVIDIA driver package to system root..."
+                sudo tar --zstd -xf "${nv_file}" -C /
+            fi
         fi
     fi
 
@@ -560,13 +880,20 @@ deploy_cachyos_kernel_packages() {
     sudo "${depmod_bin}" -a "${kver_full}"
     log_success "Kernel deployed: ${kver_full}"
 
-    # 1. Build DKMS out-of-tree modules (NVIDIA) if not already provided by prebuilt packages
-    if [ ! -d "/usr/lib/modules/${kver_full}/kernel/drivers/video" ] && [ ! -d "/lib/modules/${kver_full}/kernel/drivers/video" ]; then
-        if command -v build_nvidia_modules >/dev/null 2>&1; then
-            build_nvidia_modules "${kver_full}"
+    # 1. Build DKMS out-of-tree modules (NVIDIA) only if on NVIDIA GPU and modules not yet in tree
+    if [ "${HAS_NVIDIA}" = "true" ]; then
+        if [ ! -d "/usr/lib/modules/${kver_full}/kernel/drivers/video" ] && [ ! -d "/lib/modules/${kver_full}/kernel/drivers/video" ]; then
+            if command -v build_nvidia_modules >/dev/null 2>&1; then
+                build_nvidia_modules "${kver_full}"
+            fi
+        else
+            log_info "Matching CachyOS NVIDIA driver modules active in kernel tree."
         fi
-    else
-        log_info "Matching CachyOS NVIDIA driver modules active in kernel tree."
+
+        # Synchronize CachyOS NVIDIA user-space package and any stock Slackware kernels
+        if command -v ensure_cachyos_nvidia_duties >/dev/null 2>&1; then
+            ensure_cachyos_nvidia_duties
+        fi
     fi
 
     # 2. Generate initramfs image (Dracut / mkinitrd)
@@ -605,6 +932,12 @@ generate_kernel_initramfs() {
         local dracut_bin
         dracut_bin=$(command -v dracut 2>/dev/null || echo "/usr/bin/dracut")
         local dracut_args=(--force)
+        if [ "$(uname -m)" = "x86_64" ] && [ -d "/usr/lib64" ]; then
+            dracut_args+=(--libdirs "/lib64 /usr/lib64 /usr/local/lib64")
+            if [ -d "/etc/dracut.conf.d" ] && [ ! -f "/etc/dracut.conf.d/00-multilib.conf" ]; then
+                echo 'libdirs=" /lib64 /usr/lib64 /usr/local/lib64 "' | sudo tee /etc/dracut.conf.d/00-multilib.conf >/dev/null 2>&1 || true
+            fi
+        fi
         if [ "${HAS_NVIDIA}" = "true" ]; then
             dracut_args+=(--add-drivers "nvidia nvidia_modeset nvidia_uvm nvidia_drm")
         fi

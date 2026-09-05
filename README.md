@@ -4,7 +4,7 @@
 ### *The Most Tubular System Update Station, Kernel Time Machine, SBo SlackBuild Hub & Driver Mojo Command Center for Slackware Linux*
 
 [![Slackware -current](https://img.shields.io/badge/Slackware--current-15.0%2B-blue?style=for-the-badge&logo=slackware&logoColor=white)](http://www.slackware.com/)
-[![Release](https://img.shields.io/badge/Release-v0.7.1%20'Zero--Binary%20Liberation'-purple?style=for-the-badge)](https://github.com/TuxOfValhalla/slacky-update/releases)
+[![Release](https://img.shields.io/badge/Release-v0.8%20'Pop%20Quiz,%20Hotshot!'-purple?style=for-the-badge)](https://github.com/TuxOfValhalla/slacky-update/releases)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-green.svg?style=for-the-badge)](LICENSE)
 [![Zero-Binary](https://img.shields.io/badge/Architecture-100%25%20Pure%20Source%20(Zero--Binary)-brightgreen?style=for-the-badge)](lib/)
 [![Language](https://img.shields.io/badge/Locales-22%20Languages%20(105%20Keys)-yellow?style=for-the-badge)](locales/)
@@ -15,7 +15,7 @@
 ### *Party on, Wayne! / Party on, Garth!*
 **Slacky-Update** is an all-in-one, high-octane maintenance station, background system monitor, and SlackBuild hub engineered specifically for **Slackware Linux (-current / 15.0+)**. 
 
-It bridges the gap between pure Slackware simplicity and modern powerhouse capabilities: **SBo SlackBuild & sbotools Integration** with curated gaming packages, **CachyOS Kernel Picker** (*Standard, BORE, and BORE-LTO flavors*), automated upstream **CachyOS kernel deployment** with CPU architecture optimization (*znver4 / v4*), interactive **NVIDIA driver branch selection & DKMS compilation**, automated **Dracut initramfs generation**, **1-Click Microsoft-signed UEFI Secure Boot setup**, **silent bootloader self-healing**, **Smart `.new` configuration reconciliation**, **smart reboot evaluation**, **GitHub self-updater**, **Flatpak GL runtime synchronization**, and intelligent **retention policies** for your bootloader.
+It bridges the gap between pure Slackware simplicity and modern powerhouse capabilities: **Turbo Parallel Package Pre-fetcher (`curl -Z`)**, **SBo SlackBuild & sbotools Integration** with curated gaming packages, **CachyOS Kernel Picker** (*Standard, BORE, BORE-LTO, RC, and LTS flavors*) with **Smart Boot Priority Engine** in GRUB, **Pure CachyOS Mode with Reversible Stock Recovery**, automated upstream **CachyOS kernel deployment** with CPU architecture optimization (*znver4 / v4*), interactive **NVIDIA driver branch selection & DKMS compilation**, automated **Dracut initramfs generation**, **1-Click Microsoft-signed UEFI Secure Boot setup**, **silent bootloader self-healing with hardware guardrails**, **Smart `.new` configuration reconciliation**, **smart reboot evaluation**, **GitHub self-updater**, **Flatpak GL runtime synchronization**, and intelligent **retention policies** for your bootloader.
 
 *Slacky-Update is designed to keep Slackware Linux effortlessly maintained, rock-solid, and 100% ready for high-performance gaming, SlackBuild compilation, and seamless Windows 11 dual-booting with UEFI Secure Boot permanently enabled—without requiring a PhD in UNIX sysadmin work!*
 
@@ -120,13 +120,14 @@ Slacky-Update features native hardware inspection (`probe_gpu_hardware`) via PCI
 ```
 
 ### 1. 🛡️ Total System Synchronization ("Party On!")
+* **Turbo Parallel Package Pre-fetch Engine (`curl -Z`):** Accelerates downloads with **10 concurrent parallel streams**, live terminal progress ticker (`[x/total] ✓ package.txz (size, speed)`), automatic `.asc` GPG signature pre-fetching, and strict repository path filtering (locking out unwanted `testing/` or `pasture/` trees). Delivers 100% warm-cache handoff to `slackpkg install-new` and `upgrade-all` without duplicate downloads.
 * **Slackware Core Package Management:** Integrates seamlessly with Slackware's native `slackpkg` (`update`, `install-new`, `upgrade-all`).
 * **SBo SlackBuilds Pipeline:** Automatically checks and updates all installed SBo SlackBuilds via `sbotools` (`sboupgrade --all`) in the same unified transaction.
-* **Smart Resume Loop:** If `slackpkg`, `pkgtools`, or `glibc-solibs` upgrades itself and pauses the transaction, Slacky-Update detects this in-session and prompts to resume immediately with the newly installed tools—no aborts, no manual restarting!
+* **Multi-Pass Resume Engine:** If `slackpkg`, `slackpkg+`, `pkgtools`, `glibc-solibs`, or `ca-certificates` self-upgrades and pauses the package transaction, Slacky-Update catches this in-session and prompts to resume immediately with the new toolchain—no crashes, no manual restarts!
 * **Smart `.new` Configuration Reconciliation:** Scans `/etc/` after system upgrades and automatically categorizes `.new` files into 4 clear groups (New Configs, Identical Duplicates, Unmodified Defaults, and Custom User Configs) with 4 quick, respectful batch prompts—eliminating 95% of prompt fatigue!
 * **Smart Reboot Evaluator:** Intelligently determines if core system packages (`glibc`, `plasma`, `nvidia`, or the active running kernel) were updated via temp-file comparison (`mktemp`), prompting for a reboot only when genuinely necessary, and closing the CLI window cleanly when done.
 * **Flatpak Upgrades & NVIDIA GL Sync:** Upgrades all user and system Flatpaks, automatically inspecting and synchronizing required Flatpak NVIDIA GL runtimes (`org.freedesktop.Platform.GL*.nvidia-*`).
-* **GitHub Self-Update Engine:** Real-time release verification with clean status line (`✓ Slacky-Update is up to date with GitHub (v0.7)`) and 1-click self-upgrade & reload.
+* **GitHub Self-Update Engine:** Real-time release verification with clean status line (`✓ Slacky-Update is up to date with GitHub (v0.8)`) and 1-click self-upgrade & reload.
 * **Conditional Pipeline:** Intelligently snapshots installed packages and only rebuilds DKMS, Dracut initramfs, and signatures when kernel or driver packages actually change.
 
 ### 2. 🧰 SBo SlackBuilds & Gaming Hub (`sbotools` Integration)
@@ -134,34 +135,39 @@ Slacky-Update features native hardware inspection (`probe_gpu_hardware`) via PCI
 * **1-Click sbotools Bootstrap:** If `sbotools` is missing, Slacky-Update offers automated bootstrap compilation and setup out of the box.
 * **Interactive SBo Package Search:** Search thousands of SlackBuilds directly from the terminal (`sbofind`) and install them in real-time.
 * **Recommended Gaming Showroom:** Quick 1-click access to essential Linux gaming software: **OBS Studio**, **Steam Client** (with automated 32-bit AlienBOB multilib detection & setup), **Discord**, and **ProtonPlus**!
-* **Curated Slacky-SlackBuilds Suite:** Direct integration with our companion repository [Slacky-SlackBuilds](https://github.com/TuxOfValhalla/slacky-slackbuilds) featuring **MangoHud**, **Goverlay**, **Gamemode**, **Gamescope**, and **VKBasalt**!
+* **Curated Slacky-SlackBuilds Suite:** Direct integration with our companion repository [Slacky-SlackBuilds](https://github.com/TuxOfValhalla/slacky-slackbuilds) featuring **MangoHud**, **Goverlay**, **Gamemode**, **Gamescope**, and **VKBasalt** cached cleanly in `/var/cache/slacky-update/slacky-slackbuilds` with zero hardcoded user paths.
 * **Silent 7-Day Auto-Refresh:** Automatically refreshes the SBo tree snapshot in the background if older than 7 days, keeping build dependencies 100% fresh.
 
 ### 3. ⚡ "JUST FIX MY DAMN SECURE BOOT!" (1-Click Ironclad Wizard)
 * **One-Click Provisioning:** Deploys Microsoft-signed `shimx64.efi`, `mmx64.efi`, and Fedora-signed `grubx64.efi` to `/boot/efi/EFI/Slackware/`, creates dynamic early `grub.cfg` pointers, provisions MOK keypairs, bakes Dracut initramfs across all kernels, signs all binaries, and updates GRUB.
+* **Collision-Free Isolated Module Signing:** Module signing executes inside dedicated `/tmp/slacky-sign-XXXXXX` workspaces, preventing corrupted `.ko.zst` files, auto-purging uncompressed `.ko` duplicates, and auto-detecting the active MOK signer tool (`kmodsign` or `sign-file`).
 * **Silent Self-Heal Guard:** Runs quietly in the background on every update. If an external package or accidental `grub-install` overwrites your signed EFI binaries or configuration, Self-Heal silently restores them!
 * **Bundled OpenSSL 1.1 Compatibility:** Packages include bundled `libcrypto.so.1.1` and `libssl.so.1.1` compatibility libraries so `sbsign` and `mokutil` never fail on Slackware -current with OpenSSL 3.x.
 
 ### 4. 🏎️ CachyOS Time Machine (Kernel Engine)
-* **Automatic CPU Tier Detection:** Identifies your CPU microarchitecture (*x86_64_v4 / znver4, x86_64_v3, x86_64_v2*) and pulls high-performance, optimized CachyOS Linux kernel binaries and headers directly from upstream Arch/CachyOS package repositories.
-* **Instant NVIDIA Driver Package Sync:** When deploying a CachyOS kernel on a system with an NVIDIA GPU, Slacky-Update automatically detects your hardware and fetches the corresponding precompiled `linux-cachyos-*-nvidia-open` package directly from upstream repositories—providing lightning-fast, zero-compilation graphics setup ready on first boot!
-* **Hardware Architecture Safeguard:** Intelligently checks GPU capabilities. For legacy hardware like the Pascal architecture (GTX 10-series / 1060/1070/1080), it automatically bypasses `nvidia-open` (which requires Turing+ GSP hardware) and routes directly to the proprietary 580xx branch via DKMS, preventing black screens and ensuring flawless compatibility across GPU generations.
+* **Automatic CPU Tier Detection:** Identifies your CPU microarchitecture (*x86_64_v4 / znver4, x86_64_v3, x86_64_v2*) and pulls high-performance, optimized CachyOS Linux kernel binaries and headers directly from upstream Arch/CachyOS package repositories (*Standard, BORE, BORE-LTO, RC, and LTS flavors*).
+* **Pure CachyOS Kernel Mode (100% Reversible):** When running CachyOS LTS alongside performance kernels, Slacky-Update offers the option to completely remove stock Slackware kernels (`kernel-generic`, `kernel-huge`, `kernel-modules`) to reclaim disk space while **safely preserving `kernel-headers`** for full build system compatibility. The entire process is 100% reversible with 1-click stock restoration!
+* **Smart Bootloader "Top Dog" Priority:** Automatically sets the highest performance installed kernel as default top entry in GRUB, alongside intelligent CMDLINE deduplication and normalization.
 * **Dual-Kernel Retention:** Safely keeps the **2 newest CachyOS kernels** plus your active running kernel, preventing `/boot` clutter.
 * **Automatic Bootloader Registration:** Links kernels to GRUB (`/boot/grub/grub.cfg`) and Limine bootloader configurations automatically.
 
-### 5. 🎮 Nvidia Mojo Station (Driver Management)
+### 5. 🎮 Nvidia Mojo Station & CachyOS Master Suite
+* **CachyOS Complete NVIDIA Ecosystem:** Full automated packaging and deployment of upstream CachyOS packages: **64-bit Core Driver**, **32-bit Multilib** (`lib32-nvidia-utils`), **NVIDIA Settings** (`nvidia-settings`), **64-bit OpenCL** (`opencl-nvidia`), **32-bit OpenCL** (`lib32-opencl-nvidia`), and **VA-API Hardware Video Acceleration** driver (`libva-nvidia-driver` -> `/usr/lib64/dri/nvidia_drv_video.so` with `/etc/profile.d/nvidia-vaapi.sh`).
+* **Wayland Memory Preservation:** Automatically deploys power management and video memory allocation preservation scripts to `/var/tmp` for glitch-free suspend/resume under Wayland.
 * **Branch Selection:** Choose between **Legacy Mojo** (*580.x* - Pascal / GTX 10-series & older), **Production Mojo** (*595.x* - Modern RTX), and **New Feature Mojo** (*610.x* - Latest RTX series).
+* **Hardware Architecture Safeguard:** Intelligently checks GPU capabilities. For legacy hardware like Pascal (GTX 1060/1070/1080), it automatically routes directly to the proprietary 580xx branch via DKMS.
 * **DKMS Automated Rebuilds:** Automatically triggers and verifies DKMS compilation across all installed kernels on the system.
 * **Instant Rebuild Mode:** Recompile and re-sign NVIDIA drivers for the active kernel in seconds.
 
-### 6. ⚙️ Dracut & Fail-Safe Initramfs Architecture
+### 6. ⚙️ Dracut Multilib Shield & Fail-Safe Initramfs
+* **Dracut Multilib Shield (`00-multilib.conf`):** Automatically injects `--libdirs "/lib64 /usr/lib64 /usr/local/lib64"` and deploys `/etc/dracut.conf.d/00-multilib.conf` to block 32-bit multilib library collisions, ensuring pure 64-bit initramfs integrity.
 * **Native Dracut Engine:** Explicitly iterates across all installed kernels in `/lib/modules/*` to generate complete, high-performance Dracut initramfs images (`/boot/initramfs-*.img`, 220+ MB) with baked-in GPU and storage drivers.
 * **GRUB Preference Protection:** Automatically purges conflicting 11 MB `initrd-*.img` files created by Slackware's stock `mkinitrd` **only after** Dracut has verified successful generation, ensuring GRUB always boots the complete Dracut initramfs!
 * **Legacy Fallback:** If Dracut is not installed, seamlessly falls back to standard Slackware `mkinitrd`.
 
 ### 7. 🧹 Clean the Garage (System Maintenance)
 * **Slackware Stock Kernel Retention:** Keeps the **1 newest Slackware stock kernel** plus the active booted kernel, cleanly purging older versions, old module folders, and outdated initramfs files.
-* **Cache Purge:** Cleans stale build directories in `/var/cache/slacky-update/` and runs `flatpak uninstall --unused`.
+* **Cache Purge & Portability:** Cleans stale build directories in `/var/cache/slacky-update/` and runs `flatpak uninstall --unused`. All paths are 100% portable with zero hardcoded user directories.
 * **Bootloader Sync:** Automatically runs `grub-mkconfig` to keep `/boot/grub/grub.cfg` pristine and free of ghost entries.
 
 ### 8. 💓 Dynamic System Tray Applet

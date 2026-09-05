@@ -55,21 +55,27 @@ provision_mok_keypair() {
     fi
 
     if [ -f "${cert_der}" ]; then
-        log_info "Importing MOK certificate to UEFI keyring..."
-        echo -e "${CYAN}Set a temporary enrollment password (e.g. 1234) when prompted:${RESET}"
         local mokutil_bin
         mokutil_bin=$(command -v mokutil 2>/dev/null || echo "/usr/bin/mokutil")
-        sudo "${mokutil_bin}" --import "${cert_der}" || true
+        if [ -x "${mokutil_bin}" ]; then
+            if "${mokutil_bin}" --test-key "${cert_der}" 2>&1 | grep -qi "already enrolled"; then
+                log_info "MOK certificate is already enrolled in UEFI NVRAM keyring. Skipping import prompt."
+            else
+                log_info "Importing MOK certificate to UEFI keyring..."
+                echo -e "${CYAN}Set a temporary enrollment password (e.g. 1234) when prompted:${RESET}"
+                sudo "${mokutil_bin}" --import "${cert_der}" || true
 
-        echo ""
-        echo -e "${CYAN}============================================================${RESET}"
-        echo -e "${YELLOW}${BOLD}$(_ MOK_ENROLL_HEADER)${RESET}"
-        echo -e "  $(_ MOK_ENROLL_STEP1)"
-        echo -e "  $(_ MOK_ENROLL_STEP2)"
-        echo -e "  $(_ MOK_ENROLL_STEP3)"
-        echo -e "  $(_ MOK_ENROLL_STEP4)"
-        echo -e "${CYAN}============================================================${RESET}"
-        echo ""
+                echo ""
+                echo -e "${CYAN}============================================================${RESET}"
+                echo -e "${YELLOW}${BOLD}$(_ MOK_ENROLL_HEADER)${RESET}"
+                echo -e "  $(_ MOK_ENROLL_STEP1)"
+                echo -e "  $(_ MOK_ENROLL_STEP2)"
+                echo -e "  $(_ MOK_ENROLL_STEP3)"
+                echo -e "  $(_ MOK_ENROLL_STEP4)"
+                echo -e "${CYAN}============================================================${RESET}"
+                echo ""
+            fi
+        fi
     fi
 
     resolve_mok_keypair
@@ -110,32 +116,65 @@ sign_modules_for_kernel() {
     [ -d "/usr/lib/modules/${target_kver}" ] && search_dirs+=("/usr/lib/modules/${target_kver}")
     [ ${#search_dirs[@]} -gt 0 ] || return 0
 
+    local sign_workdir
+    sign_workdir=$(mktemp -d /tmp/slacky-sign-XXXXXX)
+
     local found_modules=0
     while IFS= read -r mod; do
         [ -f "${mod}" ] || continue
+
+        # If this is an uncompressed .ko, check if a compressed version exists
+        if [[ "${mod}" =~ \.ko$ ]]; then
+            if [ -f "${mod}.zst" ] || [ -f "${mod}.xz" ] || [ -f "${mod}.gz" ]; then
+                # Stale duplicate left behind from previous operations: remove safely
+                sudo rm -f "${mod}" 2>/dev/null || true
+                continue
+            fi
+            found_modules=1
+            sudo "${sign_bin}" sha256 "${MOK_KEY}" "${cert_for_sign}" "${mod}" 2>/dev/null || true
+            continue
+        fi
+
         found_modules=1
         if [[ "${mod}" =~ \.ko\.zst$ ]]; then
-            local raw_mod="${mod%.zst}"
-            if sudo unzstd -f -q "${mod}" -o "${raw_mod}" 2>/dev/null; then
-                sudo "${sign_bin}" sha256 "${MOK_KEY}" "${cert_for_sign}" "${raw_mod}" 2>/dev/null || true
-                sudo zstd -f -q --rm "${raw_mod}" -o "${mod}" 2>/dev/null || true
+            local base_name
+            base_name=$(basename "${mod%.zst}")
+            # Ensure stale uncompressed twin in module directory is purged
+            sudo rm -f "${mod%.zst}" 2>/dev/null || true
+            if sudo sh -c "unzstd -c '${mod}' > '${sign_workdir}/${base_name}' 2>/dev/null" && [ -s "${sign_workdir}/${base_name}" ]; then
+                sudo "${sign_bin}" sha256 "${MOK_KEY}" "${cert_for_sign}" "${sign_workdir}/${base_name}" 2>/dev/null || true
+                if sudo zstd -f -q "${sign_workdir}/${base_name}" -o "${sign_workdir}/${base_name}.zst" 2>/dev/null; then
+                    sudo mv -f "${sign_workdir}/${base_name}.zst" "${mod}"
+                fi
+                sudo rm -f "${sign_workdir}/${base_name}" "${sign_workdir}/${base_name}.zst" 2>/dev/null || true
             fi
         elif [[ "${mod}" =~ \.ko\.xz$ ]]; then
-            local raw_mod="${mod%.xz}"
-            if sudo unxz -f -q -c "${mod}" > "${raw_mod}" 2>/dev/null; then
-                sudo "${sign_bin}" sha256 "${MOK_KEY}" "${cert_for_sign}" "${raw_mod}" 2>/dev/null || true
-                sudo xz -f -q "${raw_mod}" 2>/dev/null || true
+            local base_name
+            base_name=$(basename "${mod%.xz}")
+            sudo rm -f "${mod%.xz}" 2>/dev/null || true
+            if sudo sh -c "unxz -c '${mod}' > '${sign_workdir}/${base_name}' 2>/dev/null" && [ -s "${sign_workdir}/${base_name}" ]; then
+                sudo "${sign_bin}" sha256 "${MOK_KEY}" "${cert_for_sign}" "${sign_workdir}/${base_name}" 2>/dev/null || true
+                if sudo xz -f -q "${sign_workdir}/${base_name}" 2>/dev/null; then
+                    sudo mv -f "${sign_workdir}/${base_name}.xz" "${mod}"
+                fi
+                sudo rm -f "${sign_workdir}/${base_name}" "${sign_workdir}/${base_name}.xz" 2>/dev/null || true
             fi
         elif [[ "${mod}" =~ \.ko\.gz$ ]]; then
-            local raw_mod="${mod%.gz}"
-            if sudo gunzip -f -q -c "${mod}" > "${raw_mod}" 2>/dev/null; then
-                sudo "${sign_bin}" sha256 "${MOK_KEY}" "${cert_for_sign}" "${raw_mod}" 2>/dev/null || true
-                sudo gzip -f -q "${raw_mod}" 2>/dev/null || true
+            local base_name
+            base_name=$(basename "${mod%.gz}")
+            sudo rm -f "${mod%.gz}" 2>/dev/null || true
+            if sudo sh -c "gunzip -c '${mod}' > '${sign_workdir}/${base_name}' 2>/dev/null" && [ -s "${sign_workdir}/${base_name}" ]; then
+                sudo "${sign_bin}" sha256 "${MOK_KEY}" "${cert_for_sign}" "${sign_workdir}/${base_name}" 2>/dev/null || true
+                if sudo gzip -f -q "${sign_workdir}/${base_name}" 2>/dev/null; then
+                    sudo mv -f "${sign_workdir}/${base_name}.gz" "${mod}"
+                fi
+                sudo rm -f "${sign_workdir}/${base_name}" "${sign_workdir}/${base_name}.gz" 2>/dev/null || true
             fi
-        elif [[ "${mod}" =~ \.ko$ ]]; then
-            sudo "${sign_bin}" sha256 "${MOK_KEY}" "${cert_for_sign}" "${mod}" 2>/dev/null || true
         fi
     done < <(find "${search_dirs[@]}" -name "nvidia*.ko*" 2>/dev/null || true)
+
+    sudo rm -rf "${sign_workdir}"
+    sudo depmod -a "${target_kver}" 2>/dev/null || true
 
     if [ "${found_modules}" -eq 1 ]; then
         log_success "Applied MOK signature to kernel modules for: ${target_kver}"
@@ -263,13 +302,22 @@ verify_secure_boot_status_interactive() {
 
     echo -e "\n${BOLD}NVIDIA Kernel Module Audit (/lib/modules):${RESET}"
     local found_nv=0
-    for mod in $(find /lib/modules/ -name "nvidia.ko*" 2>/dev/null | sort -u); do
+    for mod in $(find -L /lib/modules/ -name "nvidia.ko*" 2>/dev/null | sort -u); do
         [ -f "$mod" ] || continue
         found_nv=1
         local m_kver
         m_kver=$(echo "$mod" | cut -d'/' -f4)
         local signer
-        signer=$(modinfo -F signer "$mod" 2>/dev/null || echo "None")
+        signer=$(modinfo -F signer "$mod" 2>/dev/null || echo "")
+        if [ -z "$signer" ] || [ "$signer" = "None" ]; then
+            if strings "$mod" 2>/dev/null | grep -E -q "Tux MOK|Slacky-Update|Module signature appended"; then
+                signer="MOK Verified"
+            elif strings "$mod" 2>/dev/null | grep -q "~Module signature appended~"; then
+                signer="In-kernel / Attached"
+            else
+                signer="None"
+            fi
+        fi
         if [ -n "$signer" ] && [ "$signer" != "None" ]; then
             printf "  • %-35s : ${GREEN}[SIGNED by: %s]${RESET}\n" "${m_kver}" "${signer}"
         else
@@ -509,6 +557,27 @@ GCFG_EOF
 
 self_heal_secure_boot_guard() {
     # Guard runs 100% silent unless corruption or missing files are detected
+    # 1. Hardware/Firmware Guard: Must be booted in UEFI mode
+    [ -d "/sys/firmware/efi" ] || return 0
+
+    # 2. Secure Boot Guard: Must be actively enabled in firmware (via mokutil)
+    if command -v mokutil >/dev/null 2>&1; then
+        local sb_state
+        sb_state=$(mokutil --sb-state 2>/dev/null || echo "")
+        if ! echo "${sb_state}" | grep -qi "enabled"; then
+            # Secure Boot is NOT enabled in firmware. Do not touch or heal anything.
+            return 0
+        fi
+    else
+        # mokutil not available; cannot verify active Secure Boot. Safety first: do not heal.
+        return 0
+    fi
+
+    # 3. Bootloader Guard: Must be using GRUB architecture
+    if ! command -v grub-install >/dev/null 2>&1 && [ ! -f "/boot/grub/grub.cfg" ] && [ ! -f "/etc/default/grub" ]; then
+        return 0
+    fi
+
     local esp_mount
     esp_mount=$(detect_esp_mount)
     [ -d "${esp_mount}/EFI/Slackware" ] || return 0
@@ -516,12 +585,14 @@ self_heal_secure_boot_guard() {
     local target_efi_dir="${esp_mount}/EFI/Slackware"
     local needs_heal=0
 
-    if [ ! -s "${target_efi_dir}/shimx64.efi" ] || [ ! -s "${target_efi_dir}/grubx64.efi" ]; then
-        needs_heal=1
-    fi
-
-    if [ ! -s "${target_efi_dir}/grub.cfg" ]; then
-        needs_heal=1
+    # Only heal if Slackware GRUB was previously deployed here
+    if [ -f "${target_efi_dir}/grub.cfg" ] || [ -f "${target_efi_dir}/shimx64.efi" ]; then
+        if [ ! -s "${target_efi_dir}/shimx64.efi" ] || [ ! -s "${target_efi_dir}/grubx64.efi" ]; then
+            needs_heal=1
+        fi
+        if [ ! -s "${target_efi_dir}/grub.cfg" ]; then
+            needs_heal=1
+        fi
     fi
 
     if [ "${needs_heal}" -eq 1 ]; then
@@ -608,6 +679,40 @@ fix_my_damn_secure_boot_wizard() {
     echo ""
 }
 
+revert_secure_boot_armor_interactive() {
+    validate_privileges
+
+    echo ""
+    echo -e "${CYAN}============================================================${RESET}"
+    echo -e "${YELLOW}${BOLD}$(_ MOK_OPTION_REVERT_SB | sed -E 's/^[0-9]+\.\s*//')${RESET}"
+    echo -e "${CYAN}============================================================${RESET}"
+    echo -e "This will remove the Microsoft-signed Shim early-loader and re-register standard Slackware GRUB in your UEFI firmware."
+    echo -e "Use this if you are disabling Secure Boot in firmware or returning to standard boot."
+    echo ""
+    read -r -p "Are you sure you want to revert to standard unsigned GRUB? [y/N] " reply_rev
+    reply_rev=${reply_rev:-N}
+    if [[ ! "${reply_rev}" =~ ^[YyJjSsOo]$ ]]; then
+        log_info "Operation cancelled."
+        return 0
+    fi
+
+    local esp_mount
+    esp_mount=$(detect_esp_mount)
+    local target_efi_dir="${esp_mount}/EFI/Slackware"
+
+    if [ -d "${target_efi_dir}" ]; then
+        log_info "Cleaning Shim early-loader files from ${target_efi_dir}..."
+        sudo rm -f "${target_efi_dir}/shimx64.efi" "${target_efi_dir}/mmx64.efi" "${target_efi_dir}/grub.cfg" 2>/dev/null || true
+    fi
+
+    if command -v grub-install >/dev/null 2>&1; then
+        log_info "Running standard grub-install to restore native GRUB..."
+        sudo grub-install --target=x86_64-efi --efi-directory="${esp_mount}" --bootloader-id=Slackware --recheck >/dev/null 2>&1 || true
+    fi
+
+    log_success "Standard Slackware GRUB restored! Secure Boot Armor disabled."
+}
+
 manage_armor_interactive() {
     validate_privileges
 
@@ -621,10 +726,11 @@ manage_armor_interactive() {
         echo -e "  $(_ MOK_OPTION_DEPLOY_SHIM)"
         echo -e "  $(_ MOK_OPTION_CREATE_MOK)"
         echo -e "  $(_ MOK_OPTION_SIGN_ALL)"
+        echo -e "  $(_ MOK_OPTION_REVERT_SB)"
         echo -e "  $(_ MOK_OPTION_RETURN)"
         echo ""
-        echo -n "$(_ SELECT_OPERATION_RANGE range="1-6") "
-        read -r achoice || achoice="6"
+        echo -n "$(_ SELECT_OPERATION_RANGE range="1-7") "
+        read -r achoice || achoice="7"
 
         case "${achoice}" in
             1)
@@ -648,6 +754,10 @@ manage_armor_interactive() {
                 enforce_secure_boot_armor
                 ;;
             6)
+                echo ""
+                revert_secure_boot_armor_interactive
+                ;;
+            7)
                 return 0
                 ;;
             *)

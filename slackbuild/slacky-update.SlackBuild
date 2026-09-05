@@ -4,7 +4,7 @@
 set -euo pipefail
 
 PRGNAM="slacky-update"
-VERSION="0.7.1"
+VERSION="0.8"
 ARCH="noarch"
 BUILD="1_tux"
 
@@ -89,6 +89,7 @@ chmod 755 "${PKG_DIR}/install/doinst.sh"
 cd "${PKG_DIR}"
 /sbin/makepkg -l y -c n "${OUTPUT_DIR}/${PKG_NAME}"
 cp -f "${OUTPUT_DIR}/${PKG_NAME}" "${OUTPUT_DIR}/${PRGNAM}.txz"
+cp -f "${OUTPUT_DIR}/${PKG_NAME}" "/tmp/${PKG_NAME}" 2>/dev/null || true
 
 rm -rf "${BUILD_DIR}" "${PKG_DIR}"
 echo "==> Package build completed: ${OUTPUT_DIR}/${PKG_NAME}"

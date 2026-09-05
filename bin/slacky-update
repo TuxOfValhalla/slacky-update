@@ -3,7 +3,8 @@
 
 set -euo pipefail
 
-CURRENT_VERSION="0.7.1"
+CURRENT_VERSION="0.8"
+RELEASE_CODENAME="Pop Quiz, Hotshot!"
 
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 if [ -d "${SCRIPT_DIR}/../lib" ] && [ -f "${SCRIPT_DIR}/../lib/common.sh" ]; then
@@ -129,14 +130,18 @@ print(';'.join(k_pkgs))
 prompt_reboot_or_close() {
     local snap_before_file="$1"
     local snap_after_file="$2"
+    local force_flag="${3:-0}"
 
     local needs_reboot=0
-    if [ -f "${snap_before_file}" ] && [ -f "${snap_after_file}" ]; then
+    if [ "${force_flag}" -eq 1 ]; then
+        needs_reboot=1
+    fi
+
+    if [ "${needs_reboot}" -eq 0 ] && [ -f "${snap_before_file}" ] && [ -f "${snap_after_file}" ]; then
         if python3 -c "
 import sys, os
 b_file = sys.argv[1]
 a_file = sys.argv[2]
-active_k = sys.argv[3] if len(sys.argv) > 3 else ''
 
 with open(b_file, 'r', encoding='utf-8', errors='ignore') as f:
     b = set(line.strip() for line in f if line.strip())
@@ -144,21 +149,19 @@ with open(a_file, 'r', encoding='utf-8', errors='ignore') as f:
     a = set(line.strip() for line in f if line.strip())
 
 diff = a - b
-crit_keywords = ['glibc', 'plasma-', 'kwin-', 'sddm-', 'wayland-', 'nvidia-', 'kernel-']
+crit_keywords = ['glibc', 'plasma-', 'kwin-', 'sddm-', 'wayland-', 'nvidia-', 'kernel-', 'cachyos-']
 for p in diff:
     for kw in crit_keywords:
         if kw in p:
-            if kw == 'kernel-' and active_k not in p:
-                continue
             sys.exit(1)
 sys.exit(0)
-" "${snap_before_file}" "${snap_after_file}" "$(uname -r)" 2>/dev/null; then
+" "${snap_before_file}" "${snap_after_file}" 2>/dev/null; then
             needs_reboot=0
         else
             needs_reboot=1
         fi
-        rm -f "${snap_before_file}" "${snap_after_file}"
     fi
+    rm -f "${snap_before_file}" "${snap_after_file}" 2>/dev/null || true
 
     if [ "${needs_reboot}" -eq 1 ]; then
         echo ""
@@ -166,8 +169,15 @@ sys.exit(0)
         echo -e "$(_ REBOOT_RECOMMENDED_DESC)"
         echo ""
         read -r -p "$(_ PROMPT_REBOOT_NOW)" reply_reboot
-        reply_reboot=${reply_reboot:-N}
+        reply_reboot=${reply_reboot:-Y}
         if [[ "$reply_reboot" =~ ^[YyJjSsOo]$ ]]; then
+            echo ""
+            echo -e "${CYAN}${BOLD}$(_ REBOOTING_IN_5S)${RESET}"
+            for i in 5 4 3 2 1; do
+                echo -n -e "${YELLOW}${BOLD}${i}... ${RESET}"
+                sleep 1
+            done
+            echo ""
             log_info "Initiating system reboot..."
             sudo /sbin/reboot
             exit 0
@@ -192,11 +202,27 @@ run_full_update() {
     local k_snap_before k_snap_after
     k_snap_before=$(get_kernel_driver_snapshot)
 
+    local boot_snap_before boot_snap_after
+    boot_snap_before=$(ls -la /boot/vmlinuz* /boot/initramfs* /lib/modules 2>/dev/null || true)
+    local kernel_or_driver_changed=0
+
     read -r -p "$(_ PROMPT_UPGRADE_SLACKWARE)" reply_slack
     reply_slack=${reply_slack:-Y}
     if [[ "$reply_slack" =~ ^[YyJjSsOo]$ ]]; then
         echo -e "\n${BLUE}${BOLD}$(_ UPGRADING_SLACKWARE)${RESET}"
         update_slackware_core
+    fi
+
+    local cachy_count
+    cachy_count=$(python3 -c "import json, os; d=json.load(open('/var/cache/slacky-update/status.json')) if os.path.exists('/var/cache/slacky-update/status.json') else {}; print(len(d.get('cachyos_kernel_updates', [])))" 2>/dev/null || echo 0)
+    if [ "${cachy_count}" -gt 0 ]; then
+        read -r -p "$(_ PROMPT_INSTALL_CACHY_KERNEL)" reply_cachy
+        reply_cachy=${reply_cachy:-Y}
+        if [[ "$reply_cachy" =~ ^[YyJjSsOo]$ ]]; then
+            echo -e "\n${BLUE}${BOLD}$(_ UPGRADING_CACHYOS_KERNEL)${RESET}"
+            update_cachyos_kernels
+            kernel_or_driver_changed=1
+        fi
     fi
 
     if command -v flatpak >/dev/null 2>&1; then
@@ -220,16 +246,49 @@ run_full_update() {
         fi
     fi
 
+    if [ "${HAS_NVIDIA}" = "true" ]; then
+        if [ "$(has_cachyos_kernels_installed 2>/dev/null || echo false)" = "true" ]; then
+            if command -v ensure_cachyos_nvidia_duties >/dev/null 2>&1; then
+                ensure_cachyos_nvidia_duties
+            fi
+        else
+            local nv_count
+            nv_count=$(python3 -c "import json, os; d=json.load(open('/var/cache/slacky-update/status.json')) if os.path.exists('/var/cache/slacky-update/status.json') else {}; print(len(d.get('nvidia_driver_updates', [])))" 2>/dev/null || echo 0)
+            if [ "${nv_count}" -gt 0 ]; then
+                read -r -p "$(_ PROMPT_UPGRADE_NVIDIA_DRIVER)" reply_nv
+                reply_nv=${reply_nv:-Y}
+                if [[ "$reply_nv" =~ ^[YyJjSsOo]$ ]]; then
+                    install_nvidia_run_driver "production"
+                    kernel_or_driver_changed=1
+                fi
+            fi
+        fi
+    fi
+
     register_flatpak_gl_sync
 
     k_snap_after=$(get_kernel_driver_snapshot)
     get_full_pkg_snapshot_file "${snap_after_file}"
 
+    boot_snap_after=$(ls -la /boot/vmlinuz* /boot/initramfs* /lib/modules 2>/dev/null || true)
+    if [ "${boot_snap_before}" != "${boot_snap_after}" ]; then
+        kernel_or_driver_changed=1
+    fi
     if [ "${k_snap_before}" != "${k_snap_after}" ]; then
+        kernel_or_driver_changed=1
+    fi
+
+    if [ "${kernel_or_driver_changed}" -eq 1 ]; then
         log_info "Kernel or driver package changes detected. Rebuilding modules, initramfs and Secure Boot armor..."
         local active_kver
         active_kver=$(uname -r)
-        build_nvidia_modules "${active_kver}"
+        if [ "${HAS_NVIDIA}" = "true" ]; then
+            if command -v ensure_cachyos_nvidia_duties >/dev/null 2>&1 && [ "$(has_cachyos_kernels_installed 2>/dev/null || echo false)" = "true" ]; then
+                ensure_cachyos_nvidia_duties
+            else
+                build_nvidia_modules "${active_kver}"
+            fi
+        fi
         generate_kernel_initramfs "ALL"
         if command -v purge_old_slackware_kernels >/dev/null 2>&1; then
             purge_old_slackware_kernels
@@ -264,7 +323,7 @@ except Exception:
 
     echo -e "\n${GREEN}${BOLD}$(_ UPGRADE_COMPLETE_SYSTEM)${RESET}"
 
-    prompt_reboot_or_close "${snap_before_file}" "${snap_after_file}"
+    prompt_reboot_or_close "${snap_before_file}" "${snap_after_file}" "${kernel_or_driver_changed}"
 }
 
 # --- [ CACHYOS KERNEL MANAGEMENT ROUTINE ] ---
@@ -322,26 +381,7 @@ manage_cachyos_kernel_interactive() {
                     cachyos_kernel_picker_interactive
                     installed_flavors=$(get_installed_cachyos_flavors)
                 else
-                    log_info "Scanning for upstream updates across installed CachyOS flavors..."
-                    local updated_any=0
-                    for flv in ${installed_flavors}; do
-                        local cur_ver latest_ver k_url h_url
-                        cur_ver=$(get_installed_cachyos_flavor_version "${flv}")
-                        read -r latest_ver k_url h_url <<< "$(check_cachyos_upstream_flavor "${flv}" || echo "NONE NONE NONE")"
-                        if [ "${latest_ver}" != "NONE" ] && [ -n "${latest_ver}" ] && [ "${cur_ver}" != "NONE" ]; then
-                            if [ "$(compare_versions_strictly_greater "${latest_ver}" "${cur_ver}")" = "true" ]; then
-                                echo -e "\n${GREEN}${BOLD}Upgrade available for ${flv}: v${cur_ver} -> v${latest_ver}${RESET}"
-                                read -r -p "$(_ PROMPT_INSTALL_NEW_KERNEL version="${latest_ver}")" reply_up
-                                reply_up=${reply_up:-Y}
-                                if [[ "$reply_up" =~ ^[YyJjSsOo]$ ]]; then
-                                    deploy_cachyos_kernel_flavor "${flv}"
-                                    updated_any=1
-                                fi
-                            else
-                                log_info "Flavor '${flv}' (v${cur_ver}) is up to date with upstream."
-                            fi
-                        fi
-                    done
+                    update_cachyos_kernels
                 fi
                 echo ""
                 read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
@@ -378,18 +418,36 @@ manage_nvidia_interactive() {
     gpu_gen=$(detect_nvidia_gpu)
     log_info "Detected GPU Architecture: ${gpu_gen}"
 
+    local has_cachy
+    has_cachy=$(has_cachyos_kernels_installed 2>/dev/null || echo "false")
+
     echo ""
     echo -e "${BOLD}$(_ NVIDIA_BRANCH_SELECT)${RESET}"
+    if [ "${has_cachy}" = "true" ]; then
+        echo -e "  ${CYAN}$(_ NVIDIA_CACHYOS_MASTER_SYNC)${RESET}"
+    fi
     echo -e "  $(_ NVIDIA_BRANCH_LEGACY)"
     echo -e "  $(_ NVIDIA_BRANCH_PRODUCTION)"
     echo -e "  $(_ NVIDIA_BRANCH_FEATURE)"
     echo -e "  $(_ NVIDIA_OPTION_REBUILD)"
     echo -e "  $(_ NVIDIA_OPTION_RETURN)"
     echo ""
-    echo -n "$(_ SELECT_OPERATION_RANGE range="1-5")"
+    if [ "${has_cachy}" = "true" ]; then
+        echo -n "$(_ SELECT_OPERATION_RANGE range="0-5")"
+    else
+        echo -n "$(_ SELECT_OPERATION_RANGE range="1-5")"
+    fi
     read -r n_choice || n_choice="5"
 
     case "${n_choice}" in
+        0)
+            if [ "${has_cachy}" = "true" ]; then
+                validate_privileges
+                ensure_cachyos_nvidia_duties
+            else
+                log_warn "Invalid selection."
+            fi
+            ;;
         1)
             validate_privileges
             install_nvidia_run_driver "legacy"
@@ -426,7 +484,7 @@ interactive_menu() {
     probe_gpu_hardware
     while true; do
         echo ""
-        echo -e "${BOLD}Slacky-Update (v${CURRENT_VERSION})${RESET}"
+        echo -e "${BOLD}Slacky-Update (v${CURRENT_VERSION} '${RELEASE_CODENAME}')${RESET}"
         check_slacky_update_self_update "${CURRENT_VERSION}"
         echo ""
         display_pending_status

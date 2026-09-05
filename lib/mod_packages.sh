@@ -12,6 +12,100 @@ print(';'.join(core))
 " 2>/dev/null || echo ""
 }
 
+parallel_prefetch_packages() {
+    local active_mirror
+    active_mirror=$(grep -v '^#' /etc/slackpkg/mirrors 2>/dev/null | grep -E '^https?://' | head -n 1 || echo "")
+    [ -n "${active_mirror}" ] || return 0
+    [ -f "/var/lib/slackpkg/pkglist" ] || return 0
+
+    sudo python3 - "${active_mirror}" << 'PYPREFETCH'
+import os
+import sys
+import time
+import subprocess
+import threading
+import concurrent.futures
+
+active_mirror = sys.argv[1].rstrip('/')
+installed = {}
+if os.path.exists('/var/log/packages'):
+    for f in os.listdir('/var/log/packages'):
+        parts = f.rsplit('-', 3)
+        if len(parts) == 4:
+            installed[parts[0]] = f
+
+allowed_repos = {'slackware64', 'slackware', 'patches'}
+if os.path.exists('/etc/slackpkg/slackpkgplus.conf'):
+    with open('/etc/slackpkg/slackpkgplus.conf', 'r', encoding='utf-8', errors='ignore') as f:
+        for line in f:
+            if line.strip().startswith('REPOPLUS=('):
+                inside = line.split('(', 1)[1].split(')', 1)[0]
+                for r in inside.split():
+                    allowed_repos.add(r.strip())
+
+candidates = []
+if os.path.exists('/var/lib/slackpkg/pkglist'):
+    with open('/var/lib/slackpkg/pkglist', 'r', encoding='utf-8', errors='ignore') as f:
+        for line in f:
+            parts = line.strip().split()
+            if len(parts) >= 8:
+                repo, name, ver, arch, build, fullname, relpath, ext = parts[0], parts[1], parts[2], parts[3], parts[4], parts[5], parts[6], parts[7]
+                if repo in allowed_repos and name in installed and installed[name] != fullname:
+                    clean_rel = relpath.lstrip('./')
+                    pkg_file = f"{fullname}.{ext}"
+                    url = f"{active_mirror}/{clean_rel}/{pkg_file}"
+                    asc_url = f"{url}.asc"
+                    dest_dir = f"/var/cache/packages/{clean_rel}"
+                    dest_file = f"{dest_dir}/{pkg_file}"
+                    asc_dest = f"{dest_file}.asc"
+                    if os.path.exists(dest_file) and os.path.getsize(dest_file) > 0 and os.path.exists(asc_dest) and os.path.getsize(asc_dest) > 0:
+                        continue
+                    candidates.append((clean_rel, pkg_file, url, asc_url, dest_dir, dest_file, asc_dest))
+
+total = len(candidates)
+if total == 0:
+    sys.exit(0)
+
+print(f"\033[1;36m🚀 Turbo Parallel Pre-fetch: Downloading {total} packages (10 parallel streams)...\033[0m")
+sys.stdout.flush()
+
+counter = 0
+counter_lock = threading.Lock()
+
+def download_item(item):
+    global counter
+    clean_rel, pkg_file, url, asc_url, dest_dir, dest_file, asc_dest = item
+    os.makedirs(dest_dir, exist_ok=True)
+    t0 = time.time()
+    res = subprocess.run(["curl", "-sSL", "-f", "-o", dest_file, url], capture_output=True)
+    if res.returncode == 0 and os.path.exists(dest_file) and os.path.getsize(dest_file) > 0:
+        subprocess.run(["curl", "-sSL", "-f", "-o", asc_dest, asc_url], capture_output=True)
+        dt = max(time.time() - t0, 0.001)
+        sz = os.path.getsize(dest_file)
+        sz_mb = sz / (1024 * 1024)
+        spd_mb = sz_mb / dt
+        if sz_mb >= 1.0:
+            sz_str = f"{sz_mb:.1f} MB"
+        else:
+            sz_str = f"{sz / 1024:.0f} KB"
+        spd_str = f"{spd_mb:.1f} MB/s"
+        with counter_lock:
+            counter += 1
+            c = counter
+        print(f"  [\033[1;32m{c:4d}/{total}\033[0m] \033[1;34m✓\033[0m {clean_rel}/{pkg_file} (\033[1;37m{sz_str}\033[0m, \033[1;36m{spd_str}\033[0m)")
+        sys.stdout.flush()
+    else:
+        with counter_lock:
+            counter += 1
+
+with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+    list(executor.map(download_item, candidates))
+
+print(f"\033[1;32m✓ Turbo Parallel Pre-fetch completed: {total} packages cached to /var/cache/packages.\033[0m\n")
+sys.stdout.flush()
+PYPREFETCH
+}
+
 update_slackware_core() {
     validate_privileges
 
@@ -27,6 +121,9 @@ update_slackware_core() {
     sudo "${slackpkg_bin}" update || {
         log_warn "slackpkg update completed with non-zero exit code."
     }
+
+    # Engage Turbo Parallel Pre-fetch before install-new and upgrade-all
+    parallel_prefetch_packages
 
     log_info "Installing newly added distribution packages (install-new)..."
     sudo "${slackpkg_bin}" -postinst=off install-new || {
@@ -56,6 +153,15 @@ update_slackware_core() {
             if [[ "$reply_resume" =~ ^[YyJjSsOo]$ ]]; then
                 current_pass=$((current_pass + 1))
                 log_info "Resuming full system upgrade with newly upgraded package tools (Pass ${current_pass})..."
+                # CRITICAL MULTI-PASS RESUME CHAIN:
+                # 1. Refresh repository indexes so slackpkg+ re-initializes
+                log_info "Refreshing package indexes to initialize updated package tools..."
+                sudo "${slackpkg_bin}" update || true
+                # 2. Re-check for any newly added distribution packages
+                log_info "Checking for newly added packages (install-new)..."
+                sudo "${slackpkg_bin}" -postinst=off install-new || true
+                # 3. Pre-fetch remaining packages for the next pass
+                parallel_prefetch_packages
                 continue
             else
                 break
