@@ -227,7 +227,7 @@ sudo upgradepkg --install-new --reinstall slacky-update-*.txz
 
 #### ⚡ Quick Install One-Liner
 ```bash
-git clone https://github.com/tuxofvalhalla/slacky-update.git && cd slacky-update && sudo bash slackbuild/slacky-update.SlackBuild && sudo upgradepkg --install-new --reinstall slacky-update-*.txz && slacky-update-tray &
+git clone https://codeberg.org/TuxOfValhalla/slacky-update.git && cd slacky-update && sudo bash slackbuild/slacky-update.SlackBuild && sudo upgradepkg --install-new --reinstall slacky-update-*.txz && slacky-update-tray &
 ```
 
 > **Autostart:** The background tray monitor is automatically placed in `/etc/xdg/autostart/` and starts seamlessly upon every desktop login (KDE Plasma, XFCE, GNOME, etc.). Running `slacky-update-tray &` starts it immediately in your current active session.
