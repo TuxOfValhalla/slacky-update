@@ -1,0 +1,150 @@
+#!/usr/bin/env bash
+#
+# Slackware build script for snapper (Btrfs snapshot manager with cron cleanup)
+# Maintained by TuxOfValhalla <agnar1984@gmail.com>
+#
+
+set -e
+
+PRGNAM=snapper
+VERSION=${VERSION:-0.13.1}
+BUILD=${BUILD:-1_slacky}
+TAG=${TAG:-_slacky}
+
+if [ -z "$ARCH" ]; then
+  case "$(uname -m)" in
+    i?86) ARCH=i586 ;;
+    arm*) ARCH=arm ;;
+    *) ARCH=$(uname -m) ;;
+  esac
+fi
+
+CWD=$(pwd)
+TMP=${TMP:-/tmp/SBo}
+PKG=$TMP/package-$PRGNAM
+OUTPUT=${OUTPUT:-/tmp}
+
+if [ "$ARCH" = "i586" ]; then
+  SLKCFLAGS="-O2 -march=i586 -mtune=i686"
+  LIBDIRSUFFIX=""
+elif [ "$ARCH" = "i686" ]; then
+  SLKCFLAGS="-O2 -march=i686 -mtune=i686"
+  LIBDIRSUFFIX=""
+elif [ "$ARCH" = "x86_64" ]; then
+  SLKCFLAGS="-O2 -fPIC"
+  LIBDIRSUFFIX="64"
+else
+  SLKCFLAGS="-O2"
+  LIBDIRSUFFIX=""
+fi
+
+set -euo pipefail
+
+rm -rf "$PKG"
+mkdir -p "$TMP" "$PKG" "$OUTPUT"
+cd "$TMP"
+rm -rf "$PRGNAM-$VERSION"
+
+TARBALL=""
+for candidate in "$CWD/$PRGNAM-$VERSION.tar.gz" \
+                 "$CWD/$PRGNAM-v$VERSION.tar.gz" \
+                 "$CWD/v$VERSION.tar.gz" \
+                 "$CWD/$VERSION.tar.gz"; do
+  if [ -f "$candidate" ]; then
+    TARBALL="$candidate"
+    break
+  fi
+done
+
+if [ -z "$TARBALL" ]; then
+  TARBALL="$CWD/$PRGNAM-$VERSION.tar.gz"
+  DOWNLOAD_URL="https://github.com/openSUSE/snapper/archive/refs/tags/v${VERSION}.tar.gz"
+  echo "Downloading $DOWNLOAD_URL..."
+  curl -sSL -o "$TARBALL" "$DOWNLOAD_URL"
+fi
+
+echo "Extracting $(basename "$TARBALL")..."
+tar -xf "$TARBALL"
+
+cd "$PRGNAM-$VERSION"
+
+# Set permissions
+chown -R root:root .
+find -L . \
+  \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 -o -perm 511 \) \
+  -exec chmod 755 {} \; -o \
+  \( -perm 666 -o -perm 664 -o -perm 600 -o -perm 444 -o -perm 440 -o -perm 400 \) \
+  -exec chmod 644 {} \;
+
+echo "Running autoreconf..."
+autoreconf -fi
+
+echo "Configuring Snapper for Slackware..."
+CFLAGS="$SLKCFLAGS" \
+CXXFLAGS="$SLKCFLAGS -std=c++17" \
+./configure \
+  --prefix=/usr \
+  --libdir=/usr/lib${LIBDIRSUFFIX} \
+  --sysconfdir=/etc \
+  --localstatedir=/var \
+  --mandir=/usr/man \
+  --docdir=/usr/doc/$PRGNAM-$VERSION \
+  --disable-static \
+  --disable-systemd \
+  --disable-rollback \
+  --disable-zypp \
+  --enable-btrfs-quota \
+  --build=$ARCH-slackware-linux
+
+make -j$(nproc)
+make install DESTDIR="$PKG"
+
+# Install default snapper configurations
+mkdir -p "$PKG/etc/snapper/configs"
+if [ -f "$PKG/etc/snapper/snapper" ]; then
+  mv "$PKG/etc/snapper/snapper" "$PKG/etc/snapper/snapper.new"
+elif [ -f "$PKG/etc/sysconfig/snapper" ]; then
+  mkdir -p "$PKG/etc/snapper"
+  mv "$PKG/etc/sysconfig/snapper" "$PKG/etc/snapper/snapper.new"
+  rm -rf "$PKG/etc/sysconfig"
+else
+  echo 'SNAPPER_CONFIGS="root"' > "$PKG/etc/snapper/snapper.new"
+fi
+
+# Ensure SNAPPER_CONFIGS contains root
+if ! grep -q 'SNAPPER_CONFIGS="root"' "$PKG/etc/snapper/snapper.new" 2>/dev/null; then
+  echo 'SNAPPER_CONFIGS="root"' > "$PKG/etc/snapper/snapper.new"
+fi
+
+# Install default root config
+install -m 644 "$CWD/root.config" "$PKG/etc/snapper/configs/root.new"
+
+# Install Slackware hourly cron jobs for automatic timeline and cleanup
+mkdir -p "$PKG/etc/cron.hourly"
+install -m 755 "$CWD/snapper-cleanup.cron" "$PKG/etc/cron.hourly/snapper-cleanup.new"
+install -m 755 "$CWD/snapper-timeline.cron" "$PKG/etc/cron.hourly/snapper-timeline.new"
+
+# Strip binaries and shared libraries
+find "$PKG" -type f -name "*.so*" -exec strip --strip-unneeded {} \; 2>/dev/null || true
+find "$PKG/usr/bin" -type f -exec strip --strip-all {} \; 2>/dev/null || true
+
+# Compress man pages
+if [ -d "$PKG/usr/man" ]; then
+  find "$PKG/usr/man" -type f -exec gzip -9 {} \;
+fi
+
+# Documentation
+mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION"
+cp -a AUTHORS COPYING README.md VERSION "$PKG/usr/doc/$PRGNAM-$VERSION/" 2>/dev/null || true
+cat "$CWD/slack-desc" > "$PKG/usr/doc/$PRGNAM-$VERSION/slack-desc"
+
+# Package Install Script
+mkdir -p "$PKG/install"
+cat "$CWD/slack-desc" > "$PKG/install/slack-desc"
+cat "$CWD/doinst.sh" > "$PKG/install/doinst.sh"
+
+# Create Slackware Package
+cd "$PKG"
+/sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD.txz"
+
+echo "Package created successfully: $OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD.txz"

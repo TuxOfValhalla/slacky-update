@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Heroic Games Launcher
+Comment=An Open Source GOG, Epic Games and Amazon Prime Games launcher
+Exec=/usr/bin/heroic %U
+Terminal=false
+Type=Application
+Icon=heroic
+StartupWMClass=Heroic
+Categories=Game;
+MimeType=x-scheme-handler/heroic;
+Keywords=gog;epic;games;launcher;amazon;

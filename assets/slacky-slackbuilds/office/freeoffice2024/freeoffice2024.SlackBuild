@@ -1,0 +1,161 @@
+#!/usr/bin/env bash
+#
+# Slackware build script for SoftMaker FreeOffice 2024
+# Maintained by TuxOfValhalla <agnar1984@gmail.com>
+#
+
+set -e
+
+PRGNAM=freeoffice2024
+SRCNAM=softmaker-freeoffice
+VERSION=${VERSION:-1234}
+BUILD=${BUILD:-1_slacky}
+TAG=${TAG:-_slacky}
+
+case "$(uname -m)" in
+  x86_64) ARCH=x86_64 ; DEBARCH=amd64 ;;
+  *) echo "Unsupported architecture $(uname -m). FreeOffice 2024 is 64-bit only." ; exit 1 ;;
+esac
+
+CWD=$(pwd)
+TMP=${TMP:-/tmp/SBo}
+PKG=$TMP/package-$PRGNAM
+OUTPUT=${OUTPUT:-/tmp}
+
+set -euo pipefail
+
+rm -rf "$PKG"
+mkdir -p "$TMP" "$PKG" "$OUTPUT" "$PKG/opt/FreeOffice2024"
+cd "$TMP"
+rm -rf "$PRGNAM-$VERSION"
+mkdir -p "$PRGNAM-$VERSION"
+cd "$PRGNAM-$VERSION"
+
+TARBALL="$CWD/$SRCNAM-2024-$VERSION-$DEBARCH.tgz"
+if [ ! -f "$TARBALL" ]; then
+  DOWNLOAD_URL="https://www.softmaker.net/down/$SRCNAM-2024-$VERSION-$DEBARCH.tgz"
+  echo "Downloading $DOWNLOAD_URL..."
+  curl -sSL -o "$TARBALL" "$DOWNLOAD_URL"
+fi
+
+echo "Extracting $(basename "$TARBALL")..."
+tar -xf "$TARBALL"
+
+echo "Extracting FreeOffice 2024 payload..."
+tar -xf freeoffice2024.tar.lzma -C "$PKG/opt/FreeOffice2024"
+
+cd "$PKG"
+mkdir -p usr/bin
+
+# Create wrapper launchers
+cat << 'EOS' > usr/bin/textmaker-free24
+#!/bin/sh
+exec /opt/FreeOffice2024/textmaker "$@"
+EOS
+
+cat << 'EOS' > usr/bin/planmaker-free24
+#!/bin/sh
+exec /opt/FreeOffice2024/planmaker "$@"
+EOS
+
+cat << 'EOS' > usr/bin/presentations-free24
+#!/bin/sh
+exec /opt/FreeOffice2024/presentations "$@"
+EOS
+
+cat << 'EOS' > usr/bin/freeoffice
+#!/bin/sh
+exec /opt/FreeOffice2024/textmaker "$@"
+EOS
+
+chmod 755 usr/bin/*
+
+# Add standard friendly symlinks
+ln -sf textmaker-free24 usr/bin/textmaker
+ln -sf planmaker-free24 usr/bin/planmaker
+ln -sf presentations-free24 usr/bin/presentations
+
+# Install App Icons
+for s in 16 24 32 48 64 128 256 512 1024; do
+  mkdir -p "usr/share/icons/hicolor/${s}x${s}/apps"
+  for a in pml prl tml; do
+    if [ -f "opt/FreeOffice2024/icons/${a}_${s}.png" ]; then
+      cp -a "opt/FreeOffice2024/icons/${a}_${s}.png" \
+        "usr/share/icons/hicolor/${s}x${s}/apps/application-x-${a}24.png"
+    fi
+  done
+  [ -f "opt/FreeOffice2024/icons/tml_${s}.png" ] && cp -a "opt/FreeOffice2024/icons/tml_${s}.png" "usr/share/icons/hicolor/${s}x${s}/apps/textmaker.png" 2>/dev/null || true
+  [ -f "opt/FreeOffice2024/icons/tml_${s}.png" ] && cp -a "opt/FreeOffice2024/icons/tml_${s}.png" "usr/share/icons/hicolor/${s}x${s}/apps/freeoffice-textmaker.png" 2>/dev/null || true
+  [ -f "opt/FreeOffice2024/icons/pml_${s}.png" ] && cp -a "opt/FreeOffice2024/icons/pml_${s}.png" "usr/share/icons/hicolor/${s}x${s}/apps/planmaker.png" 2>/dev/null || true
+  [ -f "opt/FreeOffice2024/icons/pml_${s}.png" ] && cp -a "opt/FreeOffice2024/icons/pml_${s}.png" "usr/share/icons/hicolor/${s}x${s}/apps/freeoffice-planmaker.png" 2>/dev/null || true
+  [ -f "opt/FreeOffice2024/icons/prl_${s}.png" ] && cp -a "opt/FreeOffice2024/icons/prl_${s}.png" "usr/share/icons/hicolor/${s}x${s}/apps/presentations.png" 2>/dev/null || true
+  [ -f "opt/FreeOffice2024/icons/prl_${s}.png" ] && cp -a "opt/FreeOffice2024/icons/prl_${s}.png" "usr/share/icons/hicolor/${s}x${s}/apps/freeoffice-presentations.png" 2>/dev/null || true
+done
+
+# Install Pixmaps
+mkdir -p usr/share/pixmaps
+if [ -f opt/FreeOffice2024/icons/tml_48.png ]; then
+  cp -a opt/FreeOffice2024/icons/tml_48.png usr/share/pixmaps/textmaker.png
+  cp -a opt/FreeOffice2024/icons/tml_48.png usr/share/pixmaps/freeoffice-textmaker.png
+  cp -a opt/FreeOffice2024/icons/tml_48.png usr/share/pixmaps/application-x-tml24.png
+fi
+if [ -f opt/FreeOffice2024/icons/pml_48.png ]; then
+  cp -a opt/FreeOffice2024/icons/pml_48.png usr/share/pixmaps/planmaker.png
+  cp -a opt/FreeOffice2024/icons/pml_48.png usr/share/pixmaps/freeoffice-planmaker.png
+  cp -a opt/FreeOffice2024/icons/pml_48.png usr/share/pixmaps/application-x-pml24.png
+fi
+if [ -f opt/FreeOffice2024/icons/prl_48.png ]; then
+  cp -a opt/FreeOffice2024/icons/prl_48.png usr/share/pixmaps/presentations.png
+  cp -a opt/FreeOffice2024/icons/prl_48.png usr/share/pixmaps/freeoffice-presentations.png
+  cp -a opt/FreeOffice2024/icons/prl_48.png usr/share/pixmaps/application-x-prl24.png
+fi
+
+# Install Mime Type Icons
+for s in 16 24 32 48 64 128 256 512 1024; do
+  mkdir -p "usr/share/icons/hicolor/${s}x${s}/mimetypes"
+  for a in pmd pmd_mso pmd_oth prd prd_mso prd_oth tmd tmd_mso tmd_oth; do
+    if [ -f "opt/FreeOffice2024/icons/${a}_${s}.png" ]; then
+      cp -a "opt/FreeOffice2024/icons/${a}_${s}.png" \
+        "usr/share/icons/hicolor/${s}x${s}/mimetypes/application-x-${a}.png"
+    fi
+  done
+done
+
+# Install Desktop Shortcuts
+mkdir -p usr/share/applications
+cp -a "$CWD"/*.desktop usr/share/applications/
+
+# Install MIME type associations
+mkdir -p usr/share/mime/packages
+if [ -f opt/FreeOffice2024/mime/softmaker-freeoffice24.xml ]; then
+  cp -a opt/FreeOffice2024/mime/softmaker-freeoffice24.xml usr/share/mime/packages/
+fi
+
+# Set permissions
+chown -R root:root .
+find -L . \
+  \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 -o -perm 511 \) \
+  -exec chmod 755 {} \; -o \
+  \( -perm 666 -o -perm 664 -o -perm 600 -o -perm 444 -o -perm 440 -o -perm 400 \) \
+  -exec chmod 644 {} \;
+
+# Strip binaries
+find "$PKG/opt/FreeOffice2024" -type f -exec file {} + 2>/dev/null \
+  | grep -E "ELF.*(executable|shared object)" \
+  | cut -d: -f1 \
+  | xargs strip --strip-unneeded 2>/dev/null || true
+
+# Documentation
+mkdir -p "usr/doc/$PRGNAM-$VERSION"
+cat "$CWD/slack-desc" > "usr/doc/$PRGNAM-$VERSION/slack-desc"
+
+# Package Install Script
+mkdir -p "$PKG/install"
+cat "$CWD/slack-desc" > "$PKG/install/slack-desc"
+cat "$CWD/doinst.sh" > "$PKG/install/doinst.sh"
+
+# Create Slackware Package
+cd "$PKG"
+/sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-2024_$VERSION-$ARCH-$BUILD.txz"
+
+echo "Package created successfully: $OUTPUT/$PRGNAM-2024_$VERSION-$ARCH-$BUILD.txz"

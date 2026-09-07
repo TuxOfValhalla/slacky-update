@@ -1,0 +1,19 @@
+# HOW TO EDIT THIS FILE:
+# The "handy ruler" below makes it easier to edit a package description.
+# Line up the first '|' above the ':' following the base package name, and
+# the '|' on the right side marks the last column you can put a character in.
+# You must make exactly 11 lines for the formatting to be correct.  It's also
+# customary to leave one space after the ':' except on otherwise blank lines.
+
+                      |-----handy-ruler------------------------------------------------------|
+davinci-resolve-studio: davinci-resolve-studio (Professional Video Editing and Color Grading)
+davinci-resolve-studio:
+davinci-resolve-studio: DaVinci Resolve Studio is the world's only solution that combines
+davinci-resolve-studio: editing, color correction, visual effects, motion graphics, and audio
+davinci-resolve-studio: post-production all in one software tool.
+davinci-resolve-studio:
+davinci-resolve-studio: Includes hardware acceleration via NVIDIA CUDA, Blackmagic RAW Player,
+davinci-resolve-studio: RAW Speed Test, and DaVinci Control Panels integration.
+davinci-resolve-studio:
+davinci-resolve-studio: Homepage: https://www.blackmagicdesign.com/products/davinciresolve
+davinci-resolve-studio:

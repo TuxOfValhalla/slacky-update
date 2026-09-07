@@ -61,14 +61,20 @@ class I18nEngine:
         for env_var in ("LC_ALL", "LC_MESSAGES", "LANG", "LANGUAGE"):
             val = os.environ.get(env_var)
             if val:
-                code = val.split(".")[0].split("_")[0].split(":")[0].lower()
+                raw_tag = val.split(".")[0].split(":")[0].replace("_", "-").lower()
+                if os.path.exists(os.path.join(LOCALES_DIR, f"{raw_tag}.json")):
+                    return raw_tag
+                code = raw_tag.split("-")[0]
                 if code and code not in ("c", "posix"):
                     return code
 
         try:
             sys_lang = locale.getdefaultlocale()[0]
             if sys_lang:
-                code = sys_lang.split("_")[0].lower()
+                raw_tag = sys_lang.replace("_", "-").lower()
+                if os.path.exists(os.path.join(LOCALES_DIR, f"{raw_tag}.json")):
+                    return raw_tag
+                code = raw_tag.split("-")[0]
                 if code and code not in ("c", "posix"):
                     return code
         except Exception:

@@ -1,0 +1,113 @@
+#!/usr/bin/env bash
+# ==============================================================================
+#  Slackware build script for FreeCAD 1.1.3 (Official Accelerated CAD Suite)
+#  Maintained by TuxOfValhalla <agnar1984@gmail.com>
+# ==============================================================================
+
+set -euo pipefail
+
+PRGNAM=freecad
+VERSION=${VERSION:-1.1.3}
+BUILD=${BUILD:-1_slacky}
+TAG=${TAG:-_slacky}
+
+if [ -z "${ARCH:-}" ]; then
+  case "$(uname -m)" in
+    i?86) ARCH=i586 ;;
+    arm*) ARCH=arm ;;
+    *) ARCH=$(uname -m) ;;
+  esac
+fi
+
+if [ "$ARCH" != "x86_64" ]; then
+  echo "FreeCAD 1.1+ is only supported on x86_64."
+  exit 1
+fi
+
+CWD=$(pwd)
+TMP=${TMP:-/tmp/SBo}
+PKG=$TMP/package-$PRGNAM
+OUTPUT=${OUTPUT:-/tmp}
+
+APPIMAGE=""
+for cand in "$CWD/FreeCAD_${VERSION}-Linux-x86_64"*".AppImage" \
+            "$CWD/FreeCAD-${VERSION}-Linux-x86_64"*".AppImage"; do
+  if [ -f "$cand" ]; then
+    APPIMAGE="$cand"
+    break
+  fi
+done
+
+if [ -z "$APPIMAGE" ]; then
+  echo "Error: FreeCAD AppImage not found."
+  echo "Please download FreeCAD_${VERSION}-Linux-x86_64-py311.AppImage from https://github.com/FreeCAD/FreeCAD/releases/tag/${VERSION}"
+  exit 1
+fi
+
+rm -rf "$PKG"
+mkdir -p "$TMP" "$PKG" "$OUTPUT"
+cd "$TMP"
+rm -rf "squashfs-root"
+
+echo "Extracting FreeCAD $VERSION AppImage..."
+chmod +x "$APPIMAGE"
+"$APPIMAGE" --appimage-extract >/dev/null
+
+cd "squashfs-root"
+
+chown -R root:root .
+find -L . \
+  \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 -o -perm 511 \) \
+  -exec chmod 755 {} \; -o \
+  \( -perm 666 -o -perm 664 -o -perm 600 -o -perm 444 -o -perm 440 -o -perm 400 \) \
+  -exec chmod 644 {} \;
+
+# Install to /opt/freecad-$VERSION
+mkdir -p "$PKG/opt/freecad-$VERSION"
+cp -a * "$PKG/opt/freecad-$VERSION/"
+
+# Install runtime wrapper
+mkdir -p "$PKG/usr/bin"
+install -m 755 "$CWD/freecad-wrapper.sh" "$PKG/usr/bin/freecad"
+ln -sf freecad "$PKG/usr/bin/FreeCAD"
+ln -sf freecad "$PKG/usr/bin/freecad-$VERSION"
+
+# Install Desktop Entry & Icons
+mkdir -p "$PKG/usr/share/applications"
+install -m 644 "$CWD/freecad.desktop" "$PKG/usr/share/applications/freecad.desktop"
+ln -sf freecad.desktop "$PKG/usr/share/applications/org.freecadweb.FreeCAD.desktop"
+
+mkdir -p "$PKG/usr/share/pixmaps" "$PKG/usr/share/icons/hicolor/scalable/apps"
+if [ -f "org.freecad.FreeCAD.svg" ]; then
+  install -m 644 org.freecad.FreeCAD.svg "$PKG/usr/share/pixmaps/freecad.svg"
+  install -m 644 org.freecad.FreeCAD.svg "$PKG/usr/share/icons/hicolor/scalable/apps/freecad.svg"
+  install -m 644 org.freecad.FreeCAD.svg "$PKG/usr/share/icons/hicolor/scalable/apps/org.freecad.FreeCAD.svg"
+fi
+
+# Documentation
+mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION"
+cat "$CWD/slack-desc" > "$PKG/usr/doc/$PRGNAM-$VERSION/slack-desc" 2>/dev/null || true
+
+# Package metadata & doinst.sh
+mkdir -p "$PKG/install"
+cat "$CWD/slack-desc" > "$PKG/install/slack-desc"
+
+cat << 'EOF_DOINST' > "$PKG/install/doinst.sh"
+if [ ! -d opt/freecad ]; then
+  rm -f opt/freecad 2>/dev/null || true
+  ln -sfn freecad-1.1.3 opt/freecad 2>/dev/null || true
+fi
+
+if [ -x /usr/bin/update-desktop-database ]; then
+  /usr/bin/update-desktop-database -q /usr/share/applications 2>/dev/null || true
+fi
+if [ -x /usr/bin/gtk-update-icon-cache ]; then
+  /usr/bin/gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor 2>/dev/null || true
+fi
+EOF_DOINST
+
+# Build Slackware package
+cd "$PKG"
+/sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD.txz"
+
+echo "Package created: $OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD.txz"

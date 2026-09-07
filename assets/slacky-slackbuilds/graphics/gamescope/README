@@ -1,0 +1,10 @@
+gamescope (SteamOS session compositing window manager)
+
+gamescope is Valve's micro-compositor that runs on SteamOS and the Steam Deck.
+It allows you to upscale games with FidelityFX Super Resolution (FSR),
+apply integer scaling, limit FPS with minimal latency, and run Wayland-native
+or nested X11 game windows.
+
+Usage:
+  gamescope -W 1920 -H 1080 -w 2560 -h 1440 -U -- steam
+  gamescope -W 1280 -H 720 -U -F fsr -- %command%

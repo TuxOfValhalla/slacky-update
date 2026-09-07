@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+# ==============================================================================
+#  Slackware build script for Gamescope (SteamOS Micro-Compositor)
+#  Maintained by TuxOfValhalla <agnar1984@gmail.com>
+# ==============================================================================
+
+set -euo pipefail
+
+PRGNAM=gamescope
+VERSION=${VERSION:-3.16.28}
+BUILD=${BUILD:-1_slacky}
+TAG=${TAG:-_slacky}
+
+if [ -z "${ARCH:-}" ]; then
+  case "$(uname -m)" in
+    i?86) ARCH=i586 ;;
+    arm*) ARCH=arm ;;
+    *) ARCH=$(uname -m) ;;
+  esac
+fi
+
+if [ "$ARCH" != "x86_64" ]; then
+  echo "Gamescope is only supported on x86_64."
+  exit 1
+fi
+
+CWD=$(pwd)
+TMP=${TMP:-/tmp/SBo}
+PKG=$TMP/package-$PRGNAM
+OUTPUT=${OUTPUT:-/tmp}
+
+SLKCFLAGS="-O2 -fPIC"
+LIBDIRSUFFIX="64"
+
+rm -rf "$PKG"
+mkdir -p "$TMP" "$PKG" "$OUTPUT"
+cd "$TMP"
+
+SRC_DIR="$TMP/$PRGNAM-$VERSION"
+if [ ! -d "$SRC_DIR/.git" ]; then
+  echo "Cloning Gamescope $VERSION with submodules..."
+  rm -rf "$SRC_DIR"
+  git clone --depth 1 --branch "$VERSION" --recurse-submodules https://github.com/ValveSoftware/gamescope.git "$SRC_DIR"
+fi
+
+cd "$SRC_DIR"
+chown -R root:root .
+find -L . \
+  \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 -o -perm 511 \) \
+  -exec chmod 755 {} \; -o \
+  \( -perm 666 -o -perm 664 -o -perm 600 -o -perm 444 -o -perm 440 -o -perm 400 \) \
+  -exec chmod 644 {} \;
+
+echo "Configuring Gamescope with Meson..."
+rm -rf build
+CFLAGS="$SLKCFLAGS" \
+CXXFLAGS="$SLKCFLAGS" \
+meson setup build \
+  --prefix=/usr \
+  --libdir=/usr/lib${LIBDIRSUFFIX} \
+  --buildtype=release \
+  -Dpipewire=enabled \
+  -Drt_cap=enabled \
+  -Denable_openvr_support=false \
+  -Dinput_emulation=disabled \
+  -Dbenchmark=disabled \
+  -Denable_tests=false \
+  -Dforce_fallback_for=libliftoff,vkroots
+
+echo "Compiling Gamescope..."
+ninja -C build -j"$(nproc)"
+
+echo "Installing to staging directory..."
+DESTDIR="$PKG" ninja -C build install
+
+# Setcap for realtime priority if setcap utility is available
+if command -v setcap >/dev/null 2>&1 && [ -f "$PKG/usr/bin/gamescope" ]; then
+  setcap 'cap_sys_nice=eip' "$PKG/usr/bin/gamescope" 2>/dev/null || true
+fi
+
+# Documentation
+mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION"
+cp -a LICENSE README.md "$PKG/usr/doc/$PRGNAM-$VERSION/" 2>/dev/null || true
+cat "$CWD/slack-desc" > "$PKG/usr/doc/$PRGNAM-$VERSION/slack-desc" 2>/dev/null || true
+
+# Package metadata
+mkdir -p "$PKG/install"
+cat "$CWD/slack-desc" > "$PKG/install/slack-desc"
+
+# Build Slackware package
+cd "$PKG"
+/sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD.txz"
+
+echo "Package created: $OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD.txz"

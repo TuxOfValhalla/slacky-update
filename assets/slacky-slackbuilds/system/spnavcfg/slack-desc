@@ -1,0 +1,19 @@
+# HOW TO EDIT THIS FILE:
+# The "handy ruler" below makes it easier to edit a package description.  Line
+# up the first '|' above the ':' following the base package name, and the '|'
+# on the right side marks the last column you can put a character in.  You must
+# make exactly 11 lines for the formatting to be correct.  It's also
+# customary to leave one space after the ':' except on otherwise blank lines.
+
+         |-----handy-ruler------------------------------------------------------|
+spnavcfg: spnavcfg (interactive GUI for 3Dconnexion SpaceMouse)
+spnavcfg:
+spnavcfg: spnavcfg is an interactive graphical configurator for spacenavd
+spnavcfg: and 3Dconnexion 6DoF devices. It features an interactive 3D viewport
+spnavcfg: with a test cube, allowing real-time tuning of sensitivity curves,
+spnavcfg: per-axis inversion (pan, tilt, zoom, roll), deadzones, and button
+spnavcfg: remapping.
+spnavcfg:
+spnavcfg: Homepage: https://spacenav.sourceforge.net/
+spnavcfg:
+spnavcfg:

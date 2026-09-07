@@ -1,0 +1,59 @@
+#!/bin/sh
+#
+# /etc/rc.d/rc.grub-btrfsd - Automatically update GRUB menu on Btrfs snapshot creation
+#
+
+PIDFILE="/run/grub-btrfsd.pid"
+BIN="/usr/bin/grub-btrfsd"
+
+grub_btrfsd_start() {
+  if [ -x "$BIN" ] && [ -d "/.snapshots" ]; then
+    echo "Starting grub-btrfsd daemon: $BIN /.snapshots"
+    rm -f "$PIDFILE"
+    $BIN /.snapshots --syslog >/dev/null 2>&1 &
+    echo $! > "$PIDFILE"
+  fi
+}
+
+grub_btrfsd_stop() {
+  echo "Stopping grub-btrfsd daemon..."
+  if [ -f "$PIDFILE" ]; then
+    kill -TERM $(cat "$PIDFILE") 2>/dev/null
+    rm -f "$PIDFILE"
+  else
+    pkill -TERM -f "$BIN" 2>/dev/null
+  fi
+}
+
+grub_btrfsd_restart() {
+  grub_btrfsd_stop
+  sleep 1
+  grub_btrfsd_start
+}
+
+grub_btrfsd_status() {
+  if pgrep -f "$BIN" > /dev/null 2>&1; then
+    echo "grub-btrfsd daemon is running."
+  else
+    echo "grub-btrfsd daemon is NOT running."
+  fi
+}
+
+case "$1" in
+  'start')
+    grub_btrfsd_start
+    ;;
+  'stop')
+    grub_btrfsd_stop
+    ;;
+  'restart')
+    grub_btrfsd_restart
+    ;;
+  'status')
+    grub_btrfsd_status
+    ;;
+  *)
+    echo "Usage: $0 {start|stop|restart|status}"
+    exit 1
+    ;;
+esac

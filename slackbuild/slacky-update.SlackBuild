@@ -4,7 +4,7 @@
 set -euo pipefail
 
 PRGNAM="slacky-update"
-VERSION="0.8"
+VERSION="0.9"
 ARCH="noarch"
 BUILD="1_tux"
 
@@ -31,16 +31,17 @@ mkdir -p "${PKG_DIR}/etc/cron.weekly"
 mkdir -p "${PKG_DIR}/var/cache/slacky-update"
 mkdir -p "${PKG_DIR}/install"
 
-chmod 0777 "${PKG_DIR}/var/cache/slacky-update"
+chmod 1777 "${PKG_DIR}/var/cache/slacky-update"
 
 # --- [ FILE INSTALLATION ] ---
 install -m 0755 "${SRC_DIR}/bin/slacky-update" "${PKG_DIR}/usr/local/bin/"
 install -m 0755 "${SRC_DIR}/bin/slacky-update-tray" "${PKG_DIR}/usr/local/bin/"
 install -m 0755 "${SRC_DIR}"/lib/*.sh "${PKG_DIR}/usr/local/lib/slacky-update/"
-
-install -m 0755 "${SRC_DIR}/lib/slacky-update-tray" "${PKG_DIR}/usr/share/slacky-update/lib/"
-install -m 0755 "${SRC_DIR}/lib/check_backend.sh" "${PKG_DIR}/usr/share/slacky-update/lib/"
+install -m 0755 "${SRC_DIR}"/lib/*.sh "${PKG_DIR}/usr/share/slacky-update/lib/"
+install -m 0755 "${SRC_DIR}/lib/slacky-update-tray" "${PKG_DIR}/usr/share/slacky-update/lib/" 2>/dev/null || true
+install -m 0755 "${SRC_DIR}/lib/slacky-update-tray" "${PKG_DIR}/usr/local/lib/slacky-update/" 2>/dev/null || true
 install -m 0644 "${SRC_DIR}/lib/slacky_update_i18n.py" "${PKG_DIR}/usr/share/slacky-update/lib/"
+install -m 0644 "${SRC_DIR}/lib/slacky_update_i18n.py" "${PKG_DIR}/usr/local/lib/slacky-update/"
 install -m 0644 "${SRC_DIR}"/locales/*.json "${PKG_DIR}/usr/share/slacky-update/locales/"
 
 install -m 0644 "${SRC_DIR}/desktop/slacky-update.desktop" "${PKG_DIR}/usr/share/applications/"
@@ -53,6 +54,16 @@ if [ -d "${SRC_DIR}/assets" ]; then
     mkdir -p "${PKG_DIR}/usr/share/slacky-update/assets"
     install -m 0644 "${SRC_DIR}"/assets/*.png "${PKG_DIR}/usr/share/icons/hicolor/128x128/apps/" 2>/dev/null || true
     install -m 0644 "${SRC_DIR}"/assets/*.png "${PKG_DIR}/usr/share/slacky-update/assets/" 2>/dev/null || true
+    if [ -d "${SRC_DIR}/assets/slacky-slackbuilds" ]; then
+        cp -a "${SRC_DIR}/assets/slacky-slackbuilds" "${PKG_DIR}/usr/share/slacky-update/assets/"
+        mkdir -p "${PKG_DIR}/usr/local/lib/slacky-update/assets"
+        cp -a "${SRC_DIR}/assets/slacky-slackbuilds" "${PKG_DIR}/usr/local/lib/slacky-update/assets/"
+    fi
+    if [ -d "${SRC_DIR}/assets/udev" ]; then
+        cp -a "${SRC_DIR}/assets/udev" "${PKG_DIR}/usr/share/slacky-update/assets/"
+        mkdir -p "${PKG_DIR}/usr/local/lib/slacky-update/assets"
+        cp -a "${SRC_DIR}/assets/udev" "${PKG_DIR}/usr/local/lib/slacky-update/assets/"
+    fi
 fi
 
 # --- [ POST-INSTALL SCRIPT (doinst.sh) ] ---
@@ -87,7 +98,8 @@ chmod 755 "${PKG_DIR}/install/doinst.sh"
 
 # --- [ PACKAGE COMPILATION ] ---
 cd "${PKG_DIR}"
-/sbin/makepkg -l y -c n "${OUTPUT_DIR}/${PKG_NAME}"
+MAKEPKG_BIN=$(command -v makepkg 2>/dev/null || echo "/sbin/makepkg")
+"${MAKEPKG_BIN}" -l y -c n "${OUTPUT_DIR}/${PKG_NAME}"
 cp -f "${OUTPUT_DIR}/${PKG_NAME}" "${OUTPUT_DIR}/${PRGNAM}.txz"
 cp -f "${OUTPUT_DIR}/${PKG_NAME}" "/tmp/${PKG_NAME}" 2>/dev/null || true
 

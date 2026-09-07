@@ -1,0 +1,19 @@
+# HOW TO EDIT THIS FILE:
+# The "handy ruler" below makes it easier to edit a package description.
+# Line up the first '|' above the ':' following the base package name, and
+# the '|' on the right side marks the last column you can put a character in.
+# You must make exactly 11 lines for the formatting to be correct.  It's also
+# customary to leave one space after the ':' except on otherwise blank lines.
+
+    |-----handy-ruler------------------------------------------------------|
+lact: lact (Linux AMD and NVIDIA GPU Control Tool)
+lact:
+lact: LACT is a modern GTK4 GUI and background daemon for monitoring,
+lact: overclocking, fan curve control, and power management on AMD and
+lact: NVIDIA graphics cards.
+lact:
+lact: It provides hardware monitoring, VRAM/GPU clocks, thermals,
+lact: custom power profiles, and a Slackware SysVinit daemon (rc.lact).
+lact:
+lact: Homepage: https://github.com/ilya-zlobintsev/LACT
+lact:

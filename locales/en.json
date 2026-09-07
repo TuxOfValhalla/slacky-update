@@ -133,10 +133,18 @@
   "CURATED_SUITE_TITLE": "Slacky-SlackBuilds Curated Suite",
   "SBO_MAIN_HUB_TITLE": "What's the SlackBuild play, dude?",
   "SBO_MENU_SEARCH_AND_RECOMMENDED": "Search SBo & Recommended Gaming Packages",
-  "SBO_MENU_CURATED_SUITE": "Slacky-SlackBuilds Curated Hub (10 Essential Packages)",
-  "MENU_SLACKBUILDS_TRAY": "Slack-builds",
+  "SBO_MENU_CURATED_SUITE": "Slacky-SlackBuilds Curated Hub (25 Essential Packages)",
+  "MENU_OPTIONAL_TWEAKS": "Optional System & Gaming Tweaks (Sysctl, Limits, BBR, NTSYNC, Controllers)",
+  "MENU_SLACKBUILDS_TRAY": "SlackBuilds and Tweaks",
   "CATCH_YOU_FLIP_SIDE": "Catch You on the Flip Side (Exit)",
   "RECOMMENDED_GAMING_TITLE": "Recommended Gaming Packages",
   "SBO_RECOMMENDED_GAMING_OPTION": "Recommended Gaming Packages (OBS, Steam, Discord, ProtonPlus)",
-  "APP_UP_TO_DATE": "Slacky-Update is up to date with GitHub ({tag})"
+  "APP_UP_TO_DATE": "Slacky-Update is up to date with GitHub ({tag})",
+  "MENU_AMD_ROCM": "3. AMD ROCm/HIP Creator Toolkit (Deploy ROCm, Purge Mesa OpenCL & Boost DaVinci)",
+  "ROCM_MENU_TITLE": "AMD ROCm / HIP Creator Command Center",
+  "ROCM_OPTION_INSTALL": "1. Deploy Full AMD ROCm & HIP OpenCL Suite",
+  "ROCM_OPTION_PURGE_MESA": "2. Purge & Blacklist Conflicting Mesa OpenCL / Rusticl",
+  "ROCM_OPTION_VERIFY": "3. Verify GPU Hardware Compute & OpenCL Status",
+  "ROCM_PURGE_SUCCESS": "Conflicting Mesa OpenCL drivers successfully purged and blacklisted. DaVinci is clear!",
+  "ROCM_INSTALL_SUCCESS": "AMD ROCm & HIP OpenCL Suite successfully installed and configured. Mojo unleashed!"
 }

@@ -1,0 +1,59 @@
+#!/bin/sh
+#
+# /etc/rc.d/rc.ananicy-cpp - Ananicy C++ auto-nice daemon for Slackware
+#
+
+PIDFILE="/run/ananicy-cpp.pid"
+BIN="/usr/bin/ananicy-cpp"
+
+ananicy_start() {
+  if [ -x "$BIN" ]; then
+    echo "Starting Ananicy C++ daemon: $BIN start"
+    rm -f "$PIDFILE"
+    $BIN start > /var/log/ananicy-cpp.log 2>&1 &
+    echo $! > "$PIDFILE"
+  fi
+}
+
+ananicy_stop() {
+  echo "Stopping Ananicy C++ daemon..."
+  if [ -f "$PIDFILE" ]; then
+    kill -TERM $(cat "$PIDFILE") 2>/dev/null
+    rm -f "$PIDFILE"
+  else
+    pkill -TERM -f "$BIN start" 2>/dev/null
+  fi
+}
+
+ananicy_restart() {
+  ananicy_stop
+  sleep 1
+  ananicy_start
+}
+
+ananicy_status() {
+  if pgrep -f "$BIN start" > /dev/null 2>&1 || pgrep -f "$BIN" > /dev/null 2>&1; then
+    echo "Ananicy C++ daemon is running."
+  else
+    echo "Ananicy C++ daemon is NOT running."
+  fi
+}
+
+case "$1" in
+  'start')
+    ananicy_start
+    ;;
+  'stop')
+    ananicy_stop
+    ;;
+  'restart')
+    ananicy_restart
+    ;;
+  'status')
+    ananicy_status
+    ;;
+  *)
+    echo "Usage: $0 {start|stop|restart|status}"
+    exit 1
+    ;;
+esac

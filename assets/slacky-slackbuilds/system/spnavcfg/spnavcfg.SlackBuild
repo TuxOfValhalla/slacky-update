@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+# ==============================================================================
+#  Slackware build script for spnavcfg (GUI Configurator for 3Dconnexion Devices)
+#  Maintained by TuxOfValhalla <agnar1984@gmail.com>
+# ==============================================================================
+
+set -euo pipefail
+
+PRGNAM=spnavcfg
+VERSION=${VERSION:-1.3}
+BUILD=${BUILD:-1_slacky}
+TAG=${TAG:-_slacky}
+
+if [ -z "${ARCH:-}" ]; then
+  case "$(uname -m)" in
+    i?86) ARCH=i586 ;;
+    arm*) ARCH=arm ;;
+    *) ARCH=$(uname -m) ;;
+  esac
+fi
+
+CWD=$(pwd)
+TMP=${TMP:-/tmp/SBo}
+PKG=$TMP/package-$PRGNAM
+OUTPUT=${OUTPUT:-/tmp}
+
+if [ "$ARCH" = "x86_64" ]; then
+  SLKCFLAGS="-O2 -fPIC"
+  LIBDIRSUFFIX="64"
+else
+  SLKCFLAGS="-O2"
+  LIBDIRSUFFIX=""
+fi
+
+rm -rf "$PKG"
+mkdir -p "$TMP" "$PKG" "$OUTPUT"
+cd "$TMP"
+rm -rf "$PRGNAM-$VERSION"
+tar -xf "$CWD/$PRGNAM-$VERSION.tar.gz"
+cd "$PRGNAM-$VERSION"
+
+chown -R root:root .
+find -L . \
+  \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 -o -perm 511 \) \
+  -exec chmod 755 {} \; -o \
+  \( -perm 666 -o -perm 664 -o -perm 600 -o -perm 444 -o -perm 440 -o -perm 400 \) \
+  -exec chmod 644 {} \;
+
+echo "Configuring spnavcfg with Qt6..."
+CFLAGS="$SLKCFLAGS" \
+CXXFLAGS="$SLKCFLAGS" \
+./configure \
+  --prefix=/usr \
+  --qt6 \
+  --enable-opt \
+  --disable-debug
+
+echo "Compiling spnavcfg..."
+make -j"$(nproc)"
+
+echo "Installing to staging directory..."
+make install DESTDIR="$PKG"
+
+# Install Desktop Entry & Icons
+mkdir -p "$PKG/usr/share/applications"
+install -m 644 icons/spnavcfg.desktop "$PKG/usr/share/applications/spnavcfg.desktop"
+
+for sz in 48 128 256; do
+  mkdir -p "$PKG/usr/share/icons/hicolor/${sz}x${sz}/apps"
+  if [ -f "icons/spnavcfg-${sz}x${sz}.png" ]; then
+    install -m 644 "icons/spnavcfg-${sz}x${sz}.png" "$PKG/usr/share/icons/hicolor/${sz}x${sz}/apps/spnavcfg.png"
+  fi
+done
+
+mkdir -p "$PKG/usr/share/pixmaps"
+install -m 644 icons/spnavcfg-48x48.png "$PKG/usr/share/pixmaps/spnavcfg.png" 2>/dev/null || true
+
+# Documentation
+mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION"
+cp -a COPYING README.md "$PKG/usr/doc/$PRGNAM-$VERSION/" 2>/dev/null || true
+cat "$CWD/slack-desc" > "$PKG/usr/doc/$PRGNAM-$VERSION/slack-desc" 2>/dev/null || true
+
+# Package metadata & doinst.sh
+mkdir -p "$PKG/install"
+cat "$CWD/slack-desc" > "$PKG/install/slack-desc"
+
+cat << 'EOF_DOINST' > "$PKG/install/doinst.sh"
+if [ -x /usr/bin/update-desktop-database ]; then
+  /usr/bin/update-desktop-database -q /usr/share/applications 2>/dev/null || true
+fi
+if [ -x /usr/bin/gtk-update-icon-cache ]; then
+  /usr/bin/gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor 2>/dev/null || true
+fi
+EOF_DOINST
+
+# Build package
+cd "$PKG"
+/sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD.txz"
+
+echo "Package created: $OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD.txz"

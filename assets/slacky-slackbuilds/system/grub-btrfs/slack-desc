@@ -1,0 +1,18 @@
+# HOW TO EDIT THIS FILE:
+# The "handy ruler" below makes it easier to edit a package description.
+# Line up the first '|' above the ':' following the base package name, and
+# the '|' on the right side marks the last column you can put a character in.
+# You must make exactly 11 lines for the formatting to be correct.  It's also
+# customary to leave one space after the ':' except on otherwise blank lines.
+
+          |-----handy-ruler------------------------------------------------------|
+grub-btrfs: grub-btrfs (Include Btrfs snapshots automatically in the GRUB menu)
+grub-btrfs:
+grub-btrfs: grub-btrfs automatically includes Btrfs snapshots in the GRUB boot menu.
+grub-btrfs:
+grub-btrfs: It allows you to boot directly into read-only system snapshots taken by
+grub-btrfs: Snapper or other Btrfs snapshot tools. Includes grub-btrfsd daemon
+grub-btrfs: for inotify-based automated GRUB regeneration upon snapshot events.
+grub-btrfs:
+grub-btrfs: Homepage: https://github.com/Antynea/grub-btrfs
+grub-btrfs:

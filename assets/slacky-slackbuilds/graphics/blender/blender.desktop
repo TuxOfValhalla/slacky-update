@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Version=1.5
+Name=Blender 5.2.1
+GenericName=3D Modeler & Renderer
+Comment=3D modeling, animation, rendering, CUDA/OptiX and SpaceMouse creation suite
+Icon=blender
+Exec=blender %f
+Terminal=false
+MimeType=application/x-blender;
+Categories=Graphics;3DGraphics;
+Keywords=3D;Animation;Modeling;Rendering;Cycles;EEVEE;CUDA;OptiX;ROCm;SpaceMouse;
+StartupNotify=true
+StartupWMClass=Blender

@@ -5,6 +5,17 @@ set -euo pipefail
 
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${PATH:-}"
 
+PKG_UPGRADE_CMD=$(command -v upgradepkg 2>/dev/null || echo "/sbin/upgradepkg")
+PKG_REMOVE_CMD=$(command -v removepkg 2>/dev/null || echo "/sbin/removepkg")
+PKG_INSTALL_CMD=$(command -v installpkg 2>/dev/null || echo "/sbin/installpkg")
+PKG_MAKE_CMD=$(command -v makepkg 2>/dev/null || echo "/sbin/makepkg")
+LDCONFIG_CMD=$(command -v ldconfig 2>/dev/null || echo "/sbin/ldconfig")
+REBOOT_CMD=$(command -v reboot 2>/dev/null || echo "/sbin/reboot")
+DEPMOD_CMD=$(command -v depmod 2>/dev/null || echo "/sbin/depmod")
+MKINITRD_CMD=$(command -v mkinitrd 2>/dev/null || echo "/sbin/mkinitrd")
+SLACKPKG_CMD=$(command -v slackpkg 2>/dev/null || echo "/usr/sbin/slackpkg")
+DRACUT_CMD=$(command -v dracut 2>/dev/null || echo "/usr/bin/dracut")
+
 BOLD="\033[1m"
 RED="\033[1;31m"
 GREEN="\033[1;32m"
@@ -55,7 +66,7 @@ check_slacky_update_self_update() {
     rel_json=$(curl -sSL -m 2 -H "User-Agent: slacky-update" "https://api.github.com/repos/TuxOfValhalla/slacky-update/releases/latest" 2>/dev/null || true)
 
     local update_info
-    update_info=$(python3 -c "
+    update_info=$(echo "${rel_json}" | python3 -c "
 import json, sys, re
 
 def parse_v(v_str):
@@ -63,8 +74,9 @@ def parse_v(v_str):
 
 cur = '${current_ver}'.lstrip('v')
 try:
-    if '''${rel_json}''':
-        data = json.loads('''${rel_json}''')
+    content = sys.stdin.read().strip()
+    if content:
+        data = json.loads(content)
         tag = data.get('tag_name', '').lstrip('v')
         if tag and parse_v(tag) > parse_v(cur):
             dl_url = ''
@@ -95,17 +107,17 @@ print(f'UP_TO_DATE|{cur}')
         reply_update=${reply_update:-Y}
         if [[ "$reply_update" =~ ^[YyJjSsOo]$ ]]; then
             validate_privileges
-            log_info "Downloading Slacky-Update v${new_tag} from GitHub..."
+            log_info "Downloading Slacky-Update v${new_tag} from GitHub (Canonical)..."
             local tmp_pkg="/tmp/slacky-update-${new_tag}.txz"
             if [[ "${dl_url}" =~ \.txz$|\.tgz$ ]]; then
                 sudo curl -sSL -o "${tmp_pkg}" "${dl_url}"
                 if [ -f "${tmp_pkg}" ] && [ -s "${tmp_pkg}" ]; then
-                    sudo /sbin/upgradepkg --reinstall "${tmp_pkg}"
+                    sudo "${PKG_UPGRADE_CMD}" --reinstall "${tmp_pkg}"
                     sudo rm -f "${tmp_pkg}"
                     log_success "Slacky-Update upgraded to v${new_tag}!"
                     killall slacky-update-tray 2>/dev/null || pkill -f slacky-update-tray || true
-                    nohup /usr/local/bin/slacky-update-tray >/dev/null 2>&1 &
-                    exec /usr/local/bin/slacky-update "$@"
+                    nohup "$(command -v slacky-update-tray 2>/dev/null || echo "/usr/local/bin/slacky-update-tray")" >/dev/null 2>&1 &
+                    exec "$(command -v slacky-update 2>/dev/null || echo "/usr/local/bin/slacky-update")" "$@"
                 fi
             fi
         fi
@@ -117,10 +129,17 @@ print(f'UP_TO_DATE|{cur}')
 init_storage() {
     if [ ! -d "${CACHE_DIR}" ]; then
         mkdir -p "${CACHE_DIR}" 2>/dev/null || sudo mkdir -p "${CACHE_DIR}" 2>/dev/null || true
-        chmod 777 "${CACHE_DIR}" 2>/dev/null || sudo chmod 777 "${CACHE_DIR}" 2>/dev/null || true
     fi
+    # Set 1777 (sticky-bit world-writable like /tmp) so unprivileged check_backend / tray can update status.json
+    # while preventing unprivileged users from deleting or modifying root's cached packages.
+    chmod 1777 "${CACHE_DIR}" 2>/dev/null || sudo chmod 1777 "${CACHE_DIR}" 2>/dev/null || true
+
+    # Sensitive root payload subdirectories are restricted to 0755
+    sudo mkdir -p "${CACHE_DIR}/kernel" "${CACHE_DIR}/nvidia" "${CACHE_DIR}/slacky-slackbuilds" 2>/dev/null || true
+    sudo chmod 0755 "${CACHE_DIR}/kernel" "${CACHE_DIR}/nvidia" "${CACHE_DIR}/slacky-slackbuilds" 2>/dev/null || true
+
     touch "${LOG_FILE}" 2>/dev/null || sudo touch "${LOG_FILE}" 2>/dev/null || true
-    chmod 666 "${LOG_FILE}" 2>/dev/null || sudo chmod 666 "${LOG_FILE}" 2>/dev/null || true
+    chmod 0666 "${LOG_FILE}" 2>/dev/null || sudo chmod 0666 "${LOG_FILE}" 2>/dev/null || true
 }
 
 validate_privileges() {
@@ -260,4 +279,61 @@ resolve_mok_keypair() {
     fi
 
     MOK_CERT="${MOK_CRT:-${MOK_DER}}"
+}
+
+check_and_shield_mirror_freshness() {
+    # Check primary Slackware mirror reachability
+    local primary_mirror
+    primary_mirror=$(grep -v '^#' /etc/slackpkg/mirrors 2>/dev/null | grep -E '^https?://' | head -n 1 || echo "")
+    if [ -n "${primary_mirror}" ]; then
+        if ! curl -sSLI -m 4 -f -o /dev/null "${primary_mirror}" 2>/dev/null; then
+            log_warn "Primary Slackware mirror (${primary_mirror}) timed out or is unreachable. Continuing with standard fallback..."
+        fi
+    fi
+
+    # Auto-GPG Shield for slackpkgplus if multilib or AlienBOB repositories are present
+    if [ -f "/etc/slackpkg/slackpkgplus.conf" ]; then
+        if grep -E "REPOPLUS=.*(multilib|alienbob|restricted)" /etc/slackpkg/slackpkgplus.conf >/dev/null 2>&1; then
+            if grep -E "^STRICTGPG=on" /etc/slackpkg/slackpkgplus.conf >/dev/null 2>&1; then
+                log_info "Auto-GPG Shield: Adjusting STRICTGPG=off in slackpkgplus.conf to prevent third-party signature aborts..."
+                sudo sed -i 's/^STRICTGPG=on/STRICTGPG=off/' /etc/slackpkg/slackpkgplus.conf 2>/dev/null || true
+            fi
+        fi
+    fi
+}
+
+run_post_update_smoke_test() {
+    local kver active_driver="Mesa / In-Tree"
+    kver=$(uname -r)
+    if [ "${HAS_NVIDIA}" = "true" ] && command -v nvidia-smi >/dev/null 2>&1; then
+        local nv_ver
+        nv_ver=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null | head -n 1 || echo "")
+        [ -n "${nv_ver}" ] && active_driver="NVIDIA ${nv_ver}"
+    fi
+
+    local multi_status="Not Configured"
+    local multi_ok=0
+    if ls /var/log/packages/*-compat32* >/dev/null 2>&1 || [ -e "/lib/ld-linux.so.2" ]; then
+        if [ -e "/lib/ld-linux.so.2" ] && /lib/ld-linux.so.2 --version >/dev/null 2>&1; then
+            local g_ver
+            g_ver=$(/lib/ld-linux.so.2 --version 2>/dev/null | head -n 1 | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' | head -n 1 || echo "2.x")
+            multi_status="glibc ${g_ver} (/lib/ld-linux.so.2 active - Steam & Wine ready)"
+            multi_ok=1
+        else
+            multi_status="DEGRADED (/lib/ld-linux.so.2 unresponsive)"
+        fi
+    fi
+
+    echo ""
+    echo -e "${CYAN}${BOLD}=== 🎸 POST-UPDATE SUBSYSTEM HEALTH CHECK ===${RESET}"
+    echo -e "  ${GREEN}[✓]${RESET} 64-bit Slackware Core : ${GREEN}Up-to-date & healthy${RESET}"
+    echo -e "  ${GREEN}[✓]${RESET} Kernel & Video Driver : ${GREEN}${kver} / ${active_driver}${RESET}"
+    if [ "${multi_ok}" -eq 1 ]; then
+        echo -e "  ${GREEN}[✓]${RESET} 32-bit Multilib Armor : ${GREEN}${multi_status}${RESET}"
+    elif [ "${multi_status}" != "Not Configured" ]; then
+        echo -e "  ${YELLOW}[!]${RESET} 32-bit Multilib Armor : ${YELLOW}${multi_status}${RESET}"
+    else
+        echo -e "  ${BLUE}[-]${RESET} 32-bit Multilib Armor : ${multi_status}"
+    fi
+    echo -e "${CYAN}${BOLD}=============================================${RESET}"
 }

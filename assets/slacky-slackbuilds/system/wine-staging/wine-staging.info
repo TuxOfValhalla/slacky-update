@@ -1,0 +1,11 @@
+PRGNAM="wine-staging"
+VERSION="11.16"
+HOMEPAGE="https://wine-staging.com/"
+DOWNLOAD="https://dl.winehq.org/wine/source/11.x/wine-11.16.tar.xz \
+          https://github.com/wine-staging/wine-staging/archive/refs/tags/v11.16.tar.gz"
+MD5SUM=""
+DOWNLOAD_x86_64=""
+MD5SUM_x86_64=""
+REQUIRES=""
+MAINTAINER="TuxOfValhalla"
+EMAIL="agnar1984@gmail.com"

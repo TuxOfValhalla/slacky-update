@@ -1,0 +1,19 @@
+# HOW TO EDIT THIS FILE:
+# The "handy ruler" below makes it easier to edit a package description.  Line
+# up the first '|' above the ':' following the base package name, and the '|'
+# on the right side marks the last column you can put a character in.  You must
+# make exactly 11 lines for the formatting to be correct.  It's also
+# customary to leave one space after the ':' except on otherwise blank lines.
+
+       |-----handy-ruler------------------------------------------------------|
+openrgb: openrgb (Open Source RGB Lighting Control)
+openrgb:
+openrgb: OpenRGB is a free, open source RGB lighting control tool that does
+openrgb: not depend on manufacturer software. It supports ASUS, ASRock, Corsair,
+openrgb: G.Skill, Gigabyte, HyperX, MSI, Razer, ThermalTake, and more.
+openrgb:
+openrgb: This build includes Hotfix 1 (1.0rc3.1) with updated udev rules and
+openrgb: Slackware SysVinit / I2C motherboard & RAM lighting integration.
+openrgb:
+openrgb: Homepage: https://openrgb.org/
+openrgb:

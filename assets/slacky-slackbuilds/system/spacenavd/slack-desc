@@ -1,0 +1,19 @@
+# HOW TO EDIT THIS FILE:
+# The "handy ruler" below makes it easier to edit a package description.  Line
+# up the first '|' above the ':' following the base package name, and the '|'
+# on the right side marks the last column you can put a character in.  You must
+# make exactly 11 lines for the formatting to be correct.  It's also
+# customary to leave one space after the ':' except on otherwise blank lines.
+
+         |-----handy-ruler------------------------------------------------------|
+spacenavd: spacenavd (free driver for 3Dconnexion 6DoF input devices)
+spacenavd:
+spacenavd: spacenavd is a free software user-space daemon for 3Dconnexion 6DoF
+spacenavd: input devices (SpaceMouse Compact, Pro, Enterprise, SpaceNavigator).
+spacenavd: It acts as a drop-in replacement for the proprietary 3Dconnexion
+spacenavd: 3dxsrv daemon, communicating with CAD software (FreeCAD, Blender,
+spacenavd: KiCad, Maya) via UNIX domain sockets and X11 ClientMessages.
+spacenavd:
+spacenavd: Homepage: https://spacenav.sourceforge.net/
+spacenavd:
+spacenavd:

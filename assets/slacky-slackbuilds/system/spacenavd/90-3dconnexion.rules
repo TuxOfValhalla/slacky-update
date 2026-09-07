@@ -1,0 +1,12 @@
+# Universal Udev Rules for 3Dconnexion & Logitech 6DoF Devices
+# Grants user-grade access to both hidraw and evdev nodes for native apps & Flatpaks
+
+# 3Dconnexion Modern Devices (SpaceMouse Pro, Wireless, Compact, Enterprise, Module)
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="256f", MODE="0666", GROUP="plugdev", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTRS{idVendor}=="256f", MODE="0666", GROUP="plugdev", TAG+="uaccess"
+KERNEL=="event*", ATTRS{idVendor}=="256f", MODE="0666", GROUP="plugdev", TAG+="uaccess"
+
+# Logitech / 3Dconnexion Legacy Devices (SpaceNavigator, SpaceExplorer, SpacePilot, SpaceBall)
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="c6*", MODE="0666", GROUP="plugdev", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="c6*", MODE="0666", GROUP="plugdev", TAG+="uaccess"
+KERNEL=="event*", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="c6*", MODE="0666", GROUP="plugdev", TAG+="uaccess"

@@ -1,0 +1,19 @@
+# HOW TO EDIT THIS FILE:
+# The "handy ruler" below makes it easier to edit a package description.
+# Line up the first '|' above the ':' following the base package name, and
+# the '|' on the right side marks the last column you can put a character in.
+# You must make exactly 11 lines for the formatting to be correct.  It's also
+# customary to leave one space after the ':' except on otherwise blank lines.
+
+               |-----handy-ruler------------------------------------------------------|
+faugus-launcher: faugus-launcher (Universal Proton and Wine Game Launcher)
+faugus-launcher:
+faugus-launcher: Faugus Launcher is an open-source graphical launcher for managing
+faugus-launcher: and running Windows games and apps seamlessly on Linux using Proton,
+faugus-launcher: Wine-GE, and custom runners.
+faugus-launcher:
+faugus-launcher: Features include automated Proton prefix management, MangoHud and
+faugus-launcher: GameMode toggles, DXVK/VKD3D configuration, and Steam integration.
+faugus-launcher:
+faugus-launcher: Homepage: https://github.com/Faugus/faugus-launcher
+faugus-launcher:

@@ -1,0 +1,19 @@
+# HOW TO EDIT THIS FILE:
+# The "handy ruler" below makes it easier to edit a package description.
+# Line up the first '|' above the ':' following the base package name, and
+# the '|' on the right side marks the last column you can put a character in.
+# You must make exactly 11 lines for the formatting to be correct.  It's also
+# customary to leave one space after the ':' except on otherwise blank lines.
+
+       |-----handy-ruler------------------------------------------------------|
+snapper: snapper (Btrfs snapshot management tool with automated cron cleanup)
+snapper:
+snapper: Snapper is a tool for Linux file system snapshot management. It can
+snapper: create, diff, and delete snapshots, as well as maintain automated
+snapper: timelines and number-based cleanups.
+snapper:
+snapper: Configured for Slackware with Btrfs quota, hourly timeline snapshotting,
+snapper: and hourly cleanup tasks in /etc/cron.hourly.
+snapper:
+snapper: Homepage: https://github.com/openSUSE/snapper
+snapper:

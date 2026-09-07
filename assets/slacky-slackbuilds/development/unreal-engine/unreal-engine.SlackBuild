@@ -1,0 +1,126 @@
+#!/usr/bin/env bash
+# ==============================================================================
+#  Slackware build script for Unreal Engine 5 (Universal)
+#  Maintained by TuxOfValhalla <agnar1984@gmail.com>
+# ==============================================================================
+
+set -euo pipefail
+
+PRGNAM=unreal-engine
+BUILD=${BUILD:-1_slacky}
+TAG=${TAG:-_slacky}
+
+CWD=$(pwd)
+
+# Auto-detect version from zip file if VERSION is not explicitly specified
+ZIP_FILE=""
+for candidate in "$CWD/Linux_Unreal_Engine_5"*".zip" \
+                 "$CWD/UnrealEngine-5"*".zip" \
+                 "$CWD/"*Unreal*Engine*5*".zip"; do
+  if [ -f "$candidate" ]; then
+    ZIP_FILE="$candidate"
+    break
+  fi
+done
+
+DETECTED_VER=""
+if [ -n "$ZIP_FILE" ]; then
+  zname=$(basename "$ZIP_FILE")
+  if [[ "$zname" =~ (5\.[0-9]+(\.[0-9]+)?) ]]; then
+    DETECTED_VER="${BASH_REMATCH[1]}"
+  fi
+fi
+
+VERSION=${VERSION:-${DETECTED_VER:-5.8.0}}
+MAJOR_MINOR=$(echo "$VERSION" | cut -d. -f1-2)
+
+if [ -z "${ARCH:-}" ]; then
+  case "$(uname -m)" in
+    i?86) ARCH=i586 ;;
+    arm*) ARCH=arm ;;
+    *) ARCH=$(uname -m) ;;
+  esac
+fi
+
+if [ "$ARCH" != "x86_64" ]; then
+  echo "Unreal Engine 5 is only supported on x86_64."
+  exit 1
+fi
+
+TMP=${TMP:-/tmp/SBo}
+PKG=$TMP/package-$PRGNAM
+OUTPUT=${OUTPUT:-/tmp}
+
+INSTALL_DIR="${UNREAL_INSTALL_DIR:-/opt/unreal-engine-${MAJOR_MINOR}}"
+
+rm -rf "$PKG"
+mkdir -p "$TMP" "$PKG" "$OUTPUT"
+
+echo "Packaging Unreal Engine ${VERSION} (Branch: ${MAJOR_MINOR})..."
+
+# Desktop Entry
+mkdir -p "$PKG/usr/share/applications"
+cat << EOF_DESK > "$PKG/usr/share/applications/unreal-engine-${MAJOR_MINOR}.desktop"
+[Desktop Entry]
+Type=Application
+Version=1.5
+Name=Unreal Engine ${MAJOR_MINOR}
+GenericName=Game Engine Editor
+Comment=Real-time 3D creation tool with Nanite, Lumen and SpaceMouse support
+Icon=ue5
+Exec=unreal-engine %F
+Terminal=false
+MimeType=application/x-unreal-project;
+Categories=Development;
+Keywords=3D;Game;Engine;Editor;Vulkan;Nanite;Lumen;SpaceMouse;
+StartupNotify=true
+StartupWMClass=UnrealEditor
+EOF_DESK
+
+# Wrapper executables
+mkdir -p "$PKG/usr/bin"
+install -m 755 "$CWD/unreal-engine-wrapper.sh" "$PKG/usr/bin/unreal-engine"
+ln -sf unreal-engine "$PKG/usr/bin/unreal-engine-5"
+ln -sf unreal-engine "$PKG/usr/bin/unreal-engine-${MAJOR_MINOR}"
+
+# Icons
+if [ -f "$CWD/ue5.png" ]; then
+  mkdir -p "$PKG/usr/share/pixmaps" "$PKG/usr/share/icons/hicolor/256x256/apps"
+  install -m 644 "$CWD/ue5.png" "$PKG/usr/share/pixmaps/ue5.png"
+  install -m 644 "$CWD/ue5.png" "$PKG/usr/share/icons/hicolor/256x256/apps/ue5.png"
+fi
+
+# Configuration record
+mkdir -p "$PKG/etc"
+echo "$INSTALL_DIR" > "$PKG/etc/unreal-engine-${MAJOR_MINOR}.conf"
+echo "$INSTALL_DIR" > "$PKG/etc/unreal-engine.conf"
+
+# Documentation
+mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION"
+cat "$CWD/slack-desc" > "$PKG/usr/doc/$PRGNAM-$VERSION/slack-desc" 2>/dev/null || true
+
+# Package metadata & doinst.sh
+mkdir -p "$PKG/install"
+cat "$CWD/slack-desc" > "$PKG/install/slack-desc"
+
+cat << 'EOF_DOINST' > "$PKG/install/doinst.sh"
+if [ -f etc/unreal-engine.conf ]; then
+  TARGET=$(cat etc/unreal-engine.conf 2>/dev/null || true)
+  if [ -n "$TARGET" ] && [ -d "$TARGET" ] && [ ! -d opt/unreal-engine ]; then
+    ln -sfn "$TARGET" opt/unreal-engine 2>/dev/null || true
+  fi
+fi
+
+if [ -x /usr/bin/update-desktop-database ]; then
+  /usr/bin/update-desktop-database -q /usr/share/applications 2>/dev/null || true
+fi
+if [ -x /usr/bin/gtk-update-icon-cache ]; then
+  /usr/bin/gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor 2>/dev/null || true
+fi
+EOF_DOINST
+
+# Build Slackware package
+cd "$PKG"
+/sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD.txz"
+
+echo "Package created: $OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD.txz"

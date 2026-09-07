@@ -1,0 +1,58 @@
+#!/bin/sh
+#
+# /etc/rc.d/rc.spacenavd - 3Dconnexion 6DoF Device Driver Daemon
+#
+
+PIDFILE="/run/spnavd.pid"
+BIN="/usr/bin/spacenavd"
+
+spacenavd_start() {
+  if [ -x "$BIN" ]; then
+    echo "Starting 3Dconnexion SpaceMouse daemon: $BIN"
+    rm -f "$PIDFILE"
+    $BIN -v > /var/log/spacenavd.log 2>&1 &
+  fi
+}
+
+spacenavd_stop() {
+  echo "Stopping 3Dconnexion SpaceMouse daemon..."
+  if [ -f "$PIDFILE" ]; then
+    kill -TERM $(cat "$PIDFILE") 2>/dev/null
+    rm -f "$PIDFILE"
+  else
+    pkill -TERM -f "$BIN" 2>/dev/null
+  fi
+}
+
+spacenavd_restart() {
+  spacenavd_stop
+  sleep 1
+  spacenavd_start
+}
+
+spacenavd_status() {
+  if pgrep -f "$BIN" > /dev/null 2>&1; then
+    echo "spacenavd daemon is running."
+  else
+    echo "spacenavd daemon is NOT running."
+  fi
+}
+
+case "$1" in
+  'start')
+    spacenavd_start
+    ;;
+  'stop')
+    spacenavd_stop
+    ;;
+  'restart')
+    spacenavd_restart
+    ;;
+  'status')
+    spacenavd_status
+    ;;
+  *)
+    echo "Usage: $0 {start|stop|restart|status}"
+    exit 1
+    ;;
+esac

@@ -60,7 +60,7 @@ $(_ SBO_SETUP_HEADER)"
         local built_pkg
         built_pkg=$(ls -t /tmp/sbotools-*-noarch-*.txz 2>/dev/null | head -n 1 || true)
         if [ -n "${built_pkg}" ] && [ -f "${built_pkg}" ]; then
-            sudo /sbin/upgradepkg --install-new "${built_pkg}"
+            sudo "${PKG_UPGRADE_CMD}" --reinstall --install-new "${built_pkg}"
             log_success "sbotools installed successfully!"
         else
             log_error "Failed to build sbotools package."
@@ -106,7 +106,7 @@ auto_refresh_sbo_tree_if_stale() {
     if [ "${diff_days}" -ge 7 ]; then
         echo -e "${CYAN}[WHOA] $(_ SBO_SYNCING_INTEL)${RESET}"
         sudo sbosnap fetch >/dev/null 2>&1 || true
-        touch /var/lib/sbotools/repo 2>/dev/null || true
+        sudo touch /var/lib/sbotools/repo 2>/dev/null || true
     fi
 }
 
@@ -164,7 +164,7 @@ ${BOLD}${CYAN}$(_ MULTILIB_SETUP_HEADER)${RESET}"
     }
 
     log_info "Upgrading to multilib core packages..."
-    sudo /sbin/upgradepkg --reinstall --install-new ./*.txz 2>/dev/null || true
+    sudo "${PKG_UPGRADE_CMD}" --reinstall --install-new ./*.txz 2>/dev/null || true
 
     popd >/dev/null
     rm -rf "${multi_tmp}"
@@ -201,10 +201,20 @@ manage_recommended_gaming_interactive() {
                 sudo sboinstall steam || {
                     log_info "Downloading AlienBOB's native Steam package..."
                     local steam_txz="/tmp/steam-latest.txz"
-                    curl -sSL "http://bear.alienbase.nl/mirrors/people/alien/slackbuilds/steam/pkg64/current/steam-1.0.0.82-x86_64-1alien.txz" -o "${steam_txz}" 2>/dev/null || true
-                    if [ -f "${steam_txz}" ]; then
-                        sudo /sbin/upgradepkg --install-new "${steam_txz}"
-                        log_success "Steam installed successfully!"
+                    sudo rm -f "${steam_txz}"
+                    if curl -sSLf "https://bear.alienbase.nl/mirrors/people/alien/slackbuilds/steam/pkg64/current/steam-1.0.0.82-x86_64-1alien.txz" -o "${steam_txz}" 2>/dev/null; then
+                        local sz=0
+                        [ -f "${steam_txz}" ] && sz=$(stat -c%s "${steam_txz}" 2>/dev/null || echo 0)
+                        if [ "${sz}" -gt 1000000 ]; then
+                            sudo "${PKG_UPGRADE_CMD}" --reinstall --install-new "${steam_txz}"
+                            log_success "Steam installed successfully!"
+                            sudo rm -f "${steam_txz}" 2>/dev/null || true
+                        else
+                            log_warn "Downloaded Steam package is invalid or truncated (${sz} bytes)."
+                            sudo rm -f "${steam_txz}" 2>/dev/null || true
+                        fi
+                    else
+                        log_warn "Failed to download AlienBOB Steam package fallback."
                     fi
                 }
                 ;;
@@ -275,30 +285,54 @@ install_curated_slackbuild() {
     local suite_dir="$2"
     local pkg_path="${suite_dir}/${prg}"
 
-    if [ ! -d "${pkg_path}" ]; then
+    # Always ensure cache is synchronized with latest bundled recipe
+    local bundled_cand=""
+    for cand in "${APP_DIR}/../assets/slacky-slackbuilds/${prg}" "${APP_DIR}/assets/slacky-slackbuilds/${prg}" "/usr/share/slacky-update/assets/slacky-slackbuilds/${prg}" "/usr/local/lib/slacky-update/assets/slacky-slackbuilds/${prg}"; do
+        if [ -d "${cand}" ]; then
+            bundled_cand="${cand}"
+            break
+        fi
+    done
+
+    if [ -n "${bundled_cand}" ]; then
+        sudo mkdir -p "$(dirname "${pkg_path}")"
+        sudo rm -rf "${pkg_path}"
+        sudo cp -a "${bundled_cand}" "${pkg_path}"
+    elif [ ! -d "${pkg_path}" ]; then
         log_error "SlackBuild path ${pkg_path} not found."
         return 1
     fi
 
-    pushd "${pkg_path}" >/dev/null
+    # Create isolated ephemeral build workspace in /tmp
+    local build_tmp
+    build_tmp=$(mktemp -d /tmp/slacky-build-XXXXXX)
+    sudo cp -a "${pkg_path}"/* "${build_tmp}/"
+
+    pushd "${build_tmp}" >/dev/null
     local sb_script
     sb_script=$(ls *.SlackBuild | head -n 1)
 
     # Special handling for DaVinci Resolve Studio
     if [ "${prg}" = "multimedia/davinci-resolve-studio" ]; then
         local found_zip
-        found_zip=$(ls "${pkg_path}"/DaVinci_Resolve_Studio_*_Linux.zip ~/Downloads/DaVinci_Resolve_Studio_*_Linux.zip /tmp/DaVinci_Resolve_Studio_*_Linux.zip 2>/dev/null | head -n 1 || true)
-        if [ -z "${found_zip}" ]; then
+        found_zip=$(ls ~/Downloads/DaVinci_Resolve_Studio_*_Linux.zip /tmp/DaVinci_Resolve_Studio_*_Linux.zip "${pkg_path}"/DaVinci_Resolve_Studio_*_Linux.zip 2>/dev/null | head -n 1 || true)
+        if [ -n "${found_zip}" ]; then
+            cp -f "${found_zip}" "${build_tmp}/"
+        else
             echo ""
             echo -e "${YELLOW}${BOLD}$(_ DAVINCI_DOWNLOAD_REQUIRED)${RESET}"
             echo -e "👉 Download link: ${CYAN}https://www.blackmagicdesign.com/products/davinciresolve/studio${RESET}"
-            echo -e "Place the DaVinci_Resolve_Studio_<VERSION>_Linux.zip file in ~/Downloads
-"
+            echo -e "Place the DaVinci_Resolve_Studio_<VERSION>_Linux.zip file in ~/Downloads\n"
             read -r -p "$(_ PROMPT_CONTINUE_DAVINCI) " reply_dv
             if [[ ! "$reply_dv" =~ ^[YyJjSsOo]$ ]]; then
                 log_warn "DaVinci Resolve installation canceled."
                 popd >/dev/null
+                sudo rm -rf "${build_tmp}"
                 return 0
+            fi
+            found_zip=$(ls ~/Downloads/DaVinci_Resolve_Studio_*_Linux.zip /tmp/DaVinci_Resolve_Studio_*_Linux.zip 2>/dev/null | head -n 1 || true)
+            if [ -n "${found_zip}" ]; then
+                cp -f "${found_zip}" "${build_tmp}/"
             fi
         fi
     fi
@@ -306,86 +340,355 @@ install_curated_slackbuild() {
     # Special handling for FreeOffice 2024
     if [ "${prg}" = "office/freeoffice2024" ]; then
         local found_fo
-        found_fo=$(ls "${pkg_path}"/softmaker-freeoffice-*.tgz ~/Downloads/softmaker-freeoffice-*.tgz /tmp/softmaker-freeoffice-*.tgz 2>/dev/null | head -n 1 || true)
-        if [ -z "${found_fo}" ]; then
-            log_info "Fetching FreeOffice 2024 tarball from SoftMaker..."
-            curl -sSL "https://www.softmaker.net/down/softmaker-freeoffice-2024-1234-amd64.tgz" -o "softmaker-freeoffice-2024-1234-amd64.tgz"
+        found_fo=$(ls ~/Downloads/softmaker-freeoffice-*.tgz /tmp/softmaker-freeoffice-*.tgz "${pkg_path}"/softmaker-freeoffice-*.tgz 2>/dev/null | head -n 1 || true)
+        if [ -n "${found_fo}" ]; then
+            cp -f "${found_fo}" "${build_tmp}/"
         fi
     fi
 
-    log_info "Building and packaging ${prg}..."
+    log_info "Building and packaging ${prg} in isolated workspace..."
     chmod +x "${sb_script}"
-    sudo ./${sb_script}
+    sudo env TMP="/tmp/SBo" OUTPUT="/tmp" ./${sb_script}
 
     local built_pkg
     local prg_base
     prg_base=$(basename "${prg}")
     built_pkg=$(ls -t /tmp/"${prg_base}"-*-*.txz 2>/dev/null | head -n 1 || true)
     if [ -n "${built_pkg}" ] && [ -f "${built_pkg}" ]; then
-        sudo /sbin/upgradepkg --install-new "${built_pkg}"
+        sudo "${PKG_UPGRADE_CMD}" --reinstall --install-new "${built_pkg}"
         log_success "${prg_base} installed and active!"
+        sudo rm -f "${built_pkg}" 2>/dev/null || true
     fi
     popd >/dev/null
+    sudo rm -rf "${build_tmp}" /tmp/SBo/package-* /tmp/SBo/*-build /tmp/SBo/${prg_base}-* 2>/dev/null || true
 }
 
-manage_curated_suite_interactive() {
-    local suite_dir="${SLACKY_SLACKBUILDS_DIR:-/var/cache/slacky-update/slacky-slackbuilds}"
-    if [ ! -d "${suite_dir}" ]; then
-        log_info "Fetching curated Slacky-SlackBuilds repository..."
-        sudo mkdir -p "$(dirname "${suite_dir}")"
-        sudo git clone https://github.com/TuxOfValhalla/slacky-slackbuilds.git "${suite_dir}" 2>/dev/null || true
-    else
-        (cd "${suite_dir}" && sudo git pull 2>/dev/null || true)
+is_pkg_installed() {
+    local prg="$1"
+    local base_name
+    base_name=$(basename "${prg}")
+    local matches
+    matches=$(ls /var/log/packages/"${base_name}"-[0-9]* /var/log/packages/"${base_name}"_* /var/log/packages/"${base_name}"-[a-zA-Z0-9]* 2>/dev/null || true)
+    if [ -n "${matches}" ]; then
+        return 0
     fi
+    case "${base_name}" in
+        affinity|affinity-suite|affinity_suite)
+            [ -f "${HOME}/.local/share/applications/Affinity.desktop" ] || \
+            [ -f "${HOME}/.local/share/applications/affinity.desktop" ] || \
+            [ -f "/usr/share/applications/Affinity.desktop" ] || \
+            [ -f "/usr/share/applications/affinity.desktop" ] || \
+            [ -f "/usr/share/applications/affinity-designer.desktop" ] || \
+            [ -f "/usr/share/applications/affinity-photo.desktop" ] || \
+            [ -f "/usr/share/applications/affinity-publisher.desktop" ] || \
+            [ -d "${HOME}/.AffinityLinux" ] || \
+            [ -d "${HOME}/.config/AffinityOnLinux" ] || \
+            [ -f "/usr/bin/affinity" ] || \
+            [ -f "/usr/local/bin/affinity" ] || \
+            [ -d "/opt/affinity" ]
+            ;;
+        storyboarder)
+            [ -f "/usr/bin/storyboarder" ] || \
+            [ -f "/usr/local/bin/storyboarder" ] || \
+            [ -d "/usr/lib64/storyboarder" ] || \
+            [ -d "/usr/lib/storyboarder" ] || \
+            [ -d "/opt/storyboarder" ] || \
+            [ -f "/usr/share/applications/storyboarder.desktop" ]
+            ;;
+        davinci*|davinci-resolve-studio)
+            [ -d "/opt/resolve" ] || [ -f "/opt/resolve/bin/resolve" ]
+            ;;
+        freeoffice*|freeoffice2024)
+            [ -d "/usr/lib/softmaker2024" ] || [ -d "/opt/freeoffice2024" ] || [ -f "/usr/bin/freeoffice2024" ]
+            ;;
+        *)
+            command -v "${base_name}" >/dev/null 2>&1
+            ;;
+    esac
+}
 
+get_pkg_badge() {
+    local prg="$1"
+    if is_pkg_installed "${prg}"; then
+        echo -e "\033[1;32m[INSTALLED]\033[0m"
+    else
+        echo -e "\033[1;33m[AVAILABLE]\033[0m"
+    fi
+}
+
+menu_category_games() {
+    local suite_dir="$1"
     while true; do
+        local b_faugus b_heroic
+        b_faugus=$(get_pkg_badge "faugus-launcher")
+        b_heroic=$(get_pkg_badge "heroic-games-launcher")
         echo ""
-        echo -e "${BOLD}${CYAN}$(_ CURATED_SUITE_TITLE)${RESET}"
-        
-        # Helper to check if package is installed
-        get_status_badge() {
-            local pattern="$1"
-            if ls /var/log/packages/"${pattern}"-* >/dev/null 2>&1; then
-                echo -e "[1;32m[INSTALLED][0m"
-            else
-                echo -e "[1;33m[AVAILABLE][0m"
-            fi
-        }
+        echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
+        echo -e "${BOLD}${CYAN}                     🎮 Games & Launchers 🎮${RESET}"
+        echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
+        echo -e "  \033[1;33m1.\033[0m Faugus Launcher ${b_faugus} - Proton Cyber-Runner for Non-Steam Games"
+        echo -e "  \033[1;33m2.\033[0m Heroic Games Launcher ${b_heroic} - Epic Games & GOG Cyber-Deck"
+        echo -e "  \033[1;33m3.\033[0m $(_ SBO_BACK_OPTION)"
+        echo ""
+        echo -n "$(_ SELECT_OPERATION_RANGE range="1-3") "
+        local sel
+        read -r sel || sel="3"
+        case "${sel}" in
+            1) install_curated_slackbuild "games/faugus-launcher" "${suite_dir}" ;;
+            2) install_curated_slackbuild "games/heroic-games-launcher" "${suite_dir}" ;;
+            3) return 0 ;;
+            *) log_warn "Invalid selection." ;;
+        esac
+        echo ""
+        read -r -p "$(_ PRESS_ENTER_CONTINUE) " || true
+    done
+}
 
-        echo -e "  [1;33m1.[0m LACT $(get_status_badge "lact") - GPU Overclocking Mojo for Radeon & Nvidia"
-        echo -e "  [1;33m2.[0m Heroic Games Launcher $(get_status_badge "heroic-games-launcher") - Epic & GOG Cyber-Deck"
-        echo -e "  [1;33m3.[0m GOverlay + MangoHud $(get_status_badge "goverlay") - Radical In-Game HUD & Telemetry"
-        echo -e "  [1;33m4.[0m Faugus Launcher $(get_status_badge "faugus-launcher") - Proton Cyber-Runner for Non-Steam Games"
-        echo -e "  [1;33m5.[0m Ananicy-cpp $(get_status_badge "ananicy-cpp") - Auto-Nice Turbo Boost for Games & Apps"
-        echo -e "  [1;33m6.[0m Snapper + GRUB-Btrfs $(get_status_badge "snapper") - Instant Btrfs Time Warp & Snapshot Booting"
-        echo -e "  [1;33m7.[0m FreeOffice 2024 $(get_status_badge "freeoffice2024") - Microsoft-compatible Office Suite"
-        echo -e "  [1;33m8.[0m DaVinci Resolve Studio $(get_status_badge "davinci-resolve-studio") - Hollywood-grade Video Studio & Color Engine"
-        echo -e "  [1;33m9.[0m $(_ SBO_BACK_OPTION)"
+menu_category_graphics() {
+    local suite_dir="$1"
+    while true; do
+        local b_affinity b_blender b_freecad b_gamescope b_goverlay b_inkscape b_mangohud b_storyboarder
+        b_affinity=$(get_pkg_badge "affinity")
+        b_blender=$(get_pkg_badge "blender")
+        b_freecad=$(get_pkg_badge "freecad")
+        b_gamescope=$(get_pkg_badge "gamescope")
+        b_goverlay=$(get_pkg_badge "goverlay")
+        b_inkscape=$(get_pkg_badge "inkscape")
+        b_mangohud=$(get_pkg_badge "mangohud")
+        b_storyboarder=$(get_pkg_badge "storyboarder")
+        echo ""
+        echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
+        echo -e "${BOLD}${CYAN}                     🎨 Graphics & Design 🎨${RESET}"
+        echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
+        echo -e "  \033[1;33m1.\033[0m Affinity Suite (Unified v3) ${b_affinity} - Creative Suite with WineFix & High-DPI"
+        echo -e "  \033[1;33m2.\033[0m Blender ${b_blender} - 3D Creation & Animation Studio"
+        echo -e "  \033[1;33m3.\033[0m FreeCAD ${b_freecad} - Parametric 3D CAD Modeler"
+        echo -e "  \033[1;33m4.\033[0m Gamescope ${b_gamescope} - SteamOS Micro-Compositor & Upscaler"
+        echo -e "  \033[1;33m5.\033[0m GOverlay ${b_goverlay} - Vulkan/OpenGL Overlay Config GUI"
+        echo -e "  \033[1;33m6.\033[0m Inkscape ${b_inkscape} - Professional Vector Graphics Editor"
+        echo -e "  \033[1;33m7.\033[0m MangoHud ${b_mangohud} - Radical In-Game HUD & Telemetry"
+        echo -e "  \033[1;33m8.\033[0m Wonder Unit Storyboarder ${b_storyboarder} - Fast Visual Storytelling & Animatics"
+        echo -e "  \033[1;33m9.\033[0m $(_ SBO_BACK_OPTION)"
         echo ""
         echo -n "$(_ SELECT_OPERATION_RANGE range="1-9") "
         local sel
         read -r sel || sel="9"
-
         case "${sel}" in
-            1) install_curated_slackbuild "system/lact" "${suite_dir}" ;;
-            2) install_curated_slackbuild "games/heroic-games-launcher" "${suite_dir}" ;;
-            3)
-                install_curated_slackbuild "graphics/mangohud" "${suite_dir}"
-                install_curated_slackbuild "graphics/goverlay" "${suite_dir}"
-                ;;
-            4) install_curated_slackbuild "games/faugus-launcher" "${suite_dir}" ;;
-            5) install_curated_slackbuild "system/ananicy-cpp" "${suite_dir}" ;;
-            6)
-                install_curated_slackbuild "system/snapper" "${suite_dir}"
-                install_curated_slackbuild "system/grub-btrfs" "${suite_dir}"
-                ;;
-            7) install_curated_slackbuild "office/freeoffice2024" "${suite_dir}" ;;
-            8) install_curated_slackbuild "multimedia/davinci-resolve-studio" "${suite_dir}" ;;
+            1) install_curated_slackbuild "graphics/affinity" "${suite_dir}" ;;
+            2) install_curated_slackbuild "graphics/blender" "${suite_dir}" ;;
+            3) install_curated_slackbuild "graphics/freecad" "${suite_dir}" ;;
+            4) install_curated_slackbuild "graphics/gamescope" "${suite_dir}" ;;
+            5) install_curated_slackbuild "graphics/goverlay" "${suite_dir}" ;;
+            6) install_curated_slackbuild "graphics/inkscape" "${suite_dir}" ;;
+            7) install_curated_slackbuild "graphics/mangohud" "${suite_dir}" ;;
+            8) install_curated_slackbuild "graphics/storyboarder" "${suite_dir}" ;;
             9) return 0 ;;
             *) log_warn "Invalid selection." ;;
         esac
         echo ""
         read -r -p "$(_ PRESS_ENTER_CONTINUE) " || true
+    done
+}
+
+menu_category_multimedia() {
+    local suite_dir="$1"
+    while true; do
+        local b_davinci
+        b_davinci=$(get_pkg_badge "davinci-resolve-studio")
+        echo ""
+        echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
+        echo -e "${BOLD}${CYAN}                    🎬 Multimedia & Video 🎬${RESET}"
+        echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
+        echo -e "  \033[1;33m1.\033[0m DaVinci Resolve Studio ${b_davinci} - Hollywood Post-Production Suite"
+        echo -e "  \033[1;33m2.\033[0m $(_ SBO_BACK_OPTION)"
+        echo ""
+        echo -n "$(_ SELECT_OPERATION_RANGE range="1-2") "
+        local sel
+        read -r sel || sel="2"
+        case "${sel}" in
+            1) install_curated_slackbuild "multimedia/davinci-resolve-studio" "${suite_dir}" ;;
+            2) return 0 ;;
+            *) log_warn "Invalid selection." ;;
+        esac
+        echo ""
+        read -r -p "$(_ PRESS_ENTER_CONTINUE) " || true
+    done
+}
+
+menu_category_development() {
+    local suite_dir="$1"
+    while true; do
+        local b_unreal
+        b_unreal=$(get_pkg_badge "unreal-engine")
+        echo ""
+        echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
+        echo -e "${BOLD}${CYAN}                  🛠️ Development & Engines 🛠️${RESET}"
+        echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
+        echo -e "  \033[1;33m1.\033[0m Unreal Engine 5 ${b_unreal} - Next-Gen Real-Time 3D Game Engine"
+        echo -e "  \033[1;33m2.\033[0m $(_ SBO_BACK_OPTION)"
+        echo ""
+        echo -n "$(_ SELECT_OPERATION_RANGE range="1-2") "
+        local sel
+        read -r sel || sel="2"
+        case "${sel}" in
+            1) install_curated_slackbuild "development/unreal-engine" "${suite_dir}" ;;
+            2) return 0 ;;
+            *) log_warn "Invalid selection." ;;
+        esac
+        echo ""
+        read -r -p "$(_ PRESS_ENTER_CONTINUE) " || true
+    done
+}
+
+menu_category_system() {
+    local suite_dir="$1"
+    while true; do
+        local b_ananicy b_gdu b_grub_btrfs b_lact b_openrgb b_snapper b_spacenavd b_spnavcfg b_wine b_winetricks
+        b_lact=$(get_pkg_badge "lact")
+        b_snapper=$(get_pkg_badge "snapper")
+        b_grub_btrfs=$(get_pkg_badge "grub-btrfs")
+        b_ananicy=$(get_pkg_badge "ananicy-cpp")
+        b_gdu=$(get_pkg_badge "gnome-disk-utility")
+        b_openrgb=$(get_pkg_badge "openrgb")
+        b_spacenavd=$(get_pkg_badge "spacenavd")
+        b_spnavcfg=$(get_pkg_badge "spnavcfg")
+        b_wine=$(get_pkg_badge "wine-staging")
+        b_winetricks=$(get_pkg_badge "winetricks")
+        echo ""
+        echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
+        echo -e "${BOLD}${CYAN}                   ⚙️ System, Wine & Tuning ⚙️${RESET}"
+        echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
+        echo -e "  \033[1;33m1.\033[0m LACT ${b_lact} - GPU Control & Overclocking for Radeon & Nvidia"
+        echo -e "  \033[1;33m2.\033[0m Snapper ${b_snapper} - Btrfs Snapshot Manager"
+        echo -e "  \033[1;33m3.\033[0m GRUB-Btrfs ${b_grub_btrfs} - Bootable Btrfs Snapshots in GRUB"
+        echo -e "  \033[1;33m4.\033[0m Ananicy-cpp ${b_ananicy} - Auto-Nice Turbo Boost for Games & Apps"
+        echo -e "  \033[1;33m5.\033[0m GNOME Disk Utility ${b_gdu} - Storage, Partitions & SMART Management"
+        echo -e "  \033[1;33m6.\033[0m OpenRGB ${b_openrgb} - Open-Source RGB Lighting Control"
+        echo -e "  \033[1;33m7.\033[0m SpaceNavd ${b_spacenavd} - 3Dconnexion 3D Mouse Daemon"
+        echo -e "  \033[1;33m8.\033[0m SpNavCfg ${b_spnavcfg} - 3Dconnexion GUI Configurator"
+        echo -e "  \033[1;33m9.\033[0m Wine Staging ${b_wine} - Advanced Wine with Staging Patches"
+        echo -e "  \033[1;33m10.\033[0m Winetricks ${b_winetricks} - Easy Wine Prefix Config & DLL Helper"
+        echo -e "  \033[1;33m11.\033[0m $(_ SBO_BACK_OPTION)"
+        echo ""
+        echo -n "$(_ SELECT_OPERATION_RANGE range="1-11") "
+        local sel
+        read -r sel || sel="11"
+        case "${sel}" in
+            1) install_curated_slackbuild "system/lact" "${suite_dir}" ;;
+            2) install_curated_slackbuild "system/snapper" "${suite_dir}" ;;
+            3) install_curated_slackbuild "system/grub-btrfs" "${suite_dir}" ;;
+            4) install_curated_slackbuild "system/ananicy-cpp" "${suite_dir}" ;;
+            5) install_curated_slackbuild "system/gnome-disk-utility" "${suite_dir}" ;;
+            6) install_curated_slackbuild "system/openrgb" "${suite_dir}" ;;
+            7) install_curated_slackbuild "system/spacenavd" "${suite_dir}" ;;
+            8) install_curated_slackbuild "system/spnavcfg" "${suite_dir}" ;;
+            9) install_curated_slackbuild "system/wine-staging" "${suite_dir}" ;;
+            10) install_curated_slackbuild "system/winetricks" "${suite_dir}" ;;
+            11) return 0 ;;
+            *) log_warn "Invalid selection." ;;
+        esac
+        echo ""
+        read -r -p "$(_ PRESS_ENTER_CONTINUE) " || true
+    done
+}
+
+menu_category_office() {
+    local suite_dir="$1"
+    while true; do
+        local b_fo
+        b_fo=$(get_pkg_badge "freeoffice2024")
+        echo ""
+        echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
+        echo -e "${BOLD}${CYAN}                  🏢 Office & Productivity 🏢${RESET}"
+        echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
+        echo -e "  \033[1;33m1.\033[0m FreeOffice 2024 ${b_fo} - Microsoft Office Compatible Suite"
+        echo -e "  \033[1;33m2.\033[0m $(_ SBO_BACK_OPTION)"
+        echo ""
+        echo -n "$(_ SELECT_OPERATION_RANGE range="1-2") "
+        local sel
+        read -r sel || sel="2"
+        case "${sel}" in
+            1) install_curated_slackbuild "office/freeoffice2024" "${suite_dir}" ;;
+            2) return 0 ;;
+            *) log_warn "Invalid selection." ;;
+        esac
+        echo ""
+        read -r -p "$(_ PRESS_ENTER_CONTINUE) " || true
+    done
+}
+
+menu_category_libraries() {
+    local suite_dir="$1"
+    while true; do
+        local b_handy b_spnav
+        b_handy=$(get_pkg_badge "libhandy")
+        b_spnav=$(get_pkg_badge "libspnav")
+        echo ""
+        echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
+        echo -e "${BOLD}${CYAN}                   📚 Libraries & Drivers 📚${RESET}"
+        echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
+        echo -e "  \033[1;33m1.\033[0m LibHandy ${b_handy} - GTK Adaptive UI Library"
+        echo -e "  \033[1;33m2.\033[0m LibSpNav ${b_spnav} - 3Dconnexion 3D Mouse User-Space Library"
+        echo -e "  \033[1;33m3.\033[0m $(_ SBO_BACK_OPTION)"
+        echo ""
+        echo -n "$(_ SELECT_OPERATION_RANGE range="1-3") "
+        local sel
+        read -r sel || sel="3"
+        case "${sel}" in
+            1) install_curated_slackbuild "libraries/libhandy" "${suite_dir}" ;;
+            2) install_curated_slackbuild "libraries/libspnav" "${suite_dir}" ;;
+            3) return 0 ;;
+            *) log_warn "Invalid selection." ;;
+        esac
+        echo ""
+        read -r -p "$(_ PRESS_ENTER_CONTINUE) " || true
+    done
+}
+
+manage_curated_suite_interactive() {
+    local suite_dir="${SLACKY_SLACKBUILDS_DIR:-/var/cache/slacky-update/slacky-slackbuilds}"
+    local bundled_assets=""
+    for cand in "${APP_DIR}/../assets/slacky-slackbuilds" "${APP_DIR}/assets/slacky-slackbuilds" "/usr/share/slacky-update/assets/slacky-slackbuilds" "/usr/local/lib/slacky-update/assets/slacky-slackbuilds"; do
+        if [ -d "${cand}" ]; then
+            bundled_assets="${cand}"
+            break
+        fi
+    done
+
+    if [ -n "${bundled_assets}" ] && [ -d "${bundled_assets}" ]; then
+        sudo mkdir -p "${suite_dir}"
+        sudo cp -a "${bundled_assets}"/* "${suite_dir}/" 2>/dev/null || true
+    fi
+
+    while true; do
+        echo ""
+        echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
+        echo -e "${BOLD}${CYAN}                  ⚡ SLACKY-SLACKBUILDS CURATED HUB ⚡${RESET}"
+        echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
+        echo -e "  \033[1;33m1.\033[0m 🎮 Games & Launchers (Faugus, Heroic)"
+        echo -e "  \033[1;33m2.\033[0m 🎨 Graphics & Design (Blender, FreeCAD, Gamescope, MangoHud, GOverlay, Inkscape)"
+        echo -e "  \033[1;33m3.\033[0m 🎬 Multimedia & Video (DaVinci Resolve Studio)"
+        echo -e "  \033[1;33m4.\033[0m 🛠️ Development & Engines (Unreal Engine 5)"
+        echo -e "  \033[1;33m5.\033[0m ⚙️ System, Wine & Tuning (LACT, Snapper, GRUB-Btrfs, Ananicy-cpp, OpenRGB, SpaceMouse, Wine, Winetricks)"
+        echo -e "  \033[1;33m6.\033[0m 🏢 Office & Productivity (FreeOffice 2024)"
+        echo -e "  \033[1;33m7.\033[0m 📚 Libraries & Drivers (LibHandy, LibSpNav)"
+        echo -e "  \033[1;33m8.\033[0m $(_ SBO_BACK_OPTION)"
+        echo ""
+        echo -n "$(_ SELECT_OPERATION_RANGE range="1-8") "
+        local cat_sel
+        read -r cat_sel || cat_sel="8"
+
+        case "${cat_sel}" in
+            1) menu_category_games "${suite_dir}" ;;
+            2) menu_category_graphics "${suite_dir}" ;;
+            3) menu_category_multimedia "${suite_dir}" ;;
+            4) menu_category_development "${suite_dir}" ;;
+            5) menu_category_system "${suite_dir}" ;;
+            6) menu_category_office "${suite_dir}" ;;
+            7) menu_category_libraries "${suite_dir}" ;;
+            8) return 0 ;;
+            *) log_warn "Invalid selection." ;;
+        esac
     done
 }
 
@@ -397,15 +700,16 @@ manage_slackbuilds_interactive() {
 
     while true; do
         echo ""
-        echo -e "${BOLD}Slacky-Update (SlackBuilds & Packages)${RESET}"
+        echo -e "${BOLD}Slacky-Update (SlackBuilds & Tweaks)${RESET}"
         echo -e "${BOLD}$(_ SBO_MAIN_HUB_TITLE)${RESET}"
         echo -e "  \033[1;33m1.\033[0m $(_ SBO_MENU_SEARCH_AND_RECOMMENDED)"
         echo -e "  \033[1;33m2.\033[0m $(_ SBO_MENU_CURATED_SUITE)"
-        echo -e "  \033[1;33m3.\033[0m $(_ CATCH_YOU_FLIP_SIDE)"
+        echo -e "  \033[1;33m3.\033[0m $(_ MENU_OPTIONAL_TWEAKS)"
+        echo -e "  \033[1;33m4.\033[0m $(_ CATCH_YOU_FLIP_SIDE)"
         echo ""
-        echo -n "$(_ SELECT_OPERATION_RANGE range="1-3") "
+        echo -n "$(_ SELECT_OPERATION_RANGE range="1-4") "
         local opt
-        read -r opt || opt="3"
+        read -r opt || opt="4"
 
         case "${opt}" in
             1)
@@ -415,6 +719,9 @@ manage_slackbuilds_interactive() {
                 manage_curated_suite_interactive
                 ;;
             3)
+                manage_tweaks_interactive
+                ;;
+            4)
                 return 0
                 ;;
             *)

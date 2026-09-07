@@ -133,10 +133,18 @@
   "CURATED_SUITE_TITLE": "Slacky-SlackBuilds Kuratert Pakkesamling",
   "SBO_MAIN_HUB_TITLE": "Hva er SlackBuild-planen, dude?",
   "SBO_MENU_SEARCH_AND_RECOMMENDED": "Søk i SBo & Anbefalte Spillpakker",
-  "SBO_MENU_CURATED_SUITE": "Slacky-SlackBuilds Kurerte Hub (10 Spesialpakker)",
-  "MENU_SLACKBUILDS_TRAY": "Slack-builds",
+  "SBO_MENU_CURATED_SUITE": "Slacky-SlackBuilds Kurerte Hub (25 Spesialpakker)",
+  "MENU_OPTIONAL_TWEAKS": "Valgfrie System- & Spilljusteringer (Sysctl, Limits, BBR, NTSYNC, Kontrollere)",
+  "MENU_SLACKBUILDS_TRAY": "SlackBuilds og Tweaks",
   "CATCH_YOU_FLIP_SIDE": "Vi snakkes på baksiden (Avslutt)",
   "RECOMMENDED_GAMING_TITLE": "Anbefalte Spillpakker",
   "SBO_RECOMMENDED_GAMING_OPTION": "Anbefalte Spillpakker (OBS, Steam, Discord, ProtonPlus)",
-  "APP_UP_TO_DATE": "Slacky-Update er oppdatert mot GitHub ({tag})"
+  "APP_UP_TO_DATE": "Slacky-Update er oppdatert mot GitHub ({tag})",
+  "MENU_AMD_ROCM": "3. AMD ROCm/HIP Creator Toolkit (Installer ROCm, rens ut Mesa OpenCL og boost DaVinci)",
+  "ROCM_MENU_TITLE": "AMD ROCm / HIP Creator Kontrollsenter",
+  "ROCM_OPTION_INSTALL": "1. Installer full AMD ROCm & HIP OpenCL-pakke",
+  "ROCM_OPTION_PURGE_MESA": "2. Rens ut og svartelist konfliktende Mesa OpenCL / Rusticl",
+  "ROCM_OPTION_VERIFY": "3. Verifiser GPU Compute & OpenCL-status",
+  "ROCM_PURGE_SUCCESS": "Konfliktende Mesa OpenCL-drivere fjernet og svartelistet. DaVinci er klar!",
+  "ROCM_INSTALL_SUCCESS": "AMD ROCm & HIP OpenCL Suite installert og konfigurert! Full kraft!"
 }

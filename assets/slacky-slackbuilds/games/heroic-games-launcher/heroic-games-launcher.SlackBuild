@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+#
+# Slackware build script for Heroic Games Launcher
+# Maintained by TuxOfValhalla <agnar1984@gmail.com>
+#
+
+set -e
+
+PRGNAM=heroic-games-launcher
+VERSION=${VERSION:-2.22.1}
+BUILD=${BUILD:-1_slacky}
+TAG=${TAG:-_slacky}
+
+if [ -z "$ARCH" ]; then
+  case "$(uname -m)" in
+    i?86) ARCH=i586 ;;
+    arm*) ARCH=arm ;;
+    *) ARCH=$(uname -m) ;;
+  esac
+fi
+
+if [ "$ARCH" != "x86_64" ]; then
+  echo "Heroic Games Launcher is only available for x86_64."
+  exit 1
+fi
+
+CWD=$(pwd)
+TMP=${TMP:-/tmp/SBo}
+PKG=$TMP/package-$PRGNAM
+OUTPUT=${OUTPUT:-/tmp}
+
+set -euo pipefail
+
+# Auto-resolve latest version if specified as "latest"
+if [ "$VERSION" = "latest" ]; then
+  echo "Fetching latest version tag from GitHub API..."
+  VERSION=$(curl -sSL "https://api.github.com/repos/Heroic-Games-Launcher/HeroicGamesLauncher/releases/latest" 2>/dev/null | python3 -c "import sys, json; print(json.load(sys.stdin).get('tag_name','2.22.1').lstrip('v'))" 2>/dev/null || echo "2.22.1")
+  echo "Resolved latest version: $VERSION"
+fi
+
+TARBALL="$CWD/Heroic-$VERSION-linux-x64.tar.xz"
+if [ ! -f "$TARBALL" ]; then
+  DOWNLOAD_URL="https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/releases/download/v${VERSION}/Heroic-${VERSION}-linux-x64.tar.xz"
+  echo "Downloading $DOWNLOAD_URL..."
+  curl -sSL -o "$TARBALL" "$DOWNLOAD_URL"
+fi
+
+rm -rf "$PKG"
+mkdir -p "$TMP" "$PKG" "$OUTPUT"
+cd "$TMP"
+rm -rf "Heroic-$VERSION-linux-x64"
+
+echo "Extracting $(basename "$TARBALL")..."
+tar -xJf "$TARBALL"
+
+cd "Heroic-$VERSION-linux-x64"
+
+# Set permissions
+chown -R root:root .
+find -L . \
+  \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 -o -perm 511 \) \
+  -exec chmod 755 {} \; -o \
+  \( -perm 666 -o -perm 664 -o -perm 600 -o -perm 444 -o -perm 440 -o -perm 400 \) \
+  -exec chmod 644 {} \;
+
+# Install to /opt/heroic
+mkdir -p "$PKG/opt/heroic"
+cp -a . "$PKG/opt/heroic/"
+chmod 755 "$PKG/opt/heroic/heroic"
+[ -f "$PKG/opt/heroic/chrome-sandbox" ] && chmod 4755 "$PKG/opt/heroic/chrome-sandbox" || true
+
+# Launcher wrapper in /usr/bin
+mkdir -p "$PKG/usr/bin"
+cat << 'LAUNCHER_EOF' > "$PKG/usr/bin/heroic"
+#!/bin/sh
+exec /opt/heroic/heroic "$@"
+LAUNCHER_EOF
+chmod 755 "$PKG/usr/bin/heroic"
+
+# Desktop File and Icons
+mkdir -p "$PKG/usr/share/applications"
+mkdir -p "$PKG/usr/share/pixmaps"
+mkdir -p "$PKG/usr/share/icons/hicolor/512x512/apps"
+mkdir -p "$PKG/usr/share/icons/hicolor/128x128/apps"
+
+install -m 644 "$CWD/heroic-games-launcher.desktop" "$PKG/usr/share/applications/heroic.desktop"
+
+if [ -f "$PKG/opt/heroic/resources/app.asar.unpacked/build/icon.png" ]; then
+  install -m 644 "$PKG/opt/heroic/resources/app.asar.unpacked/build/icon.png" "$PKG/usr/share/icons/hicolor/512x512/apps/heroic.png"
+  install -m 644 "$PKG/opt/heroic/resources/app.asar.unpacked/build/icon.png" "$PKG/usr/share/pixmaps/heroic.png"
+fi
+
+# Documentation
+mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION"
+[ -f "$PKG/opt/heroic/LICENSE.electron.txt" ] && cp -a "$PKG/opt/heroic/LICENSE.electron.txt" "$PKG/usr/doc/$PRGNAM-$VERSION/" || true
+[ -f "$PKG/opt/heroic/LICENSES.chromium.html" ] && cp -a "$PKG/opt/heroic/LICENSES.chromium.html" "$PKG/usr/doc/$PRGNAM-$VERSION/" || true
+cat "$CWD/slack-desc" > "$PKG/usr/doc/$PRGNAM-$VERSION/slack-desc"
+
+# Package Install Script
+mkdir -p "$PKG/install"
+cat "$CWD/slack-desc" > "$PKG/install/slack-desc"
+cat "$CWD/doinst.sh" > "$PKG/install/doinst.sh"
+
+# Create Slackware Package
+cd "$PKG"
+/sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD.txz"
+
+echo "Package created successfully: $OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD.txz"

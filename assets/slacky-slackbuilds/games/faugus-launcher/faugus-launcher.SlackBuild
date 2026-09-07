@@ -1,0 +1,133 @@
+#!/usr/bin/env bash
+#
+# Slackware build script for Faugus Launcher
+# Maintained by TuxOfValhalla <agnar1984@gmail.com>
+#
+
+set -e
+
+PRGNAM=faugus-launcher
+VERSION=${VERSION:-2.2.1}
+BUILD=${BUILD:-1_slacky}
+TAG=${TAG:-_slacky}
+
+if [ -z "$ARCH" ]; then
+  case "$(uname -m)" in
+    i?86) ARCH=i586 ;;
+    arm*) ARCH=arm ;;
+    *) ARCH=$(uname -m) ;;
+  esac
+fi
+
+CWD=$(pwd)
+TMP=${TMP:-/tmp/SBo}
+PKG=$TMP/package-$PRGNAM
+OUTPUT=${OUTPUT:-/tmp}
+
+if [ "$ARCH" = "i586" ]; then
+  SLKCFLAGS="-O2 -march=i586 -mtune=i686"
+  LIBDIRSUFFIX=""
+elif [ "$ARCH" = "i686" ]; then
+  SLKCFLAGS="-O2 -march=i686 -mtune=i686"
+  LIBDIRSUFFIX=""
+elif [ "$ARCH" = "x86_64" ]; then
+  SLKCFLAGS="-O2 -fPIC"
+  LIBDIRSUFFIX="64"
+else
+  SLKCFLAGS="-O2"
+  LIBDIRSUFFIX=""
+fi
+
+set -euo pipefail
+
+rm -rf "$PKG"
+mkdir -p "$TMP" "$PKG" "$OUTPUT"
+cd "$TMP"
+rm -rf "$PRGNAM-$VERSION"
+
+TARBALL=""
+for candidate in "$CWD/$PRGNAM-$VERSION.tar.gz" \
+                 "$CWD/$PRGNAM-v$VERSION.tar.gz" \
+                 "$CWD/v$VERSION.tar.gz" \
+                 "$CWD/$VERSION.tar.gz"; do
+  if [ -f "$candidate" ]; then
+    TARBALL="$candidate"
+    break
+  fi
+done
+
+if [ -z "$TARBALL" ]; then
+  TARBALL="$CWD/$PRGNAM-$VERSION.tar.gz"
+  DOWNLOAD_URL="https://github.com/Faugus/faugus-launcher/archive/refs/tags/${VERSION}.tar.gz"
+  echo "Downloading $DOWNLOAD_URL..."
+  curl -sSL -o "$TARBALL" "$DOWNLOAD_URL"
+fi
+
+echo "Extracting $(basename "$TARBALL")..."
+tar -xf "$TARBALL"
+
+cd "$PRGNAM-$VERSION"
+
+# Set permissions
+chown -R root:root .
+find -L . \
+  \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 -o -perm 511 \) \
+  -exec chmod 755 {} \; -o \
+  \( -perm 666 -o -perm 664 -o -perm 600 -o -perm 444 -o -perm 440 -o -perm 400 \) \
+  -exec chmod 644 {} \;
+
+echo "Building Faugus Launcher with Meson..."
+CFLAGS="$SLKCFLAGS" \
+CXXFLAGS="$SLKCFLAGS" \
+meson setup build \
+  --prefix=/usr \
+  --libdir=lib${LIBDIRSUFFIX} \
+  --sysconfdir=/etc \
+  --buildtype=release
+
+ninja -C build
+DESTDIR="$PKG" ninja -C build install
+
+# Install bundled pure-python vdf dependency required by Faugus
+VDF_TARBALL="$CWD/vdf-3.4.tar.gz"
+if [ ! -f "$VDF_TARBALL" ]; then
+  curl -sSL -o "$VDF_TARBALL" "https://files.pythonhosted.org/packages/44/7f/74192f47d67c8bf3c47bf0d8487b3457614c2c98d58b6617721d217f3f79/vdf-3.4.tar.gz"
+fi
+echo "Installing bundled python vdf dependency..."
+cd "$TMP"
+rm -rf "vdf-3.4"
+tar -xzf "$VDF_TARBALL"
+cd "vdf-3.4"
+python3 setup.py install --root="$PKG" --optimize=1
+
+# Move python site-packages from /usr/lib to /usr/lib64 if on x86_64
+if [ "$ARCH" = "x86_64" ] && [ -d "$PKG/usr/lib/python"* ]; then
+  for pdir in "$PKG/usr/lib/python"*; do
+    [ -d "$pdir" ] || continue
+    pyver=$(basename "$pdir")
+    mkdir -p "$PKG/usr/lib64/$pyver"
+    cp -a "$pdir/." "$PKG/usr/lib64/$pyver/"
+    rm -rf "$pdir"
+  done
+  # Clean up empty /usr/lib if present
+  rmdir "$PKG/usr/lib" 2>/dev/null || true
+fi
+
+# Ensure launcher binary has execute permissions
+[ -f "$PKG/usr/bin/faugus-launcher" ] && chmod 755 "$PKG/usr/bin/faugus-launcher"
+
+# Documentation
+mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION"
+cp -a LICENSE README.md "$PKG/usr/doc/$PRGNAM-$VERSION/" 2>/dev/null || true
+cat "$CWD/slack-desc" > "$PKG/usr/doc/$PRGNAM-$VERSION/slack-desc"
+
+# Package Install Script
+mkdir -p "$PKG/install"
+cat "$CWD/slack-desc" > "$PKG/install/slack-desc"
+cat "$CWD/doinst.sh" > "$PKG/install/doinst.sh"
+
+# Create Slackware Package
+cd "$PKG"
+/sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD.txz"
+
+echo "Package created successfully: $OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD.txz"

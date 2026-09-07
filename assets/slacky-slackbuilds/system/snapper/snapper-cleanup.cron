@@ -1,0 +1,10 @@
+#!/bin/sh
+#
+# /etc/cron.hourly/snapper-cleanup - Automatic snapshot cleanup for Slackware
+#
+
+if [ -x /usr/bin/snapper ]; then
+  /usr/bin/snapper --config root cleanup timeline 2>/dev/null || true
+  /usr/bin/snapper --config root cleanup number 2>/dev/null || true
+  /usr/bin/snapper --config root cleanup empty-pre-post 2>/dev/null || true
+fi

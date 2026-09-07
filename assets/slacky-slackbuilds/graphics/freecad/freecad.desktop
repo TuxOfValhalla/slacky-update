@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Version=1.5
+Name=FreeCAD 1.1.3
+GenericName=Parametric 3D CAD Modeler
+Comment=Feature-based parametric modeler with Topological Naming and SpaceMouse support
+Icon=freecad
+Exec=freecad %F
+Terminal=false
+MimeType=application/x-extension-fcstd;application/step;application/iges;model/step;model/iges;
+Categories=Graphics;3DGraphics;Engineering;
+Keywords=CAD;CAM;FEM;3D;Modeler;Parametric;SpaceMouse;CUDA;ROCm;
+StartupNotify=true
+StartupWMClass=FreeCAD

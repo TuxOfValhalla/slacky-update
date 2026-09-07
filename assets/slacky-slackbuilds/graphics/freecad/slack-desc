@@ -1,0 +1,19 @@
+# HOW TO EDIT THIS FILE:
+# The "handy ruler" below makes it easier to edit a package description.  Line
+# up the first '|' above the ':' following the base package name, and the '|'
+# on the right side marks the last column you can put a character in.  You must
+# make exactly 11 lines for the formatting to be correct.  It's also
+# customary to leave one space after the ':' except on otherwise blank lines.
+
+       |-----handy-ruler------------------------------------------------------|
+freecad: freecad (Parametric 3D CAD Modeler)
+freecad:
+freecad: FreeCAD is an open-source parametric 3D modeler made primarily to
+freecad: design real-life objects of any size. Parametric modeling allows you
+freecad: to easily modify your design by going back into your model history.
+freecad:
+freecad: Version 1.1.3 introduces the landmark Topological Naming Algorithm
+freecad: fix (TNP), native 3Dconnexion SpaceMouse integration via libspnav,
+freecad: OpenCASCADE 7.8, and CUDA/ROCm acceleration for Render Workbenches.
+freecad:
+freecad: Homepage: https://www.freecad.org/

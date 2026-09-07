@@ -4,16 +4,25 @@
 import os
 import sys
 from PyQt5.QtWidgets import QApplication
-from PyQt5.QtGui import QPixmap, QPainter, QColor, QBrush, QPen, QFont, QPainterPath
+from PyQt5.QtGui import QPixmap, QPainter, QColor, QBrush, QPen, QFont, QPainterPath, QImage
 from PyQt5.QtCore import Qt, QRectF
 
 app = QApplication(sys.argv)
 
-SRC_ICON = "/home/tux/Pictures/icons/slackware.png"
-DEST_DIR = "/home/tux/development/slacky-update/assets"
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
+DEST_DIR = os.path.join(REPO_ROOT, "assets")
 os.makedirs(DEST_DIR, exist_ok=True)
 
-base_pixmap = QPixmap(SRC_ICON)
+SRC_ICON = os.path.join(DEST_DIR, "slackware_tight2.png")
+if not os.path.exists(SRC_ICON):
+    SRC_ICON = "/home/tux/Pictures/icons/slackware_tight2.png"
+
+img = QImage(SRC_ICON)
+if not img.isNull():
+    base_pixmap = QPixmap.fromImage(img)
+else:
+    base_pixmap = QPixmap(SRC_ICON)
 if base_pixmap.isNull():
     base_pixmap = QPixmap(128, 128)
     base_pixmap.fill(Qt.transparent)

@@ -1,0 +1,19 @@
+# /etc/spnavrc - Configuration for 3Dconnexion spacenavd
+#
+# Sensitivity scale multiplier
+sensitivity = 1.000
+
+# Deadzone threshold
+deadzone = 0
+
+# Axis inversion
+invert-rot = no
+invert-trans = no
+
+# X11 integration (auto: detection of active X11/Wayland display)
+use-x11 = auto
+
+# CRITICAL: Do NOT grab the device exclusively with EVIOCGRAB!
+# Setting grab = no allows slicers (Bambu Studio, OrcaSlicer, PrusaSlicer)
+# to open /dev/hidraw* simultaneously while CAD apps use /run/spnav.sock!
+grab = no

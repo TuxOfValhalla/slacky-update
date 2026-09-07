@@ -1,0 +1,235 @@
+#!/bin/bash
+#
+# Slackware build script for affinity (Serif Affinity Suite on Linux)
+# Maintained by TuxOfValhalla <agnar1984@gmail.com>
+#
+# All rights reserved.
+#
+# Redistribution and use of this script, with or without modification, is
+# permitted provided that the following conditions are met:
+#
+# 1. Redistributions of this script must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR "AS IS" AND ANY EXPRESS OR IMPLIED
+# WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+
+cd $(dirname $0) ; CWD=$(pwd)
+
+PRGNAM=affinity
+VERSION=${VERSION:-3.2.3}
+BUILD=${BUILD:-10}
+TAG=${TAG:-_slacky}
+PKGTYPE=${PKGTYPE:-txz}
+
+if [ -z "$ARCH" ]; then
+  case "$( uname -m )" in
+    i?86) ARCH=i586 ;;
+    arm*) ARCH=arm ;;
+       *) ARCH=$( uname -m ) ;;
+  esac
+fi
+
+TMP=${TMP:-/tmp}
+PKG=$TMP/package-$PRGNAM
+OUTPUT=${OUTPUT:-/tmp}
+
+set -e
+
+rm -rf $PKG
+mkdir -p $TMP $PKG $OUTPUT
+cd $TMP
+
+# Install directories
+mkdir -p $PKG/usr/bin
+mkdir -p $PKG/usr/share/affinity
+mkdir -p $PKG/usr/share/applications
+mkdir -p $PKG/usr/share/icons/hicolor/256x256/apps
+mkdir -p $PKG/usr/doc/$PRGNAM-$VERSION
+
+# 1. Deploy launcher wrapper to /usr/bin/affinity
+cat << 'EOF_WRAP' > $PKG/usr/bin/affinity
+#!/usr/bin/env bash
+# Serif Affinity Unified v3 Launcher Wrapper
+export WINEPREFIX="${AFFINITY_DIR:-$HOME/.local/share/affinity-wine}"
+export PATH="${WINEPREFIX}/ElementalWarriorWine/bin:/usr/local/bin:/opt/wine-staging/bin:$PATH"
+
+# GPU Hardware Acceleration & Vendor Detection
+GPU_PCI=$(lspci 2>/dev/null | grep -iE "vga|3d|display" || true)
+
+if echo "$GPU_PCI" | grep -qi "nvidia"; then
+    # NVIDIA GPU: Enable Prime render offload, Vulkan ICD and OpenCL
+    export __NV_PRIME_RENDER_OFFLOAD=1
+    export __GLX_VENDOR_LIBRARY_NAME=nvidia
+    export __VK_LAYER_NV_optimus=NVIDIA_only
+    if [ -f /usr/share/vulkan/icd.d/nvidia_icd.json ]; then
+        export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/nvidia_icd.json
+    elif [ -f /etc/vulkan/icd.d/nvidia_icd.json ]; then
+        export VK_ICD_FILENAMES=/etc/vulkan/icd.d/nvidia_icd.json
+    fi
+    export OCL_ICD_VENDORS="nvidia.icd"
+elif echo "$GPU_PCI" | grep -qiE "amd|radeon|ati"; then
+    # AMD GPU: Disable OpenCL to prevent canvas and startup crashes
+    export WINEDLLOVERRIDES="opencl=;${WINEDLLOVERRIDES:-}"
+    export DXVK_ASYNC=0
+    export DXVK_CONFIG="d3d9.deferSurfaceCreation = True; d3d9.shaderModel = 1"
+    unset OCL_ICD_VENDORS
+
+    # Ensure OpenCL hardware acceleration is disabled in Affinity settings for AMD
+    for PERF_XML in \
+        "${WINEPREFIX}/drive_c/users/${USER}/AppData/Roaming/Affinity/Affinity/3.0/Settings/PerformancePreferences.xml" \
+        "${WINEPREFIX}/drive_c/users/${USER}/AppData/Roaming/Affinity/Photo/2.0/Settings/PerformancePreferences.xml" \
+        "${WINEPREFIX}/drive_c/users/${USER}/AppData/Roaming/Affinity/Designer/2.0/Settings/PerformancePreferences.xml" \
+        "${WINEPREFIX}/drive_c/users/${USER}/AppData/Roaming/Affinity/Publisher/2.0/Settings/PerformancePreferences.xml"; do
+        if [ -f "$PERF_XML" ]; then
+            sed -i 's/<UseHardwareAcceleration>True<\/UseHardwareAcceleration>/<UseHardwareAcceleration>False<\/UseHardwareAcceleration>/g' "$PERF_XML" 2>/dev/null || true
+            sed -i 's/<UseHardwareAcceleration2>True<\/UseHardwareAcceleration2>/<UseHardwareAcceleration2>False<\/UseHardwareAcceleration2>/g' "$PERF_XML" 2>/dev/null || true
+            sed -i 's/<UseHardwareAcceleration2 xsi:nil="true" \/>/<UseHardwareAcceleration2>False<\/UseHardwareAcceleration2>/g' "$PERF_XML" 2>/dev/null || true
+        fi
+    done
+fi
+
+# WebView2 Chromium in Wine Fix: Disable GPU sandbox & hardware rasterization to prevent blank white screen
+export WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS="--disable-gpu --disable-gpu-compositing --disable-features=RendererCodeIntegrity --no-sandbox --in-process-gpu"
+export WEBVIEW2_BROWSER_EXECUTABLE_FOLDER="C:\\Program Files (x86)\\Microsoft\\EdgeWebView\\Application\\142.0.3595.94"
+
+export WINEDEBUG="-all"
+export DXVK_LOG_LEVEL="none"
+
+# Clear stale IPC lock files from previous runs
+rm -f "${WINEPREFIX}/drive_c/users/${USER}/AppData/Roaming/Affinity/Common/3.0/locks/"* 2>/dev/null || true
+
+# Disable WPF UI hardware acceleration to prevent dialog crashes (Settings, New Document)
+if ! grep -q "DisableHWAcceleration" "${WINEPREFIX}/user.reg" 2>/dev/null; then
+    "${WINEPREFIX}/ElementalWarriorWine/bin/wine" reg add 'HKCU\SOFTWARE\Microsoft\Avalon.Graphics' /v DisableHWAcceleration /t REG_DWORD /d 1 /f >/dev/null 2>&1 || true
+fi
+
+# Fix KDE Plasma / Wayland window focus and panel clicking
+"${WINEPREFIX}/ElementalWarriorWine/bin/wine" reg add 'HKCU\Software\Wine\X11 Driver' /v UseTakeFocus /t REG_SZ /d N /f >/dev/null 2>&1 || true
+"${WINEPREFIX}/ElementalWarriorWine/bin/wine" reg add 'HKCU\Software\Wine\X11 Driver' /v Managed /t REG_SZ /d Y /f >/dev/null 2>&1 || true
+
+# Patch wine-mono <MarshalCopy> assertion bug (prevents crash on document creation)
+MONO_DLL="${WINEPREFIX}/drive_c/windows/mono/mono-2.0/bin/libmono-2.0-x86_64.dll"
+if [ -f "$MONO_DLL" ]; then
+    python3 -c '
+dll = "'"$MONO_DLL"'"
+with open(dll, "r+b") as f:
+    d = f.read()
+    idx = d.find(bytes.fromhex("4989c64885c00f8477010000"))
+    if idx != -1:
+        f.seek(idx + 6)
+        f.write(bytes.fromhex("0f840c000000"))
+' 2>/dev/null || true
+fi
+
+# Suppress WebView2 Welcome / New Document popup to prevent white window
+APP_XML="${WINEPREFIX}/drive_c/users/${USER}/AppData/Roaming/Affinity/Affinity/3.0/Settings/Application.xml"
+if [ -f "$APP_XML" ]; then
+    sed -i 's/<ShowNewDocumentDialog>True<\/ShowNewDocumentDialog>/<ShowNewDocumentDialog>False<\/ShowNewDocumentDialog>/' "$APP_XML" 2>/dev/null || true
+fi
+
+# Disable Canva Home Web feed in New Document dialog (prevents white screen when clicking New)
+HOME_XML="${WINEPREFIX}/drive_c/users/${USER}/AppData/Roaming/Affinity/Affinity/3.0/Settings/HomeScreenPreferences.xml"
+if [ -f "$HOME_XML" ]; then
+    sed -i 's/<HomeScreenItem Type="1" IsOn="True" \/>/<HomeScreenItem Type="1" IsOn="False" \/>/' "$HOME_XML" 2>/dev/null || true
+fi
+
+# If Wine prefix or application is not yet installed, launch setup-affinity.sh
+APP_DIR="${WINEPREFIX}/drive_c/Program Files/Affinity/Affinity"
+if [ ! -d "$APP_DIR" ]; then
+    APP_DIR=$(find "${WINEPREFIX}/drive_c/Program Files" -type d -iname "Affinity" 2>/dev/null | grep -E "Affinity/Affinity$" | head -1 || true)
+fi
+
+if [ ! -d "$WINEPREFIX" ] || [ ! -d "$WINEPREFIX/ElementalWarriorWine" ] || [ -z "$APP_DIR" ] || [ ! -f "$APP_DIR/Affinity.exe" ]; then
+    echo "Affinity is not yet installed in prefix. Launching setup-affinity.sh..."
+    if [ -x /usr/share/affinity/setup-affinity.sh ]; then
+        exec /usr/share/affinity/setup-affinity.sh "$@"
+    elif [ -x "$(dirname "$0")/setup-affinity.sh" ]; then
+        exec "$(dirname "$0")/setup-affinity.sh" "$@"
+    fi
+fi
+
+APP_DIR="${WINEPREFIX}/drive_c/Program Files/Affinity/Affinity"
+if [ ! -d "$APP_DIR" ]; then
+    APP_DIR=$(find "${WINEPREFIX}/drive_c/Program Files" -type d -iname "Affinity" 2>/dev/null | grep -E "Affinity/Affinity$" | head -1 || true)
+fi
+
+if [ -n "$APP_DIR" ] && [ -d "$APP_DIR" ]; then
+    cd "$APP_DIR"
+    # Ensure standard WPF controls are used in Settings to prevent XAML crash in v3
+    APL_TOML="$APP_DIR/apl/config/apl.toml"
+    if [ -f "$APL_TOML" ]; then
+        sed -i 's/force_wpf_controls = false/force_wpf_controls = true/' "$APL_TOML" 2>/dev/null || true
+    fi
+    if [ -f "$APP_DIR/AffinityHook.exe" ]; then
+        exec "${WINEPREFIX}/ElementalWarriorWine/bin/wine" "$APP_DIR/AffinityHook.exe" "$@"
+    elif [ -f "$APP_DIR/Affinity.exe" ]; then
+        exec "${WINEPREFIX}/ElementalWarriorWine/bin/wine" "$APP_DIR/Affinity.exe" "$@"
+    fi
+fi
+
+echo "Affinity executable not found. Please run setup-affinity.sh to complete installation." >&2
+exit 1
+EOF_WRAP
+chmod 755 $PKG/usr/bin/affinity
+
+# 2. Deploy setup script and helper files
+cp -a $CWD/setup-affinity.sh $PKG/usr/share/affinity/
+chmod 755 $PKG/usr/share/affinity/setup-affinity.sh
+[ -f $CWD/AffinityLinuxInstaller.py ] && cp -a $CWD/AffinityLinuxInstaller.py $PKG/usr/share/affinity/
+[ -f $CWD/affinitypluginloader-plus-winefix.tar.xz ] && cp -a $CWD/affinitypluginloader-plus-winefix.tar.xz $PKG/usr/share/affinity/
+[ -f $CWD/wine-dark-theme.reg ] && cp -a $CWD/wine-dark-theme.reg $PKG/usr/share/affinity/
+[ -d $CWD/icons ] && cp -a $CWD/icons $PKG/usr/share/affinity/
+
+# 3. Desktop Entry and Icons
+if [ -f $CWD/icons/Affinity.png ]; then
+    cp -a $CWD/icons/Affinity.png $PKG/usr/share/icons/hicolor/256x256/apps/affinity.png
+fi
+
+cat << 'EOF_DESK' > $PKG/usr/share/applications/affinity.desktop
+[Desktop Entry]
+Type=Application
+Version=1.5
+Name=Affinity (Unified v3)
+GenericName=Creative Graphics Suite
+Comment=Run Affinity Unified Suite on Linux with 150% DPI scale, hardware acceleration and WineFix
+Icon=affinity
+Exec=/usr/bin/affinity %F
+Terminal=false
+Categories=Graphics;2DGraphics;VectorGraphics;Photography;Publishing;
+Keywords=Affinity;Vector;Photo;Design;Publisher;Studio;
+StartupNotify=false
+StartupWMClass=Affinity.exe
+EOF_DESK
+
+# 4. Documentation
+cat << 'EOF_README' > $PKG/usr/doc/$PRGNAM-$VERSION/README
+affinity - Serif Affinity Suite on Slackware Linux
+==================================================
+
+This package provides system integration, desktop entries, and the
+automated installer for Serif Affinity Unified v3 on Slackware.
+
+Features:
+* Ryzendew Native One-Click Installer integration (AffinityLinuxInstaller.py)
+* ElementalWarrior patched Wine runner (Zen 4/5 AVX-512 optimized)
+* Automated GPU detection (NVIDIA OpenCL & Prime offload, AMD stability with OpenCL disabled)
+* Direct3D 12 to Vulkan translation via vkd3d-proton
+* Microsoft Edge WebView2 runtime with software rendering flags
+* WinRT Foundation contracts and wintypes shim
+* AffinityHook + WineFix runtime hooks (Fix Settings v3 & RAM leak prevention)
+* Native Layers panel support (full selection, deselection, grouping & drag/drop)
+* High-DPI UI scaling configured at 150% (144 DPI)
+
+To launch or set up Affinity:
+  $ affinity
+EOF_README
+
+# 5. Slack-desc and doinst.sh
+mkdir -p $PKG/install
+cat $CWD/slack-desc > $PKG/install/slack-desc
+[ -f $CWD/doinst.sh ] && cat $CWD/doinst.sh > $PKG/install/doinst.sh
+
+cd $PKG
+/sbin/makepkg -l y -c n $OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE

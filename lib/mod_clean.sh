@@ -35,10 +35,11 @@ if os.path.exists('/boot'):
         if 'cachyos' in f and f.startswith('vmlinuz-') and not os.path.islink(os.path.join('/boot', f)):
             cachy_kernels.add(f.replace('vmlinuz-', ''))
 
-if os.path.exists('/lib/modules'):
-    for d in os.listdir('/lib/modules'):
-        if 'cachyos' in d:
-            cachy_kernels.add(d)
+for mdir in ('/lib/modules', '/usr/lib/modules'):
+    if os.path.exists(mdir):
+        for d in os.listdir(mdir):
+            if 'cachyos' in d:
+                cachy_kernels.add(d)
 
 active = os.uname().release
 by_flavor = defaultdict(list)
@@ -118,10 +119,11 @@ if os.path.exists('/boot'):
             if v and v != 'generic' and v != 'huge':
                 slack_kernels.add(v)
 
-if os.path.exists('/lib/modules'):
-    for d in os.listdir('/lib/modules'):
-        if 'cachyos' not in d:
-            slack_kernels.add(d)
+for mdir in ('/lib/modules', '/usr/lib/modules'):
+    if os.path.exists(mdir):
+        for d in os.listdir(mdir):
+            if 'cachyos' not in d:
+                slack_kernels.add(d)
 
 active = os.uname().release
 sorted_k = sorted(list(slack_kernels), key=parse_ver, reverse=True)
@@ -170,8 +172,11 @@ for k in to_remove:
             [ -f "${img}" ] && [ ! -L "${img}" ] || continue
             local img_kver
             img_kver=$(basename "${img}" | sed -e 's/^initrd-//' -e 's/\.img$//' -e 's/\.gz$//')
-            # STRICT CHECK: Only delete mkinitrd image IF a valid, non-empty Dracut initramfs exists for this exact kernel!
-            if [ -f "/boot/initramfs-${img_kver}.img" ] && [ -s "/boot/initramfs-${img_kver}.img" ]; then
+            # STRICT CHECK: Only delete mkinitrd image IF a valid, non-empty Dracut initramfs (>5MB) exists for this exact kernel!
+            local d_img="/boot/initramfs-${img_kver}.img"
+            local d_sz=0
+            [ -f "${d_img}" ] && d_sz=$(stat -c%s "${d_img}" 2>/dev/null || echo 0)
+            if [ "${d_sz}" -gt 5000000 ]; then
                 log_info "Removing superseded mkinitrd image (replaced by verified Dracut initramfs): ${img}..."
                 sudo rm -f "${img}" 2>/dev/null || true
                 removed_any=1
@@ -183,7 +188,7 @@ for k in to_remove:
             [ -f "${img}" ] || continue
             local img_kver
             img_kver=$(basename "${img}" | sed -e 's/^initramfs-//' -e 's/\.img$//')
-            if [ ! -d "/lib/modules/${img_kver}" ]; then
+            if [ ! -d "/lib/modules/${img_kver}" ] && [ ! -d "/usr/lib/modules/${img_kver}" ]; then
                 log_info "Removing orphaned initramfs image: ${img}..."
                 sudo rm -f "${img}" 2>/dev/null || true
                 removed_any=1
@@ -213,6 +218,7 @@ clean_system_cache_and_orphans() {
     log_info "Cleaning package cache and temporary build directories..."
     sudo rm -rf /var/cache/slacky-update/kernel/* 2>/dev/null || true
     sudo rm -f /var/cache/slacky-update/*.tmp 2>/dev/null || true
+    sudo rm -rf /tmp/slacky-build-* /tmp/slacky-rocm-* /tmp/slacky-sign-* /tmp/SBo/* 2>/dev/null || true
 
     if command -v flatpak >/dev/null 2>&1; then
         log_info "Uninstalling unused Flatpak runtimes..."

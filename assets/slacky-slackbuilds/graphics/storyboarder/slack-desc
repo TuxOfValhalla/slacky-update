@@ -1,0 +1,19 @@
+# HOW TO EDIT THIS FILE:
+# The "handy ruler" below makes it easier to edit a package description.  Line
+# up the first '|' above the ':' following the base package name, and the '|'
+# on the right side marks the last column you can put a character in.  You must
+# make exactly 11 lines for the formatting to look correct.  It's also
+# customary to leave one space after the ':'.
+
+            |-----handy-ruler------------------------------------------------------|
+storyboarder: storyboarder (Wonder Unit Storyboarder)
+storyboarder:
+storyboarder: Storyboarder makes it easy to visualize a story as fast as you can
+storyboarder: draw stick figures. Quickly illustrate boards to test if a scene idea
+storyboarder: works. Create and show animatics to others. Express your story idea
+storyboarder: without making a movie.
+storyboarder:
+storyboarder: Supports drawing tools, Shot Generator 3D scene builder, timing,
+storyboarder: audio, and export to Premiere, Final Cut, Avid, and PDF.
+storyboarder:
+storyboarder: Homepage: https://wonderunit.com/storyboarder/

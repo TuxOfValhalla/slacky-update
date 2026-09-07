@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Version=1.5
+Name=Unreal Engine 5.8
+GenericName=Game Engine Editor
+Comment=Real-time 3D creation tool with Nanite, Lumen and SpaceMouse support
+Icon=ue5
+Exec=unreal-engine-5.8 %F
+Terminal=false
+MimeType=application/x-unreal-project;
+Categories=Development;
+Keywords=3D;Game;Engine;Editor;Vulkan;Nanite;Lumen;SpaceMouse;
+StartupNotify=true
+StartupWMClass=UnrealEditor

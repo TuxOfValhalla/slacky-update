@@ -3,10 +3,20 @@
 
 set -euo pipefail
 
-TARGET_BIN="/usr/share/slacky-update/lib/slacky-update-tray"
-if [ ! -f "${TARGET_BIN}" ]; then
-    TARGET_BIN="$(dirname "$(readlink -f "$0")")/../lib/slacky-update-tray"
-fi
+SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+TARGET_BIN=""
+for cand in "/usr/share/slacky-update/lib/slacky-update-tray" \
+            "/usr/local/share/slacky-update/lib/slacky-update-tray" \
+            "/usr/local/lib/slacky-update/slacky-update-tray" \
+            "/usr/lib64/slacky-update/slacky-update-tray" \
+            "/usr/lib/slacky-update/slacky-update-tray" \
+            "${SCRIPT_DIR}/../lib/slacky-update-tray"; do
+    if [ -f "${cand}" ]; then
+        TARGET_BIN="${cand}"
+        break
+    fi
+done
+[ -n "${TARGET_BIN}" ] || TARGET_BIN="${SCRIPT_DIR}/../lib/slacky-update-tray"
 
 if [ "${1:-}" = "--restart" ] || [ "${1:-}" = "-r" ]; then
     pkill -f "python3.*slacky-update-tray" 2>/dev/null || true

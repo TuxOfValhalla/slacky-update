@@ -1,0 +1,158 @@
+#!/usr/bin/env bash
+#
+# Slackware build script for MangoHud (with automatic 64-bit and 32-bit multilib)
+# Maintained by TuxOfValhalla <agnar1984@gmail.com>
+#
+
+set -e
+
+PRGNAM=mangohud
+VERSION=${VERSION:-0.8.4}
+BUILD=${BUILD:-1_slacky}
+TAG=${TAG:-_slacky}
+
+if [ -z "$ARCH" ]; then
+  case "$(uname -m)" in
+    i?86) ARCH=i586 ;;
+    arm*) ARCH=arm ;;
+    *) ARCH=$(uname -m) ;;
+  esac
+fi
+
+CWD=$(pwd)
+TMP=${TMP:-/tmp/SBo}
+PKG=$TMP/package-$PRGNAM
+OUTPUT=${OUTPUT:-/tmp}
+
+if [ "$ARCH" = "i586" ]; then
+  SLKCFLAGS="-O2 -march=i586 -mtune=i686"
+  LIBDIRSUFFIX=""
+elif [ "$ARCH" = "i686" ]; then
+  SLKCFLAGS="-O2 -march=i686 -mtune=i686"
+  LIBDIRSUFFIX=""
+elif [ "$ARCH" = "x86_64" ]; then
+  SLKCFLAGS="-O2 -fPIC"
+  LIBDIRSUFFIX="64"
+else
+  SLKCFLAGS="-O2"
+  LIBDIRSUFFIX=""
+fi
+
+set -euo pipefail
+
+rm -rf "$PKG" "$TMP/pkg32"
+mkdir -p "$TMP" "$PKG" "$OUTPUT"
+cd "$TMP"
+rm -rf "MangoHud-$VERSION" "MangoHud-v$VERSION" "$PRGNAM-$VERSION"
+
+TARBALL="$CWD/MangoHud-v$VERSION-Source.tar.xz"
+if [ ! -f "$TARBALL" ]; then
+  TARBALL="$CWD/MangoHud-$VERSION.tar.gz"
+fi
+
+if [ ! -f "$TARBALL" ]; then
+  DOWNLOAD_URL="https://github.com/flightlessmango/MangoHud/releases/download/v${VERSION}/MangoHud-v${VERSION}-Source.tar.xz"
+  echo "Downloading $DOWNLOAD_URL..."
+  curl -sSL -o "$CWD/MangoHud-v$VERSION-Source.tar.xz" "$DOWNLOAD_URL"
+  TARBALL="$CWD/MangoHud-v$VERSION-Source.tar.xz"
+fi
+
+echo "Extracting $(basename "$TARBALL")..."
+tar -xf "$TARBALL"
+
+cd "MangoHud-"*
+
+# Set permissions
+chown -R root:root .
+find -L . \
+  \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 -o -perm 511 \) \
+  -exec chmod 755 {} \; -o \
+  \( -perm 666 -o -perm 664 -o -perm 600 -o -perm 444 -o -perm 440 -o -perm 400 \) \
+  -exec chmod 644 {} \;
+
+# 1. Build Primary 64-bit / Native Architecture
+echo "--> [1/2] Building 64-bit / Native MangoHud..."
+CFLAGS="$SLKCFLAGS" \
+CXXFLAGS="$SLKCFLAGS" \
+meson setup build-native \
+  --prefix=/usr \
+  --libdir=lib${LIBDIRSUFFIX} \
+  --sysconfdir=/etc \
+  --mandir=/usr/man \
+  --buildtype=release \
+  -Dwith_xnvctrl=disabled \
+  -Dwith_wayland=enabled \
+  -Dwith_dbus=enabled \
+  -Dinclude_doc=true
+
+ninja -C build-native
+DESTDIR="$PKG" ninja -C build-native install
+
+# 2. Build 32-bit Multilib if on x86_64 and 32-bit compiler is present
+if [ "$ARCH" = "x86_64" ] && gcc -m32 -v >/dev/null 2>&1; then
+  echo "--> [2/2] Building 32-bit MangoHud for multilib / Proton / 32-bit Wine..."
+  mkdir -p "$TMP/pkg32"
+  PKG_CONFIG_PATH="/usr/lib/pkgconfig:/usr/share/pkgconfig" \
+  CC="gcc -m32" \
+  CXX="g++ -m32" \
+  CFLAGS="-O2 -m32 -march=i686 -mtune=i686" \
+  CXXFLAGS="-O2 -m32 -march=i686 -mtune=i686" \
+  meson setup build32 \
+    --prefix=/usr \
+    --libdir=lib \
+    --sysconfdir=/etc \
+    --buildtype=release \
+    -Dwith_xnvctrl=disabled \
+    -Dwith_wayland=enabled \
+    -Dwith_dbus=enabled
+
+  ninja -C build32
+  DESTDIR="$TMP/pkg32" ninja -C build32 install
+
+  # Copy 32-bit libraries into main package
+  mkdir -p "$PKG/usr/lib"
+  cp -a "$TMP/pkg32/usr/lib"/libMangoHud*.so* "$PKG/usr/lib/" 2>/dev/null || true
+  
+  # Copy 32-bit layer manifests if generated separately
+  if [ -d "$TMP/pkg32/usr/share/vulkan/implicit_layer.d" ]; then
+    mkdir -p "$PKG/usr/share/vulkan/implicit_layer.d"
+    for jf in "$TMP/pkg32/usr/share/vulkan/implicit_layer.d"/*.json; do
+      [ -f "$jf" ] || continue
+      base_j=$(basename "$jf")
+      if [ -f "$PKG/usr/share/vulkan/implicit_layer.d/$base_j" ]; then
+        # If filename collides (e.g. MangoHud.json), rename 32-bit to MangoHud.i686.json if needed
+        if ! grep -q "/usr/lib64/" "$jf" 2>/dev/null; then
+          cp -a "$jf" "$PKG/usr/share/vulkan/implicit_layer.d/MangoHud.i686.json" 2>/dev/null || true
+        fi
+      else
+        cp -a "$jf" "$PKG/usr/share/vulkan/implicit_layer.d/"
+      fi
+    done
+  fi
+  echo " • 32-bit multilib MangoHud libraries bundled successfully!"
+fi
+
+# Ensure /usr/bin/mangohud wrapper and libraries have correct permissions
+[ -f "$PKG/usr/bin/mangohud" ] && chmod 755 "$PKG/usr/bin/mangohud"
+find "$PKG/usr/lib"* -name "*.so*" -exec chmod 755 {} \; 2>/dev/null || true
+
+# Compress man pages if present
+if [ -d "$PKG/usr/man" ]; then
+  find "$PKG/usr/man" -type f -exec gzip -9 {} \;
+fi
+
+# Documentation
+mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION"
+cp -a LICENSE README.md "$PKG/usr/doc/$PRGNAM-$VERSION/" 2>/dev/null || true
+cat "$CWD/slack-desc" > "$PKG/usr/doc/$PRGNAM-$VERSION/slack-desc"
+
+# Package Install Script
+mkdir -p "$PKG/install"
+cat "$CWD/slack-desc" > "$PKG/install/slack-desc"
+cat "$CWD/doinst.sh" > "$PKG/install/doinst.sh"
+
+# Create Slackware Package
+cd "$PKG"
+/sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD.txz"
+
+echo "Package created successfully: $OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD.txz"

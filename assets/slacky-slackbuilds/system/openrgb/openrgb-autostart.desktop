@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Version=1.5
+Name=OpenRGB (Autostart)
+Comment=Load lighting profile on user login
+Icon=openrgb
+Exec=openrgb --startminimized
+Terminal=false
+Categories=Utility;Settings;
+X-GNOME-Autostart-enabled=true
+X-KDE-autostart-after=panel

@@ -150,8 +150,16 @@ check_cachyos_background() {
     LIB_DIR="$(dirname "$(readlink -f "$0")")"
     if [ -f "${LIB_DIR}/mod_kernel.sh" ]; then
         APP_DIR="${LIB_DIR}"
-    elif [ -d "/usr/local/lib/slacky-update" ]; then
+    elif [ -d "/usr/share/slacky-update" ] && [ -f "/usr/share/slacky-update/mod_kernel.sh" ]; then
+        APP_DIR="/usr/share/slacky-update"
+    elif [ -d "/usr/local/share/slacky-update" ] && [ -f "/usr/local/share/slacky-update/mod_kernel.sh" ]; then
+        APP_DIR="/usr/local/share/slacky-update"
+    elif [ -d "/usr/local/lib/slacky-update" ] && [ -f "/usr/local/lib/slacky-update/mod_kernel.sh" ]; then
         APP_DIR="/usr/local/lib/slacky-update"
+    elif [ -d "/usr/lib64/slacky-update" ] && [ -f "/usr/lib64/slacky-update/mod_kernel.sh" ]; then
+        APP_DIR="/usr/lib64/slacky-update"
+    elif [ -d "/usr/lib/slacky-update" ] && [ -f "/usr/lib/slacky-update/mod_kernel.sh" ]; then
+        APP_DIR="/usr/lib/slacky-update"
     else
         APP_DIR="${LIB_DIR}"
     fi
@@ -164,9 +172,9 @@ check_cachyos_background() {
 
         if [ -n "${installed_flavors}" ]; then
             for flv in ${installed_flavors}; do
-                local cur_flv_ver latest_flv_ver k_url h_url
+                local cur_flv_ver latest_flv_ver k_url h_url nv_url
                 cur_flv_ver=$(get_installed_cachyos_flavor_version "${flv}" 2>/dev/null || echo "NONE")
-                read -r latest_flv_ver k_url h_url <<< "$(check_cachyos_upstream_flavor "${flv}" || echo "NONE NONE NONE")"
+                read -r latest_flv_ver k_url h_url nv_url <<< "$(check_cachyos_upstream_flavor "${flv}" || echo "NONE NONE NONE NONE")"
 
                 if [ "${latest_flv_ver}" != "NONE" ] && [ -n "${latest_flv_ver}" ] && [ "${cur_flv_ver}" != "NONE" ]; then
                     local is_flv_newer

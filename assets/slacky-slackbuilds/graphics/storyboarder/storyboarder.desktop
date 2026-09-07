@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Storyboarder
+Comment=Fast and easy storyboard creation and animatics tool by Wonder Unit
+Exec=/usr/bin/storyboarder %U
+Icon=storyboarder
+Type=Application
+StartupNotify=true
+Categories=Graphics;2DGraphics;AudioVideo;Video;
+MimeType=application/x-storyboarder;
+Keywords=storyboard;animatic;drawing;film;animation;

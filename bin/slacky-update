@@ -3,14 +3,20 @@
 
 set -euo pipefail
 
-CURRENT_VERSION="0.8"
-RELEASE_CODENAME="Pop Quiz, Hotshot!"
+CURRENT_VERSION="0.9"
+RELEASE_CODENAME="Fat Lady"
 
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 if [ -d "${SCRIPT_DIR}/../lib" ] && [ -f "${SCRIPT_DIR}/../lib/common.sh" ]; then
     APP_DIR="${SCRIPT_DIR}/../lib"
-elif [ -d "/usr/local/lib/slacky-update" ]; then
+elif [ -d "/usr/share/slacky-update/lib" ] && [ -f "/usr/share/slacky-update/lib/common.sh" ]; then
+    APP_DIR="/usr/share/slacky-update/lib"
+elif [ -d "/usr/local/lib/slacky-update" ] && [ -f "/usr/local/lib/slacky-update/common.sh" ]; then
     APP_DIR="/usr/local/lib/slacky-update"
+elif [ -d "/usr/lib64/slacky-update" ] && [ -f "/usr/lib64/slacky-update/common.sh" ]; then
+    APP_DIR="/usr/lib64/slacky-update"
+elif [ -d "/usr/lib/slacky-update" ] && [ -f "/usr/lib/slacky-update/common.sh" ]; then
+    APP_DIR="/usr/lib/slacky-update"
 else
     APP_DIR="${SCRIPT_DIR}/../lib"
 fi
@@ -29,6 +35,10 @@ source "${APP_DIR}/mod_kernel.sh"
 source "${APP_DIR}/mod_armor.sh"
 # shellcheck source=/dev/null
 source "${APP_DIR}/mod_clean.sh"
+# shellcheck source=/dev/null
+[ -f "${APP_DIR}/mod_rocm.sh" ] && source "${APP_DIR}/mod_rocm.sh"
+# shellcheck source=/dev/null
+[ -f "${APP_DIR}/mod_tweaks.sh" ] && source "${APP_DIR}/mod_tweaks.sh"
 
 if [ -f "${SCRIPT_DIR}/../lib/slacky_update_i18n.py" ]; then
     I18N_PY="${SCRIPT_DIR}/../lib/slacky_update_i18n.py"
@@ -163,12 +173,25 @@ sys.exit(0)
     fi
     rm -f "${snap_before_file}" "${snap_after_file}" 2>/dev/null || true
 
+    if [ "${NON_INTERACTIVE:-0}" = "1" ] || [ ! -t 0 ]; then
+        if [ "${needs_reboot}" -eq 1 ]; then
+            echo ""
+            echo -e "${YELLOW}${BOLD}🔄 $(_ REBOOT_RECOMMENDED_TITLE)${RESET}"
+            echo -e "$(_ REBOOT_RECOMMENDED_DESC)"
+            log_info "Non-interactive mode: Reboot deferred. Please reboot when convenient."
+        else
+            echo ""
+            echo -e "${GREEN}${BOLD}$(_ ALL_DONE_CLOSE_PROMPT)${RESET}"
+        fi
+        exit 0
+    fi
+
     if [ "${needs_reboot}" -eq 1 ]; then
         echo ""
         echo -e "${YELLOW}${BOLD}🔄 $(_ REBOOT_RECOMMENDED_TITLE)${RESET}"
         echo -e "$(_ REBOOT_RECOMMENDED_DESC)"
         echo ""
-        read -r -p "$(_ PROMPT_REBOOT_NOW)" reply_reboot
+        read -r -p "$(_ PROMPT_REBOOT_NOW)" reply_reboot || reply_reboot="N"
         reply_reboot=${reply_reboot:-Y}
         if [[ "$reply_reboot" =~ ^[YyJjSsOo]$ ]]; then
             echo ""
@@ -179,7 +202,7 @@ sys.exit(0)
             done
             echo ""
             log_info "Initiating system reboot..."
-            sudo /sbin/reboot
+            sudo "${REBOOT_CMD}"
             exit 0
         fi
     else
@@ -206,8 +229,16 @@ run_full_update() {
     boot_snap_before=$(ls -la /boot/vmlinuz* /boot/initramfs* /lib/modules 2>/dev/null || true)
     local kernel_or_driver_changed=0
 
-    read -r -p "$(_ PROMPT_UPGRADE_SLACKWARE)" reply_slack
-    reply_slack=${reply_slack:-Y}
+    local is_headless=0
+    if [ "${NON_INTERACTIVE:-0}" = "1" ] || [ ! -t 0 ]; then
+        is_headless=1
+    fi
+
+    local reply_slack="Y"
+    if [ "${is_headless}" -eq 0 ]; then
+        read -r -p "$(_ PROMPT_UPGRADE_SLACKWARE)" reply_slack || reply_slack="Y"
+        reply_slack=${reply_slack:-Y}
+    fi
     if [[ "$reply_slack" =~ ^[YyJjSsOo]$ ]]; then
         echo -e "\n${BLUE}${BOLD}$(_ UPGRADING_SLACKWARE)${RESET}"
         update_slackware_core
@@ -216,8 +247,11 @@ run_full_update() {
     local cachy_count
     cachy_count=$(python3 -c "import json, os; d=json.load(open('/var/cache/slacky-update/status.json')) if os.path.exists('/var/cache/slacky-update/status.json') else {}; print(len(d.get('cachyos_kernel_updates', [])))" 2>/dev/null || echo 0)
     if [ "${cachy_count}" -gt 0 ]; then
-        read -r -p "$(_ PROMPT_INSTALL_CACHY_KERNEL)" reply_cachy
-        reply_cachy=${reply_cachy:-Y}
+        local reply_cachy="Y"
+        if [ "${is_headless}" -eq 0 ]; then
+            read -r -p "$(_ PROMPT_INSTALL_CACHY_KERNEL)" reply_cachy || reply_cachy="Y"
+            reply_cachy=${reply_cachy:-Y}
+        fi
         if [[ "$reply_cachy" =~ ^[YyJjSsOo]$ ]]; then
             echo -e "\n${BLUE}${BOLD}$(_ UPGRADING_CACHYOS_KERNEL)${RESET}"
             update_cachyos_kernels
@@ -226,8 +260,11 @@ run_full_update() {
     fi
 
     if command -v flatpak >/dev/null 2>&1; then
-        read -r -p "$(_ PROMPT_UPGRADE_FLATPAK)" reply_flatpak
-        reply_flatpak=${reply_flatpak:-Y}
+        local reply_flatpak="Y"
+        if [ "${is_headless}" -eq 0 ]; then
+            read -r -p "$(_ PROMPT_UPGRADE_FLATPAK)" reply_flatpak || reply_flatpak="Y"
+            reply_flatpak=${reply_flatpak:-Y}
+        fi
         if [[ "$reply_flatpak" =~ ^[YyJjSsOo]$ ]]; then
             echo -e "\n${BLUE}${BOLD}$(_ UPGRADING_FLATPAK)${RESET}"
             update_flatpaks
@@ -238,8 +275,11 @@ run_full_update() {
         local sbo_count
         sbo_count=$(python3 -c "import json, os; d=json.load(open('/var/cache/slacky-update/status.json')) if os.path.exists('/var/cache/slacky-update/status.json') else {}; print(len(d.get('sbo_updates', [])))" 2>/dev/null || echo 0)
         if [ "${sbo_count}" -gt 0 ]; then
-            read -r -p "$(_ PROMPT_UPGRADE_SBO)" reply_sbo
-            reply_sbo=${reply_sbo:-Y}
+            local reply_sbo="Y"
+            if [ "${is_headless}" -eq 0 ]; then
+                read -r -p "$(_ PROMPT_UPGRADE_SBO)" reply_sbo || reply_sbo="Y"
+                reply_sbo=${reply_sbo:-Y}
+            fi
             if [[ "$reply_sbo" =~ ^[YyJjSsOo]$ ]]; then
                 update_sbo_packages
             fi
@@ -255,8 +295,11 @@ run_full_update() {
             local nv_count
             nv_count=$(python3 -c "import json, os; d=json.load(open('/var/cache/slacky-update/status.json')) if os.path.exists('/var/cache/slacky-update/status.json') else {}; print(len(d.get('nvidia_driver_updates', [])))" 2>/dev/null || echo 0)
             if [ "${nv_count}" -gt 0 ]; then
-                read -r -p "$(_ PROMPT_UPGRADE_NVIDIA_DRIVER)" reply_nv
-                reply_nv=${reply_nv:-Y}
+                local reply_nv="Y"
+                if [ "${is_headless}" -eq 0 ]; then
+                    read -r -p "$(_ PROMPT_UPGRADE_NVIDIA_DRIVER)" reply_nv || reply_nv="Y"
+                    reply_nv=${reply_nv:-Y}
+                fi
                 if [[ "$reply_nv" =~ ^[YyJjSsOo]$ ]]; then
                     install_nvidia_run_driver "production"
                     kernel_or_driver_changed=1
@@ -321,6 +364,7 @@ except Exception:
     pass
 " 2>/dev/null || true
 
+    run_post_update_smoke_test
     echo -e "\n${GREEN}${BOLD}$(_ UPGRADE_COMPLETE_SYSTEM)${RESET}"
 
     prompt_reboot_or_close "${snap_before_file}" "${snap_after_file}" "${kernel_or_driver_changed}"
@@ -541,8 +585,61 @@ interactive_menu() {
                     sleep 1
                     ;;
             esac
+        elif [ "${HAS_AMD}" = "true" ]; then
+            echo -e "  $(_ MENU_FULL_UPDATE)"
+            echo -e "  $(_ MENU_KERNEL)"
+            echo -e "  3. $(_ MENU_AMD_ROCM | sed -E 's/^[0-9]+\.\s*//')"
+            echo -e "  4. $(_ MENU_CLEAN | sed -E 's/^[0-9]+\.\s*//')"
+            echo -e "  5. $(_ MENU_ARMOR | sed -E 's/^[0-9]+\.\s*//')"
+            echo -e "  6. $(_ MENU_EXIT | sed -E 's/^[0-9]+\.\s*//')"
+            echo ""
+            echo -n "$(_ SELECT_OPERATION_RANGE range="1-6")"
+            read -r choice || choice="6"
+
+            case "${choice}" in
+                1)
+                    echo ""
+                    run_full_update
+                    ;;
+                2)
+                    echo ""
+                    manage_cachyos_kernel_interactive
+                    echo ""
+                    read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                    ;;
+                3)
+                    echo ""
+                    if command -v manage_rocm_interactive >/dev/null 2>&1; then
+                        manage_rocm_interactive
+                    else
+                        log_warn "ROCm module not loaded."
+                    fi
+                    echo ""
+                    read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                    ;;
+                4)
+                    echo ""
+                    clean_system_cache_and_orphans
+                    echo ""
+                    read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                    ;;
+                5)
+                    echo ""
+                    manage_armor_interactive
+                    echo ""
+                    read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                    ;;
+                6)
+                    echo -e "\n${GREEN}$(_ SESSION_TERMINATED)${RESET}"
+                    exit 0
+                    ;;
+                *)
+                    echo -e "\n${YELLOW}$(_ INVALID_SELECTION)${RESET}"
+                    sleep 1
+                    ;;
+            esac
         else
-            # AMD / Intel Tailored Menu (NVIDIA option cleanly hidden)
+            # Pure Intel / Headless Menu (No dedicated GPU menu)
             echo -e "  1. $(_ MENU_FULL_UPDATE | sed -E 's/^[0-9]+\.\s*//')"
             echo -e "  2. $(_ MENU_KERNEL | sed -E 's/^[0-9]+\.\s*//')"
             echo -e "  3. $(_ MENU_CLEAN | sed -E 's/^[0-9]+\.\s*//')"
@@ -590,13 +687,21 @@ interactive_menu() {
 
 # --- [ ENTRY POINT ] ---
 if [ "${1:-}" = "--non-interactive" ] || [ "${1:-}" = "-y" ]; then
+    export NON_INTERACTIVE=1
     run_full_update
 elif [ "${1:-}" = "--check" ]; then
     "${CHECK_BIN}"
     display_pending_status
+elif [ "${1:-}" = "--heal-multilib" ] || [ "${1:-}" = "-m" ]; then
+    validate_privileges
+    heal_multilib_subsystem
+    run_post_update_smoke_test
 elif [ "${1:-}" = "--slackbuilds" ] || [ "${1:-}" = "-s" ]; then
     INTERACTIVE_SESSION=1
     manage_slackbuilds_interactive
+elif [ "${1:-}" = "--tweaks" ] || [ "${1:-}" = "-t" ]; then
+    INTERACTIVE_SESSION=1
+    manage_tweaks_interactive
 elif [ "${1:-}" = "--lang" ] || [ "${1:-}" = "--set-lang" ]; then
     if [ -n "${2:-}" ]; then
         python3 -c "import sys; sys.path.insert(0, '${APP_DIR}'); from slacky_update_i18n import i18n; i18n.save_language_override('${2}')"

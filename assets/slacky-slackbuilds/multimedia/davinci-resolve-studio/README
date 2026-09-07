@@ -1,0 +1,36 @@
+DaVinci Resolve Studio for Slackware Linux
+==========================================
+
+This SlackBuild packages the official DaVinci Resolve Studio installer into a
+native Slackware (.txz) package.
+
+Prerequisites & Source Download
+-------------------------------
+Download the official "DaVinci Resolve Studio <VERSION> for Linux" from:
+https://www.blackmagicdesign.com/products/davinciresolve
+
+Place DaVinci_Resolve_Studio_<VERSION>_Linux.zip in this directory or in
+~/Downloads before running the SlackBuild.
+
+GPU & Hardware Acceleration
+---------------------------
+DaVinci Resolve requires GPU compute capabilities for video processing:
+
+1. NVIDIA GPUs:
+   - Works immediately out-of-the-box with the official proprietary NVIDIA
+     display driver (which includes the CUDA Driver API and NVENC/NVDEC).
+
+2. AMD Radeon GPUs:
+   - Requires OpenCL compute support. Install ROCm OpenCL runtime (rocm-opencl)
+     or Mesa RustiCL OpenCL (with RUSTICL_ENABLE=radeonsi).
+   - On legacy GCN AMD cards, run with: ROC_ENABLE_PRE_VEGA=1 davinci-resolve-studio
+
+3. Intel Arc / Iris GPUs:
+   - Requires Intel Compute Runtime (intel-compute-runtime / neo OpenCL).
+
+Licensing
+---------
+DaVinci Resolve Studio requires a valid Blackmagic activation key or USB dongle.
+License and application support directories in /var/BlackmagicDesign and
+/opt/resolve/.license are pre-configured with full write access so regular
+users can activate seamlessly.

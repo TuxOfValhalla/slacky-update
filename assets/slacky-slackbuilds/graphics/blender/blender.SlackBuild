@@ -1,0 +1,121 @@
+#!/usr/bin/env bash
+# ==============================================================================
+#  Slackware build script for Blender 5.2.1 (Official Linux Accelerated Suite)
+#  Maintained by TuxOfValhalla <agnar1984@gmail.com>
+# ==============================================================================
+
+set -euo pipefail
+
+PRGNAM=blender
+VERSION=${VERSION:-5.2.1}
+BUILD=${BUILD:-1_slacky}
+TAG=${TAG:-_slacky}
+
+if [ -z "${ARCH:-}" ]; then
+  case "$(uname -m)" in
+    i?86) ARCH=i586 ;;
+    arm*) ARCH=arm ;;
+    *) ARCH=$(uname -m) ;;
+  esac
+fi
+
+if [ "$ARCH" != "x86_64" ]; then
+  echo "Blender 5.2+ is only supported on x86_64."
+  exit 1
+fi
+
+CWD=$(pwd)
+TMP=${TMP:-/tmp/SBo}
+PKG=$TMP/package-$PRGNAM
+OUTPUT=${OUTPUT:-/tmp}
+
+rm -rf "$PKG"
+mkdir -p "$TMP" "$PKG" "$OUTPUT"
+cd "$TMP"
+rm -rf "$PRGNAM-$VERSION-linux-x64"
+
+# Locate archive
+TARBALL=""
+for cand in "$CWD/$PRGNAM-$VERSION-linux-x64.tar.xz" \
+            "$CWD/$PRGNAM-$VERSION.tar.xz"; do
+  if [ -f "$cand" ]; then
+    TARBALL="$cand"
+    break
+  fi
+done
+
+if [ -z "$TARBALL" ]; then
+  echo "Error: Blender archive not found."
+  echo "Please download blender-$VERSION-linux-x64.tar.xz from https://download.blender.org/release/Blender5.2/"
+  exit 1
+fi
+
+echo "Extracting Blender $VERSION..."
+tar -xf "$TARBALL"
+EXTRACTED_DIR=$(find . -maxdepth 1 -type d -name "blender-$VERSION*" | head -n1)
+cd "$EXTRACTED_DIR"
+
+chown -R root:root .
+find -L . \
+  \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 -o -perm 511 \) \
+  -exec chmod 755 {} \; -o \
+  \( -perm 666 -o -perm 664 -o -perm 600 -o -perm 444 -o -perm 440 -o -perm 400 \) \
+  -exec chmod 644 {} \;
+
+# Install to /opt/blender-$VERSION
+mkdir -p "$PKG/opt/blender-$VERSION"
+cp -a * "$PKG/opt/blender-$VERSION/"
+
+# Install runtime wrapper
+mkdir -p "$PKG/usr/bin"
+install -m 755 "$CWD/blender-wrapper.sh" "$PKG/usr/bin/blender"
+ln -sf blender "$PKG/usr/bin/blender-5"
+ln -sf blender "$PKG/usr/bin/blender-$VERSION"
+
+# Install Desktop Entry & Icons
+mkdir -p "$PKG/usr/share/applications"
+install -m 644 "$CWD/blender.desktop" "$PKG/usr/share/applications/blender.desktop"
+
+for sz in 16 22 24 32 48 64 128 256 512; do
+  if [ -f "$PKG/opt/blender-$VERSION/icons/${sz}x${sz}/apps/blender.png" ]; then
+    mkdir -p "$PKG/usr/share/icons/hicolor/${sz}x${sz}/apps"
+    install -m 644 "$PKG/opt/blender-$VERSION/icons/${sz}x${sz}/apps/blender.png" \
+      "$PKG/usr/share/icons/hicolor/${sz}x${sz}/apps/blender.png"
+  fi
+done
+
+if [ -f "$PKG/opt/blender-$VERSION/icons/scalable/apps/blender.svg" ]; then
+  mkdir -p "$PKG/usr/share/icons/hicolor/scalable/apps"
+  install -m 644 "$PKG/opt/blender-$VERSION/icons/scalable/apps/blender.svg" \
+    "$PKG/usr/share/icons/hicolor/scalable/apps/blender.svg"
+fi
+
+# Documentation
+mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION"
+cp -a "$PKG/opt/blender-$VERSION/copyright.txt" "$PKG/opt/blender-$VERSION/readme.html" \
+  "$PKG/usr/doc/$PRGNAM-$VERSION/" 2>/dev/null || true
+cat "$CWD/slack-desc" > "$PKG/usr/doc/$PRGNAM-$VERSION/slack-desc" 2>/dev/null || true
+
+# Package metadata & doinst.sh
+mkdir -p "$PKG/install"
+cat "$CWD/slack-desc" > "$PKG/install/slack-desc"
+
+cat << 'EOF_DOINST' > "$PKG/install/doinst.sh"
+if [ ! -d opt/blender ]; then
+  rm -f opt/blender 2>/dev/null || true
+  ln -sfn blender-5.2.1 opt/blender 2>/dev/null || true
+fi
+
+if [ -x /usr/bin/update-desktop-database ]; then
+  /usr/bin/update-desktop-database -q /usr/share/applications 2>/dev/null || true
+fi
+if [ -x /usr/bin/gtk-update-icon-cache ]; then
+  /usr/bin/gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor 2>/dev/null || true
+fi
+EOF_DOINST
+
+# Build Slackware package
+cd "$PKG"
+/sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD.txz"
+
+echo "Package created: $OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD.txz"

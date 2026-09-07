@@ -1,0 +1,62 @@
+#!/bin/sh
+#
+# /etc/rc.d/rc.lact - LACT daemon service script for Slackware
+#
+
+PIDFILE="/run/lactd.pid"
+SOCKFILE="/run/lactd.sock"
+BIN="/usr/bin/lact"
+
+lact_start() {
+  if [ -x "$BIN" ]; then
+    echo "Starting LACT daemon: $BIN daemon"
+    rm -f "$SOCKFILE" "$PIDFILE"
+    $BIN daemon > /var/log/lactd.log 2>&1 &
+    echo $! > "$PIDFILE"
+  fi
+}
+
+lact_stop() {
+  echo "Stopping LACT daemon..."
+  if [ -f "$PIDFILE" ]; then
+    kill -TERM $(cat "$PIDFILE") 2>/dev/null
+    rm -f "$PIDFILE"
+  else
+    pkill -TERM -f "$BIN daemon" 2>/dev/null
+  fi
+  rm -f "$SOCKFILE"
+}
+
+lact_restart() {
+  lact_stop
+  sleep 1
+  lact_start
+}
+
+lact_status() {
+  if pgrep -f "$BIN daemon" > /dev/null 2>&1; then
+    echo "LACT daemon is running."
+    $BIN cli profile get 2>/dev/null || true
+  else
+    echo "LACT daemon is NOT running."
+  fi
+}
+
+case "$1" in
+  'start')
+    lact_start
+    ;;
+  'stop')
+    lact_stop
+    ;;
+  'restart')
+    lact_restart
+    ;;
+  'status')
+    lact_status
+    ;;
+  *)
+    echo "Usage: $0 {start|stop|restart|status}"
+    exit 1
+    ;;
+esac

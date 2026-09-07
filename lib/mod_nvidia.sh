@@ -56,7 +56,7 @@ ensure_dkms_installed_interactive() {
             local pkg_file
             pkg_file=$(ls -t /tmp/dkms-*.t?z 2>/dev/null | head -n1 || true)
             if [ -n "${pkg_file}" ] && [ -f "${pkg_file}" ]; then
-                sudo /sbin/upgradepkg --install-new --reinstall "${pkg_file}"
+                sudo "${PKG_UPGRADE_CMD}" --install-new --reinstall "${pkg_file}"
                 log_success "DKMS installed successfully!"
             fi
         )
@@ -314,9 +314,12 @@ build_and_deploy_cachyos_nvidia_userspace() {
 
     local cache_dir="/var/cache/slacky-update/cachyos-nvidia"
     sudo mkdir -p "${cache_dir}"
-    local staging_root="/tmp/slacky-cachy-nv-staging-$$"
-    local tmp_extract="/tmp/slacky-cachy-nv-extract-$$"
-    sudo rm -rf "${staging_root}" "${tmp_extract}"
+    local staging_root
+    staging_root=$(mktemp -d /tmp/slacky-cachy-nv-staging.XXXXXX)
+    local tmp_extract
+    tmp_extract=$(mktemp -d /tmp/slacky-cachy-nv-extract.XXXXXX)
+    trap 'sudo rm -rf "${staging_root:-}" "${tmp_extract:-}" 2>/dev/null || true' INT TERM
+
     sudo mkdir -p "${staging_root}" \
                   "${tmp_extract}/utils" \
                   "${tmp_extract}/lib32" \
@@ -420,17 +423,44 @@ build_and_deploy_cachyos_nvidia_userspace() {
     cat << 'VA_SH_EOF' | sudo tee "${staging_root}/etc/profile.d/nvidia-vaapi.sh" >/dev/null
 #!/bin/sh
 # NVIDIA VA-API hardware video acceleration configuration
-export LIBVA_DRIVER_NAME=nvidia
-export MOZ_DISABLE_RDD_SANDBOX=1
-export NVD_BACKEND=direct
+
+# Detect if running on a hybrid laptop where iGPU is primary display
+is_hybrid_laptop() {
+    [ -d "/sys/class/power_supply" ] && ls /sys/class/power_supply/BAT* >/dev/null 2>&1 || return 1
+    local gpus
+    gpus=$(lspci -d ::0300 2>/dev/null | wc -l)
+    [ "${gpus:-0}" -gt 1 ]
+}
+
+if is_hybrid_laptop; then
+    # On hybrid laptops, only enable NVIDIA VA-API when PRIME offload is explicitly requested
+    if [ "${__NV_PRIME_RENDER_OFFLOAD:-0}" = "1" ] || [ "${DRI_PRIME:-0}" = "1" ]; then
+        export LIBVA_DRIVER_NAME=nvidia
+        export MOZ_DISABLE_RDD_SANDBOX=1
+        export NVD_BACKEND=direct
+    fi
+else
+    # Standard desktop or single-GPU system: enable globally for full HW acceleration
+    export LIBVA_DRIVER_NAME=nvidia
+    export MOZ_DISABLE_RDD_SANDBOX=1
+    export NVD_BACKEND=direct
+fi
 VA_SH_EOF
 
     cat << 'VA_CSH_EOF' | sudo tee "${staging_root}/etc/profile.d/nvidia-vaapi.csh" >/dev/null
 #!/bin/csh
 # NVIDIA VA-API hardware video acceleration configuration
-setenv LIBVA_DRIVER_NAME nvidia
-setenv MOZ_DISABLE_RDD_SANDBOX 1
-setenv NVD_BACKEND direct
+if ( -d /sys/class/power_supply && `ls /sys/class/power_supply/BAT* >& /dev/null; echo $status` == 0 ) then
+    if ( $?__NV_PRIME_RENDER_OFFLOAD || $?DRI_PRIME ) then
+        setenv LIBVA_DRIVER_NAME nvidia
+        setenv MOZ_DISABLE_RDD_SANDBOX 1
+        setenv NVD_BACKEND direct
+    endif
+else
+    setenv LIBVA_DRIVER_NAME nvidia
+    setenv MOZ_DISABLE_RDD_SANDBOX 1
+    setenv NVD_BACKEND direct
+endif
 VA_CSH_EOF
 
     sudo chmod 755 "${staging_root}/etc/profile.d/nvidia-vaapi.sh" "${staging_root}/etc/profile.d/nvidia-vaapi.csh"
@@ -472,18 +502,36 @@ DOINST_EOF
     sudo rm -f "${txz_out}"
     (
         cd "${staging_root}"
-        sudo /sbin/makepkg -l y -c n "${txz_out}" >/dev/null 2>&1
+        sudo "${PKG_MAKE_CMD}" -l y -c n "${txz_out}" >/dev/null 2>&1
     )
 
     if [ -f "${txz_out}" ]; then
+        # Scan and retire legacy conflicting NVIDIA packages from /var/log/packages to avoid multiple owners
+        local legacy_pkgs=("nvidia-driver" "nvidia-kernel" "nvidia-utils" "x11-nvidia-driver")
+        for lpkg in "${legacy_pkgs[@]}"; do
+            for ppath in /var/log/packages/${lpkg}-[0-9]*; do
+                [ -f "${ppath}" ] || continue
+                local pbname
+                pbname=$(basename "${ppath}")
+                log_info "Retiring legacy package database entry: ${pbname}..."
+                sudo mkdir -p /var/log/packages/retired_by_slacky
+                sudo mv -f "${ppath}" /var/log/packages/retired_by_slacky/ 2>/dev/null || true
+                if [ -f "/var/log/scripts/${pbname}" ]; then
+                    sudo mkdir -p /var/log/scripts/retired_by_slacky
+                    sudo mv -f "/var/log/scripts/${pbname}" /var/log/scripts/retired_by_slacky/ 2>/dev/null || true
+                fi
+            done
+        done
+
         log_info "Installing cachyos-nvidia-utils package to system..."
-        sudo /sbin/upgradepkg --install-new --reinstall "${txz_out}"
+        sudo "${PKG_UPGRADE_CMD}" --install-new --reinstall "${txz_out}"
         log_success "CachyOS NVIDIA Complete Suite package deployed: ${target_ver}"
     else
         log_warn "Failed to create cachyos-nvidia-utils txz package."
     fi
 
-    sudo rm -rf "${staging_root}" "${tmp_extract}"
+    sudo rm -rf "${staging_root}" "${tmp_extract}" 2>/dev/null || true
+    trap - INT TERM
 }
 
 get_nvidia_module_version() {
@@ -538,6 +586,8 @@ sync_stock_kernel_nvidia_module() {
             sudo rm -f "${run_file}"
             log_warn "Could not download official NVIDIA .run installer (${cachy_nv_ver}) from download.nvidia.com."
             log_warn "Upstream NVIDIA may not have published standalone .run for this release yet."
+            echo -e "${RED}${BOLD}[MAJOR BUMMER] Stock Slackware kernel (${stock_kver}) could NOT be synchronized to NVIDIA ${cachy_nv_ver}!${RESET}"
+            echo -e "${YELLOW}${BOLD}DO NOT select stock kernel '${stock_kver}' in boot menu until matching NVIDIA driver is available.${RESET}"
             return 1
         fi
         sudo chmod +x "${run_file}"
@@ -561,12 +611,14 @@ sync_stock_kernel_nvidia_module() {
         log_success "NVIDIA kernel module built for stock kernel: ${stock_kver}"
     else
         log_warn "NVIDIA --kernel-module-only returned non-zero code for ${stock_kver}."
+        echo -e "${RED}${BOLD}[MAJOR BUMMER] NVIDIA module build failed for stock kernel (${stock_kver})!${RESET}"
+        echo -e "${YELLOW}${BOLD}Stock kernel '${stock_kver}' lacks matching graphics driver. Avoid booting into stock kernel.${RESET}"
     fi
 
     if command -v enforce_secure_boot_armor >/dev/null 2>&1; then
         enforce_secure_boot_armor
     fi
-    sudo /sbin/depmod -a "${stock_kver}" 2>/dev/null || true
+    sudo "${DEPMOD_CMD}" -a "${stock_kver}" 2>/dev/null || true
     if command -v generate_kernel_initramfs >/dev/null 2>&1; then
         generate_kernel_initramfs "${stock_kver}"
     fi

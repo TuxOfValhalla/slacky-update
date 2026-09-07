@@ -1,0 +1,4 @@
+spnavcfg (interactive GUI for 3Dconnexion SpaceMouse)
+
+spnavcfg is a Qt6-based interactive calibration tool for 3Dconnexion devices.
+It requires libspnav and a running spacenavd daemon.

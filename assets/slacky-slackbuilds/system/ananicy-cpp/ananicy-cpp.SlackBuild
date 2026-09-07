@@ -1,0 +1,136 @@
+#!/usr/bin/env bash
+#
+# Slackware build script for ananicy-cpp (with CachyOS gaming rules)
+# Maintained by TuxOfValhalla <agnar1984@gmail.com>
+#
+
+set -e
+
+PRGNAM=ananicy-cpp
+VERSION=${VERSION:-1.2.0}
+BUILD=${BUILD:-1_slacky}
+TAG=${TAG:-_slacky}
+
+if [ -z "$ARCH" ]; then
+  case "$(uname -m)" in
+    i?86) ARCH=i586 ;;
+    arm*) ARCH=arm ;;
+    *) ARCH=$(uname -m) ;;
+  esac
+fi
+
+CWD=$(pwd)
+TMP=${TMP:-/tmp/SBo}
+PKG=$TMP/package-$PRGNAM
+OUTPUT=${OUTPUT:-/tmp}
+
+if [ "$ARCH" = "i586" ]; then
+  SLKCFLAGS="-O2 -march=i586 -mtune=i686"
+  LIBDIRSUFFIX=""
+elif [ "$ARCH" = "i686" ]; then
+  SLKCFLAGS="-O2 -march=i686 -mtune=i686"
+  LIBDIRSUFFIX=""
+elif [ "$ARCH" = "x86_64" ]; then
+  SLKCFLAGS="-O2 -fPIC"
+  LIBDIRSUFFIX="64"
+else
+  SLKCFLAGS="-O2"
+  LIBDIRSUFFIX=""
+fi
+
+set -euo pipefail
+
+rm -rf "$PKG"
+mkdir -p "$TMP" "$PKG" "$OUTPUT"
+cd "$TMP"
+rm -rf "$PRGNAM-v$VERSION" "$PRGNAM-$VERSION"
+
+TARBALL=""
+for candidate in "$CWD/$PRGNAM-$VERSION.tar.gz" \
+                 "$CWD/$PRGNAM-v$VERSION.tar.gz" \
+                 "$CWD/v$VERSION.tar.gz" \
+                 "$CWD/$VERSION.tar.gz"; do
+  if [ -f "$candidate" ]; then
+    TARBALL="$candidate"
+    break
+  fi
+done
+
+if [ -z "$TARBALL" ]; then
+  TARBALL="$CWD/$PRGNAM-v$VERSION.tar.gz"
+  DOWNLOAD_URL="https://gitlab.com/ananicy-cpp/ananicy-cpp/-/archive/v${VERSION}/ananicy-cpp-v${VERSION}.tar.gz"
+  echo "Downloading $DOWNLOAD_URL..."
+  curl -sSL -o "$TARBALL" "$DOWNLOAD_URL"
+fi
+
+RULES_TARBALL="$CWD/ananicy-rules-cachyos.tar.gz"
+if [ ! -f "$RULES_TARBALL" ]; then
+  RULES_URL="https://github.com/CachyOS/ananicy-rules/archive/refs/heads/master.tar.gz"
+  echo "Downloading CachyOS ananicy rules from $RULES_URL..."
+  curl -sSL -o "$RULES_TARBALL" "$RULES_URL"
+fi
+
+echo "Extracting $(basename "$TARBALL")..."
+tar -xf "$TARBALL"
+
+cd "$PRGNAM-"*
+
+# Set permissions
+chown -R root:root .
+find -L . \
+  \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 -o -perm 511 \) \
+  -exec chmod 755 {} \; -o \
+  \( -perm 666 -o -perm 664 -o -perm 600 -o -perm 444 -o -perm 440 -o -perm 400 \) \
+  -exec chmod 644 {} \;
+
+# Patch CMake configuration for standalone non-systemd build
+sed -i '1i enable_language(C)' CMakeLists.txt
+sed -i 's|spdlog::spdlog fmt::fmt rt|spdlog::spdlog_header_only fmt::fmt-header-only rt|g' CMakeLists.txt
+sed -i '/add_executable(ananicy-cpp/i list(APPEND SOURCES libananicycpp_netlink/src/netlink_program_utils.c)\ninclude_directories(libananicycpp_netlink/include)' CMakeLists.txt
+
+echo "Building ananicy-cpp with CMake..."
+CFLAGS="$SLKCFLAGS" \
+CXXFLAGS="$SLKCFLAGS" \
+cmake -B build \
+  -DCMAKE_INSTALL_PREFIX=/usr \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DENABLE_SYSTEMD=OFF \
+  -DVERSION_STRING="$VERSION"
+
+cmake --build build -j$(nproc)
+DESTDIR="$PKG" cmake --install build
+
+# Install CachyOS Ananicy Rules
+mkdir -p "$PKG/etc/ananicy.d"
+echo "Extracting CachyOS rules into /etc/ananicy.d/..."
+cd "$TMP"
+rm -rf ananicy-rules-master
+tar -xf "$RULES_TARBALL"
+cp -a ananicy-rules-master/* "$PKG/etc/ananicy.d/" 2>/dev/null || true
+rm -rf "$PKG/etc/ananicy.d/.git"* "$PKG/etc/ananicy.d/.github" 2>/dev/null || true
+
+# Rename ananicy.conf to ananicy.conf.new for safe Slackware upgrades
+if [ -f "$PKG/etc/ananicy.d/ananicy.conf" ]; then
+  mv "$PKG/etc/ananicy.d/ananicy.conf" "$PKG/etc/ananicy.d/ananicy.conf.new"
+fi
+
+# Install SysVinit Service
+mkdir -p "$PKG/etc/rc.d"
+install -m 755 "$CWD/rc.ananicy-cpp" "$PKG/etc/rc.d/rc.ananicy-cpp.new"
+
+# Documentation
+mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION"
+cd "$TMP/$PRGNAM-"*
+cp -a LICENSE README.md "$PKG/usr/doc/$PRGNAM-$VERSION/" 2>/dev/null || true
+cat "$CWD/slack-desc" > "$PKG/usr/doc/$PRGNAM-$VERSION/slack-desc"
+
+# Package Install Script
+mkdir -p "$PKG/install"
+cat "$CWD/slack-desc" > "$PKG/install/slack-desc"
+cat "$CWD/doinst.sh" > "$PKG/install/doinst.sh"
+
+# Create Slackware Package
+cd "$PKG"
+/sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD.txz"
+
+echo "Package created successfully: $OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD.txz"

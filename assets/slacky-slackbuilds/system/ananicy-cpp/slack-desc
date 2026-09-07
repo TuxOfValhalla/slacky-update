@@ -1,0 +1,19 @@
+# HOW TO EDIT THIS FILE:
+# The "handy ruler" below makes it easier to edit a package description.
+# Line up the first '|' above the ':' following the base package name, and
+# the '|' on the right side marks the last column you can put a character in.
+# You must make exactly 11 lines for the formatting to be correct.  It's also
+# customary to leave one space after the ':' except on otherwise blank lines.
+
+           |-----handy-ruler------------------------------------------------------|
+ananicy-cpp: ananicy-cpp (Auto Nice daemon in C++ with CachyOS gaming rules)
+ananicy-cpp:
+ananicy-cpp: ananicy-cpp is a high-performance C++ rewrite of Ananicy (ANother
+ananicy-cpp: Auto NICe daemon) designed to manage process priority and latency.
+ananicy-cpp:
+ananicy-cpp: It automatically assigns optimal CPU scheduler priorities, IO nice,
+ananicy-cpp: and cgroups to games and latency-sensitive desktop applications.
+ananicy-cpp:
+ananicy-cpp: Bundled with the latest CachyOS gaming rules and SysVinit rc.ananicy-cpp.
+ananicy-cpp: Homepage: https://gitlab.com/ananicy-cpp/ananicy-cpp
+ananicy-cpp:

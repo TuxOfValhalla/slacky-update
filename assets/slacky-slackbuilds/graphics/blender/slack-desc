@@ -1,0 +1,19 @@
+# HOW TO EDIT THIS FILE:
+# The "handy ruler" below makes it easier to edit a package description.  Line
+# up the first '|' above the ':' following the base package name, and the '|'
+# on the right side marks the last column you can put a character in.  You must
+# make exactly 11 lines for the formatting to be correct.  It's also
+# customary to leave one space after the ':' except on otherwise blank lines.
+
+       |-----handy-ruler------------------------------------------------------|
+blender: blender (3D Content Creation Suite)
+blender:
+blender: Blender is the free and open source 3D creation suite. It supports
+blender: the entirety of the 3D pipeline - modeling, rigging, animation,
+blender: simulation, rendering, compositing and motion tracking, video editing
+blender: and 2D animation pipeline.
+blender:
+blender: This package integrates NVIDIA RTX OptiX/CUDA raytracing, AMD ROCm HIP,
+blender: and native 3Dconnexion SpaceMouse 6-DoF navigation.
+blender:
+blender: Homepage: https://www.blender.org/

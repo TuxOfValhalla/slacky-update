@@ -1,0 +1,61 @@
+#!/bin/sh
+#
+# /etc/rc.d/rc.openrgb - Headless OpenRGB SDK Server Daemon
+#
+
+PIDFILE="/run/openrgb.pid"
+BIN="/usr/bin/openrgb"
+
+openrgb_start() {
+  if [ -x "$BIN" ]; then
+    echo "Starting OpenRGB SDK Server: $BIN"
+    rm -f "$PIDFILE"
+    # Load i2c module if missing
+    modprobe i2c-dev 2>/dev/null || true
+    $BIN --server --noautoconnect > /var/log/openrgb-server.log 2>&1 &
+    echo $! > "$PIDFILE"
+  fi
+}
+
+openrgb_stop() {
+  echo "Stopping OpenRGB SDK Server..."
+  if [ -f "$PIDFILE" ]; then
+    kill -TERM $(cat "$PIDFILE") 2>/dev/null
+    rm -f "$PIDFILE"
+  else
+    pkill -TERM -f "$BIN --server" 2>/dev/null
+  fi
+}
+
+openrgb_restart() {
+  openrgb_stop
+  sleep 1
+  openrgb_start
+}
+
+openrgb_status() {
+  if pgrep -f "$BIN --server" > /dev/null 2>&1; then
+    echo "OpenRGB SDK Server is running."
+  else
+    echo "OpenRGB SDK Server is NOT running."
+  fi
+}
+
+case "$1" in
+  'start')
+    openrgb_start
+    ;;
+  'stop')
+    openrgb_stop
+    ;;
+  'restart')
+    openrgb_restart
+    ;;
+  'status')
+    openrgb_status
+    ;;
+  *)
+    echo "Usage: $0 {start|stop|restart|status}"
+    exit 1
+    ;;
+esac

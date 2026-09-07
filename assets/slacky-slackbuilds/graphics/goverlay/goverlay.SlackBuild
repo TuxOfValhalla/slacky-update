@@ -1,0 +1,127 @@
+#!/usr/bin/env bash
+#
+# Slackware build script for GOverlay
+# Maintained by TuxOfValhalla <agnar1984@gmail.com>
+#
+
+set -e
+
+PRGNAM=goverlay
+VERSION=${VERSION:-1.9.0}
+BUILD=${BUILD:-1_slacky}
+TAG=${TAG:-_slacky}
+
+if [ -z "$ARCH" ]; then
+  case "$(uname -m)" in
+    i?86) ARCH=i586 ;;
+    arm*) ARCH=arm ;;
+    *) ARCH=$(uname -m) ;;
+  esac
+fi
+
+if [ "$ARCH" != "x86_64" ]; then
+  echo "GOverlay package is only available for x86_64."
+  exit 1
+fi
+
+CWD=$(pwd)
+TMP=${TMP:-/tmp/SBo}
+PKG=$TMP/package-$PRGNAM
+OUTPUT=${OUTPUT:-/tmp}
+
+set -euo pipefail
+
+# Auto-resolve latest version if specified as "latest"
+if [ "$VERSION" = "latest" ]; then
+  echo "Fetching latest version tag from GitHub API..."
+  VERSION=$(curl -sSL "https://api.github.com/repos/benjamimgois/goverlay/releases/latest" 2>/dev/null | python3 -c "import sys, json; print(json.load(sys.stdin).get('tag_name','1.9.0').lstrip('v'))" 2>/dev/null || echo "1.9.0")
+  echo "Resolved latest version: $VERSION"
+fi
+
+DEB_PKG="$CWD/goverlay-$VERSION-x86_64.deb"
+if [ ! -f "$DEB_PKG" ]; then
+  DOWNLOAD_URL="https://github.com/benjamimgois/goverlay/releases/download/${VERSION}/goverlay-${VERSION}-x86_64.deb"
+  echo "Downloading $DOWNLOAD_URL..."
+  curl -sSL -o "$DEB_PKG" "$DOWNLOAD_URL"
+fi
+
+rm -rf "$PKG"
+mkdir -p "$TMP" "$PKG" "$OUTPUT"
+cd "$TMP"
+rm -rf "goverlay-pkg-$VERSION"
+mkdir -p "goverlay-pkg-$VERSION"
+cd "goverlay-pkg-$VERSION"
+
+echo "Extracting $(basename "$DEB_PKG")..."
+ar x "$DEB_PKG"
+
+DATA_TAR=$(ls data.tar.* 2>/dev/null || true)
+if [ -n "$DATA_TAR" ]; then
+  tar -xf "$DATA_TAR" -C "$PKG/"
+fi
+
+# Move /usr/lib to /usr/lib64 on x86_64 if needed
+if [ -d "$PKG/usr/lib" ] && [ ! -d "$PKG/usr/lib64" ]; then
+  mv "$PKG/usr/lib" "$PKG/usr/lib64"
+elif [ -d "$PKG/usr/lib" ] && [ -d "$PKG/usr/lib64" ]; then
+  cp -a "$PKG/usr/lib/." "$PKG/usr/lib64/"
+  rm -rf "$PKG/usr/lib"
+fi
+
+# Bundle required libQt6Pas Pascal Qt6 library (eliminates Lazarus build dependencies for users)
+QT6PAS_RPM="$CWD/libqt6pas6-6.2.10-1.x86_64.rpm"
+if [ ! -f "$QT6PAS_RPM" ]; then
+  echo "Downloading libQt6Pas runtime library..."
+  curl -sSL -o "$QT6PAS_RPM" "https://github.com/davidbannon/libqt6pas/releases/download/v6.2.10/libqt6pas6-6.2.10-1.x86_64.rpm"
+fi
+if [ -f "$QT6PAS_RPM" ]; then
+  echo "Extracting bundled libQt6Pas runtime into package..."
+  ( cd "$PKG" && rpm2cpio "$QT6PAS_RPM" | cpio -idmv >/dev/null 2>&1 || true )
+fi
+
+# Fix launcher script for Slackware 64-bit path
+if [ -f "$PKG/usr/bin/goverlay" ]; then
+  sed -i 's|/usr/lib/goverlay|/usr/lib64/goverlay|g' "$PKG/usr/bin/goverlay"
+  chmod 755 "$PKG/usr/bin/goverlay"
+fi
+
+# Maintain compatibility symlinks
+mkdir -p "$PKG/usr/lib"
+ln -sf /usr/lib64/goverlay "$PKG/usr/lib/goverlay"
+ln -sf /usr/lib64/bgmod "$PKG/usr/lib/bgmod"
+ln -sf /usr/lib64/pascube "$PKG/usr/lib/pascube"
+
+# Set permissions
+cd "$PKG"
+chown -R root:root .
+find -L . \
+  \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 -o -perm 511 \) \
+  -exec chmod 755 {} \; -o \
+  \( -perm 666 -o -perm 664 -o -perm 600 -o -perm 444 -o -perm 440 -o -perm 400 \) \
+  -exec chmod 644 {} \;
+
+[ -f "$PKG/usr/bin/goverlay" ] && chmod 755 "$PKG/usr/bin/goverlay"
+[ -d "$PKG/usr/lib64" ] && chmod -R 755 "$PKG/usr/lib64"
+
+# Icons installation
+if [ -f "$PKG/usr/share/goverlay/assets/icons/goverlay.png" ]; then
+  mkdir -p "$PKG/usr/share/pixmaps"
+  mkdir -p "$PKG/usr/share/icons/hicolor/256x256/apps"
+  cp "$PKG/usr/share/goverlay/assets/icons/goverlay.png" "$PKG/usr/share/pixmaps/goverlay.png"
+  cp "$PKG/usr/share/goverlay/assets/icons/goverlay.png" "$PKG/usr/share/icons/hicolor/256x256/apps/goverlay.png"
+fi
+
+# Documentation
+mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION"
+cat "$CWD/slack-desc" > "$PKG/usr/doc/$PRGNAM-$VERSION/slack-desc"
+
+# Package Install Script
+mkdir -p "$PKG/install"
+cat "$CWD/slack-desc" > "$PKG/install/slack-desc"
+cat "$CWD/doinst.sh" > "$PKG/install/doinst.sh"
+
+# Create Slackware Package
+cd "$PKG"
+/sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD.txz"
+
+echo "Package created successfully: $OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD.txz"

@@ -118,10 +118,26 @@ sign_modules_for_kernel() {
 
     local sign_workdir
     sign_workdir=$(mktemp -d /tmp/slacky-sign-XXXXXX)
+    trap 'sudo rm -rf "${sign_workdir:-}" 2>/dev/null || true' INT TERM
+
+    local expected_cn=""
+    if [ -f "${cert_for_sign}" ]; then
+        expected_cn=$(openssl x509 -in "${cert_for_sign}" -noout -subject 2>/dev/null | sed -E 's/.*CN[[:space:]]*=[[:space:]]*//' | tr -d '"' || true)
+    fi
 
     local found_modules=0
+    local newly_signed=0
     while IFS= read -r mod; do
         [ -f "${mod}" ] || continue
+
+        found_modules=1
+
+        # Check if module is already signed with current MOK certificate
+        local cur_signer=""
+        cur_signer=$(modinfo -F signer "${mod}" 2>/dev/null || true)
+        if [ -n "${cur_signer}" ] && { [ -z "${expected_cn}" ] || [ "${cur_signer}" = "${expected_cn}" ]; }; then
+            continue
+        fi
 
         # If this is an uncompressed .ko, check if a compressed version exists
         if [[ "${mod}" =~ \.ko$ ]]; then
@@ -130,12 +146,11 @@ sign_modules_for_kernel() {
                 sudo rm -f "${mod}" 2>/dev/null || true
                 continue
             fi
-            found_modules=1
+            newly_signed=1
             sudo "${sign_bin}" sha256 "${MOK_KEY}" "${cert_for_sign}" "${mod}" 2>/dev/null || true
             continue
         fi
 
-        found_modules=1
         if [[ "${mod}" =~ \.ko\.zst$ ]]; then
             local base_name
             base_name=$(basename "${mod%.zst}")
@@ -145,6 +160,7 @@ sign_modules_for_kernel() {
                 sudo "${sign_bin}" sha256 "${MOK_KEY}" "${cert_for_sign}" "${sign_workdir}/${base_name}" 2>/dev/null || true
                 if sudo zstd -f -q "${sign_workdir}/${base_name}" -o "${sign_workdir}/${base_name}.zst" 2>/dev/null; then
                     sudo mv -f "${sign_workdir}/${base_name}.zst" "${mod}"
+                    newly_signed=1
                 fi
                 sudo rm -f "${sign_workdir}/${base_name}" "${sign_workdir}/${base_name}.zst" 2>/dev/null || true
             fi
@@ -156,6 +172,7 @@ sign_modules_for_kernel() {
                 sudo "${sign_bin}" sha256 "${MOK_KEY}" "${cert_for_sign}" "${sign_workdir}/${base_name}" 2>/dev/null || true
                 if sudo xz -f -q "${sign_workdir}/${base_name}" 2>/dev/null; then
                     sudo mv -f "${sign_workdir}/${base_name}.xz" "${mod}"
+                    newly_signed=1
                 fi
                 sudo rm -f "${sign_workdir}/${base_name}" "${sign_workdir}/${base_name}.xz" 2>/dev/null || true
             fi
@@ -167,17 +184,20 @@ sign_modules_for_kernel() {
                 sudo "${sign_bin}" sha256 "${MOK_KEY}" "${cert_for_sign}" "${sign_workdir}/${base_name}" 2>/dev/null || true
                 if sudo gzip -f -q "${sign_workdir}/${base_name}" 2>/dev/null; then
                     sudo mv -f "${sign_workdir}/${base_name}.gz" "${mod}"
+                    newly_signed=1
                 fi
                 sudo rm -f "${sign_workdir}/${base_name}" "${sign_workdir}/${base_name}.gz" 2>/dev/null || true
             fi
         fi
     done < <(find "${search_dirs[@]}" -name "nvidia*.ko*" 2>/dev/null || true)
 
-    sudo rm -rf "${sign_workdir}"
-    sudo depmod -a "${target_kver}" 2>/dev/null || true
-
-    if [ "${found_modules}" -eq 1 ]; then
+    sudo rm -rf "${sign_workdir}" 2>/dev/null || true
+    trap - INT TERM
+    if [ "${newly_signed}" -eq 1 ]; then
+        sudo depmod -a "${target_kver}" 2>/dev/null || true
         log_success "Applied MOK signature to kernel modules for: ${target_kver}"
+    elif [ "${found_modules}" -eq 1 ]; then
+        log_info "Kernel modules for ${target_kver} are already signed with active MOK."
     fi
 }
 

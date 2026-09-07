@@ -1,0 +1,8 @@
+#!/bin/sh
+#
+# /etc/cron.hourly/snapper-timeline - Hourly timeline snapshot for Slackware
+#
+
+if [ -x /usr/bin/snapper ]; then
+  /usr/bin/snapper --config root create --type single --cleanup-algorithm timeline --description "timeline" 2>/dev/null || true
+fi

@@ -1,0 +1,328 @@
+#!/usr/bin/env bash
+#
+# Slackware build script for DaVinci Resolve Studio (Any Version: 19.x, 21.x, 22.x...)
+# Maintained by TuxOfValhalla <agnar1984@gmail.com>
+#
+
+set -e
+
+PRGNAM=davinci-resolve-studio
+BUILD=${BUILD:-1_slacky}
+TAG=${TAG:-_slacky}
+
+case "$(uname -m)" in
+  x86_64) ARCH=x86_64 ;;
+  *) echo "Unsupported architecture $(uname -m). DaVinci Resolve is 64-bit only." ; exit 1 ;;
+esac
+
+CWD=$(pwd)
+TMP=${TMP:-/tmp/SBo}
+PKG=$TMP/package-$PRGNAM
+OUTPUT=${OUTPUT:-/tmp}
+
+set -euo pipefail
+
+# 1. Dynamic Source Discovery
+SRC_FILE=""
+if [ -n "${1:-}" ] && [ -f "$1" ]; then
+  SRC_FILE="$1"
+fi
+
+if [ -z "$SRC_FILE" ]; then
+  for f in "$CWD"/DaVinci_Resolve_Studio_*_Linux.zip \
+           "$CWD"/DaVinci_Resolve_Studio_*_Linux.run \
+           "$CWD"/DaVinci_Resolve_*_Linux.zip \
+           "$CWD"/DaVinci_Resolve_*_Linux.run \
+           /home/*/Downloads/DaVinci_Resolve_Studio_*_Linux.zip \
+           /home/*/Downloads/DaVinci_Resolve_Studio_*_Linux.run \
+           /home/*/Downloads/DaVinci_Resolve_*_Linux.zip \
+           /home/*/Downloads/DaVinci_Resolve_*_Linux.run; do
+    if [ -f "$f" ]; then
+      SRC_FILE="$f"
+      break
+    fi
+  done
+fi
+
+if [ -z "$SRC_FILE" ] || [ ! -f "$SRC_FILE" ]; then
+  echo "Error: Could not find DaVinci Resolve installer zip/run file."
+  echo "Please place DaVinci_Resolve_Studio_<VERSION>_Linux.zip in $CWD or in ~/Downloads/"
+  exit 1
+fi
+
+echo "Found source installer: $SRC_FILE"
+
+# 2. Dynamic Version Parsing
+DETECTED_VER=$(basename "$SRC_FILE" | sed -n -E 's/DaVinci_Resolve_(Studio_)?([0-9.]+)(_.*)?_Linux\.(zip|run)/\2/p')
+VERSION=${VERSION:-${DETECTED_VER:-21.0.4}}
+echo "Building DaVinci Resolve Studio version: $VERSION"
+
+rm -rf "$PKG"
+mkdir -p "$TMP" "$PKG" "$OUTPUT"
+cd "$TMP"
+rm -rf "$PRGNAM-build"
+mkdir -p "$PRGNAM-build"
+cd "$PRGNAM-build"
+
+# 3. Extract Zip if necessary
+RUN_FILE=""
+if [[ "$SRC_FILE" == *.zip ]]; then
+  echo "Extracting installer from zip..."
+  unzip -q -o "$SRC_FILE"
+  RUN_FILE=$(ls "$TMP/$PRGNAM-build"/DaVinci_Resolve_*_Linux.run 2>/dev/null | head -n 1 || true)
+elif [[ "$SRC_FILE" == *.run ]]; then
+  RUN_FILE="$SRC_FILE"
+fi
+
+if [ -z "$RUN_FILE" ] || [ ! -f "$RUN_FILE" ]; then
+  echo "Error: Could not locate .run installer file."
+  exit 1
+fi
+
+chmod +x "$RUN_FILE"
+
+echo "Extracting DaVinci Resolve AppImage payload..."
+"$RUN_FILE" --appimage-extract
+
+cd squashfs-root
+
+# Fix panel libraries
+if [ -d share/panels ]; then
+  pushd share/panels >/dev/null
+  if [ -f dvpanel-framework-linux-x86_64.tgz ]; then
+    tar -zxf dvpanel-framework-linux-x86_64.tgz
+    mkdir -p ../../libs
+    mv *.so lib/* ../../libs/ 2>/dev/null || true
+  fi
+  popd >/dev/null
+fi
+
+# Clean up installer wrapper artifacts
+rm -rf installer* AppRun* CentOSUpdate
+
+# Fix file permissions across payload
+find . -type d -exec chmod 755 {} +
+find . -type f -exec chmod u+rw,go+r {} +
+find . -type f -perm /111 -exec chmod 755 {} +
+
+# 4. Remove conflicting bundled CentOS libraries and symlink to Slackware 64-bit system libraries
+echo "Replacing conflicting bundled CentOS libraries with Slackware system symlinks..."
+rm -rf libs/libglib-2.0.so* \
+       libs/libgio-2.0.so* \
+       libs/libgmodule-2.0.so* \
+       libs/libgobject-2.0.so* \
+       libs/libgdk_pixbuf-2.0.so* \
+       libs/libc++.so* \
+       libs/libc++abi.so*
+
+ln -sf /usr/lib64/libglib-2.0.so.0 libs/libglib-2.0.so.0
+ln -sf /usr/lib64/libgio-2.0.so.0 libs/libgio-2.0.so.0
+ln -sf /usr/lib64/libgmodule-2.0.so.0 libs/libgmodule-2.0.so.0
+ln -sf /usr/lib64/libgobject-2.0.so.0 libs/libgobject-2.0.so.0
+ln -sf /usr/lib64/libgdk_pixbuf-2.0.so.0 libs/libgdk_pixbuf-2.0.so.0
+ln -sf /usr/lib64/libc++.so.1 libs/libc++.so.1
+ln -sf /usr/lib64/libc++abi.so.1 libs/libc++abi.so.1
+
+# Prepare and apply patchelf rpaths
+if command -v patchelf >/dev/null 2>&1; then
+  echo "Patching ELF rpaths for /opt/resolve..."
+  _patchelf_paths=(
+    "/opt/resolve/libs"
+    "/opt/resolve/libs/plugins/sqldrivers"
+    "/opt/resolve/libs/plugins/xcbglintegrations"
+    "/opt/resolve/libs/plugins/imageformats"
+    "/opt/resolve/libs/plugins/platforms"
+    "/opt/resolve/libs/Fusion"
+    "/opt/resolve/plugins"
+    "/opt/resolve/bin"
+    "/opt/resolve/BlackmagicRAWSpeedTest/BlackmagicRawAPI"
+    "/opt/resolve/BlackmagicRAWSpeedTest/plugins/platforms"
+    "/opt/resolve/BlackmagicRAWSpeedTest/plugins/imageformats"
+    "/opt/resolve/BlackmagicRAWPlayer/BlackmagicRawAPI"
+    "/opt/resolve/BlackmagicRAWPlayer/plugins/platforms"
+    "/opt/resolve/BlackmagicRAWPlayer/plugins/imageformats"
+    "/opt/resolve/Onboarding/plugins/platforms"
+    "/opt/resolve/DaVinci Control Panels Setup/plugins/platforms"
+    "/opt/resolve/DaVinci Control Panels Setup/AdminUtility/PlugIns/DaVinciKeyboards"
+    "/opt/resolve/DaVinci Control Panels Setup/AdminUtility/PlugIns/DaVinciPanels"
+  )
+  RPATH_STRING=$(IFS=":"; echo "${_patchelf_paths[*]}:\$ORIGIN")
+
+  while IFS= read -r -d '' elf_file; do
+    if [ -f "$elf_file" ] && file "$elf_file" | grep -q "ELF"; then
+      patchelf --set-rpath "$RPATH_STRING" "$elf_file" 2>/dev/null || true
+    fi
+  done < <(find . -type f -size -64M -print0)
+fi
+
+# Fix desktop path variables
+while IFS= read -r -d '' desk_file; do
+  sed -i "s|RESOLVE_INSTALL_LOCATION|/opt/resolve|g" "$desk_file"
+done < <(find . -type f \( -name "*.desktop" -o -name "*.directory" -o -name "*.menu" \) -print0)
+
+# Create Udev rules for Blackmagic hardware panels and keyboards
+mkdir -p share/etc/udev/rules.d
+echo 'SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTRS{idVendor}=="096e", MODE="0666"' > share/etc/udev/rules.d/99-DavinciPanel.rules
+
+# Setup desktop launcher attributes
+if [ -f share/DaVinciResolve.desktop ]; then
+  grep -q "StartupWMClass" share/DaVinciResolve.desktop || echo "StartupWMClass=resolve" >> share/DaVinciResolve.desktop
+  sed -i 's#Icon=.*#Icon=davinci-resolve#' share/DaVinciResolve.desktop
+  sed -i 's#Exec=.*#Exec=davinci-resolve-studio %u#' share/DaVinciResolve.desktop
+fi
+if [ -f share/DaVinciControlPanelsSetup.desktop ]; then
+  sed -i 's#Exec=.*#Exec=davinci-control-panels-setup#' share/DaVinciControlPanelsSetup.desktop
+  sed -i 's#Icon=.*#Icon=davinci-resolve-panels-setup#' share/DaVinciControlPanelsSetup.desktop
+fi
+if [ -f share/blackmagicraw-player.desktop ]; then
+  sed -i 's#Icon=.*#Icon=blackmagicraw-player#' share/blackmagicraw-player.desktop
+fi
+if [ -f share/blackmagicraw-speedtest.desktop ]; then
+  sed -i 's#Icon=.*#Icon=blackmagicraw-speedtest#' share/blackmagicraw-speedtest.desktop
+fi
+
+# 5. Assemble Slackware Package Tree
+mkdir -p "$PKG/opt/resolve"
+cp -a ./* "$PKG/opt/resolve/"
+
+# Create IOPlugins directory for Deliver Page Encoders (FFmpeg & AAC)
+mkdir -p "$PKG/opt/resolve/IOPlugins"
+if [ -d "$CWD/plugins" ]; then
+  cp -a "$CWD/plugins"/* "$PKG/opt/resolve/IOPlugins/" 2>/dev/null || true
+fi
+
+# Fetch FFmpeg Deliver Tab Encoder plugin if missing
+FFMPEG_PLUGIN="$PKG/opt/resolve/IOPlugins/FFmpegEncoder.dvpipeline"
+if [ ! -d "${FFMPEG_PLUGIN}" ] && [ ! -f "${FFMPEG_PLUGIN}" ]; then
+  echo "Installing FFmpeg Deliver Tab Encoder plugin..."
+  TMP_PLUGIN="/tmp/ffmpeg-encoder-plugin.tar.gz"
+  if curl -sSLf "https://github.com/EdvinNilsson/ffmpeg_encoder_plugin/releases/download/v1.1.0/FFmpegEncoder.dvpipeline.tar.gz" -o "${TMP_PLUGIN}" 2>/dev/null; then
+    tar -zxf "${TMP_PLUGIN}" -C "$PKG/opt/resolve/IOPlugins/" 2>/dev/null || true
+    rm -f "${TMP_PLUGIN}"
+  fi
+fi
+
+# BlackmagicRawAPI internal symlinks
+ln -sf "../BlackmagicRAWPlayer/BlackmagicRawAPI" "$PKG/opt/resolve/bin/BlackmagicRawAPI"
+ln -sf "../BlackmagicRAWPlayer/BlackmagicRawAPI/libBlackmagicRawAPI.so" "$PKG/opt/resolve/bin/libBlackmagicRawAPI.so"
+
+# Create robust GPU-aware X11/XWayland launcher wrapper
+mkdir -p "$PKG/usr/bin"
+cat << 'EOS' > "$PKG/usr/bin/davinci-resolve-studio"
+#!/bin/bash
+# DaVinci Resolve Studio Universal Wrapper for Slackware
+export QT_QPA_PLATFORM=xcb
+
+# 1. GPU Detection & Hardware Tuning
+PCI_GPUS=""
+if [ -x /usr/bin/lspci ]; then
+    PCI_GPUS=$(lspci -nn 2>/dev/null | grep -iE 'vga|3d|display' || true)
+fi
+
+if echo "${PCI_GPUS}" | grep -qi '\[1002:'; then
+    # AMD Radeon GPU
+    export ROC_ENABLE_PRE_VEGA=1
+    if [ -d "/opt/rocm/lib" ]; then
+        export LD_LIBRARY_PATH="/opt/rocm/lib:/opt/rocm/lib64:$LD_LIBRARY_PATH"
+    fi
+    # Auto-detect RDNA architecture overrides if necessary
+    if [ -z "${HSA_OVERRIDE_GFX_VERSION:-}" ]; then
+        if echo "${PCI_GPUS}" | grep -qiE '7[0-9]{3}'; then
+            export HSA_OVERRIDE_GFX_VERSION=11.0.0
+        elif echo "${PCI_GPUS}" | grep -qiE '6[0-9]{3}'; then
+            export HSA_OVERRIDE_GFX_VERSION=10.3.0
+        fi
+    fi
+elif echo "${PCI_GPUS}" | grep -qi '\[10de:'; then
+    # NVIDIA GeForce/RTX GPU
+    if [ -d /sys/class/power_supply ] && ls /sys/class/power_supply/BAT* >/dev/null 2>&1; then
+        export __NV_PRIME_RENDER_OFFLOAD=1
+        export __GLX_VENDOR_LIBRARY_NAME=nvidia
+        export __VK_LAYER_NV_optimus=NVIDIA_only
+    fi
+fi
+
+# 2. OpenCL & IOPlugins isolation
+export RESOLVE_SCRIPT_API="/opt/resolve/Developer/Scripting"
+export RESOLVE_SCRIPT_LIB="/opt/resolve/libs/libResolveScript.so"
+export PYTHONPATH="$PYTHONPATH:$RESOLVE_SCRIPT_API/Modules/"
+export LD_LIBRARY_PATH="/opt/resolve/libs:/opt/resolve/libs/plugins:$LD_LIBRARY_PATH"
+
+exec /opt/resolve/bin/resolve "$@"
+EOS
+
+chmod 755 "$PKG/usr/bin/davinci-resolve-studio"
+ln -sf "davinci-resolve-studio" "$PKG/usr/bin/davinci-resolve"
+ln -sf "davinci-resolve-studio" "$PKG/usr/bin/resolve"
+install -m 755 "$CWD/davinci-control-panels-setup.sh" "$PKG/usr/bin/davinci-control-panels-setup"
+
+# Install Desktop Files
+mkdir -p "$PKG/usr/share/applications"
+for d in share/DaVinciResolve.desktop \
+         share/DaVinciControlPanelsSetup.desktop \
+         share/blackmagicraw-player.desktop \
+         share/blackmagicraw-speedtest.desktop; do
+  [ -f "$d" ] && install -m 644 "$d" "$PKG/usr/share/applications/"
+done
+
+# Install Icons
+for s in 64 128 256; do
+  mkdir -p "$PKG/usr/share/icons/hicolor/${s}x${s}/apps"
+done
+mkdir -p "$PKG/usr/share/pixmaps"
+
+[ -f graphics/DV_Resolve.png ] && install -m 644 graphics/DV_Resolve.png "$PKG/usr/share/icons/hicolor/128x128/apps/davinci-resolve.png"
+[ -f graphics/DV_Resolve.png ] && install -m 644 graphics/DV_Resolve.png "$PKG/usr/share/icons/hicolor/64x64/apps/davinci-resolve.png"
+[ -f graphics/DV_Resolve.png ] && install -m 644 graphics/DV_Resolve.png "$PKG/usr/share/pixmaps/davinci-resolve.png"
+
+[ -f graphics/DV_Panels.png ] && install -m 644 graphics/DV_Panels.png "$PKG/usr/share/icons/hicolor/128x128/apps/davinci-resolve-panels-setup.png"
+[ -f graphics/DV_Panels.png ] && install -m 644 graphics/DV_Panels.png "$PKG/usr/share/pixmaps/davinci-resolve-panels-setup.png"
+
+[ -f graphics/blackmagicraw-player_256x256_apps.png ] && install -m 644 graphics/blackmagicraw-player_256x256_apps.png "$PKG/usr/share/icons/hicolor/256x256/apps/blackmagicraw-player.png"
+[ -f graphics/blackmagicraw-speedtest_256x256_apps.png ] && install -m 644 graphics/blackmagicraw-speedtest_256x256_apps.png "$PKG/usr/share/icons/hicolor/256x256/apps/blackmagicraw-speedtest.png"
+
+# Install MIME type associations
+mkdir -p "$PKG/usr/share/mime/packages"
+[ -f share/resolve.xml ] && install -m 644 share/resolve.xml "$PKG/usr/share/mime/packages/"
+
+# Install Udev rules
+mkdir -p "$PKG/lib/udev/rules.d"
+for r in share/etc/udev/rules.d/*.rules; do
+  [ -f "$r" ] && install -m 644 "$r" "$PKG/lib/udev/rules.d/"
+done
+
+# Permissions
+cd "$PKG"
+mkdir -p opt/resolve/.license \
+         opt/resolve/configs \
+         opt/resolve/DolbyVision \
+         "opt/resolve/Apple Immersive/Calibration" \
+         "var/BlackmagicDesign/DaVinci Resolve"
+
+chmod 777 opt/resolve \
+          opt/resolve/.license \
+          opt/resolve/configs \
+          opt/resolve/DolbyVision \
+          "opt/resolve/Apple Immersive" \
+          "opt/resolve/Apple Immersive/Calibration" 2>/dev/null || true
+chmod -R 777 var/BlackmagicDesign 2>/dev/null || true
+
+# Documentation
+mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION"
+[ -f "$PKG/opt/resolve/docs/License.html" ] && cp -a "$PKG/opt/resolve/docs/License.html" "$PKG/usr/doc/$PRGNAM-$VERSION/" 2>/dev/null || true
+cat "$CWD/slack-desc" > "$PKG/usr/doc/$PRGNAM-$VERSION/slack-desc"
+
+# Package Install Script
+mkdir -p "$PKG/install"
+cat "$CWD/slack-desc" > "$PKG/install/slack-desc"
+cat "$CWD/doinst.sh" > "$PKG/install/doinst.sh"
+
+# Create Slackware Package
+echo "Packaging DaVinci Resolve Studio $VERSION into Slackware .txz (this may take a few minutes)..."
+/sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD.txz"
+
+# Clean up temporary build files to conserve disk space
+echo "Cleaning up temporary build artifacts in /tmp..."
+rm -rf "$TMP/$PRGNAM-build" "$PKG"
+
+echo "Package created successfully: $OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD.txz"

@@ -1,0 +1,117 @@
+#!/usr/bin/env bash
+# ==============================================================================
+#  Slackware build script for OpenRGB (Open Source RGB Lighting Control)
+#  Maintained by TuxOfValhalla <agnar1984@gmail.com>
+# ==============================================================================
+
+set -euo pipefail
+
+PRGNAM=openrgb
+SRCNAM=OpenRGB
+VERSION=${VERSION:-1.0rc3.1}
+BUILD=${BUILD:-1_slacky}
+TAG=${TAG:-_slacky}
+
+if [ -z "${ARCH:-}" ]; then
+  case "$(uname -m)" in
+    i?86) ARCH=i586 ;;
+    arm*) ARCH=arm ;;
+    *) ARCH=$(uname -m) ;;
+  esac
+fi
+
+CWD=$(pwd)
+TMP=${TMP:-/tmp/SBo}
+PKG=$TMP/package-$PRGNAM
+OUTPUT=${OUTPUT:-/tmp}
+
+if [ "$ARCH" = "x86_64" ]; then
+  SLKCFLAGS="-O2 -fPIC"
+  LIBDIRSUFFIX="64"
+else
+  SLKCFLAGS="-O2"
+  LIBDIRSUFFIX=""
+fi
+
+rm -rf "$PKG"
+mkdir -p "$TMP" "$PKG" "$OUTPUT"
+cd "$TMP"
+rm -rf "$SRCNAM-release_candidate_$VERSION"
+tar -xf "$CWD/$SRCNAM-release_candidate_$VERSION.tar.gz"
+cd "$SRCNAM-release_candidate_$VERSION"
+
+chown -R root:root .
+find -L . \
+  \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 -o -perm 511 \) \
+  -exec chmod 755 {} \; -o \
+  \( -perm 666 -o -perm 664 -o -perm 600 -o -perm 444 -o -perm 440 -o -perm 400 \) \
+  -exec chmod 644 {} \;
+
+# Adjust udev rule destination to Slackware standard /lib/udev/rules.d/
+sed -i 's|\$\$PREFIX/lib/udev/|/lib/udev/|g' OpenRGB.pro
+sed -i 's|/usr/lib/udev/|/lib/udev/|' README.md ResourceManager.cpp 2>/dev/null || true
+
+mkdir -p build
+cd build
+qmake \
+  PREFIX=/usr \
+  QMAKE_CFLAGS="$SLKCFLAGS" \
+  QMAKE_CXXFLAGS="$SLKCFLAGS" \
+  OpenRGB.pro
+
+make -j"$(nproc)"
+make install INSTALL_ROOT="$PKG"
+
+# Install SysVinit server script
+mkdir -p "$PKG/etc/rc.d"
+install -m 755 "$CWD/rc.openrgb" "$PKG/etc/rc.d/rc.openrgb.new"
+
+# Install Autostart desktop entry for user sessions
+mkdir -p "$PKG/etc/xdg/autostart"
+install -m 644 "$CWD/openrgb-autostart.desktop" "$PKG/etc/xdg/autostart/openrgb-autostart.desktop"
+
+# Install setup helper script
+mkdir -p "$PKG/usr/bin"
+install -m 755 "$CWD/setup-openrgb.sh" "$PKG/usr/bin/setup-openrgb"
+
+# Documentation
+mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION"
+cp -a ../COPYING ../README.md "$PKG/usr/doc/$PRGNAM-$VERSION/" 2>/dev/null || true
+cat "$CWD/slack-desc" > "$PKG/usr/doc/$PRGNAM-$VERSION/slack-desc" 2>/dev/null || true
+
+# Package metadata & doinst.sh
+mkdir -p "$PKG/install"
+cat "$CWD/slack-desc" > "$PKG/install/slack-desc"
+
+cat << 'EOF_DOINST' > "$PKG/install/doinst.sh"
+config() {
+  NEW="$1"
+  OLD="$(dirname $NEW)/$(basename $NEW .new)"
+  if [ ! -r $OLD ]; then
+    cp -a $NEW $OLD
+  elif [ "$(cat $OLD | md5sum)" = "$(cat $NEW | md5sum)" ]; then
+    rm $NEW
+  fi
+}
+
+config etc/rc.d/rc.openrgb.new
+
+if [ -x /sbin/udevadm ]; then
+  /sbin/udevadm control --reload-rules 2>/dev/null || true
+  /sbin/udevadm trigger --subsystem-match=hidraw 2>/dev/null || true
+  /sbin/udevadm trigger --subsystem-match=i2c-dev 2>/dev/null || true
+fi
+
+if [ -x /usr/bin/update-desktop-database ]; then
+  /usr/bin/update-desktop-database -q /usr/share/applications 2>/dev/null || true
+fi
+if [ -x /usr/bin/gtk-update-icon-cache ]; then
+  /usr/bin/gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor 2>/dev/null || true
+fi
+EOF_DOINST
+
+# Build package
+cd "$PKG"
+/sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD.txz"
+
+echo "Package created: $OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD.txz"

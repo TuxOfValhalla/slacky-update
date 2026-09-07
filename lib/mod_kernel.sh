@@ -342,6 +342,39 @@ update_cachyos_kernels() {
 
 remove_stock_slackware_kernels() {
     validate_privileges
+
+    # HARD BOOT-VALIDATION GUARDRAIL:
+    # Ensure at least one verified, bootable CachyOS vmlinuz (>5MB) and matching initramfs/initrd (>5MB) exist before removing stock kernels
+    local valid_cachy_boot=0
+    local found_cachy_kernel=""
+    for vk in /boot/vmlinuz-*cachyos*; do
+        [ -f "${vk}" ] && [ ! -L "${vk}" ] || continue
+        local ksz
+        ksz=$(stat -c%s "${vk}" 2>/dev/null || stat -f%z "${vk}" 2>/dev/null || echo 0)
+        if [ "${ksz}" -gt 5000000 ]; then
+            local ksuffix
+            ksuffix=$(basename "${vk}" | sed 's/^vmlinuz-//')
+            for initrd_cand in "/boot/initramfs-${ksuffix}.img" "/boot/initrd-${ksuffix}.img" "/boot/initramfs-${ksuffix}" "/boot/initrd.gz"; do
+                if [ -f "${initrd_cand}" ]; then
+                    local isz
+                    isz=$(stat -c%s "${initrd_cand}" 2>/dev/null || stat -f%z "${initrd_cand}" 2>/dev/null || echo 0)
+                    if [ "${isz}" -gt 5000000 ]; then
+                        valid_cachy_boot=1
+                        found_cachy_kernel="$(basename "${vk}")"
+                        break 2
+                    fi
+                fi
+            done
+        fi
+    done
+
+    if [ "${valid_cachy_boot}" -eq 0 ]; then
+        log_error "Safety Guardrail: No verified, bootable CachyOS kernel + initramfs (>5MB) found in /boot!"
+        log_error "Stock Slackware kernels must be retained to prevent an unbootable system."
+        return 1
+    fi
+
+    log_info "Boot validation passed (Verified bootable kernel: ${found_cachy_kernel})."
     log_info "Transitioning system to Pure CachyOS Mode..."
 
     local stock_pkgs=("kernel-generic" "kernel-huge" "kernel-modules" "kernel-source")
@@ -353,7 +386,7 @@ remove_stock_slackware_kernels() {
                 local base_p
                 base_p=$(basename "${p}")
                 log_info "Removing stock Slackware package: ${base_p}..."
-                sudo /sbin/removepkg "${base_p}" 2>/dev/null || true
+                sudo "${PKG_REMOVE_CMD}" "${base_p}" 2>/dev/null || true
             done
         fi
     done
@@ -620,6 +653,7 @@ if ranked:
 
     if [ -n "${top_dog}" ] && [ -f "${top_dog}" ]; then
         log_info "Smart Boot Priority: Setting Top Dog default in GRUB (${top_dog})..."
+        echo -e "  \033[1;36m• Primary Boot Kernel (Top Dog):\033[0m \033[1;32m$(basename "${top_dog}")\033[0m"
         local grub_default_file="/etc/default/grub"
         if [ -f "${grub_default_file}" ]; then
             if grep -q "^GRUB_TOP_LEVEL=" "${grub_default_file}"; then
@@ -757,6 +791,34 @@ PYLIM
     log_success "Bootloader synchronization completed."
 }
 
+verify_cachyos_package_integrity() {
+    local archive="$1"
+    [ -f "${archive}" ] || return 1
+    if ! zstd -t "${archive}" >/dev/null 2>&1; then
+        log_error "Archive $(basename "${archive}") failed zstd CRC integrity verification!"
+        return 1
+    fi
+    if ! tar --zstd -tf "${archive}" >/dev/null 2>&1; then
+        log_error "Archive $(basename "${archive}") failed tar structure verification!"
+        return 1
+    fi
+    return 0
+}
+
+check_boot_disk_space() {
+    local min_free_mb="${1:-250}"
+    local free_kb
+    free_kb=$(df -k /boot 2>/dev/null | awk 'NR==2 {print $4}')
+    if [ -n "${free_kb}" ]; then
+        local free_mb=$(( free_kb / 1024 ))
+        if [ "${free_mb}" -lt "${min_free_mb}" ]; then
+            log_warn "Low disk space on /boot: ${free_mb} MB free (recommended: at least ${min_free_mb} MB)."
+            return 1
+        fi
+    fi
+    return 0
+}
+
 deploy_cachyos_kernel_packages() {
     local ver="$1"
     local k_url="$2"
@@ -765,6 +827,9 @@ deploy_cachyos_kernel_packages() {
     local nv_url="${5:-NONE}"
     validate_privileges
     probe_gpu_hardware
+    if ! check_boot_disk_space 250; then
+        log_warn "Proceeding with caution, but /boot partition is running very low on disk space."
+    fi
 
     local dest_dir="/var/cache/slacky-update/kernel"
     sudo mkdir -p "${dest_dir}"
@@ -780,6 +845,13 @@ deploy_cachyos_kernel_packages() {
     sudo curl -sSL -o "${k_file}" "${k_url}"
     log_info "Downloading kernel headers package (${h_filename})..."
     sudo curl -sSL -o "${h_file}" "${h_url}"
+
+    log_info "Verifying archive integrity for kernel and headers packages..."
+    if ! verify_cachyos_package_integrity "${k_file}" || ! verify_cachyos_package_integrity "${h_file}"; then
+        log_error "Kernel package integrity verification failed! Aborting deployment to prevent system corruption."
+        sudo rm -f "${k_file}" "${h_file}" 2>/dev/null || true
+        return 1
+    fi
 
     log_info "Extracting kernel package to system root..."
     sudo tar --zstd -xf "${k_file}" -C /
@@ -851,13 +923,18 @@ deploy_cachyos_kernel_packages() {
                 local dkms_file="${dest_dir}/${dkms_pkg}"
                 log_info "Downloading ${dkms_pkg}..."
                 sudo curl -sSL -o "${dkms_file}" "${cachy_base}/${dkms_pkg}"
-                sudo tar --zstd -xf "${dkms_file}" -C /
-                if command -v dkms >/dev/null 2>&1; then
-                    local dkms_ver
-                    dkms_ver=$(dkms status 2>/dev/null | grep -E '^nvidia/' | awk -F'[,/]' '{print $2}' | tr -d ' ' | head -n 1 || echo "580.178.04")
-                    log_info "Building nvidia ${dkms_ver} for kernel ${kver_full} via DKMS..."
-                    sudo dkms build -m nvidia -v "${dkms_ver}" -k "${kver_full}" 2>/dev/null || true
-                    sudo dkms install -m nvidia -v "${dkms_ver}" -k "${kver_full}" 2>/dev/null || true
+                if ! verify_cachyos_package_integrity "${dkms_file}"; then
+                    log_error "DKMS package integrity verification failed! Skipping extraction."
+                    sudo rm -f "${dkms_file}" 2>/dev/null || true
+                else
+                    sudo tar --zstd -xf "${dkms_file}" -C /
+                    if command -v dkms >/dev/null 2>&1; then
+                        local dkms_ver
+                        dkms_ver=$(dkms status 2>/dev/null | grep -E '^nvidia/' | awk -F'[,/]' '{print $2}' | tr -d ' ' | head -n 1 || echo "580.178.04")
+                        log_info "Building nvidia ${dkms_ver} for kernel ${kver_full} via DKMS..."
+                        sudo dkms build -m nvidia -v "${dkms_ver}" -k "${kver_full}" 2>/dev/null || true
+                        sudo dkms install -m nvidia -v "${dkms_ver}" -k "${kver_full}" 2>/dev/null || true
+                    fi
                 fi
             else
                 log_warn "Could not resolve nvidia-580xx-dkms package from CachyOS repository."
@@ -869,8 +946,13 @@ deploy_cachyos_kernel_packages() {
                 local nv_file="${dest_dir}/${nv_filename}"
                 log_info "Modern NVIDIA GPU detected (Turing 20-series+). Downloading prebuilt matching CachyOS NVIDIA Open driver (${nv_filename})..."
                 sudo curl -sSL -o "${nv_file}" "${nv_url}"
-                log_info "Extracting NVIDIA driver package to system root..."
-                sudo tar --zstd -xf "${nv_file}" -C /
+                if ! verify_cachyos_package_integrity "${nv_file}"; then
+                    log_error "NVIDIA driver package integrity verification failed! Skipping extraction."
+                    sudo rm -f "${nv_file}" 2>/dev/null || true
+                else
+                    log_info "Extracting NVIDIA driver package to system root..."
+                    sudo tar --zstd -xf "${nv_file}" -C /
+                fi
             fi
         fi
     fi
@@ -923,6 +1005,9 @@ generate_kernel_initramfs() {
     local kver="$1"
     validate_privileges
     probe_gpu_hardware
+    if ! check_boot_disk_space 250; then
+        log_warn "Proceeding with caution, but /boot partition is running very low on disk space."
+    fi
 
     local engine
     engine=$(detect_initramfs_engine)
@@ -951,10 +1036,16 @@ generate_kernel_initramfs() {
                 if [ -f "/boot/vmlinuz-${single_kver}" ] || [ -f "/boot/vmlinuz-generic" ] || [ -d "/lib/modules/${single_kver}/kernel" ]; then
                     local initrd_out="/boot/initramfs-${single_kver}.img"
                     log_info "Generating Dracut initramfs for kernel: ${single_kver} -> ${initrd_out}..."
-                    if sudo "${dracut_bin}" "${dracut_args[@]}" "${initrd_out}" "${single_kver}"; then
-                        # Clean up legacy mkinitrd files for this kernel ONLY after verified successful Dracut generation
-                        if [ -f "${initrd_out}" ] && [ -s "${initrd_out}" ]; then
+                    if sudo env -i PATH="/usr/local/sbin:/usr/local/bin:/sbin:/usr/sbin:/bin:/usr/bin" "${dracut_bin}" "${dracut_args[@]}" "${initrd_out}" "${single_kver}"; then
+                        # Clean up legacy mkinitrd files for this kernel ONLY after verified successful Dracut generation (>5MB)
+                        local img_sz=0
+                        if [ -f "${initrd_out}" ]; then
+                            img_sz=$(stat -c%s "${initrd_out}" 2>/dev/null || echo 0)
+                        fi
+                        if [ "${img_sz}" -gt 5000000 ]; then
                             sudo rm -f "/boot/initrd-${single_kver}.img" "/boot/initrd-${single_kver}.gz" "/boot/initrd-${single_kver}" 2>/dev/null || true
+                        else
+                            log_warn "Generated Dracut image ${initrd_out} is unexpectedly small (${img_sz} bytes). Preserving existing initrd backup."
                         fi
                     fi
                 fi
@@ -965,7 +1056,7 @@ generate_kernel_initramfs() {
                 [ -f "${img}" ] || continue
                 local img_kver
                 img_kver=$(basename "${img}" | sed -e 's/^initramfs-//' -e 's/\.img$//')
-                if [ ! -d "/lib/modules/${img_kver}" ]; then
+                if [ ! -d "/lib/modules/${img_kver}" ] && [ ! -d "/usr/lib/modules/${img_kver}" ]; then
                     log_info "Removing orphaned initramfs image: ${img}"
                     sudo rm -f "${img}" 2>/dev/null || true
                 fi
@@ -976,10 +1067,16 @@ generate_kernel_initramfs() {
         else
             local initrd_out="/boot/initramfs-${kver}.img"
             log_info "Generating Dracut initramfs for kernel: ${kver} -> ${initrd_out}..."
-            if sudo "${dracut_bin}" "${dracut_args[@]}" "${initrd_out}" "${kver}"; then
-                # Clean up legacy mkinitrd files for this kernel ONLY after verified successful Dracut generation
-                if [ -f "${initrd_out}" ] && [ -s "${initrd_out}" ]; then
+            if sudo env -i PATH="/usr/local/sbin:/usr/local/bin:/sbin:/usr/sbin:/bin:/usr/bin" "${dracut_bin}" "${dracut_args[@]}" "${initrd_out}" "${kver}"; then
+                # Clean up legacy mkinitrd files for this kernel ONLY after verified successful Dracut generation (>5MB)
+                local img_sz=0
+                if [ -f "${initrd_out}" ]; then
+                    img_sz=$(stat -c%s "${initrd_out}" 2>/dev/null || echo 0)
+                fi
+                if [ "${img_sz}" -gt 5000000 ]; then
                     sudo rm -f "/boot/initrd-${kver}.img" "/boot/initrd-${kver}.gz" "/boot/initrd-${kver}" 2>/dev/null || true
+                else
+                    log_warn "Generated Dracut image ${initrd_out} is unexpectedly small (${img_sz} bytes). Preserving existing initrd backup."
                 fi
                 log_success "Dracut initramfs generated: ${initrd_out}"
                 return 0
@@ -991,9 +1088,11 @@ generate_kernel_initramfs() {
     else
         # Legacy Slackware mkinitrd fallback
         if [ "${kver}" = "ALL" ]; then
-            if [ -x "/sbin/mkinitrd_command_generator.sh" ]; then
+            local gen_script
+            gen_script=$(command -v mkinitrd_command_generator.sh 2>/dev/null || echo "/sbin/mkinitrd_command_generator.sh")
+            if [ -x "${gen_script}" ]; then
                 log_info "Regenerating mkinitrd images using Slackware generator..."
-                sudo bash <(/sbin/mkinitrd_command_generator.sh) 2>/dev/null || true
+                sudo bash <("${gen_script}") 2>/dev/null || true
             elif [ -d "/lib/modules" ]; then
                 for kdir in /lib/modules/*; do
                     [ -d "${kdir}" ] || continue
@@ -1053,9 +1152,9 @@ generate_legacy_mkinitrd() {
         root_param="UUID=${root_uuid}"
     fi
 
-    if ! sudo /sbin/mkinitrd -c -k "${kver}" -m "${combined_modules}" -f "${root_fs}" -r "${root_param}" ${ucode_opt} -o "${initrd_out}"; then
+    if ! sudo "${MKINITRD_CMD}" -c -k "${kver}" -m "${combined_modules}" -f "${root_fs}" -r "${root_param}" ${ucode_opt} -o "${initrd_out}"; then
         log_warn "Standard mkinitrd completed with warnings. Running fallback..."
-        sudo /sbin/mkinitrd -c -k "${kver}" -o "${initrd_out}"
+        sudo "${MKINITRD_CMD}" -c -k "${kver}" -o "${initrd_out}"
     fi
 
     log_success "Initrd generated: ${initrd_out}"

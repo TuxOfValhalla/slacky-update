@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+#
+# Slackware build script for grub-btrfs (GRUB boot menu snapshots integration)
+# Maintained by TuxOfValhalla <agnar1984@gmail.com>
+#
+
+set -e
+
+PRGNAM=grub-btrfs
+VERSION=${VERSION:-4.14}
+BUILD=${BUILD:-1_slacky}
+TAG=${TAG:-_slacky}
+
+if [ -z "$ARCH" ]; then
+  case "$(uname -m)" in
+    i?86) ARCH=i586 ;;
+    arm*) ARCH=arm ;;
+    *) ARCH=$(uname -m) ;;
+  esac
+fi
+
+CWD=$(pwd)
+TMP=${TMP:-/tmp/SBo}
+PKG=$TMP/package-$PRGNAM
+OUTPUT=${OUTPUT:-/tmp}
+
+set -euo pipefail
+
+rm -rf "$PKG"
+mkdir -p "$TMP" "$PKG" "$OUTPUT"
+cd "$TMP"
+rm -rf "$PRGNAM-$VERSION"
+
+TARBALL=""
+for candidate in "$CWD/$PRGNAM-$VERSION.tar.gz" \
+                 "$CWD/$PRGNAM-v$VERSION.tar.gz" \
+                 "$CWD/v$VERSION.tar.gz" \
+                 "$CWD/$VERSION.tar.gz"; do
+  if [ -f "$candidate" ]; then
+    TARBALL="$candidate"
+    break
+  fi
+done
+
+if [ -z "$TARBALL" ]; then
+  TARBALL="$CWD/$PRGNAM-$VERSION.tar.gz"
+  DOWNLOAD_URL="https://github.com/Antynea/grub-btrfs/archive/refs/tags/v${VERSION}.tar.gz"
+  echo "Downloading $DOWNLOAD_URL..."
+  curl -sSL -o "$TARBALL" "$DOWNLOAD_URL"
+fi
+
+echo "Extracting $(basename "$TARBALL")..."
+tar -xf "$TARBALL"
+
+cd "$PRGNAM-$VERSION"
+
+# Set permissions
+chown -R root:root .
+find -L . \
+  \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 -o -perm 511 \) \
+  -exec chmod 755 {} \; -o \
+  \( -perm 666 -o -perm 664 -o -perm 600 -o -perm 444 -o -perm 440 -o -perm 400 \) \
+  -exec chmod 644 {} \;
+
+# Install GRUB menu generator script
+mkdir -p "$PKG/etc/grub.d"
+install -m 755 41_snapshots-btrfs "$PKG/etc/grub.d/41_snapshots-btrfs"
+
+# Install configuration file
+mkdir -p "$PKG/etc/default/grub-btrfs"
+install -m 644 config "$PKG/etc/default/grub-btrfs/config.new"
+
+# Install daemon binary
+mkdir -p "$PKG/usr/bin"
+install -m 755 grub-btrfsd "$PKG/usr/bin/grub-btrfsd"
+
+# Install Slackware SysVinit Service
+mkdir -p "$PKG/etc/rc.d"
+install -m 755 "$CWD/rc.grub-btrfsd" "$PKG/etc/rc.d/rc.grub-btrfsd.new"
+
+# Install Man Pages
+mkdir -p "$PKG/usr/man/man8"
+if [ -f manpages/grub-btrfs.8.man ]; then
+  install -m 644 manpages/grub-btrfs.8.man "$PKG/usr/man/man8/grub-btrfs.8"
+fi
+if [ -f manpages/grub-btrfsd.8.man ]; then
+  install -m 644 manpages/grub-btrfsd.8.man "$PKG/usr/man/man8/grub-btrfsd.8"
+fi
+find "$PKG/usr/man" -type f -exec gzip -9 {} \; 2>/dev/null || true
+
+# Documentation
+mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION"
+cp -a LICENSE README.md "$PKG/usr/doc/$PRGNAM-$VERSION/" 2>/dev/null || true
+cat "$CWD/slack-desc" > "$PKG/usr/doc/$PRGNAM-$VERSION/slack-desc"
+
+# Package Install Script
+mkdir -p "$PKG/install"
+cat "$CWD/slack-desc" > "$PKG/install/slack-desc"
+cat "$CWD/doinst.sh" > "$PKG/install/doinst.sh"
+
+# Create Slackware Package
+cd "$PKG"
+/sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD.txz"
+
+echo "Package created successfully: $OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD.txz"

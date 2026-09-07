@@ -1,0 +1,9 @@
+spacenavd (free driver for 3Dconnexion 6DoF devices)
+
+spacenavd is a daemon that enables 3Dconnexion SpaceMouse and SpaceNavigator
+devices under Linux.
+
+To start the daemon on boot, add the following to /etc/rc.d/rc.local:
+  if [ -x /etc/rc.d/rc.spacenavd ]; then
+    /etc/rc.d/rc.spacenavd start
+  fi
