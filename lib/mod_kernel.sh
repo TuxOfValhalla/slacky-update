@@ -170,26 +170,6 @@ else:
 " 2>/dev/null || echo "NONE"
 }
 
-compare_versions_strictly_greater() {
-    local target="$1"
-    local reference="$2"
-
-    python3 -c "
-import sys, re
-
-def parse_ver(v_str):
-    return [int(x) for x in re.findall(r'\d+', v_str.split('-cachyos')[0])]
-
-try:
-    target_parts = parse_ver('$target')
-    ref_parts = parse_ver('$reference')
-    if target_parts > ref_parts:
-        sys.exit(0)
-except Exception:
-    pass
-sys.exit(1)
-" && echo "true" || echo "false"
-}
 
 check_cachyos_upstream_flavor() {
     local flavor="${1:-standard}"
@@ -229,18 +209,57 @@ check_cachyos_upstream_flavor() {
 
     for repo_url in "${repo_urls[@]}"; do
         local result
-        result=$(curl -sSL -m 15 "${repo_url}" 2>/dev/null | python3 -c "
-import re, sys
+        result=$(python3 - "${repo_url}" "${k_prefix}" "${h_prefix}" << 'PYKERNELFETCH'
+import re, sys, os, time, urllib.request, hashlib
 
-html = sys.stdin.read()
+repo_url = sys.argv[1]
+k_pref = sys.argv[2]
+h_pref = sys.argv[3]
+nv_pref = k_pref + '-nvidia-open'
+
+def get_cache_dir():
+    for d in ['/var/cache/slacky-update', os.path.expanduser('~/.cache/slacky-update'), '/tmp/slacky-update-cache']:
+        try:
+            os.makedirs(d, exist_ok=True)
+            test_f = os.path.join(d, '.write_test')
+            with open(test_f, 'w') as f: f.write('1')
+            os.remove(test_f)
+            return d
+        except Exception:
+            continue
+    return '/tmp'
+
+cache_dir = get_cache_dir()
+
+def fetch_url_cached(url, cdir, ttl=1800):
+    url_hash = hashlib.sha256(url.encode('utf-8')).hexdigest()[:16]
+    cache_file = os.path.join(cdir, f'repo_idx_{url_hash}.html')
+    now = time.time()
+    if os.path.exists(cache_file):
+        try:
+            mtime = os.path.getmtime(cache_file)
+            if (now - mtime) < ttl:
+                with open(cache_file, 'r', encoding='utf-8', errors='ignore') as f:
+                    return f.read()
+        except Exception:
+            pass
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64)'})
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            content = resp.read().decode('utf-8', errors='ignore')
+            try:
+                with open(cache_file, 'w', encoding='utf-8', errors='ignore') as f:
+                    f.write(content)
+            except Exception:
+                pass
+            return content
+    except Exception:
+        return ''
+
+html = fetch_url_cached(repo_url, cache_dir)
 if not html:
     print('NONE NONE NONE NONE')
     sys.exit(0)
-
-repo_url = '${repo_url}'
-k_pref = '${k_prefix}'
-h_pref = '${h_prefix}'
-nv_pref = k_pref + '-nvidia-open'
 
 k_matches = re.findall(r'href=[\'\"]?(' + re.escape(k_pref) + r'-([0-9]+\.[0-9]+[a-zA-Z0-9\._]*-[0-9]+)[^\'\">]*\.pkg\.tar\.zst)', html)
 h_matches = re.findall(r'href=[\'\"]?(' + re.escape(h_pref) + r'-([0-9]+\.[0-9]+[a-zA-Z0-9\._]*-[0-9]+)[^\'\">]*\.pkg\.tar\.zst)', html)
@@ -268,7 +287,8 @@ if nv_matches:
         pass
 
 print(f'{latest_ver} {repo_url}{k_pkg} {repo_url}{h_pkg} {nv_url}')
-" 2>/dev/null || echo "NONE NONE NONE NONE")
+PYKERNELFETCH
+)
 
         if [ "${result}" != "NONE NONE NONE NONE" ] && [ -n "${result}" ]; then
             echo "${result}"
@@ -495,6 +515,214 @@ prompt_stock_kernel_removal_if_eligible() {
     fi
 }
 
+manage_kernel_removal_interactive() {
+    validate_privileges
+
+    while true; do
+        local kernels_raw
+        kernels_raw=$(python3 -c "
+import os
+
+def get_dir_size(path):
+    if not os.path.exists(path):
+        return 0
+    if os.path.isfile(path) and not os.path.islink(path):
+        return os.path.getsize(path)
+    total = 0
+    for root, dirs, files in os.walk(path):
+        for f in files:
+            fp = os.path.join(root, f)
+            if not os.path.islink(fp) and os.path.exists(fp):
+                try:
+                    total += os.path.getsize(fp)
+                except Exception:
+                    pass
+    return total
+
+def format_sz(bytes_sz):
+    mb = bytes_sz / (1024 * 1024)
+    return f'{mb:.0f} MB' if mb >= 1 else f'{bytes_sz / 1024:.0f} KB'
+
+active = os.uname().release
+kernels = {}
+
+if os.path.exists('/boot'):
+    for f in os.listdir('/boot'):
+        if f.startswith('vmlinuz-') and not os.path.islink(os.path.join('/boot', f)):
+            k = f.replace('vmlinuz-', '')
+            if k and k not in ('generic', 'huge'):
+                kernels[k] = {'type': 'cachyos' if 'cachyos' in k else 'stock'}
+
+for mdir in ('/lib/modules', '/usr/lib/modules'):
+    if os.path.exists(mdir):
+        for d in os.listdir(mdir):
+            if os.path.isdir(os.path.join(mdir, d)) and not os.path.islink(os.path.join(mdir, d)):
+                if d not in kernels:
+                    kernels[d] = {'type': 'cachyos' if 'cachyos' in d else 'stock'}
+
+for k, data in sorted(kernels.items()):
+    sz = 0
+    sz += get_dir_size(f'/boot/vmlinuz-{k}')
+    sz += get_dir_size(f'/boot/initramfs-{k}.img')
+    sz += get_dir_size(f'/boot/initrd-{k}.img')
+    sz += get_dir_size(f'/lib/modules/{k}')
+    sz += get_dir_size(f'/usr/lib/modules/{k}')
+    sz += get_dir_size(f'/usr/src/linux-headers-{k}')
+    
+    k_type = data['type']
+    is_active = (k == active)
+    print(f'{k}|{k_type}|{format_sz(sz)}|{1 if is_active else 0}')
+" 2>/dev/null || true)
+
+        if [ -z "${kernels_raw}" ]; then
+            log_info "No installed kernels detected."
+            return 0
+        fi
+
+        local k_list=()
+        local k_types=()
+        local k_sizes=()
+        local k_active=()
+        local idx=0
+
+        echo ""
+        echo -e "${CYAN}============================================================${RESET}"
+        echo -e "${YELLOW}${BOLD}$(_ KERNEL_REMOVAL_TITLE)${RESET}"
+        echo -e "${CYAN}============================================================${RESET}"
+
+        while IFS='|' read -r k_name k_type k_sz k_act; do
+            [ -n "${k_name}" ] || continue
+            idx=$((idx + 1))
+            k_list+=("${k_name}")
+            k_types+=("${k_type}")
+            k_sizes+=("${k_sz}")
+            k_active+=("${k_act}")
+
+            local status_badge=""
+            if [ "${k_act}" -eq 1 ]; then
+                status_badge="${GREEN}${BOLD}[ACTIVE - CANNOT REMOVE]${RESET}"
+            elif [ "${k_type}" = "stock" ]; then
+                status_badge="${BLUE}[STOCK]${RESET}"
+            else
+                status_badge="${CYAN}[CACHY]${RESET}"
+            fi
+
+            echo -e "  \033[1;33m${idx}.\033[0m ${k_name} (${k_sizes[$((idx-1))]}) ${status_badge}"
+        done <<< "${kernels_raw}"
+
+        local exit_idx=$((idx + 1))
+        echo -e "  \033[1;33m${exit_idx}.\033[0m $(_ CACHY_PICKER_EXIT | sed -E 's/^[0-9]+\.\s*//')"
+        echo ""
+        echo -n "$(_ SELECT_OPERATION_RANGE range="1-${exit_idx}") "
+        local sel
+        read -r sel || sel="${exit_idx}"
+
+        if [ "${sel}" = "${exit_idx}" ] || [ -z "${sel}" ]; then
+            return 0
+        fi
+
+        if ! [[ "${sel}" =~ ^[0-9]+$ ]] || [ "${sel}" -lt 1 ] || [ "${sel}" -gt "${idx}" ]; then
+            log_warn "Invalid selection."
+            continue
+        fi
+
+        local chosen_k="${k_list[$((sel-1))]}"
+        local chosen_type="${k_types[$((sel-1))]}"
+        local chosen_is_active="${k_active[$((sel-1))]}"
+
+        if [ "${chosen_is_active}" -eq 1 ]; then
+            echo ""
+            log_error "Safety Guardrail: Cannot remove the active booted kernel (${chosen_k})!"
+            echo -e "${YELLOW}Please reboot your system into another kernel before removing this version.${RESET}"
+            echo ""
+            read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+            continue
+        fi
+
+        if [ "${chosen_type}" = "stock" ]; then
+            # Stock Slackware kernel guardrail: CachyOS LTS must be installed on the system!
+            local has_cachy_lts=0
+            if get_installed_cachyos_flavors | grep -qw "lts"; then
+                has_cachy_lts=1
+            fi
+
+            if [ "${has_cachy_lts}" -eq 0 ]; then
+                echo ""
+                log_error "Safety Guardrail: Slackware stock kernels cannot be removed unless CachyOS LTS is installed as a fallback!"
+                echo -e "${YELLOW}Install 'linux-cachyos-lts' first before removing official stock Slackware kernels.${RESET}"
+                echo ""
+                read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                continue
+            fi
+
+            echo ""
+            echo -e "${YELLOW}${BOLD}Are you sure you want to remove Slackware stock kernel packages?${RESET}"
+            echo -e "${CYAN}(Note: kernel-headers will be safely preserved for build compatibility)${RESET}"
+            read -r -p "Confirm removal [y/N]: " conf_stock
+            conf_stock=${conf_stock:-N}
+            if [[ "${conf_stock}" =~ ^[YyJjSsOo]$ ]]; then
+                remove_stock_slackware_kernels
+            fi
+            echo ""
+            read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+            continue
+        fi
+
+        # CachyOS kernel removal
+        local has_stock_now=0
+        if ls /var/log/packages/kernel-generic-* /var/log/packages/kernel-modules-* 2>/dev/null | grep -q 'kernel-'; then
+            has_stock_now=1
+        fi
+
+        echo ""
+        echo -e "${YELLOW}${BOLD}Are you sure you want to completely remove kernel ${chosen_k}?${RESET}"
+        read -r -p "Confirm removal [y/N]: " conf_k
+        conf_k=${conf_k:-N}
+        if [[ ! "${conf_k}" =~ ^[YyJjSsOo]$ ]]; then
+            continue
+        fi
+
+        log_info "Purging kernel artifacts for: ${chosen_k}..."
+        sudo rm -f "/boot/vmlinuz-${chosen_k}" 2>/dev/null || true
+        sudo rm -f "/boot/initramfs-${chosen_k}.img"* 2>/dev/null || true
+        sudo rm -f "/boot/initrd-${chosen_k}.img"* 2>/dev/null || true
+        sudo rm -f "/boot/initrd-${chosen_k}.gz"* 2>/dev/null || true
+        sudo rm -rf "/lib/modules/${chosen_k}" 2>/dev/null || true
+        sudo rm -rf "/usr/lib/modules/${chosen_k}" 2>/dev/null || true
+        sudo rm -rf "/usr/src/linux-headers-${chosen_k}" 2>/dev/null || true
+
+        local dkms_bin
+        dkms_bin=$(command -v dkms 2>/dev/null || echo "/usr/sbin/dkms")
+        if [ -x "${dkms_bin}" ]; then
+            sudo "${dkms_bin}" remove -k "${chosen_k}" --all >/dev/null 2>&1 || true
+        fi
+
+        log_success "Kernel ${chosen_k} removed successfully."
+
+        # Check if no CachyOS kernels remain
+        local remaining_cachy_now
+        remaining_cachy_now=$(get_installed_cachyos_flavors)
+
+        if [ -z "${remaining_cachy_now}" ] && [ "${has_stock_now}" -eq 0 ]; then
+            log_warn "No kernels remain! Automatically restoring official Slackware stock kernel..."
+            restore_stock_slackware_kernels
+            if [ "${HAS_NVIDIA}" = "true" ] && command -v rollback_cachyos_to_slackware_nvidia >/dev/null 2>&1; then
+                log_info "Migrating NVIDIA graphics driver to native Slackware standalone driver..."
+                rollback_cachyos_to_slackware_nvidia
+            fi
+        elif [ -z "${remaining_cachy_now}" ] && [ "${has_stock_now}" -eq 1 ]; then
+            if [ "${HAS_NVIDIA}" = "true" ] && command -v rollback_cachyos_to_slackware_nvidia >/dev/null 2>&1; then
+                log_info "No CachyOS kernels remain. Migrating NVIDIA graphics driver to native Slackware standalone driver..."
+                rollback_cachyos_to_slackware_nvidia
+            fi
+        fi
+
+        sync_bootloader_configuration "$(uname -r)"
+        echo ""
+        read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+    done
+}
+
 cachyos_kernel_picker_interactive() {
     while true; do
         local st_ver bo_ver lto_ver rc_ver lts_ver
@@ -529,11 +757,11 @@ cachyos_kernel_picker_interactive() {
         echo -e "     $(_ CACHY_FLAVOR_RC)"
         echo -e "  5. \033[1;32mlinux-cachyos-lts\033[0m ${lts_tag}"
         echo -e "     $(_ CACHY_FLAVOR_LTS)"
-        echo -e "  $(_ CACHY_PICKER_RESTORE_STOCK)"
-        echo -e "  $(_ CACHY_PICKER_EXIT)"
+        echo -e "  6. $(_ CACHY_PICKER_EXIT | sed -E 's/^[0-9]+\.\s*//')"
         echo ""
-        echo -n "$(_ SELECT_OPERATION_RANGE range="1-7") "
-        read -r pchoice || pchoice="7"
+        echo -n "$(_ SELECT_OPERATION_RANGE range="1-6") "
+        local pchoice
+        read -r pchoice || pchoice="6"
 
         case "${pchoice}" in
             1)
@@ -567,12 +795,42 @@ cachyos_kernel_picker_interactive() {
                 read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
                 ;;
             6)
+                return 0
+                ;;
+            *)
+                echo -e "\n${YELLOW}$(_ INVALID_SELECTION)${RESET}"
+                sleep 1
+                ;;
+        esac
+    done
+}
+
+manage_system_kernels_interactive() {
+    while true; do
+        echo ""
+        echo -e "${CYAN}============================================================${RESET}"
+        echo -e "${YELLOW}${BOLD}$(_ KERNEL_MANAGE_SYSTEM_TITLE)${RESET}"
+        echo -e "${CYAN}============================================================${RESET}"
+        echo -e "  1. $(_ KERNEL_MANAGE_OPTION_REMOVE | sed -E 's/^[0-9]+\.\s*//')"
+        echo -e "  2. $(_ KERNEL_MANAGE_OPTION_RESTORE | sed -E 's/^[0-9]+\.\s*//')"
+        echo -e "  3. $(_ MOK_OPTION_RETURN | sed -E 's/^[0-9]+\.\s*//')"
+        echo ""
+        echo -n "$(_ SELECT_OPERATION_RANGE range="1-3") "
+        local mchoice
+        read -r mchoice || mchoice="3"
+
+        case "${mchoice}" in
+            1)
+                echo ""
+                manage_kernel_removal_interactive
+                ;;
+            2)
                 echo ""
                 restore_stock_slackware_kernels
                 echo ""
                 read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
                 ;;
-            7)
+            3)
                 return 0
                 ;;
             *)
@@ -621,6 +879,81 @@ detect_root_filesystem_details() {
     echo "${root_dev}|${root_fs}|${root_uuid}|${root_flags}"
 }
 
+ensure_grub_smart_kernel_sorting() {
+    local grub_script="/etc/grub.d/10_linux"
+    [ -f "${grub_script}" ] || return 0
+
+    if grep -q "Smart CachyOS Prioritized Sort" "${grub_script}" 2>/dev/null; then
+        return 0
+    fi
+
+    log_info "Tuning GRUB menu sorting order (CachyOS kernels prioritized on top, Slackware stock at the bottom)..."
+    python3 - << 'PYGRUB_SORT'
+import os, sys
+
+script = '/etc/grub.d/10_linux'
+if not os.path.exists(script):
+    sys.exit(0)
+
+try:
+    with open(script, 'r', encoding='utf-8') as f:
+        lines = f.readlines()
+
+    new_lines = []
+    modified = False
+    for line in lines:
+        if 'reverse_sorted_list=' in line and 'version_sort -r' in line:
+            modified = True
+            snippet = """# Smart CachyOS Prioritized Sort (slacky-update)
+if command -v python3 >/dev/null 2>&1; then
+  reverse_sorted_list=$(echo "$list" | tr ' ' '\\n' | python3 -c "
+import sys, os, re
+
+def rank(k):
+    b = os.path.basename(k)
+    tier = -50
+    if '-cachyos-bore-lto' in b or '-cachyos-lto' in b:
+        tier = 50
+    elif '-cachyos-bore' in b:
+        tier = 40
+    elif '-cachyos' in b and '-rc' not in b and '-lts' not in b:
+        tier = 30
+    elif '-cachyos-lts' in b:
+        tier = 20
+    elif '-cachyos-rc' in b:
+        tier = 10
+    elif 'vmlinuz-generic' in b or 'generic' in b:
+        tier = -40
+    elif 'vmlinuz-huge' in b or 'huge' in b:
+        tier = -60
+    nums = [int(x) for x in re.findall(r'\\d+', b)]
+    return (tier, nums)
+
+lines = [l.strip() for l in sys.stdin if l.strip()]
+ranked = sorted(lines, key=rank, reverse=True)
+print(' '.join(ranked))
+" 2>/dev/null || true)
+fi
+if [ -z "${reverse_sorted_list}" ]; then
+""" + line + "fi\n"
+            new_lines.append(snippet)
+        else:
+            new_lines.append(line)
+
+    if modified:
+        if not os.path.exists(script + '.orig'):
+            try:
+                with open(script + '.orig', 'w', encoding='utf-8') as f_orig:
+                    f_orig.writelines(lines)
+            except Exception:
+                pass
+        with open(script, 'w', encoding='utf-8') as f_out:
+            f_out.writelines(new_lines)
+except Exception:
+    pass
+PYGRUB_SORT
+}
+
 set_grub_smart_default_priority() {
     local top_dog
     top_dog=$(python3 -c "
@@ -629,15 +962,15 @@ import os, re
 def rank_kernel(k):
     tier = -2
     if '-cachyos-bore-lto' in k or '-cachyos-lto' in k:
-        tier = 4
-    elif '-cachyos-bore' in k:
         tier = 5
-    elif '-cachyos-rc' in k:
-        tier = 3
+    elif '-cachyos-bore' in k:
+        tier = 4
     elif '-cachyos-lts' in k:
+        tier = 2
+    elif '-cachyos-rc' in k:
         tier = 1
     elif '-cachyos' in k:
-        tier = 2
+        tier = 3
     elif 'vmlinuz-generic' in k:
         tier = 0
     elif 'vmlinuz-huge' in k:
@@ -737,6 +1070,7 @@ except Exception:
     pass
 PYGRUB
         fi
+        ensure_grub_smart_kernel_sorting
         set_grub_smart_default_priority
         if [ -f "/boot/grub/grub.cfg" ]; then
             log_info "Synchronizing GRUB bootloader configuration (/boot/grub/grub.cfg)..."
@@ -788,6 +1122,27 @@ PYLIM
         fi
     done
 
+    # 3. ELILO Bootloader Configuration (Standard Slackware UEFI)
+    local elilo_cfg="/boot/efi/EFI/Slackware/elilo.conf"
+    if [ -f "${elilo_cfg}" ] && [ ! -f "/boot/grub/grub.cfg" ] && [ ! -f "/boot/grub2/grub.cfg" ]; then
+        log_info "ELILO bootloader detected at ${elilo_cfg}."
+        echo -n "Would you like to sync ELILO with kernel ${kver_full}? [Y/n]: "
+        read -r reply_elilo
+        reply_elilo=${reply_elilo:-Y}
+        if [[ "${reply_elilo}" =~ ^[YyJjSsOo]$ ]]; then
+            validate_privileges
+            log_info "Deploying ${kver_full} kernel and initrd to /boot/efi/EFI/Slackware/..."
+            sudo cp -f "/boot/vmlinuz-${kver_full}" /boot/efi/EFI/Slackware/vmlinuz 2>/dev/null || true
+            sudo cp -f "/boot/${initrd_target}" /boot/efi/EFI/Slackware/initrd.gz 2>/dev/null || true
+            local elilo_bin
+            elilo_bin=$(command -v elilo 2>/dev/null || echo "/sbin/elilo")
+            if [ -x "${elilo_bin}" ]; then
+                sudo "${elilo_bin}" 2>/dev/null || true
+            fi
+            log_success "ELILO updated successfully with ${kver_full}."
+        fi
+    fi
+
     log_success "Bootloader synchronization completed."
 }
 
@@ -825,54 +1180,101 @@ deploy_cachyos_kernel_packages() {
     local h_url="$3"
     local flavor="${4:-standard}"
     local nv_url="${5:-NONE}"
-    validate_privileges
     probe_gpu_hardware
-    if ! check_boot_disk_space 250; then
-        log_warn "Proceeding with caution, but /boot partition is running very low on disk space."
-    fi
 
-    local dest_dir="/var/cache/slacky-update/kernel"
-    sudo mkdir -p "${dest_dir}"
+    local staging_dir
+    staging_dir=$(get_user_staging_dir)
+    mkdir -p "${staging_dir}"
 
     local k_filename h_filename
     k_filename=$(basename "${k_url}")
     h_filename=$(basename "${h_url}")
 
-    local k_file="${dest_dir}/${k_filename}"
-    local h_file="${dest_dir}/${h_filename}"
+    local k_file="${staging_dir}/${k_filename}"
+    local h_file="${staging_dir}/${h_filename}"
+    local k_sig_file="${staging_dir}/${k_filename}.sig"
+    local h_sig_file="${staging_dir}/${h_filename}.sig"
 
-    log_info "Downloading kernel package (${k_filename})..."
-    sudo curl -sSL -o "${k_file}" "${k_url}"
-    log_info "Downloading kernel headers package (${h_filename})..."
-    sudo curl -sSL -o "${h_file}" "${h_url}"
+    local dl_items=()
+    dl_items+=("${k_url}|${k_file}|${k_url}.sig|${k_sig_file}")
+    dl_items+=("${h_url}|${h_file}|${h_url}.sig|${h_sig_file}")
 
-    log_info "Verifying archive integrity for kernel and headers packages..."
-    if ! verify_cachyos_package_integrity "${k_file}" || ! verify_cachyos_package_integrity "${h_file}"; then
-        log_error "Kernel package integrity verification failed! Aborting deployment to prevent system corruption."
-        sudo rm -f "${k_file}" "${h_file}" 2>/dev/null || true
+    local nv_filename="" nv_file=""
+    if [ "${nv_url}" != "NONE" ] && [ -n "${nv_url}" ]; then
+        nv_filename=$(basename "${nv_url}")
+        nv_file="${staging_dir}/${nv_filename}"
+        dl_items+=("${nv_url}|${nv_file}|${nv_url}.sig|${nv_file}.sig")
+    fi
+
+    if ! download_parallel_pacman "CachyOS Kernel (${flavor})" "${dl_items[@]}"; then
+        log_error "Failed to download CachyOS kernel packages."
+        rm -f "${k_file}" "${h_file}" "${k_sig_file}" "${h_sig_file}" "${nv_file}" "${nv_file}.sig" 2>/dev/null || true
         return 1
     fi
 
-    log_info "Extracting kernel package to system root..."
+    log_info "Verifying cryptographic integrity & GPG signatures..."
+    if ! verify_cachyos_gpg_signature "${k_file}" "${k_sig_file}"; then
+        log_error "Kernel package GPG signature check failed! Aborting."
+        rm -f "${k_file}" "${h_file}" "${k_sig_file}" "${h_sig_file}" 2>/dev/null || true
+        return 1
+    fi
+    if ! verify_cachyos_gpg_signature "${h_file}" "${h_sig_file}"; then
+        log_error "Kernel headers package GPG signature check failed! Aborting."
+        rm -f "${k_file}" "${h_file}" "${k_sig_file}" "${h_sig_file}" 2>/dev/null || true
+        return 1
+    fi
+
+    if ! verify_cachyos_package_integrity "${k_file}" || ! verify_cachyos_package_integrity "${h_file}"; then
+        log_error "Kernel package integrity verification failed! Aborting deployment to prevent system corruption."
+        rm -f "${k_file}" "${h_file}" 2>/dev/null || true
+        return 1
+    fi
+
+    # Resolve exact kernel release string directly from the verified package
+    local kver_full=""
+    kver_full=$(tar --zstd -tf "${k_file}" 2>/dev/null | grep -E '^usr/lib/modules/[^/]+/$' | head -n 1 | sed -E 's|^usr/lib/modules/([^/]+)/$|\1|' || true)
+    if [ -z "${kver_full}" ]; then
+        kver_full=$(tar --zstd -tf "${k_file}" 2>/dev/null | grep -E '^usr/lib/modules/[^/]+/modules\.order' | head -n 1 | sed -E 's|^usr/lib/modules/([^/]+)/.*|\1|' || true)
+    fi
+
+    # Root transaction phase
+    validate_privileges
+    if ! check_boot_disk_space 250; then
+        log_warn "Proceeding with caution, but /boot partition is running very low on disk space."
+    fi
+
+    log_info "Deploying verified kernel package to system root..."
     sudo tar --zstd -xf "${k_file}" -C /
 
-    log_info "Extracting kernel headers package to system root..."
+    log_info "Deploying verified kernel headers package to system root..."
     sudo tar --zstd -xf "${h_file}" -C /
 
-    local kver_full=""
-    if [ "${flavor}" = "bore" ]; then
-        kver_full="${ver}-cachyos-bore"
-    elif [ "${flavor}" = "lto" ]; then
-        kver_full="${ver}-cachyos-bore-lto"
-        if [ ! -d "/usr/lib/modules/${kver_full}" ] && [ -d "/usr/lib/modules/${ver}-cachyos-lto" ]; then
-            kver_full="${ver}-cachyos-lto"
+    if [ -z "${kver_full}" ]; then
+        local ver_clean
+        ver_clean=$(echo "${ver}" | sed -E 's/-[0-9]+$//')
+        if [ "${flavor}" = "bore" ]; then
+            kver_full="${ver_clean}-cachyos-bore"
+        elif [ "${flavor}" = "lto" ]; then
+            kver_full="${ver_clean}-cachyos-bore-lto"
+            if [ ! -d "/usr/lib/modules/${kver_full}" ] && [ -d "/usr/lib/modules/${ver_clean}-cachyos-lto" ]; then
+                kver_full="${ver_clean}-cachyos-lto"
+            fi
+        elif [ "${flavor}" = "rc" ]; then
+            kver_full="${ver_clean}-cachyos-rc"
+        elif [ "${flavor}" = "lts" ]; then
+            kver_full="${ver_clean}-cachyos-lts"
+        else
+            kver_full="${ver_clean}-cachyos"
         fi
-    elif [ "${flavor}" = "rc" ]; then
-        kver_full="${ver}-cachyos-rc"
-    elif [ "${flavor}" = "lts" ]; then
-        kver_full="${ver}-cachyos-lts"
-    else
-        kver_full="${ver}-cachyos"
+    fi
+
+    # Verify matching directory in /usr/lib/modules if slight naming variation
+    if [ ! -d "/usr/lib/modules/${kver_full}" ]; then
+        local matched_dir
+        matched_dir=$(find /usr/lib/modules -maxdepth 1 -type d -name "*${flavor}*" 2>/dev/null | sort -V | tail -n 1 || true)
+        if [ -n "${matched_dir}" ] && [ -d "${matched_dir}" ]; then
+            kver_full=$(basename "${matched_dir}")
+        fi
     fi
 
     if [ -d "/usr/lib/modules/${kver_full}" ] && [ ! -d "/lib/modules/${kver_full}" ]; then
@@ -880,7 +1282,23 @@ deploy_cachyos_kernel_packages() {
         sudo ln -sf "/usr/lib/modules/${kver_full}" "/lib/modules/${kver_full}"
     fi
 
-    if [ -f "/boot/vmlinuz-linux-cachyos-bore-lto" ] && [ "${flavor}" = "lto" ]; then
+    # Resolve headers directory dynamically
+    local headers_dir=""
+    headers_dir=$(tar --zstd -tf "${h_file}" 2>/dev/null | grep -E '^usr/src/linux-headers-[^/]+/$' | head -n 1 | sed -E 's|^usr/src/([^/]+)/$|/usr/src/\1|' || true)
+    if [ -z "${headers_dir}" ] || [ ! -d "${headers_dir}" ]; then
+        if [ -d "/usr/src/linux-headers-${kver_full}" ]; then
+            headers_dir="/usr/src/linux-headers-${kver_full}"
+        else
+            headers_dir=$(find /usr/src -maxdepth 1 -type d -name "linux-headers-*${flavor}*" 2>/dev/null | sort -V | tail -n 1 || true)
+        fi
+    fi
+
+    # Copy vmlinuz image dynamically
+    local vmlinuz_in_pkg=""
+    vmlinuz_in_pkg=$(tar --zstd -tf "${k_file}" 2>/dev/null | grep -E '^boot/vmlinuz-' | head -n 1 | sed 's|^|/|' || true)
+    if [ -n "${vmlinuz_in_pkg}" ] && [ -f "${vmlinuz_in_pkg}" ]; then
+        sudo cp -f "${vmlinuz_in_pkg}" "/boot/vmlinuz-${kver_full}"
+    elif [ -f "/boot/vmlinuz-linux-cachyos-bore-lto" ] && [ "${flavor}" = "lto" ]; then
         sudo cp -f "/boot/vmlinuz-linux-cachyos-bore-lto" "/boot/vmlinuz-${kver_full}"
     elif [ -f "/boot/vmlinuz-linux-cachyos-bore" ] && [ "${flavor}" = "bore" ]; then
         sudo cp -f "/boot/vmlinuz-linux-cachyos-bore" "/boot/vmlinuz-${kver_full}"
@@ -896,9 +1314,9 @@ deploy_cachyos_kernel_packages() {
         sudo cp -f "/lib/modules/${kver_full}/vmlinuz" "/boot/vmlinuz-${kver_full}"
     fi
 
-    if [ -d "/usr/src/linux-headers-${kver_full}" ]; then
-        sudo ln -sf "/usr/src/linux-headers-${kver_full}" "/lib/modules/${kver_full}/build"
-        sudo ln -sf "/usr/src/linux-headers-${kver_full}" "/lib/modules/${kver_full}/source"
+    if [ -n "${headers_dir}" ] && [ -d "${headers_dir}" ]; then
+        sudo ln -sf "${headers_dir}" "/lib/modules/${kver_full}/build"
+        sudo ln -sf "${headers_dir}" "/lib/modules/${kver_full}/source"
     elif [ -d "/usr/lib/modules/${kver_full}/build" ]; then
         sudo ln -sf "/usr/lib/modules/${kver_full}/build" "/lib/modules/${kver_full}/source"
     fi
@@ -943,9 +1361,14 @@ deploy_cachyos_kernel_packages() {
             if [ "${nv_url}" != "NONE" ] && [ -n "${nv_url}" ]; then
                 local nv_filename
                 nv_filename=$(basename "${nv_url}")
+                local nv_src="${staging_dir}/${nv_filename}"
                 local nv_file="${dest_dir}/${nv_filename}"
-                log_info "Modern NVIDIA GPU detected (Turing 20-series+). Downloading prebuilt matching CachyOS NVIDIA Open driver (${nv_filename})..."
-                sudo curl -sSL -o "${nv_file}" "${nv_url}"
+                if [ -f "${nv_src}" ]; then
+                    sudo cp -f "${nv_src}" "${nv_file}" 2>/dev/null || true
+                elif [ ! -f "${nv_file}" ]; then
+                    log_info "Modern NVIDIA GPU detected. Downloading prebuilt matching CachyOS NVIDIA Open driver (${nv_filename})..."
+                    sudo curl -sSL -o "${nv_file}" "${nv_url}"
+                fi
                 if ! verify_cachyos_package_integrity "${nv_file}"; then
                     log_error "NVIDIA driver package integrity verification failed! Skipping extraction."
                     sudo rm -f "${nv_file}" 2>/dev/null || true
@@ -962,7 +1385,29 @@ deploy_cachyos_kernel_packages() {
     sudo "${depmod_bin}" -a "${kver_full}"
     log_success "Kernel deployed: ${kver_full}"
 
-    # 1. Build DKMS out-of-tree modules (NVIDIA) only if on NVIDIA GPU and modules not yet in tree
+    # 1. Build DKMS out-of-tree modules (v4l2loopback, broadcom-wl, VirtualBox, NVIDIA, etc.)
+    if ! command -v dkms >/dev/null 2>&1; then
+        log_info "DKMS is not installed. DKMS automates module rebuilding for v4l2loopback, broadcom-wl, VirtualBox, and out-of-tree drivers across kernel updates."
+        if command -v sboinstall >/dev/null 2>&1 || [ -d /var/lib/sbopkg ]; then
+            echo -n "Would you like to install DKMS from SlackBuilds now? [y/N]: "
+            read -r reply_dkms
+            if [[ "${reply_dkms}" =~ ^[YyJjSsOo]$ ]]; then
+                log_info "Installing DKMS from SlackBuilds..."
+                if command -v sboinstall >/dev/null 2>&1; then
+                    sudo sboinstall -r -j$(nproc) dkms 2>/dev/null || true
+                fi
+                if command -v dkms >/dev/null 2>&1; then
+                    log_success "DKMS installed successfully!"
+                fi
+            fi
+        fi
+    fi
+
+    if command -v dkms >/dev/null 2>&1; then
+        log_info "Rebuilding registered DKMS modules for kernel: ${kver_full}..."
+        sudo dkms autoinstall -k "${kver_full}" 2>/dev/null || true
+    fi
+
     if [ "${HAS_NVIDIA}" = "true" ]; then
         if [ ! -d "/usr/lib/modules/${kver_full}/kernel/drivers/video" ] && [ ! -d "/lib/modules/${kver_full}/kernel/drivers/video" ]; then
             if command -v build_nvidia_modules >/dev/null 2>&1; then
@@ -1011,6 +1456,23 @@ generate_kernel_initramfs() {
 
     local engine
     engine=$(detect_initramfs_engine)
+    if [ "${engine}" = "mkinitrd" ] && [[ "${kver}" =~ cachyos ]]; then
+        log_info "Dracut is recommended for CachyOS kernels to dynamically bundle storage, NVMe and GPU modules."
+        if command -v sboinstall >/dev/null 2>&1 || [ -d /var/lib/sbopkg ]; then
+            echo -n "Would you like to build and install Dracut via SBo before generating initramfs? [y/N]: "
+            read -r reply_dracut
+            if [[ "${reply_dracut}" =~ ^[YyJjSsOo]$ ]]; then
+                log_info "Installing Dracut from SlackBuilds..."
+                if command -v sboinstall >/dev/null 2>&1; then
+                    sudo sboinstall -r -j$(nproc) dracut 2>/dev/null || true
+                fi
+                if command -v dracut >/dev/null 2>&1; then
+                    engine="dracut"
+                    log_success "Dracut installed! Switching initramfs engine to Dracut."
+                fi
+            fi
+        fi
+    fi
     log_info "Initramfs Engine Selected: ${engine}"
 
     if [ "${engine}" = "dracut" ]; then
@@ -1033,6 +1495,7 @@ generate_kernel_initramfs() {
                 [ -d "${kdir}" ] || continue
                 local single_kver
                 single_kver=$(basename "${kdir}")
+                [ -f "${kdir}/modules.dep" ] || continue
                 if [ -f "/boot/vmlinuz-${single_kver}" ] || [ -f "/boot/vmlinuz-generic" ] || [ -d "/lib/modules/${single_kver}/kernel" ]; then
                     local initrd_out="/boot/initramfs-${single_kver}.img"
                     log_info "Generating Dracut initramfs for kernel: ${single_kver} -> ${initrd_out}..."

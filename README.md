@@ -4,28 +4,32 @@
 ### *The Most Tubular System Update Station, Kernel Time Machine, SBo SlackBuild Hub & Driver Mojo Command Center for Slackware Linux*
 
 [![Slackware -current](https://img.shields.io/badge/Slackware--current-15.0%2B-blue?style=for-the-badge&logo=slackware&logoColor=white)](http://www.slackware.com/)
-[![Release](https://img.shields.io/badge/Release-v0.9%20'The%20Fat%20Lady'-purple?style=for-the-badge)](https://github.com/TuxOfValhalla/slacky-update/releases)
+[![Release](https://img.shields.io/badge/Release-v0.10%20'Underpants%20Gnomes'-purple?style=for-the-badge)](https://github.com/TuxOfValhalla/slacky-update/releases)
 [![Mirror: Codeberg](https://img.shields.io/badge/Mirror-Codeberg-2185d0?style=for-the-badge&logo=codeberg&logoColor=white)](https://codeberg.org/TuxOfValhalla/slacky-update)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-green.svg?style=for-the-badge)](LICENSE)
 [![Zero-Binary](https://img.shields.io/badge/Architecture-100%25%20Pure%20Source%20(Zero--Binary)-brightgreen?style=for-the-badge)](lib/)
-[![Language](https://img.shields.io/badge/Locales-24%20Languages%20(148%20Keys)-yellow?style=for-the-badge)](locales/)
+[![Language](https://img.shields.io/badge/Locales-24%20Languages%20(162%20Keys)-yellow?style=for-the-badge)](locales/)
 [![Stack](https://img.shields.io/badge/Stack-Bash%20%7C%20Python3%20%7C%20PyQt5-orange?style=for-the-badge)](bin/)
 
 ---
 
 ### *Party on, Wayne! / Party on, Garth!*
-**Slacky-Update** is an all-in-one maintenance station, background system monitor, curated SlackBuild hub, and gaming/creator toolkit engineered specifically for **Slackware Linux (-current / 15.0+)**. 
+**Slacky-Update** is an all-in-one maintenance station, background system monitor, curated SlackBuild hub, and high-performance gaming/creator workstation suite engineered specifically for **Slackware Linux (-current / 15.0+)**. 
 
 *Canonical source: [GitHub](https://github.com/TuxOfValhalla/slacky-update) | Official European mirror: [Codeberg](https://codeberg.org/TuxOfValhalla/slacky-update)*
 
-**Release v0.9 'The Fat Lady'** delivers a comprehensive feature set for power users, gamers, and content creators:
+**Release v0.10 'Underpants Gnomes'** (*"Phase 1: Collect Kernels. Phase 2: Transmute & Package. Phase 3: Profit!"*) delivers major kernel management, workstation, and gaming enhancements:
+* **The Underpants Gnomes Suite:** 36 native transmuted gaming, audio, creative, and hardware packages (MangoHud, GameMode, Sched-EXT, Yabridge, DaVinci plugins, Solaar, CoolerControl, LACT, OpenRGB, Syncthing, Browsers) with GPG verification, SysVinit daemons, and isolated `/opt` App-Bundles.
+* **Interactive Granular Kernel Uninstaller:** Selectively inspect and purge installed kernels with disk usage reporting, active kernel protection (`uname -r`), mandatory CachyOS LTS / Slackware fallback guardrails, and permanent preservation of official `kernel-headers`.
+* **100% `.run`-Independent CachyOS NVIDIA Architecture:** Deploys precompiled `linux-cachyos-*-nvidia-open` packages for CachyOS kernels and `nvidia-open-dkms` (or `nvidia-580xx-dkms` for Pascal) for Slackware stock kernels, completely eliminating large `.run` file downloads on CachyOS systems.
+* **Dynamic NVIDIA Interface & Automated Rollback:** Context-aware menu automatically presents CachyOS Master controls on CachyOS systems, and provides seamless 1-click rollback to standalone official `.run` drivers with DKMS when reverting to pure Slackware.
 * **Turbo Multi-Stream Package Pre-fetcher:** 10 concurrent worker streams delivering warm-cache handoffs to `slackpkg` for 5–10× faster package download phases.
 * **Curated SBo SlackBuilds Hub:** 25 pre-configured, tested SlackBuild recipes (including Wonder Unit Storyboarder, Serif Affinity Suite, DaVinci Resolve Studio, Unreal Engine 5, MangoHud, Gamescope, LACT, and OpenRGB) with automated recipe synchronization and Ponce -current routing.
-* **Optional System & Gaming Tweaks Module:** Modular kernel and system tuning suite featuring process limits, memory/THP tuning, TCP BBR network congestion control, NTSYNC kernel synchronization, and 27 controller/gamepad udev rules with real-time status badges.
+* **Optional System & Gaming Tweaks Module:** Modular tuning suite featuring process limits, memory/THP tuning, TCP BBR network congestion control, NTSYNC kernel synchronization, and 27 controller/gamepad udev rules with real-time status badges.
 * **CachyOS Time Machine:** High-performance BORE / sched-ext kernel deployment with CPU microarchitecture tier detection (*znver4 / x86_64_v4*), reversible stock kernel removal, and intelligent GRUB priority management.
-* **Hardware Graphics & Compute Stations:** NVIDIA branch selector (*Production 595.x, Feature 610.x, Legacy 580.x*) with DKMS and VA-API, plus an AMD ROCm / HIP creator toolkit with DaVinci Resolve FFmpeg/AAC export integration and Rusticl collision prevention.
-* **Secure Boot MOK Forcefield:** 1-Click automated UEFI Secure Boot provisioning, Microsoft-signed shim and GRUB deployment, MOK key generation, and smart signature verification.
-* **24 Multi-Lingual Locales:** Full internationalization with 100% key parity (148/148 keys) across 24 languages with instant desktop tray switching.
+* **AMD ROCm / HIP Creator Station:** Full compute stack integration with DaVinci Resolve FFmpeg/AAC export plugins and Rusticl collision prevention.
+* **Secure Boot MOK Forcefield:** 1-Click automated UEFI Secure Boot provisioning, Microsoft-signed shim and GRUB deployment, MOK key generation, and smart signature verification (`modinfo -F signer`).
+* **24 Multi-Lingual Locales:** Full internationalization with 100% key parity (162/162 keys) across 24 languages with instant desktop tray switching.
 
 </div>
 
@@ -86,13 +90,13 @@ Slacky-Update features native hardware inspection (`probe_gpu_hardware`) via PCI
 =============================================================================
                       ⚡ SLACKY-UPDATE COMMAND MATRIX ⚡
 =============================================================================
- [1] Total System Party On!      --> Slackware + Flatpaks + SBo + MOK Armor
- [2] SBo SlackBuild & Gaming Hub --> 25 Curated Packages, Search & Tweaks
- [3] CachyOS Time Machine        --> CPU Tier Detect, Deploy & Manage Kernels
- [4] Nvidia & ROCm Stations      --> Branch Select (580/595/610), ROCm / HIP
- [5] Clean the Garage            --> Dual Kernel Retention & Artifact Purge
- [6] Secure Boot MOK Forcefield  --> 1-Click Setup, Shim Inject & Self-Heal
- [7] Babling                     --> 24 Multi-Lingual Locales (Tray menu)
+ [1] Total System Synchronization --> Slackware + Flatpaks + SBo + MOK Armor
+ [2] CachyOS Kernel Time Machine  --> CPU Tier Detect, Deploy, Manage & Purge
+ [3] NVIDIA & ROCm Graphics Hub   --> Branch Select / CachyOS Master, ROCm/HIP
+ [4] Underpants Gnomes Suite      --> 37 Native Transmuted Gaming & App Packages
+ [5] System Cleanup & Retention   --> Dual Kernel Retention & Artifact Purge
+ [6] Secure Boot MOK Forcefield   --> 1-Click Setup, Shim Inject & Self-Heal
+ [7] Babling Multi-Lingual Engine --> 24 Locales with 100% Key Parity (162 Keys)
 =============================================================================
 ```
 
@@ -104,7 +108,7 @@ Slacky-Update features native hardware inspection (`probe_gpu_hardware`) via PCI
 * **Smart `.new` Configuration Reconciliation:** Scans `/etc/` after system upgrades and automatically categorizes `.new` files into 4 clear groups (New Configs, Identical Duplicates, Unmodified Defaults, and Custom User Configs) with 4 quick, respectful batch prompts—eliminating 95% of prompt fatigue!
 * **Smart Reboot Evaluator:** Intelligently determines if core system packages (`glibc`, `plasma`, `nvidia`, or the active running kernel) were updated via temp-file comparison (`mktemp`), prompting for a reboot only when genuinely necessary, and closing the CLI window cleanly when done.
 * **Flatpak Upgrades & NVIDIA GL Sync:** Upgrades all user and system Flatpaks, automatically inspecting and synchronizing required Flatpak NVIDIA GL runtimes (`org.freedesktop.Platform.GL*.nvidia-*`).
-* **GitHub Self-Update Engine:** Real-time release verification with clean status line (`✓ Slacky-Update is up to date with GitHub (v0.9)`) and 1-click self-upgrade & reload.
+* **Dual Upstream Self-Update Engine:** Real-time release verification from Codeberg (primary) and GitHub (fallback) with clean status line (`✓ Slacky-Update is up to date (v0.10)`) and 1-click self-upgrade & reload.
 * **Conditional Pipeline:** Intelligently snapshots installed packages and only rebuilds DKMS, Dracut initramfs, and signatures when kernel or driver packages actually change.
 
 ### 2. 🧰 Curated SBo SlackBuilds Hub (25 Tested Packages & `sbotools` Integration)
@@ -128,42 +132,63 @@ Slacky-Update provides a dedicated, non-destructive tuning module accessible via
 * **NTSYNC Kernel Fast Synchronization:** Configures `/dev/ntsync` udev device access permissions and kernel module loading for high-performance Windows NT kernel synchronization in Wine/Proton.
 * **Universal Controller & Gamepad Udev Rules:** Deploys 27 comprehensive udev rules (`/etc/udev/rules.d/70-gamepad-tweaks.rules` and `60-openhmd.rules`) providing plug-and-play user-space permissions for Xbox (360, One, Series X/S), PlayStation (DualShock 3/4, DualSense), Nintendo Switch (Pro Controller, Joy-Cons), Steam Controller, 8BitDo gamepads, Logitech controllers, Flight Sticks / HOTAS systems, and Racing Wheels.
 
-### 4. 🏎️ CachyOS Time Machine (Kernel Engine)
-* **Automatic CPU Tier Detection:** Identifies your CPU microarchitecture (*x86_64_v4 / znver4, x86_64_v3, x86_64_v2*) and pulls high-performance, optimized CachyOS Linux kernel binaries and headers directly from upstream Arch/CachyOS package repositories (*Standard, BORE, BORE-LTO, RC, and LTS flavors*).
-* **Pure CachyOS Kernel Mode (100% Reversible):** When running CachyOS LTS alongside performance kernels, Slacky-Update offers the option to completely remove stock Slackware kernels (`kernel-generic`, `kernel-huge`, `kernel-modules`) to reclaim disk space while **safely preserving `kernel-headers`** for full build system compatibility. The entire process is 100% reversible with 1-click stock restoration!
-* **Smart Bootloader "Top Dog" Priority:** Automatically sets the highest performance installed kernel as default top entry in GRUB, alongside intelligent CMDLINE deduplication and normalization.
-* **Dual-Kernel Retention:** Safely keeps the **2 newest CachyOS kernels** plus your active running kernel, preventing `/boot` clutter.
-* **Automatic Bootloader Registration:** Links kernels to GRUB (`/boot/grub/grub.cfg`) and Limine bootloader configurations automatically.
+### 4. 🩲 The Underpants Gnomes Master Suite (36 Native Transmuted Packages)
+*Phase 1: Collect Upstream Packages. Phase 2: Transmute & Package into Native Slackware `.txz`. Phase 3: Profit!*
 
-### 5. 🎮 Nvidia Mojo Station & AMD ROCm Creator Suite
-* **CachyOS Complete NVIDIA Ecosystem:** Full automated packaging and deployment of upstream CachyOS packages: **64-bit Core Driver**, **32-bit Multilib** (`lib32-nvidia-utils`), **NVIDIA Settings** (`nvidia-settings`), **64-bit OpenCL** (`opencl-nvidia`), **32-bit OpenCL** (`lib32-opencl-nvidia`), and **VA-API Hardware Video Acceleration** driver (`libva-nvidia-driver` -> `/usr/lib64/dri/nvidia_drv_video.so` with `/etc/profile.d/nvidia-vaapi.sh`).
+The Underpants Gnomes suite provides a curated collection of 36 native, high-performance workstation, audio, creative, hardware, and gaming applications packaged on-the-fly directly from CachyOS and Arch Extra repositories into native Slackware `.txz` packages:
+
+* **Cryptographic Integrity & GPG Verification:** Every downloaded upstream archive (`.pkg.tar.zst`) and auxiliary subpackage is strictly validated against Arch and CachyOS public GPG signatures (`.sig`) before unpacking. Corrupted or unverified packages are rejected immediately.
+* **Isolated App-Bundles in `/opt` (Host System Respect):** Applications with complex runtime dependencies (`obs-studio`, `lutris`, `pear-desktop`) are packaged into self-contained directory trees in `/opt/<name>/` with dedicated wrapper launchers in `/usr/bin/`. Host Slackware Python installations, system libraries, and desktop schemas are never polluted or overwritten.
+* **Full Multilib 32-Bit & Wine Integration:** Seamless 32-bit multilib runtime deployment for `lib32-gamemode`, `lib32-mangohud`, `obs-vkcapture`, and `yabridge` + `yabridgectl` for Windows VST2/VST3 plugin bridging in Linux DAWs.
+* **SysVinit Daemons (`/etc/rc.d/`):** Full integration with Slackware's native init system: generates and manages service scripts for `rc.coolercontrol`, `rc.asusd`, `rc.syncthing`, `rc.lact`, `rc.scx`, `rc.ananicy-cpp`, and `rc.gamemode`, with automatic boot persistence in `/etc/rc.d/rc.local` and `/etc/rc.d/rc.local_shutdown`.
+* **Hardware User Group & Multilib Readiness Audits:** Automatically verifies whether your active user account belongs to `input`, `plugdev`, `video`, `audio`, offering 1-click group enrollment via `usermod -aG` so controllers, Solaar, Lian Li, and GPU utilities work without root.
+* **Pre-flight Dependency Checks:** Detects kernel support for `sched_ext` before installing `scx`, and verifies Wine availability before deploying `yabridge`, prompting the user with clear options and zero surprise failures.
+
+| Category | Applications Included | Integration & Features |
+| :--- | :--- | :--- |
+| **🎮 Game Engine & Overlays** | `mangohud`, `gamemode`, `goverlay`, `scx`, `ananicy`, `gamescope` | Multilib 32-bit, Vulkan layer remapping, BPF schedulers, auto-nice daemons. |
+| **🎵 Audio & Music Studio** | `yabridge`, `audacity`, `spotify`, `easyeffects`, `pear-desktop` | Windows VST2/3 bridge, 15+ LV2 DSP plugins with JackHack96 presets, YouTube Music. |
+| **🎨 Creative & 3D Studio** | `inkscape`, `darktable`, `bambu-studio` | Vector graphics, RAW photo development, 3D printing slicer. |
+| **🎛️ Hardware & Cooling** | `coolercontrol`, `solaar`, `lian-li-linux`, `asusctl`, `lact`, `openrgb` | AIO liquid & fan daemons, Logitech Unifying, Lian Li Uni-fan, ASUS ROG, GPU OC. |
+| **🛠️ Power Tools & Launchers** | `syncthing`, `parabolic`, `retroarch`, `heroic`, `faugus`, `protonplus`, `steam-devices` | P2P sync daemon, yt-dlp GUI, Libretro emulator with Ozone, 28 gamepad udev rules. |
+| **🌐 High-Performance Browsers** | `brave`, `zen-browser`, `vivaldi`, `google-chrome`, `microsoft-edge`, `opera` | Standalone isolated `/opt` installations with clean `/usr/bin` symlinks. |
+
+### 5. 🏎️ CachyOS Time Machine & Kernel Uninstaller
+* **Interactive Granular Kernel Removal:** Dedicated interactive tool to select and completely purge specific installed kernels. Removes vmlinuz, initramfs/initrd, `/lib/modules/`, headers, DKMS entries, and GRUB lines.
+* **Active Kernel Shield:** Strictly prevents deleting the currently running kernel (`uname -r`).
+* **Stock & LTS Fallback Guardrails:** Slackware stock kernels can only be removed if `linux-cachyos-lts` is installed. Removing CachyOS LTS when no other CachyOS kernel exists automatically triggers complete restoration of Slackware stock kernels (`kernel-generic`, `kernel-modules`) and rebuilds graphics drivers.
+* **Permanent `kernel-headers` Preservation:** `kernel-headers` are permanently preserved across all operations, ensuring 100% build system compatibility.
+* **Automatic CPU Tier Detection:** Identifies your CPU microarchitecture (*x86_64_v4 / znver4, x86_64_v3, x86_64_v2*) and pulls high-performance, optimized CachyOS Linux kernel binaries and headers directly from upstream Arch/CachyOS package repositories (*Standard, BORE, BORE-LTO, RC, and LTS flavors*).
+* **Smart Bootloader "Top Dog" Priority:** Automatically sets the highest performance installed kernel as default top entry in GRUB, alongside intelligent CMDLINE deduplication and normalization.
+
+### 6. 🎮 NVIDIA & ROCm Graphics Hub (100% `.run`-Independent)
+* **Precompiled CachyOS Modules:** Automatically deploys official prebuilt `linux-cachyos-*-nvidia-open` packages for all CachyOS kernels on Modern GPUs (Turing+), delivering zero compilation overhead.
+* **`nvidia-open-dkms` Integration:** Utilizes CachyOS `nvidia-open-dkms` (or `nvidia-580xx-dkms` for Pascal) to compile open modules directly for Slackware stock kernels, completely eliminating 400 MB `.run` file downloads on CachyOS systems.
+* **Dynamic Interface Adaptation:** Hides manual `.run` branch options on CachyOS systems to prevent driver mismatch, and automatically restores the full `.run` installer interface when returning to pure Slackware.
+* **Automated Rollback Engine:** Fully sanitizes `cachyos-nvidia-utils` and reinstalls the official NVIDIA standalone `.run` driver with DKMS when reverting to pure Slackware.
 * **AMD ROCm / HIP Creator Toolkit:** Complete OpenCL & HIP compute runtimes (`rocm-core`, `rocm-opencl-runtime`, `rocm-hip-runtime`, `hsa-rocr`, `comgr`) with automatic **Mesa OpenCL & Rusticl purge & blacklisting** to prevent DaVinci Resolve crashes on Radeon hardware.
 * **DaVinci Resolve Deliver Plugins:** Full integration of **FFmpeg Deliver Tab Encoder plugin** (`FFmpegEncoder.dvpipeline`) and **AAC audio export plugin** directly into DaVinci Resolve Studio for both AMD and NVIDIA rigs.
-* **Wayland Memory Preservation:** Automatically deploys power management and video memory allocation preservation scripts to `/var/tmp` for glitch-free suspend/resume under Wayland.
-* **Branch Selection:** Choose between **Legacy Mojo** (*580.x* - Pascal / GTX 10-series & older), **Production Mojo** (*595.x* - Modern RTX), and **New Feature Mojo** (*610.x* - Latest RTX series).
-* **Hardware Architecture Safeguard:** Intelligently checks GPU capabilities. For legacy hardware like Pascal (GTX 1060/1070/1080), it automatically routes directly to the proprietary 580xx branch via DKMS.
-* **DKMS Automated Rebuilds:** Automatically triggers and verifies DKMS compilation across all installed kernels on the system.
-* **Instant Rebuild Mode:** Recompile and re-sign NVIDIA drivers for the active kernel in seconds.
 
-### 6. ⚡ "JUST FIX MY DAMN SECURE BOOT!" (1-Click Ironclad Wizard)
+### 7. ⚡ "JUST FIX MY DAMN SECURE BOOT!" (1-Click Ironclad Wizard)
 * **One-Click Provisioning:** Deploys Microsoft-signed `shimx64.efi`, `mmx64.efi`, and Fedora-signed `grubx64.efi` to `/boot/efi/EFI/Slackware/`, creates dynamic early `grub.cfg` pointers, provisions MOK keypairs, bakes Dracut initramfs across all kernels, signs all binaries, and updates GRUB.
 * **Smart Signature Verification:** Inspects module headers (`modinfo -F signer`) prior to extraction, skipping already-signed modules to accelerate update transactions.
 * **Collision-Free Isolated Module Signing:** Module signing executes inside dedicated `/tmp/slacky-sign-XXXXXX` workspaces, preventing corrupted `.ko.zst` files, auto-purging uncompressed `.ko` duplicates, and auto-detecting the active MOK signer tool (`kmodsign` or `sign-file`).
 * **Silent Self-Heal Guard:** Runs quietly in the background on every update. If an external package or accidental `grub-install` overwrites your signed EFI binaries or configuration, Self-Heal silently restores them!
 * **Bundled OpenSSL 1.1 Compatibility:** Packages include bundled `libcrypto.so.1.1` and `libssl.so.1.1` compatibility libraries so `sbsign` and `mokutil` never fail on Slackware -current with OpenSSL 3.x.
 
-### 7. ⚙️ Dracut Multilib Shield & Fail-Safe Initramfs
+### 8. ⚙️ Dracut & ELILO / Bootloader Integrations
 * **Dracut Multilib Shield (`00-multilib.conf`):** Automatically injects `--libdirs "/lib64 /usr/lib64 /usr/local/lib64"` and deploys `/etc/dracut.conf.d/00-multilib.conf` to block 32-bit multilib library collisions, ensuring pure 64-bit initramfs integrity.
 * **Native Dracut Engine:** Explicitly iterates across all installed kernels in `/lib/modules/*` to generate complete, high-performance Dracut initramfs images (`/boot/initramfs-*.img`, 220+ MB) with baked-in GPU and storage drivers.
+* **ELILO & GRUB Multi-Bootloader Support:** Intelligently adapts to your active bootloader environment, synchronizing `/boot/efi/EFI/Slackware/elilo.conf` on pure ELILO setups, and managing `/boot/grub/grub.cfg` with Top-Dog kernel prioritization on GRUB systems.
 * **GRUB Preference Protection:** Automatically purges conflicting 11 MB `initrd-*.img` files created by Slackware's stock `mkinitrd` **only after** Dracut has verified successful generation, ensuring GRUB always boots the complete Dracut initramfs!
-* **Legacy Fallback:** If Dracut is not installed, seamlessly falls back to standard Slackware `mkinitrd`.
+* **Legacy Fallback:** If Dracut is not installed, seamlessly falls back to standard Slackware `mkinitrd` with root device UUID and filesystem auto-detection.
 
-### 8. 🧹 Clean the Garage (System Maintenance)
+### 9. 🧹 Clean the Garage (System Maintenance)
 * **Slackware Stock Kernel Retention:** Keeps the **1 newest Slackware stock kernel** plus the active booted kernel, cleanly purging older versions, old module folders, and outdated initramfs files.
 * **Cache Purge & Portability:** Cleans stale build directories in `/var/cache/slacky-update/` and runs `flatpak uninstall --unused`. All paths are 100% portable with zero hardcoded user directories.
 * **Bootloader Sync:** Automatically runs `grub-mkconfig` to keep `/boot/grub/grub.cfg` pristine and free of ghost entries.
 
-### 9. 💓 Dynamic System Tray Applet
+### 10. 💓 Dynamic System Tray Applet
 * **Pulsing Desktop Notifications:** When updates are available, the tray icon pulses dynamically (100% ⇄ 80% size) synchronized with desktop notifications (KNotify/KDE) before settling back smoothly.
 * **Discreet Scan Flow:** Manual updates trigger an instant checking icon without popup spam; returning quietly to green when 0 updates are found.
 * **Direct Slack-builds Trigger:** Dedicated tray action to launch the interactive SlackBuilds & Tweaks hub in a terminal window.
@@ -173,7 +198,7 @@ Slacky-Update provides a dedicated, non-destructive tuning module accessible via
 
 ## 🌍 Babling (24 Multi-Lingual Locales)
 
-Slacky-Update includes full internationalization across **24 languages** with **100% key parity (148/148 keys)**.
+Slacky-Update includes full internationalization across **24 languages** with **100% key parity (162/162 keys)**.
 
 Choose between radical **90's pop-culture theme** (*English* and *Norsk Bokmål*) or **dry, corporate, formal tone** across all languages:
 

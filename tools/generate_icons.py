@@ -7,6 +7,7 @@ from PyQt5.QtWidgets import QApplication
 from PyQt5.QtGui import QPixmap, QPainter, QColor, QBrush, QPen, QFont, QPainterPath, QImage
 from PyQt5.QtCore import Qt, QRectF
 
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 app = QApplication(sys.argv)
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -14,9 +15,9 @@ REPO_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
 DEST_DIR = os.path.join(REPO_ROOT, "assets")
 os.makedirs(DEST_DIR, exist_ok=True)
 
-SRC_ICON = os.path.join(DEST_DIR, "slackware_tight2.png")
+SRC_ICON = os.path.join(DEST_DIR, "slackware_icon_HD.png")
 if not os.path.exists(SRC_ICON):
-    SRC_ICON = "/home/tux/Pictures/icons/slackware_tight2.png"
+    SRC_ICON = "/home/tux/Pictures/icons/slackware_icon_HD.png"
 
 img = QImage(SRC_ICON)
 if not img.isNull():
@@ -50,11 +51,13 @@ def make_icon(state):
     cy = y + (badge_size / 2.0)
 
     if state == "ok":
-        painter.setBrush(QBrush(QColor(16, 185, 129)))
-        painter.setPen(QPen(QColor(255, 255, 255), 4))
+        # Arch Blue badge background with black border
+        painter.setBrush(QBrush(QColor(23, 147, 209)))
+        painter.setPen(QPen(QColor(0, 0, 0), 4))
         painter.drawEllipse(QRectF(x, y, badge_size, badge_size))
 
-        painter.setPen(QPen(QColor(255, 255, 255), 5.5, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
+        # Solid black checkmark inside
+        painter.setPen(QPen(QColor(0, 0, 0), 5.5, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
         painter.setBrush(Qt.NoBrush)
         check_path = QPainterPath()
         check_path.moveTo(cx - 15, cy + 1)
@@ -63,11 +66,13 @@ def make_icon(state):
         painter.drawPath(check_path)
 
     elif state == "pending":
+        # Crimson Red badge background with black border
         painter.setBrush(QBrush(QColor(220, 38, 38)))
-        painter.setPen(QPen(QColor(255, 255, 255), 4))
+        painter.setPen(QPen(QColor(0, 0, 0), 4))
         painter.drawEllipse(QRectF(x, y, badge_size, badge_size))
 
-        painter.setBrush(QBrush(QColor(255, 255, 255)))
+        # Solid black arrow inside
+        painter.setBrush(QBrush(QColor(0, 0, 0)))
         painter.setPen(Qt.NoPen)
         arrow_path = QPainterPath()
         arrow_path.moveTo(cx, cy + 17)
@@ -81,9 +86,9 @@ def make_icon(state):
         painter.drawPath(arrow_path)
 
     elif state == "checking":
-        # Neutral dark badge with crisp dual arrows: Red UP ⬆️ and Green DOWN ⬇️
+        # Neutral dark badge with black border and crisp dual arrows
         painter.setBrush(QBrush(QColor(30, 41, 59)))
-        painter.setPen(QPen(QColor(255, 255, 255), 4))
+        painter.setPen(QPen(QColor(0, 0, 0), 4))
         painter.drawEllipse(QRectF(x, y, badge_size, badge_size))
 
         painter.setPen(Qt.NoPen)

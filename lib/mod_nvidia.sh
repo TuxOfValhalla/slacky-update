@@ -190,7 +190,7 @@ sys.exit(0 if p('$req_ver') > p('$cachy_nv_ver') else 1)
 
     build_nvidia_modules "ALL"
     enforce_secure_boot_armor
-    register_flatpak_gl_sync
+    register_flatpak_gl_sync "${req_ver:-}"
 }
 
 # --- [ MULTI-KERNEL MODULE COMPILATION ] ---
@@ -248,11 +248,46 @@ build_nvidia_modules() {
 
 # --- [ FLATPAK GL SYNCHRONIZATION ] ---
 register_flatpak_gl_sync() {
-    if command -v flatpak >/dev/null 2>&1; then
-        log_info "Synchronizing Flatpak NVIDIA GL runtimes..."
-        flatpak update -y --non-interactive >/dev/null 2>&1 || true
-        log_success "Flatpak GL synchronization complete."
+    local target_ver="${1:-}"
+    if ! command -v flatpak >/dev/null 2>&1; then
+        return 0
     fi
+
+    # 1. Targeted Pre-Fetch: If target driver version is provided, inject exact runtimes before reboot
+    if [ -n "${target_ver}" ]; then
+        local ver_clean
+        ver_clean=$(echo "${target_ver}" | sed -E 's/^[^0-9]*([0-9]+\.[0-9]+(\.[0-9]+)?).*/\1/')
+        if [ -n "${ver_clean}" ]; then
+            local ver_dash
+            ver_dash=$(echo "${ver_clean}" | tr '.' '-')
+            log_info "Pre-fetching Flatpak NVIDIA GL runtimes for driver ${ver_clean} (nvidia-${ver_dash})..."
+
+            local installed_runtimes
+            installed_runtimes=$(flatpak list --runtime 2>/dev/null || true)
+
+            local pkgs_to_install=()
+            if ! echo "${installed_runtimes}" | grep -q "org.freedesktop.Platform.GL.nvidia-${ver_dash}"; then
+                pkgs_to_install+=("runtime/org.freedesktop.Platform.GL.nvidia-${ver_dash}")
+            fi
+            if ! echo "${installed_runtimes}" | grep -q "org.freedesktop.Platform.GL32.nvidia-${ver_dash}"; then
+                pkgs_to_install+=("runtime/org.freedesktop.Platform.GL32.nvidia-${ver_dash}")
+            fi
+
+            if [ "${#pkgs_to_install[@]}" -gt 0 ]; then
+                log_info "Downloading Flatpak runtimes in advance: ${pkgs_to_install[*]}"
+                flatpak install -y --non-interactive flathub "${pkgs_to_install[@]}" 2>/dev/null || {
+                    log_warn "Flatpak runtime pre-fetch from Flathub deferred (runtime may not be published yet; will auto-heal after reboot)."
+                }
+            else
+                log_success "Matching Flatpak NVIDIA runtimes already staged locally."
+            fi
+        fi
+    fi
+
+    # 2. General Flatpak update for active runtimes
+    log_info "Synchronizing active Flatpak runtimes..."
+    flatpak update -y --non-interactive >/dev/null 2>&1 || true
+    log_success "Flatpak GL synchronization complete."
 }
 
 # --- [ CACHYOS-MASTER NVIDIA DUALITY & SYNCHRONIZATION ] ---
@@ -274,7 +309,6 @@ detect_cachyos_nvidia_upstream_version() {
 
 build_and_deploy_cachyos_nvidia_userspace() {
     local target_ver="$1"
-    validate_privileges
 
     local cachy_repo="https://mirror.cachyos.org/repo/x86_64/cachyos/"
     local html
@@ -312,67 +346,99 @@ build_and_deploy_cachyos_nvidia_userspace() {
         return 1
     fi
 
-    local cache_dir="/var/cache/slacky-update/cachyos-nvidia"
-    sudo mkdir -p "${cache_dir}"
-    local staging_root
-    staging_root=$(mktemp -d /tmp/slacky-cachy-nv-staging.XXXXXX)
-    local tmp_extract
-    tmp_extract=$(mktemp -d /tmp/slacky-cachy-nv-extract.XXXXXX)
-    trap 'sudo rm -rf "${staging_root:-}" "${tmp_extract:-}" 2>/dev/null || true' INT TERM
+    local staging_base
+    staging_base=$(mktemp -d "$(get_user_staging_dir)/cachy-nv-${target_ver}.XXXXXX" 2>/dev/null || mktemp -d /tmp/slacky-cachy-nv.XXXXXX)
+    local cache_dir="${staging_base}/downloads"
+    local staging_root="${staging_base}/pkg"
+    local tmp_extract="${staging_base}/extract"
+    trap 'rm -rf "${staging_base:-}" 2>/dev/null || true' INT TERM
 
-    sudo mkdir -p "${staging_root}" \
-                  "${tmp_extract}/utils" \
-                  "${tmp_extract}/lib32" \
-                  "${tmp_extract}/settings" \
-                  "${tmp_extract}/opencl" \
-                  "${tmp_extract}/lib32_opencl" \
-                  "${tmp_extract}/libva"
+    mkdir -p "${cache_dir}" \
+             "${staging_root}" \
+             "${tmp_extract}/utils" \
+             "${tmp_extract}/lib32" \
+             "${tmp_extract}/settings" \
+             "${tmp_extract}/opencl" \
+             "${tmp_extract}/lib32_opencl" \
+             "${tmp_extract}/libva"
 
-    log_info "Downloading CachyOS NVIDIA Complete Suite components (${target_ver})..."
-    sudo curl -sSL -o "${cache_dir}/${pkg_utils}" "${cachy_repo}/${pkg_utils}"
-    [ -n "${pkg_lib32}" ] && sudo curl -sSL -o "${cache_dir}/${pkg_lib32}" "${cachy_repo}/${pkg_lib32}"
-    [ -n "${pkg_settings}" ] && sudo curl -sSL -o "${cache_dir}/${pkg_settings}" "${cachy_repo}/${pkg_settings}"
-    [ -n "${pkg_opencl}" ] && sudo curl -sSL -o "${cache_dir}/${pkg_opencl}" "${cachy_repo}/${pkg_opencl}"
-    [ -n "${pkg_lib32_opencl}" ] && sudo curl -sSL -o "${cache_dir}/${pkg_lib32_opencl}" "${cachy_repo}/${pkg_lib32_opencl}"
-    [ -n "${pkg_libva}" ] && [ -n "${libva_url}" ] && sudo curl -sSL -o "${cache_dir}/${pkg_libva}" "${libva_url}"
+    log_info "Downloading CachyOS NVIDIA Complete Suite components (${target_ver}) to user staging..."
+    local download_list=("${pkg_utils}")
+    [ -n "${pkg_lib32}" ] && download_list+=("${pkg_lib32}")
+    [ -n "${pkg_settings}" ] && download_list+=("${pkg_settings}")
+    [ -n "${pkg_opencl}" ] && download_list+=("${pkg_opencl}")
+    [ -n "${pkg_lib32_opencl}" ] && download_list+=("${pkg_lib32_opencl}")
 
-    log_info "Unpacking and mapping Complete Suite to Slackware multilib hierarchy..."
-    sudo tar --zstd -xf "${cache_dir}/${pkg_utils}" -C "${tmp_extract}/utils" 2>/dev/null || true
-    [ -n "${pkg_lib32}" ] && [ -f "${cache_dir}/${pkg_lib32}" ] && sudo tar --zstd -xf "${cache_dir}/${pkg_lib32}" -C "${tmp_extract}/lib32" 2>/dev/null || true
-    [ -n "${pkg_settings}" ] && [ -f "${cache_dir}/${pkg_settings}" ] && sudo tar --zstd -xf "${cache_dir}/${pkg_settings}" -C "${tmp_extract}/settings" 2>/dev/null || true
-    [ -n "${pkg_opencl}" ] && [ -f "${cache_dir}/${pkg_opencl}" ] && sudo tar --zstd -xf "${cache_dir}/${pkg_opencl}" -C "${tmp_extract}/opencl" 2>/dev/null || true
-    [ -n "${pkg_lib32_opencl}" ] && [ -f "${cache_dir}/${pkg_lib32_opencl}" ] && sudo tar --zstd -xf "${cache_dir}/${pkg_lib32_opencl}" -C "${tmp_extract}/lib32_opencl" 2>/dev/null || true
-    [ -n "${pkg_libva}" ] && [ -f "${cache_dir}/${pkg_libva}" ] && sudo tar --zstd -xf "${cache_dir}/${pkg_libva}" -C "${tmp_extract}/libva" 2>/dev/null || true
+    local dl_items=()
+    for pkg_item in "${download_list[@]}"; do
+        dl_items+=("${cachy_repo}/${pkg_item}|${cache_dir}/${pkg_item}|${cachy_repo}/${pkg_item}.sig|${cache_dir}/${pkg_item}.sig")
+    done
+    if [ -n "${pkg_libva}" ] && [ -n "${libva_url}" ]; then
+        dl_items+=("${libva_url}|${cache_dir}/${pkg_libva}|${libva_url}.sig|${cache_dir}/${pkg_libva}.sig")
+    fi
+
+    if ! download_parallel_pacman "CachyOS NVIDIA Driver Suite (${target_ver})" "${dl_items[@]}"; then
+        log_error "Failed to download NVIDIA suite components."
+        rm -rf "${staging_base}"
+        trap - INT TERM
+        return 1
+    fi
+
+    for pkg_item in "${download_list[@]}"; do
+        if ! verify_cachyos_gpg_signature "${cache_dir}/${pkg_item}" "${cache_dir}/${pkg_item}.sig"; then
+            log_error "GPG verification failed for ${pkg_item}! Aborting user-space staging build."
+            rm -rf "${staging_base}"
+            trap - INT TERM
+            return 1
+        fi
+    done
+
+    if [ -n "${pkg_libva}" ] && [ -n "${libva_url}" ]; then
+        if ! verify_cachyos_gpg_signature "${cache_dir}/${pkg_libva}" "${cache_dir}/${pkg_libva}.sig"; then
+            log_error "GPG verification failed for ${pkg_libva}! Aborting."
+            rm -rf "${staging_base}"
+            trap - INT TERM
+            return 1
+        fi
+    fi
+
+    log_info "Unpacking and mapping Complete Suite in user staging..."
+    tar --zstd -xf "${cache_dir}/${pkg_utils}" -C "${tmp_extract}/utils" 2>/dev/null || true
+    [ -n "${pkg_lib32}" ] && [ -f "${cache_dir}/${pkg_lib32}" ] && tar --zstd -xf "${cache_dir}/${pkg_lib32}" -C "${tmp_extract}/lib32" 2>/dev/null || true
+    [ -n "${pkg_settings}" ] && [ -f "${cache_dir}/${pkg_settings}" ] && tar --zstd -xf "${cache_dir}/${pkg_settings}" -C "${tmp_extract}/settings" 2>/dev/null || true
+    [ -n "${pkg_opencl}" ] && [ -f "${cache_dir}/${pkg_opencl}" ] && tar --zstd -xf "${cache_dir}/${pkg_opencl}" -C "${tmp_extract}/opencl" 2>/dev/null || true
+    [ -n "${pkg_lib32_opencl}" ] && [ -f "${cache_dir}/${pkg_lib32_opencl}" ] && tar --zstd -xf "${cache_dir}/${pkg_lib32_opencl}" -C "${tmp_extract}/lib32_opencl" 2>/dev/null || true
+    [ -n "${pkg_libva}" ] && [ -f "${cache_dir}/${pkg_libva}" ] && tar --zstd -xf "${cache_dir}/${pkg_libva}" -C "${tmp_extract}/libva" 2>/dev/null || true
 
     # Prepare Slackware structure:
     # 64-bit -> /usr/lib64
     # 32-bit -> /usr/lib
-    sudo mkdir -p "${staging_root}/usr/bin" \
-                  "${staging_root}/usr/lib64/dri" \
-                  "${staging_root}/usr/lib" \
-                  "${staging_root}/usr/share" \
-                  "${staging_root}/etc/OpenCL/vendors" \
-                  "${staging_root}/etc/profile.d" \
-                  "${staging_root}/lib/firmware/nvidia/${target_ver}" \
-                  "${staging_root}/install"
+    mkdir -p "${staging_root}/usr/bin" \
+             "${staging_root}/usr/lib64/dri" \
+             "${staging_root}/usr/lib" \
+             "${staging_root}/usr/share" \
+             "${staging_root}/etc/OpenCL/vendors" \
+             "${staging_root}/etc/profile.d" \
+             "${staging_root}/lib/firmware/nvidia/${target_ver}" \
+             "${staging_root}/install"
 
     # 1. Map nvidia-utils (64-bit Core)
     if [ -d "${tmp_extract}/utils/usr/bin" ]; then
-        sudo cp -a "${tmp_extract}/utils/usr/bin/." "${staging_root}/usr/bin/"
+        cp -a "${tmp_extract}/utils/usr/bin/." "${staging_root}/usr/bin/"
     fi
     if [ -d "${tmp_extract}/utils/usr/share" ]; then
-        sudo cp -a "${tmp_extract}/utils/usr/share/." "${staging_root}/usr/share/"
+        cp -a "${tmp_extract}/utils/usr/share/." "${staging_root}/usr/share/"
     fi
     if [ -d "${tmp_extract}/utils/etc" ]; then
-        sudo cp -a "${tmp_extract}/utils/etc/." "${staging_root}/etc/"
+        cp -a "${tmp_extract}/utils/etc/." "${staging_root}/etc/"
     fi
     if [ -d "${tmp_extract}/utils/usr/lib/firmware/nvidia" ]; then
-        sudo cp -a "${tmp_extract}/utils/usr/lib/firmware/nvidia/." "${staging_root}/lib/firmware/nvidia/"
+        cp -a "${tmp_extract}/utils/usr/lib/firmware/nvidia/." "${staging_root}/lib/firmware/nvidia/"
     fi
     if [ -d "${tmp_extract}/utils/usr/lib" ]; then
         (
             cd "${tmp_extract}/utils/usr/lib"
-            sudo find . -maxdepth 1 ! -name "." ! -name "environment.d" ! -name "firmware" -exec cp -a {} "${staging_root}/usr/lib64/" \;
+            find . -maxdepth 1 ! -name "." ! -name "environment.d" ! -name "firmware" -exec cp -a {} "${staging_root}/usr/lib64/" \;
         )
     fi
 
@@ -380,29 +446,29 @@ build_and_deploy_cachyos_nvidia_userspace() {
     if [ -d "${tmp_extract}/lib32/usr/lib32" ]; then
         (
             cd "${tmp_extract}/lib32/usr/lib32"
-            sudo find . -maxdepth 1 ! -name "." -exec cp -a {} "${staging_root}/usr/lib/" \;
+            find . -maxdepth 1 ! -name "." -exec cp -a {} "${staging_root}/usr/lib/" \;
         )
     fi
 
     # 3. Map nvidia-settings
     if [ -d "${tmp_extract}/settings/usr/bin" ]; then
-        sudo cp -a "${tmp_extract}/settings/usr/bin/." "${staging_root}/usr/bin/"
+        cp -a "${tmp_extract}/settings/usr/bin/." "${staging_root}/usr/bin/"
     fi
     if [ -d "${tmp_extract}/settings/usr/share" ]; then
-        sudo cp -a "${tmp_extract}/settings/usr/share/." "${staging_root}/usr/share/"
+        cp -a "${tmp_extract}/settings/usr/share/." "${staging_root}/usr/share/"
     fi
     if [ -d "${tmp_extract}/settings/usr/lib" ]; then
-        sudo cp -a "${tmp_extract}/settings/usr/lib/." "${staging_root}/usr/lib64/"
+        cp -a "${tmp_extract}/settings/usr/lib/." "${staging_root}/usr/lib64/"
     fi
 
     # 4. Map opencl-nvidia (64-bit OpenCL)
     if [ -d "${tmp_extract}/opencl/etc/OpenCL" ]; then
-        sudo cp -a "${tmp_extract}/opencl/etc/OpenCL/." "${staging_root}/etc/OpenCL/"
+        cp -a "${tmp_extract}/opencl/etc/OpenCL/." "${staging_root}/etc/OpenCL/"
     fi
     if [ -d "${tmp_extract}/opencl/usr/lib" ]; then
         (
             cd "${tmp_extract}/opencl/usr/lib"
-            sudo find . -maxdepth 1 ! -name "." -exec cp -a {} "${staging_root}/usr/lib64/" \;
+            find . -maxdepth 1 ! -name "." -exec cp -a {} "${staging_root}/usr/lib64/" \;
         )
     fi
 
@@ -410,17 +476,17 @@ build_and_deploy_cachyos_nvidia_userspace() {
     if [ -d "${tmp_extract}/lib32_opencl/usr/lib32" ]; then
         (
             cd "${tmp_extract}/lib32_opencl/usr/lib32"
-            sudo find . -maxdepth 1 ! -name "." -exec cp -a {} "${staging_root}/usr/lib/" \;
+            find . -maxdepth 1 ! -name "." -exec cp -a {} "${staging_root}/usr/lib/" \;
         )
     fi
 
     # 6. Map libva-nvidia-driver (VA-API NVDEC driver) -> /usr/lib64/dri/
     if [ -d "${tmp_extract}/libva/usr/lib/dri" ]; then
-        sudo cp -a "${tmp_extract}/libva/usr/lib/dri/." "${staging_root}/usr/lib64/dri/"
+        cp -a "${tmp_extract}/libva/usr/lib/dri/." "${staging_root}/usr/lib64/dri/"
     fi
 
     # 7. Hardware video acceleration profile configuration
-    cat << 'VA_SH_EOF' | sudo tee "${staging_root}/etc/profile.d/nvidia-vaapi.sh" >/dev/null
+    cat << 'VA_SH_EOF' > "${staging_root}/etc/profile.d/nvidia-vaapi.sh"
 #!/bin/sh
 # NVIDIA VA-API hardware video acceleration configuration
 
@@ -447,7 +513,7 @@ else
 fi
 VA_SH_EOF
 
-    cat << 'VA_CSH_EOF' | sudo tee "${staging_root}/etc/profile.d/nvidia-vaapi.csh" >/dev/null
+    cat << 'VA_CSH_EOF' > "${staging_root}/etc/profile.d/nvidia-vaapi.csh"
 #!/bin/csh
 # NVIDIA VA-API hardware video acceleration configuration
 if ( -d /sys/class/power_supply && `ls /sys/class/power_supply/BAT* >& /dev/null; echo $status` == 0 ) then
@@ -463,13 +529,13 @@ else
 endif
 VA_CSH_EOF
 
-    sudo chmod 755 "${staging_root}/etc/profile.d/nvidia-vaapi.sh" "${staging_root}/etc/profile.d/nvidia-vaapi.csh"
+    chmod 755 "${staging_root}/etc/profile.d/nvidia-vaapi.sh" "${staging_root}/etc/profile.d/nvidia-vaapi.csh"
 
     # Clean Arch metadata
-    sudo rm -f "${staging_root}/.BUILDINFO" "${staging_root}/.INSTALL" "${staging_root}/.MTREE" "${staging_root}/.PKGINFO"
+    rm -f "${staging_root}/.BUILDINFO" "${staging_root}/.INSTALL" "${staging_root}/.MTREE" "${staging_root}/.PKGINFO"
 
     # Write Slackware slack-desc
-    cat << 'DESC_EOF' | sudo tee "${staging_root}/install/slack-desc" >/dev/null
+    cat << 'DESC_EOF' > "${staging_root}/install/slack-desc"
 cachyos-nvidia-utils: cachyos-nvidia-utils (CachyOS NVIDIA Complete User-Space Suite)
 cachyos-nvidia-utils:
 cachyos-nvidia-utils: Official NVIDIA graphics libraries (OpenGL, Vulkan, CUDA,
@@ -485,7 +551,7 @@ cachyos-nvidia-utils:
 DESC_EOF
 
     # Write doinst.sh
-    cat << 'DOINST_EOF' | sudo tee "${staging_root}/install/doinst.sh" >/dev/null
+    cat << 'DOINST_EOF' > "${staging_root}/install/doinst.sh"
 if [ -x /sbin/ldconfig ]; then
   /sbin/ldconfig 2>/dev/null || true
 fi
@@ -496,16 +562,25 @@ if [ -x /usr/bin/gtk-update-icon-cache ]; then
   /usr/bin/gtk-update-icon-cache -f -t /usr/share/icons/hicolor 2>/dev/null || true
 fi
 DOINST_EOF
+    chmod 755 "${staging_root}/install/doinst.sh"
+
+    # Enforce standard permissions before packaging
+    chmod -R u=rwX,go=rX "${staging_root}"
 
     log_info "Assembling Slackware txz package: cachyos-nvidia-utils-${target_ver}..."
-    local txz_out="/tmp/cachyos-nvidia-utils-${target_ver}-x86_64-1_slacky.txz"
-    sudo rm -f "${txz_out}"
+    local txz_out="${staging_base}/cachyos-nvidia-utils-${target_ver}-x86_64-1_slacky.txz"
+    rm -f "${txz_out}"
     (
         cd "${staging_root}"
-        sudo "${PKG_MAKE_CMD}" -l y -c n "${txz_out}" >/dev/null 2>&1
+        "${PKG_MAKE_CMD}" -l y -c n "${txz_out}" >/dev/null 2>&1
     )
 
     if [ -f "${txz_out}" ]; then
+        chmod 644 "${txz_out}"
+
+        # Root stage: Validate privileges and install
+        validate_privileges
+
         # Scan and retire legacy conflicting NVIDIA packages from /var/log/packages to avoid multiple owners
         local legacy_pkgs=("nvidia-driver" "nvidia-kernel" "nvidia-utils" "x11-nvidia-driver")
         for lpkg in "${legacy_pkgs[@]}"; do
@@ -530,7 +605,7 @@ DOINST_EOF
         log_warn "Failed to create cachyos-nvidia-utils txz package."
     fi
 
-    sudo rm -rf "${staging_root}" "${tmp_extract}" 2>/dev/null || true
+    rm -rf "${staging_base}" 2>/dev/null || true
     trap - INT TERM
 }
 
@@ -556,7 +631,6 @@ get_nvidia_module_version() {
 sync_stock_kernel_nvidia_module() {
     local stock_kver="$1"
     local cachy_nv_ver="$2"
-    validate_privileges
 
     [ -n "${stock_kver}" ] || return 0
     [ -n "${cachy_nv_ver}" ] || return 0
@@ -575,53 +649,102 @@ sync_stock_kernel_nvidia_module() {
         fi
     fi
 
-    local run_url="https://download.nvidia.com/XFree86/Linux-x86_64/${cachy_nv_ver}/NVIDIA-Linux-x86_64-${cachy_nv_ver}.run"
-    local cache_dir="/var/cache/slacky-update/nvidia"
-    local run_file="${cache_dir}/NVIDIA-Linux-x86_64-${cachy_nv_ver}.run"
+    local gpu_arch="MODERN"
+    if command -v detect_nvidia_gpu >/dev/null 2>&1; then
+        gpu_arch=$(detect_nvidia_gpu)
+    fi
 
-    sudo mkdir -p "${cache_dir}"
-    if [ ! -f "${run_file}" ]; then
-        log_info "Downloading matching NVIDIA installer (${cachy_nv_ver})..."
-        if ! sudo curl -sSLf -o "${run_file}" "${run_url}"; then
-            sudo rm -f "${run_file}"
-            log_warn "Could not download official NVIDIA .run installer (${cachy_nv_ver}) from download.nvidia.com."
-            log_warn "Upstream NVIDIA may not have published standalone .run for this release yet."
-            echo -e "${RED}${BOLD}[MAJOR BUMMER] Stock Slackware kernel (${stock_kver}) could NOT be synchronized to NVIDIA ${cachy_nv_ver}!${RESET}"
-            echo -e "${YELLOW}${BOLD}DO NOT select stock kernel '${stock_kver}' in boot menu until matching NVIDIA driver is available.${RESET}"
+    local cachy_repo="https://mirror.cachyos.org/repo/x86_64/cachyos"
+    local staging_dir
+    staging_dir="$(get_user_staging_dir)/dkms"
+    mkdir -p "${staging_dir}"
+
+    local dkms_pkg=""
+    local dkms_name="nvidia"
+    local dkms_ver="${cachy_nv_ver}"
+
+    if [ "${gpu_arch}" = "PASCAL" ]; then
+        # Pascal GTX 10-series uses nvidia-580xx-dkms
+        local phtml
+        phtml=$(curl -sSL --connect-timeout 15 -m 30 "${cachy_repo}/" 2>/dev/null || echo "")
+        dkms_pkg=$(echo "${phtml}" | grep -o -E 'nvidia-580xx-dkms-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst' | head -n 1 || echo "")
+        dkms_name="nvidia"
+        dkms_ver=$(echo "${dkms_pkg}" | grep -o -E '580\.[0-9]+(\.[0-9]+)?' | head -n 1 || echo "580.178.04")
+    else
+        # Modern Turing+ RTX series uses nvidia-open-dkms
+        local mhtml
+        mhtml=$(curl -sSL --connect-timeout 15 -m 30 "${cachy_repo}/" 2>/dev/null || echo "")
+        dkms_pkg=$(echo "${mhtml}" | grep -o -E 'nvidia-open-dkms-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst' | head -n 1 || echo "")
+        dkms_name="nvidia"
+    fi
+
+    if [ -n "${dkms_pkg}" ]; then
+        local dkms_archive="${staging_dir}/${dkms_pkg}"
+        local dkms_items=("${cachy_repo}/${dkms_pkg}|${dkms_archive}|${cachy_repo}/${dkms_pkg}.sig|${dkms_archive}.sig")
+        if ! download_parallel_pacman "CachyOS NVIDIA DKMS (${dkms_pkg})" "${dkms_items[@]}"; then
+            log_error "Failed to download DKMS source package: ${dkms_pkg}"
+            rm -rf "${staging_dir}"
             return 1
         fi
-        sudo chmod +x "${run_file}"
+
+        if ! verify_cachyos_gpg_signature "${dkms_archive}" "${dkms_archive}.sig"; then
+            log_error "GPG signature verification failed for ${dkms_pkg}! Aborting."
+            rm -rf "${staging_dir}"
+            return 1
+        fi
+
+        if [ -f "${dkms_archive}" ] && [ -s "${dkms_archive}" ]; then
+            validate_privileges
+            # Unpack /usr/src/nvidia-* to system
+            sudo tar --zstd -xf "${dkms_archive}" -C / 2>/dev/null || true
+
+            local dkms_bin
+            dkms_bin=$(command -v dkms 2>/dev/null || echo "/usr/sbin/dkms")
+            if [ -x "${dkms_bin}" ]; then
+                log_info "Compiling NVIDIA module for stock kernel ${stock_kver} via DKMS..."
+                sudo "${dkms_bin}" build -m "${dkms_name}" -v "${dkms_ver}" -k "${stock_kver}" 2>/dev/null || log_warn "DKMS build warning for ${stock_kver}"
+                sudo "${dkms_bin}" install -m "${dkms_name}" -v "${dkms_ver}" -k "${stock_kver}" 2>/dev/null || log_warn "DKMS install warning for ${stock_kver}"
+                log_success "NVIDIA kernel module built for stock kernel: ${stock_kver}"
+            fi
+        fi
     fi
 
-    log_info "Building NVIDIA kernel module exclusively for ${stock_kver} (--kernel-module-only)..."
-    if sudo "${run_file}" --silent --accept-license \
-                          --kernel-name="${stock_kver}" \
-                          --kernel-module-only \
-                          --no-opengl-files \
-                          --no-install-compat32-libs \
-                          --no-distro-scripts \
-                          --no-nouveau-check 2>/dev/null || \
-       sudo "${run_file}" -s -a \
-                          --kernel-name="${stock_kver}" \
-                          --kernel-module-only \
-                          --no-opengl-files \
-                          --no-install-compat32-libs \
-                          --no-distro-scripts \
-                          --no-nouveau-check; then
-        log_success "NVIDIA kernel module built for stock kernel: ${stock_kver}"
-    else
-        log_warn "NVIDIA --kernel-module-only returned non-zero code for ${stock_kver}."
-        echo -e "${RED}${BOLD}[MAJOR BUMMER] NVIDIA module build failed for stock kernel (${stock_kver})!${RESET}"
-        echo -e "${YELLOW}${BOLD}Stock kernel '${stock_kver}' lacks matching graphics driver. Avoid booting into stock kernel.${RESET}"
-    fi
-
-    if command -v enforce_secure_boot_armor >/dev/null 2>&1; then
-        enforce_secure_boot_armor
-    fi
+    validate_privileges
     sudo "${DEPMOD_CMD}" -a "${stock_kver}" 2>/dev/null || true
     if command -v generate_kernel_initramfs >/dev/null 2>&1; then
         generate_kernel_initramfs "${stock_kver}"
     fi
+}
+
+rollback_cachyos_to_slackware_nvidia() {
+    validate_privileges
+    [ "${HAS_NVIDIA}" = "true" ] || return 0
+
+    log_info "Initiating rollback from CachyOS NVIDIA Suite to official Slackware standalone driver..."
+
+    # 1. Clean up CachyOS NVIDIA user-space package from /var/log/packages
+    for pkg in /var/log/packages/cachyos-nvidia-utils-*; do
+        [ -f "${pkg}" ] || continue
+        local pbase
+        pbase=$(basename "${pkg}")
+        log_info "Removing CachyOS package: ${pbase}..."
+        sudo "${PKG_REMOVE_CMD}" "${pbase}" 2>/dev/null || true
+    done
+
+    # 2. Determine appropriate branch (Pascal -> legacy/580, Modern -> production/595)
+    local gpu_arch="MODERN"
+    if command -v detect_nvidia_gpu >/dev/null 2>&1; then
+        gpu_arch=$(detect_nvidia_gpu)
+    fi
+
+    local target_branch="production"
+    if [ "${gpu_arch}" = "PASCAL" ]; then
+        target_branch="legacy"
+    fi
+
+    log_info "Installing official NVIDIA .run driver (${target_branch} branch) with DKMS..."
+    install_nvidia_run_driver "${target_branch}"
+    log_success "Rollback to official Slackware NVIDIA driver completed!"
 }
 
 sync_all_stock_kernels_nvidia() {
@@ -645,7 +768,6 @@ sync_all_stock_kernels_nvidia() {
 sync_all_cachyos_kernels_nvidia() {
     local cachy_nv_ver="$1"
     [ -n "${cachy_nv_ver}" ] || return 0
-    validate_privileges
 
     local gpu_arch="MODERN"
     if command -v detect_nvidia_gpu >/dev/null 2>&1; then
@@ -699,21 +821,30 @@ sync_all_cachyos_kernels_nvidia() {
                     local matched_pkg
                     matched_pkg=$(echo "${html}" | grep -o -E "${pkg_pattern}" | head -n 1 || echo "")
                     if [ -n "${matched_pkg}" ]; then
-                        local cache_dir="/var/cache/slacky-update/cachyos-nvidia"
-                        sudo mkdir -p "${cache_dir}"
-                        local nv_file="${cache_dir}/${matched_pkg}"
-                        log_info "Downloading ${matched_pkg}..."
-                        if sudo curl -sSLf -o "${nv_file}" "${cachy_repo}/${matched_pkg}"; then
-                            log_info "Deploying updated NVIDIA open driver to kernel ${kver}..."
-                            sudo tar --zstd -xf "${nv_file}" -C /
-                            sudo depmod -a "${kver}" 2>/dev/null || true
-                            if command -v generate_kernel_initramfs >/dev/null 2>&1; then
-                                generate_kernel_initramfs "${kver}"
-                            fi
+                        local staging_dir
+                        staging_dir="$(get_user_staging_dir)/cachy-nv-modules"
+                        mkdir -p "${staging_dir}"
+                        local nv_file="${staging_dir}/${matched_pkg}"
+                        local nv_items=("${cachy_repo}/${matched_pkg}|${nv_file}|${cachy_repo}/${matched_pkg}.sig|${nv_file}.sig")
+                        if ! download_parallel_pacman "CachyOS NVIDIA Module (${kver})" "${nv_items[@]}"; then
+                            log_error "Failed to download NVIDIA driver package: ${matched_pkg}"
+                            continue
+                        fi
+                        if ! verify_cachyos_gpg_signature "${nv_file}" "${nv_file}.sig"; then
+                            log_error "GPG signature verification failed for ${matched_pkg}! Skipping."
+                            continue
+                        fi
+                        validate_privileges
+                        log_info "Deploying updated NVIDIA open driver to kernel ${kver}..."
+                        sudo tar --zstd -xf "${nv_file}" -C /
+                        sudo depmod -a "${kver}" 2>/dev/null || true
+                        if command -v generate_kernel_initramfs >/dev/null 2>&1; then
+                            generate_kernel_initramfs "${kver}"
                         fi
                     fi
                 elif [ "${gpu_arch}" = "PASCAL" ]; then
                     if command -v dkms >/dev/null 2>&1; then
+                        validate_privileges
                         local dkms_ver
                         dkms_ver=$(dkms status 2>/dev/null | grep -E '^nvidia/' | awk -F'[,/]' '{print $2}' | tr -d ' ' | head -n 1 || echo "580.178.04")
                         log_info "Building nvidia ${dkms_ver} for CachyOS kernel ${kver} via DKMS..."
@@ -749,6 +880,7 @@ ensure_cachyos_nvidia_duties() {
     echo ""
     echo -e "${CYAN}${BOLD}=== [ CachyOS-Master Pre-Flight Status ] ===${RESET}"
     echo -e " • Target Driver Suite: ${GREEN}${cachy_nv_ver}${RESET} (64-bit + 32-bit Multilib + OpenCL + VA-API + Settings)"
+    local pending_rebuilds=0
     if [ -d "/lib/modules" ]; then
         for kdir in /lib/modules/*; do
             [ -d "${kdir}" ] || continue
@@ -763,9 +895,11 @@ ensure_cachyos_nvidia_duties() {
                     echo -e " • Kernel ${kver}: nvidia.ko ${GREEN}${k_ver} [Matched ✓]${RESET}"
                 else
                     echo -e " • Kernel ${kver}: nvidia.ko ${YELLOW}${k_ver} [Rebuild pending -> ${cachy_nv_ver}]${RESET}"
+                    pending_rebuilds=$((pending_rebuilds + 1))
                 fi
             else
                 echo -e " • Kernel ${kver}: nvidia.ko ${YELLOW}None [Rebuild pending -> ${cachy_nv_ver}]${RESET}"
+                pending_rebuilds=$((pending_rebuilds + 1))
             fi
         done
     fi
@@ -795,17 +929,19 @@ ensure_cachyos_nvidia_duties() {
         log_info "CachyOS NVIDIA Complete Suite is up to date: ${cachy_nv_ver}"
     fi
 
-    # 2. Synchronize installed CachyOS kernels
-    sync_all_cachyos_kernels_nvidia "${cachy_nv_ver}"
-
-    # 3. Synchronize all installed stock Slackware kernels
-    sync_all_stock_kernels_nvidia "${cachy_nv_ver}"
-
-    # 4. Secure Boot & Flatpak
-    configure_nvidia_modprobe
-    if command -v enforce_secure_boot_armor >/dev/null 2>&1; then
-        enforce_secure_boot_armor
+    # 2. Synchronize installed CachyOS and stock kernels if pending rebuilds exist
+    if [ "${pending_rebuilds}" -gt 0 ]; then
+        sync_all_cachyos_kernels_nvidia "${cachy_nv_ver}"
+        sync_all_stock_kernels_nvidia "${cachy_nv_ver}"
     fi
-    register_flatpak_gl_sync
+
+    # 3. Secure Boot & Flatpak only if userspace or kernel modules changed
+    if [ "${need_userspace}" = "true" ] || [ "${pending_rebuilds}" -gt 0 ]; then
+        configure_nvidia_modprobe
+        if command -v enforce_secure_boot_armor >/dev/null 2>&1; then
+            enforce_secure_boot_armor
+        fi
+        register_flatpak_gl_sync "${cachy_nv_ver}"
+    fi
 }
 

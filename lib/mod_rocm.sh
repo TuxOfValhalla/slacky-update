@@ -87,32 +87,48 @@ install_cachyos_rocm_suite() {
         "hip-runtime-amd"
     )
 
-    local dl_dir="/tmp/slacky-rocm-dl"
-    sudo rm -rf "${dl_dir}"
-    sudo mkdir -p "${dl_dir}"
+    local dl_dir="$(get_user_staging_dir)/rocm-dl"
+    rm -rf "${dl_dir}"
+    mkdir -p "${dl_dir}"
+
+    local rocm_dl_items=()
+    local resolved_pkgs=()
+
+    log_info "Resolving upstream package URLs for AMD ROCm..."
+    local m_index
+    m_index=$(curl -sSL -m 10 "${mirror_url}/" 2>/dev/null || echo "")
+    local arch_index
+    arch_index=$(curl -sSL -m 10 "${arch_mirror_url}/" 2>/dev/null || echo "")
 
     for rpkg in "${rocm_pkgs[@]}"; do
-        log_info "Fetching ${rpkg}..."
         local pkg_file
-        pkg_file=$(curl -sSL -m 10 "${mirror_url}/" 2>/dev/null | grep -o -E "${rpkg}-[0-9][^\"'>]+\.pkg\.tar\.zst" | sort -V | tail -n 1 || true)
+        pkg_file=$(echo "${m_index}" | grep -o -E "${rpkg}-[0-9][^\"'>]+\.pkg\.tar\.zst" | sort -V | tail -n 1 || true)
         local base_url="${mirror_url}"
 
         if [ -z "${pkg_file}" ]; then
-            pkg_file=$(curl -sSL -m 10 "${arch_mirror_url}/" 2>/dev/null | grep -o -E "${rpkg}-[0-9][^\"'>]+\.pkg\.tar\.zst" | sort -V | tail -n 1 || true)
+            pkg_file=$(echo "${arch_index}" | grep -o -E "${rpkg}-[0-9][^\"'>]+\.pkg\.tar\.zst" | sort -V | tail -n 1 || true)
             base_url="${arch_mirror_url}"
         fi
 
         if [ -n "${pkg_file}" ]; then
-            log_info "Downloading ${pkg_file}..."
-            sudo curl -sSL -o "${dl_dir}/${pkg_file}" "${base_url}/${pkg_file}" || true
-            if [ -f "${dl_dir}/${pkg_file}" ] && [ -s "${dl_dir}/${pkg_file}" ]; then
-                log_info "Extracting ${pkg_file} into staging tree..."
-                sudo tar -I zstd -xf "${dl_dir}/${pkg_file}" -C "${staging_root}/" 2>/dev/null || sudo tar --zstd -xf "${dl_dir}/${pkg_file}" -C "${staging_root}/" 2>/dev/null || true
-            fi
+            rocm_dl_items+=("${base_url}/${pkg_file}|${dl_dir}/${pkg_file}")
+            resolved_pkgs+=("${dl_dir}/${pkg_file}")
         else
             log_warn "Package ${rpkg} not found in primary mirrors; continuing..."
         fi
     done
+
+    if [ ${#rocm_dl_items[@]} -gt 0 ]; then
+        if ! download_parallel_pacman "AMD ROCm / HIP Creator Suite" "${rocm_dl_items[@]}"; then
+            log_warn "Some ROCm components failed to download."
+        fi
+        validate_privileges
+        for r_pkg_file in "${resolved_pkgs[@]}"; do
+            if [ -f "${r_pkg_file}" ] && [ -s "${r_pkg_file}" ]; then
+                sudo tar --zstd -xf "${r_pkg_file}" -C "${staging_root}/" 2>/dev/null || true
+            fi
+        done
+    fi
 
     # Clean Arch Linux packaging metadata
     sudo rm -f "${staging_root}/.BUILDINFO" "${staging_root}/.INSTALL" "${staging_root}/.MTREE" "${staging_root}/.PKGINFO"

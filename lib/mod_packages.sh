@@ -18,14 +18,16 @@ parallel_prefetch_packages() {
     [ -n "${active_mirror}" ] || return 0
     [ -f "/var/lib/slackpkg/pkglist" ] || return 0
 
-    sudo python3 - "${active_mirror}" << 'PYPREFETCH'
+    sudo mkdir -p /var/cache/packages 2>/dev/null || true
+    sudo chmod 777 /var/cache/packages 2>/dev/null || true
+
+    local candidates=()
+    while IFS= read -r line; do
+        [ -n "${line}" ] && candidates+=("${line}")
+    done < <(python3 - "${active_mirror}" << 'PYPREFETCH'
 import os
 import sys
 import shutil
-import time
-import subprocess
-import threading
-import concurrent.futures
 
 active_mirror = sys.argv[1].rstrip('/')
 try:
@@ -33,7 +35,7 @@ try:
     usage = shutil.disk_usage(cache_path)
     free_mb = usage.free // (1024 * 1024)
     if free_mb < 500:
-        print(f"\033[1;33m⚠️ Low disk space warning: Only {free_mb} MB free on {cache_path}. Skipping pre-fetch to avoid filling disk.\033[0m")
+        print(f"\033[1;33m⚠️ Low disk space warning: Only {free_mb} MB free on {cache_path}. Skipping pre-fetch to avoid filling disk.\033[0m", file=sys.stderr)
         sys.exit(0)
 except Exception:
     pass
@@ -45,7 +47,7 @@ if os.path.exists('/var/log/packages'):
         if len(parts) == 4:
             installed[parts[0]] = f
 
-# Read recently added packages from ChangeLog.txt so install-new packages are also pre-fetched
+# 1. Read recently added packages from ChangeLog.txt so install-new packages are also pre-fetched
 added_pkgs = set()
 changelog_file = '/var/lib/slackpkg/ChangeLog.txt'
 if os.path.exists(changelog_file):
@@ -84,7 +86,6 @@ if os.path.exists('/etc/slackpkg/slackpkgplus.conf'):
                 if repo_key and repo_url:
                     mirror_map[repo_key] = repo_url
 
-candidates = []
 if os.path.exists('/var/lib/slackpkg/pkglist'):
     with open('/var/lib/slackpkg/pkglist', 'r', encoding='utf-8', errors='ignore') as f:
         for line in f:
@@ -92,7 +93,6 @@ if os.path.exists('/var/lib/slackpkg/pkglist'):
             if len(parts) >= 8:
                 repo, name, ver, arch, build, fullname, relpath, ext = parts[0], parts[1], parts[2], parts[3], parts[4], parts[5], parts[6], parts[7]
                 if repo in allowed_repos:
-                    # Candidates: either upgrade of an installed package OR newly added package for install-new
                     is_upgrade = (name in installed and installed[name] != fullname)
                     is_new_add = (name not in installed and name in added_pkgs)
                     if is_upgrade or is_new_add:
@@ -106,80 +106,13 @@ if os.path.exists('/var/lib/slackpkg/pkglist'):
                         asc_dest = f"{dest_file}.asc"
                         if os.path.exists(dest_file) and os.path.getsize(dest_file) > 0 and os.path.exists(asc_dest) and os.path.getsize(asc_dest) > 0:
                             continue
-                        candidates.append((clean_rel or repo, pkg_file, url, asc_url, dest_dir, dest_file, asc_dest))
-
-total = len(candidates)
-if total == 0:
-    sys.exit(0)
-
-try:
-    num_workers = int(os.environ.get('SLACKY_PREFETCH_JOBS', '10'))
-    num_workers = max(1, min(num_workers, 32))
-except Exception:
-    num_workers = 10
-
-print(f"\033[1;36m🚀 Turbo Parallel Pre-fetch: Downloading {total} packages ({num_workers} parallel streams)...\033[0m")
-sys.stdout.flush()
-
-counter = 0
-success_count = 0
-fail_count = 0
-counter_lock = threading.Lock()
-
-def download_item(item):
-    global counter, success_count, fail_count
-    clean_rel, pkg_file, url, asc_url, dest_dir, dest_file, asc_dest = item
-    os.makedirs(dest_dir, exist_ok=True)
-    part_file = f"{dest_file}.part"
-    part_asc = f"{asc_dest}.part"
-    t0 = time.time()
-
-    # Download payload using curl with resume support (-C -)
-    res = subprocess.run(["curl", "-sSL", "-f", "-C", "-", "-m", "120", "-o", part_file, url], capture_output=True)
-    if res.returncode == 0 and os.path.exists(part_file) and os.path.getsize(part_file) > 0:
-        # Download asc signature
-        res_asc = subprocess.run(["curl", "-sSL", "-f", "-m", "30", "-o", part_asc, asc_url], capture_output=True)
-        if res_asc.returncode == 0 and os.path.exists(part_asc) and os.path.getsize(part_asc) > 0:
-            # Atomic rename into final destinations
-            os.replace(part_file, dest_file)
-            os.replace(part_asc, asc_dest)
-            dt = max(time.time() - t0, 0.001)
-            sz = os.path.getsize(dest_file)
-            sz_mb = sz / (1024 * 1024)
-            spd_mb = sz_mb / dt
-            if sz_mb >= 1.0:
-                sz_str = f"{sz_mb:.1f} MB"
-            else:
-                sz_str = f"{sz / 1024:.0f} KB"
-            spd_str = f"{spd_mb:.1f} MB/s"
-            with counter_lock:
-                counter += 1
-                success_count += 1
-                c = counter
-            print(f"  [\033[1;32m{c:4d}/{total}\033[0m] \033[1;34m✓\033[0m {clean_rel}/{pkg_file} (\033[1;37m{sz_str}\033[0m, \033[1;36m{spd_str}\033[0m)")
-            sys.stdout.flush()
-            return
-        else:
-            if os.path.exists(part_asc):
-                try: os.remove(part_asc)
-                except Exception: pass
-            if os.path.exists(part_file):
-                try: os.remove(part_file)
-                except Exception: pass
-
-    with counter_lock:
-        counter += 1
-        fail_count += 1
-
-with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
-    list(executor.map(download_item, candidates))
-
-if fail_count > 0:
-    print(f"\033[1;33m⚠️ Turbo Parallel Pre-fetch finished: {success_count}/{total} packages cached ({fail_count} failed, slackpkg will fallback to direct download).\033[0m\n")
-else:
-    print(f"\033[1;32m✓ Turbo Parallel Pre-fetch completed: {success_count} packages cached to /var/cache/packages.\033[0m\n")
-sys.stdout.flush()
+                        print(f"{url}|{dest_file}|{asc_url}|{asc_dest}")
 PYPREFETCH
+)
+
+    if [ ${#candidates[@]} -gt 0 ]; then
+        download_parallel_pacman "Slackware System Packages" "${candidates[@]}" || true
+    fi
 }
 
 update_slackware_core() {

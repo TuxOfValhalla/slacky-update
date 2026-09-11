@@ -132,11 +132,25 @@ sign_modules_for_kernel() {
 
         found_modules=1
 
-        # Check if module is already signed with current MOK certificate
+        # Check if module is already signed with current MOK certificate AND has valid container integrity
         local cur_signer=""
         cur_signer=$(modinfo -F signer "${mod}" 2>/dev/null || true)
         if [ -n "${cur_signer}" ] && { [ -z "${expected_cn}" ] || [ "${cur_signer}" = "${expected_cn}" ]; }; then
-            continue
+            if [[ "${mod}" =~ \.ko\.zst$ ]]; then
+                if zstd -t "${mod}" >/dev/null 2>&1; then
+                    continue
+                fi
+            elif [[ "${mod}" =~ \.ko\.xz$ ]]; then
+                if xz -t "${mod}" >/dev/null 2>&1; then
+                    continue
+                fi
+            elif [[ "${mod}" =~ \.ko\.gz$ ]]; then
+                if gzip -t "${mod}" >/dev/null 2>&1; then
+                    continue
+                fi
+            else
+                continue
+            fi
         fi
 
         # If this is an uncompressed .ko, check if a compressed version exists
@@ -156,7 +170,34 @@ sign_modules_for_kernel() {
             base_name=$(basename "${mod%.zst}")
             # Ensure stale uncompressed twin in module directory is purged
             sudo rm -f "${mod%.zst}" 2>/dev/null || true
+            local decomp_ok=0
             if sudo sh -c "unzstd -c '${mod}' > '${sign_workdir}/${base_name}' 2>/dev/null" && [ -s "${sign_workdir}/${base_name}" ]; then
+                decomp_ok=1
+            else
+                # Self-healing: Strip trailing signature bytes appended to raw zstd stream
+                if sudo python3 -c "
+import sys, subprocess
+try:
+    with open('${mod}', 'rb') as fp:
+        data = fp.read()
+    found = False
+    for cut in range(28, 4096):
+        sub = data[:-cut]
+        p = subprocess.run(['unzstd', '-c'], input=sub, capture_output=True)
+        if p.returncode == 0 and len(p.stdout) > 0:
+            with open('${sign_workdir}/${base_name}', 'wb') as out_fp:
+                out_fp.write(p.stdout)
+            found = True
+            break
+    sys.exit(0 if found else 1)
+except Exception:
+    sys.exit(1)
+" 2>/dev/null; then
+                    decomp_ok=1
+                fi
+            fi
+
+            if [ "${decomp_ok}" -eq 1 ] && [ -s "${sign_workdir}/${base_name}" ]; then
                 sudo "${sign_bin}" sha256 "${MOK_KEY}" "${cert_for_sign}" "${sign_workdir}/${base_name}" 2>/dev/null || true
                 if sudo zstd -f -q "${sign_workdir}/${base_name}" -o "${sign_workdir}/${base_name}.zst" 2>/dev/null; then
                     sudo mv -f "${sign_workdir}/${base_name}.zst" "${mod}"
@@ -196,9 +237,9 @@ sign_modules_for_kernel() {
     if [ "${newly_signed}" -eq 1 ]; then
         sudo depmod -a "${target_kver}" 2>/dev/null || true
         log_success "Applied MOK signature to kernel modules for: ${target_kver}"
-    elif [ "${found_modules}" -eq 1 ]; then
-        log_info "Kernel modules for ${target_kver} are already signed with active MOK."
+        ARMOR_NEWLY_SIGNED=1
     fi
+    return 0
 }
 
 sign_kernel_images() {
@@ -220,8 +261,6 @@ sign_kernel_images() {
         return 0
     fi
 
-    log_info "Verifying and signing kernel images in /boot..."
-
     for kernel in /boot/vmlinuz-*; do
         [ -f "${kernel}" ] || continue
         [ -L "${kernel}" ] && continue
@@ -233,7 +272,6 @@ sign_kernel_images() {
         if [ -x "${sbverify_bin}" ]; then
             if "${sbverify_bin}" --cert "${MOK_CRT}" "${kernel}" >/dev/null 2>&1; then
                 needs_sign=0
-                log_info "Kernel ${k_base} is already signed with active MOK."
             fi
         fi
 
@@ -244,12 +282,14 @@ sign_kernel_images() {
                 sudo mv -f "${signed_tmp}" "${kernel}"
                 sudo chmod 0644 "${kernel}"
                 log_success "Applied MOK signature to kernel image: ${k_base}"
+                ARMOR_NEWLY_SIGNED=1
             else
                 sudo rm -f "${signed_tmp}" 2>/dev/null || true
                 log_warn "Failed to sign kernel image: ${k_base}"
             fi
         fi
     done
+    return 0
 }
 
 enforce_secure_boot_armor() {
@@ -262,7 +302,9 @@ enforce_secure_boot_armor() {
         return 0
     fi
 
-    log_info "MOK keypair located (${MOK_CRT:-${MOK_DER}}). Enforcing Secure Boot armor..."
+    log_info "Verifying and enforcing Secure Boot MOK armor..."
+
+    ARMOR_NEWLY_SIGNED=0
 
     # 1. Sign kernel binaries in /boot
     sign_kernel_images
@@ -275,6 +317,10 @@ enforce_secure_boot_armor() {
             kver=$(basename "${kdir}")
             sign_modules_for_kernel "${kver}"
         done
+    fi
+
+    if [ "${ARMOR_NEWLY_SIGNED}" -eq 0 ]; then
+        log_info "All kernel images and modules are verified signed with active MOK."
     fi
 
     # 3. Silent Self-Heal Guard: Verify EFI bootloader integrity
@@ -388,17 +434,17 @@ get_bootloader_uuid_and_prefix() {
 fetch_official_signed_shim_interactive() {
     local esp_mount="${1:-/boot/efi}"
     local target_efi_dir="${esp_mount}/EFI/Slackware"
-    sudo mkdir -p "${target_efi_dir}"
 
     if [ -f "${target_efi_dir}/shimx64.efi" ] && [ -f "${target_efi_dir}/mmx64.efi" ] && [ -f "${target_efi_dir}/grubx64.efi" ]; then
         return 0
     fi
 
-    log_info "Fetching official Microsoft-signed Shim and GRUB from Fedora repositories..."
-    local efi_tmp="/tmp/slacky-efi-bootstrap"
-    rm -rf "${efi_tmp}"
-    mkdir -p "${efi_tmp}"
-    pushd "${efi_tmp}" >/dev/null
+    log_info "Fetching official Microsoft-signed Shim and GRUB from Fedora repositories to user staging..."
+    local efi_staging
+    efi_staging="$(get_user_staging_dir)/efi-bootstrap"
+    rm -rf "${efi_staging}"
+    mkdir -p "${efi_staging}"
+    pushd "${efi_staging}" >/dev/null
 
     local shim_url="https://kojipkgs.fedoraproject.org/packages/shim/15.8/3/x86_64/shim-x64-15.8-3.x86_64.rpm"
     local grub_url="https://kojipkgs.fedoraproject.org/packages/grub2/2.12/9.fc41/x86_64/grub2-efi-x64-2.12-9.fc41.x86_64.rpm"
@@ -419,10 +465,20 @@ fetch_official_signed_shim_interactive() {
         bsdtar -xf grub.rpm 2>/dev/null || true
 
         if [ -f "boot/efi/EFI/fedora/shimx64.efi" ]; then
+            if ! verify_microsoft_uefi_authenticode "boot/efi/EFI/fedora/shimx64.efi"; then
+                log_error "Authenticode verification failed for shimx64.efi! Aborting deployment to protect Secure Boot integrity."
+                popd >/dev/null
+                rm -rf "${efi_staging}" 2>/dev/null || true
+                return 1
+            fi
+            validate_privileges
+            sudo mkdir -p "${target_efi_dir}"
             sudo cp -af "boot/efi/EFI/fedora/shimx64.efi" "${target_efi_dir}/shimx64.efi"
             sudo cp -af "boot/efi/EFI/fedora/mmx64.efi" "${target_efi_dir}/mmx64.efi"
         fi
         if [ -f "boot/efi/EFI/fedora/grubx64.efi" ]; then
+            validate_privileges
+            sudo mkdir -p "${target_efi_dir}"
             sudo cp -af "boot/efi/EFI/fedora/grubx64.efi" "${target_efi_dir}/grubx64.efi"
         fi
         log_success "Official Microsoft-signed Shim & GRUB deployed to ${target_efi_dir}!"
@@ -431,7 +487,7 @@ fetch_official_signed_shim_interactive() {
     fi
 
     popd >/dev/null
-    rm -rf "${efi_tmp}"
+    rm -rf "${efi_staging}" 2>/dev/null || true
 }
 
 deploy_maximum_armor_interactive() {

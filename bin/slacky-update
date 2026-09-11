@@ -3,8 +3,8 @@
 
 set -euo pipefail
 
-CURRENT_VERSION="0.9"
-RELEASE_CODENAME="Fat Lady"
+CURRENT_VERSION="0.10"
+RELEASE_CODENAME="Underpants Gnomes"
 
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 if [ -d "${SCRIPT_DIR}/../lib" ] && [ -f "${SCRIPT_DIR}/../lib/common.sh" ]; then
@@ -39,6 +39,8 @@ source "${APP_DIR}/mod_clean.sh"
 [ -f "${APP_DIR}/mod_rocm.sh" ] && source "${APP_DIR}/mod_rocm.sh"
 # shellcheck source=/dev/null
 [ -f "${APP_DIR}/mod_tweaks.sh" ] && source "${APP_DIR}/mod_tweaks.sh"
+# shellcheck source=/dev/null
+[ -f "${APP_DIR}/mod_gaming.sh" ] && source "${APP_DIR}/mod_gaming.sh"
 
 if [ -f "${SCRIPT_DIR}/../lib/slacky_update_i18n.py" ]; then
     I18N_PY="${SCRIPT_DIR}/../lib/slacky_update_i18n.py"
@@ -60,6 +62,8 @@ _() {
     python3 "$I18N_PY" "$@"
 }
 
+set_terminal_title "slacky-update v${CURRENT_VERSION}"
+
 INTERACTIVE_SESSION=0
 
 cleanup_on_exit() {
@@ -73,10 +77,7 @@ trap cleanup_on_exit EXIT
 
 # --- [ STATUS SUMMARY DISPLAY ] ---
 display_pending_status() {
-    local status_file="/var/cache/slacky-update/status.json"
-    if [ -f "${status_file}" ]; then
-        echo -e "${CYAN}${BOLD}$(_ CLI_UPDATES_HEADER)${RESET}"
-        python3 -c '
+    python3 -c '
 import json, sys, os
 sys.path.insert(0, "/usr/share/slacky-update/lib")
 try:
@@ -84,15 +85,30 @@ try:
 except ImportError:
     def _(k, **kw): return k
 
-status_file = "/var/cache/slacky-update/status.json"
-if not os.path.exists(status_file):
+candidates = ["/var/cache/slacky-update/status.json", os.path.expanduser("~/.cache/slacky-update/status.json")]
+sudo_u = os.environ.get("SUDO_USER")
+if sudo_u:
+    candidates.append(f"/home/{sudo_u}/.cache/slacky-update/status.json")
+
+data = None
+best_ts = -1
+for c in candidates:
+    if os.path.exists(c):
+        try:
+            with open(c, "r", encoding="utf-8") as f:
+                cand_data = json.load(f)
+                ts = float(cand_data.get("last_check_ts", os.path.getmtime(c)))
+                if ts > best_ts:
+                    best_ts = ts
+                    data = cand_data
+        except Exception:
+            pass
+
+if data is None:
     sys.exit(0)
 
-try:
-    with open(status_file, "r", encoding="utf-8") as f:
-        data = json.load(f)
-except Exception:
-    sys.exit(0)
+hdr = _("CLI_UPDATES_HEADER")
+print(f"\033[1;36m{hdr}\033[0m")
 
 def print_cat(title, items):
     if items:
@@ -104,6 +120,7 @@ print_cat(_("CAT_SLACKWARE"), data.get("slackware_updates", []))
 print_cat(_("CAT_FLATPAK"), data.get("flatpak_updates", []))
 print_cat(_("CAT_SBO"), data.get("sbo_updates", []))
 print_cat(_("CAT_KERNEL"), data.get("cachyos_kernel_updates", []))
+print_cat(_("CAT_GAMING"), data.get("cachyos_gaming_updates", []))
 print_cat(_("CAT_NVIDIA"), data.get("nvidia_driver_updates", []))
 
 if data.get("nvidia_gl_mismatch", False):
@@ -114,12 +131,11 @@ if sb.get("state") == "enabled":
     for w in sb.get("warnings", []):
         print(f"\033[1;31m• Secure Boot Warning: {w}\033[0m")
 
-total = len(data.get("slackware_updates", [])) + len(data.get("flatpak_updates", [])) + len(data.get("sbo_updates", [])) + len(data.get("cachyos_kernel_updates", [])) + len(data.get("nvidia_driver_updates", []))
+total = len(data.get("slackware_updates", [])) + len(data.get("flatpak_updates", [])) + len(data.get("sbo_updates", [])) + len(data.get("cachyos_kernel_updates", [])) + len(data.get("cachyos_gaming_updates", [])) + len(data.get("nvidia_driver_updates", []))
 if total == 0 and not data.get("nvidia_gl_mismatch", False):
     print("\033[1;32m" + _("NO_PENDING_UPDATES") + "\033[0m")
-'
-        echo ""
-    fi
+print("")
+' 2>/dev/null || true
 }
 
 # --- [ FULL SYSTEM UPDATE TRANSACTION ] ---
@@ -159,7 +175,7 @@ with open(a_file, 'r', encoding='utf-8', errors='ignore') as f:
     a = set(line.strip() for line in f if line.strip())
 
 diff = a - b
-crit_keywords = ['glibc', 'plasma-', 'kwin-', 'sddm-', 'wayland-', 'nvidia-', 'kernel-', 'cachyos-']
+crit_keywords = ['glibc', 'plasma-', 'kwin-', 'sddm-', 'wayland-', 'nvidia-', 'kernel-', 'linux-cachyos']
 for p in diff:
     for kw in crit_keywords:
         if kw in p:
@@ -226,7 +242,7 @@ run_full_update() {
     k_snap_before=$(get_kernel_driver_snapshot)
 
     local boot_snap_before boot_snap_after
-    boot_snap_before=$(ls -la /boot/vmlinuz* /boot/initramfs* /lib/modules 2>/dev/null || true)
+    boot_snap_before=$(ls -ld /boot/vmlinuz* /boot/initramfs* /lib/modules/*/modules.dep 2>/dev/null || true)
     local kernel_or_driver_changed=0
 
     local is_headless=0
@@ -234,18 +250,25 @@ run_full_update() {
         is_headless=1
     fi
 
-    local reply_slack="Y"
-    if [ "${is_headless}" -eq 0 ]; then
-        read -r -p "$(_ PROMPT_UPGRADE_SLACKWARE)" reply_slack || reply_slack="Y"
-        reply_slack=${reply_slack:-Y}
-    fi
-    if [[ "$reply_slack" =~ ^[YyJjSsOo]$ ]]; then
-        echo -e "\n${BLUE}${BOLD}$(_ UPGRADING_SLACKWARE)${RESET}"
-        update_slackware_core
+    local slack_count
+    slack_count=$(get_status_key_count "slackware_updates")
+
+    if [ "${slack_count}" -gt 0 ]; then
+        local reply_slack="Y"
+        if [ "${is_headless}" -eq 0 ]; then
+            read -r -p "$(_ PROMPT_UPGRADE_SLACKWARE)" reply_slack || reply_slack="Y"
+            reply_slack=${reply_slack:-Y}
+        fi
+        if [[ "$reply_slack" =~ ^[YyJjSsOo]$ ]]; then
+            echo -e "\n${BLUE}${BOLD}$(_ UPGRADING_SLACKWARE)${RESET}"
+            update_slackware_core
+        fi
+    else
+        log_info "$(_ SLACKWARE_CORE_UP_TO_DATE)"
     fi
 
     local cachy_count
-    cachy_count=$(python3 -c "import json, os; d=json.load(open('/var/cache/slacky-update/status.json')) if os.path.exists('/var/cache/slacky-update/status.json') else {}; print(len(d.get('cachyos_kernel_updates', [])))" 2>/dev/null || echo 0)
+    cachy_count=$(get_status_key_count "cachyos_kernel_updates")
     if [ "${cachy_count}" -gt 0 ]; then
         local reply_cachy="Y"
         if [ "${is_headless}" -eq 0 ]; then
@@ -260,20 +283,41 @@ run_full_update() {
     fi
 
     if command -v flatpak >/dev/null 2>&1; then
-        local reply_flatpak="Y"
-        if [ "${is_headless}" -eq 0 ]; then
-            read -r -p "$(_ PROMPT_UPGRADE_FLATPAK)" reply_flatpak || reply_flatpak="Y"
-            reply_flatpak=${reply_flatpak:-Y}
+        local flatpak_count
+        flatpak_count=$(get_status_key_count "flatpak_updates")
+        local nvidia_mismatch="false"
+        if [ -f "/var/cache/slacky-update/status.json" ]; then
+            nvidia_mismatch=$(python3 -c "
+import json
+try:
+    with open('/var/cache/slacky-update/status.json') as f:
+        print('true' if json.load(f).get('nvidia_gl_mismatch', False) else 'false')
+except Exception:
+    print('false')
+" 2>/dev/null || echo "false")
         fi
-        if [[ "$reply_flatpak" =~ ^[YyJjSsOo]$ ]]; then
-            echo -e "\n${BLUE}${BOLD}$(_ UPGRADING_FLATPAK)${RESET}"
-            update_flatpaks
+
+        if [ "${flatpak_count}" -gt 0 ] || [ "${nvidia_mismatch}" = "true" ]; then
+            local reply_flatpak="Y"
+            if [ "${is_headless}" -eq 0 ]; then
+                read -r -p "$(_ PROMPT_UPGRADE_FLATPAK)" reply_flatpak || reply_flatpak="Y"
+                reply_flatpak=${reply_flatpak:-Y}
+            fi
+            if [[ "$reply_flatpak" =~ ^[YyJjSsOo]$ ]]; then
+                echo -e "\n${BLUE}${BOLD}$(_ UPGRADING_FLATPAK)${RESET}"
+                update_flatpaks
+                if [ "${nvidia_mismatch}" = "true" ]; then
+                    local act_nv
+                    act_nv=$(cat /sys/module/nvidia/version 2>/dev/null || head -n 1 /proc/driver/nvidia/version 2>/dev/null | awk '{print $8}' || true)
+                    register_flatpak_gl_sync "${act_nv}"
+                fi
+            fi
         fi
     fi
 
     if is_sbotools_installed; then
         local sbo_count
-        sbo_count=$(python3 -c "import json, os; d=json.load(open('/var/cache/slacky-update/status.json')) if os.path.exists('/var/cache/slacky-update/status.json') else {}; print(len(d.get('sbo_updates', [])))" 2>/dev/null || echo 0)
+        sbo_count=$(get_status_key_count "sbo_updates")
         if [ "${sbo_count}" -gt 0 ]; then
             local reply_sbo="Y"
             if [ "${is_headless}" -eq 0 ]; then
@@ -286,6 +330,22 @@ run_full_update() {
         fi
     fi
 
+    if command -v sync_all_installed_cachyos_gaming_packages >/dev/null 2>&1; then
+        local gaming_count
+        gaming_count=$(get_status_key_count "cachyos_gaming_updates")
+        if [ "${gaming_count}" -gt 0 ]; then
+            local reply_gaming="Y"
+            if [ "${is_headless}" -eq 0 ]; then
+                read -r -p "$(_ PROMPT_UPGRADE_GAMING)" reply_gaming || reply_gaming="Y"
+                reply_gaming=${reply_gaming:-Y}
+            fi
+            if [[ "$reply_gaming" =~ ^[YyJjSsOo]$ ]]; then
+                echo -e "\n${BLUE}${BOLD}$(_ UPGRADING_GAMING)${RESET}"
+                sync_all_installed_cachyos_gaming_packages
+            fi
+        fi
+    fi
+
     if [ "${HAS_NVIDIA}" = "true" ]; then
         if [ "$(has_cachyos_kernels_installed 2>/dev/null || echo false)" = "true" ]; then
             if command -v ensure_cachyos_nvidia_duties >/dev/null 2>&1; then
@@ -293,7 +353,7 @@ run_full_update() {
             fi
         else
             local nv_count
-            nv_count=$(python3 -c "import json, os; d=json.load(open('/var/cache/slacky-update/status.json')) if os.path.exists('/var/cache/slacky-update/status.json') else {}; print(len(d.get('nvidia_driver_updates', [])))" 2>/dev/null || echo 0)
+            nv_count=$(get_status_key_count "nvidia_driver_updates")
             if [ "${nv_count}" -gt 0 ]; then
                 local reply_nv="Y"
                 if [ "${is_headless}" -eq 0 ]; then
@@ -308,12 +368,10 @@ run_full_update() {
         fi
     fi
 
-    register_flatpak_gl_sync
-
     k_snap_after=$(get_kernel_driver_snapshot)
     get_full_pkg_snapshot_file "${snap_after_file}"
 
-    boot_snap_after=$(ls -la /boot/vmlinuz* /boot/initramfs* /lib/modules 2>/dev/null || true)
+    boot_snap_after=$(ls -ld /boot/vmlinuz* /boot/initramfs* /lib/modules/*/modules.dep 2>/dev/null || true)
     if [ "${boot_snap_before}" != "${boot_snap_after}" ]; then
         kernel_or_driver_changed=1
     fi
@@ -332,13 +390,13 @@ run_full_update() {
                 build_nvidia_modules "${active_kver}"
             fi
         fi
-        generate_kernel_initramfs "ALL"
         if command -v purge_old_slackware_kernels >/dev/null 2>&1; then
-            purge_old_slackware_kernels
+            purge_old_slackware_kernels --no-sync
         fi
         if command -v purge_old_cachyos_kernels >/dev/null 2>&1; then
-            purge_old_cachyos_kernels
+            purge_old_cachyos_kernels --no-sync
         fi
+        generate_kernel_initramfs "ALL"
         enforce_secure_boot_armor
         sync_bootloader_configuration "${active_kver}"
     else
@@ -411,11 +469,12 @@ manage_cachyos_kernel_interactive() {
         echo -e "${BOLD}Actions:${RESET}"
         echo -e "  1. $(_ CACHY_MENU_UPGRADE_INSTALLED | sed -E 's/^[0-9]+\.\s*//')"
         echo -e "  2. $(_ CACHY_MENU_PICKER | sed -E 's/^[0-9]+\.\s*//')"
-        echo -e "  3. $(_ CACHY_MENU_REBUILD_ACTIVE active="${active_kver}" | sed -E 's/^[0-9]+\.\s*//')"
-        echo -e "  4. $(_ MOK_OPTION_RETURN | sed -E 's/^[0-9]+\.\s*//')"
+        echo -e "  3. $(_ CACHY_MENU_MANAGE_KERNELS | sed -E 's/^[0-9]+\.\s*//')"
+        echo -e "  4. $(_ CACHY_MENU_REBUILD_ACTIVE active="${active_kver}" | sed -E 's/^[0-9]+\.\s*//')"
+        echo -e "  5. $(_ MOK_OPTION_RETURN | sed -E 's/^[0-9]+\.\s*//')"
         echo ""
-        echo -n "$(_ SELECT_OPERATION_RANGE range="1-4") "
-        read -r kchoice || kchoice="4"
+        echo -n "$(_ SELECT_OPERATION_RANGE range="1-5") "
+        read -r kchoice || kchoice="5"
 
         case "${kchoice}" in
             1)
@@ -437,6 +496,11 @@ manage_cachyos_kernel_interactive() {
                 ;;
             3)
                 echo ""
+                manage_system_kernels_interactive
+                installed_flavors=$(get_installed_cachyos_flavors)
+                ;;
+            4)
+                echo ""
                 validate_privileges
                 generate_kernel_initramfs "${active_kver}"
                 build_nvidia_modules "${active_kver}"
@@ -445,7 +509,7 @@ manage_cachyos_kernel_interactive() {
                 echo ""
                 read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
                 ;;
-            4)
+            5)
                 return 0
                 ;;
             *)
@@ -465,61 +529,99 @@ manage_nvidia_interactive() {
     local has_cachy
     has_cachy=$(has_cachyos_kernels_installed 2>/dev/null || echo "false")
 
-    echo ""
-    echo -e "${BOLD}$(_ NVIDIA_BRANCH_SELECT)${RESET}"
     if [ "${has_cachy}" = "true" ]; then
-        echo -e "  ${CYAN}$(_ NVIDIA_CACHYOS_MASTER_SYNC)${RESET}"
-    fi
-    echo -e "  $(_ NVIDIA_BRANCH_LEGACY)"
-    echo -e "  $(_ NVIDIA_BRANCH_PRODUCTION)"
-    echo -e "  $(_ NVIDIA_BRANCH_FEATURE)"
-    echo -e "  $(_ NVIDIA_OPTION_REBUILD)"
-    echo -e "  $(_ NVIDIA_OPTION_RETURN)"
-    echo ""
-    if [ "${has_cachy}" = "true" ]; then
-        echo -n "$(_ SELECT_OPERATION_RANGE range="0-5")"
-    else
-        echo -n "$(_ SELECT_OPERATION_RANGE range="1-5")"
-    fi
-    read -r n_choice || n_choice="5"
+        # CachyOS-managed system: show CachyOS NVIDIA Master Station
+        while true; do
+            echo ""
+            echo -e "${CYAN}============================================================${RESET}"
+            echo -e "${YELLOW}${BOLD}$(_ MENU_NVIDIA_CACHY_TITLE)${RESET}"
+            echo -e "${CYAN}============================================================${RESET}"
+            echo -e "  \033[1;33m1.\033[0m $(_ NVIDIA_CACHYOS_MASTER_SYNC)"
+            echo -e "  \033[1;33m2.\033[0m $(_ NVIDIA_OPTION_REBUILD)"
+            echo -e "  \033[1;33m3.\033[0m $(_ NVIDIA_OPTION_RETURN)"
+            echo ""
+            echo -n "$(_ SELECT_OPERATION_RANGE range="1-3") "
+            local n_choice
+            read -r n_choice || n_choice="3"
 
-    case "${n_choice}" in
-        0)
-            if [ "${has_cachy}" = "true" ]; then
-                validate_privileges
-                ensure_cachyos_nvidia_duties
-            else
-                log_warn "Invalid selection."
-            fi
-            ;;
-        1)
-            validate_privileges
-            install_nvidia_run_driver "legacy"
-            ;;
-        2)
-            validate_privileges
-            install_nvidia_run_driver "production"
-            ;;
-        3)
-            validate_privileges
-            install_nvidia_run_driver "feature"
-            ;;
-        4)
-            validate_privileges
-            build_nvidia_modules "ALL"
-            generate_kernel_initramfs "ALL"
-            enforce_secure_boot_armor
-            sync_bootloader_configuration "$(uname -r)"
-            register_flatpak_gl_sync
-            ;;
-        5)
-            return 0
-            ;;
-        *)
-            log_warn "Invalid selection. Returning to main menu."
-            return 0
-            ;;
-    esac
+            case "${n_choice}" in
+                1)
+                    validate_privileges
+                    ensure_cachyos_nvidia_duties
+                    echo ""
+                    read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                    ;;
+                2)
+                    validate_privileges
+                    build_nvidia_modules "ALL"
+                    generate_kernel_initramfs "ALL"
+                    enforce_secure_boot_armor
+                    sync_bootloader_configuration "$(uname -r)"
+                    register_flatpak_gl_sync
+                    echo ""
+                    read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                    ;;
+                3)
+                    return 0
+                    ;;
+                *)
+                    log_warn "Invalid selection."
+                    ;;
+            esac
+        done
+    else
+        # Pure Slackware system without CachyOS: show standalone .run branch selection
+        while true; do
+            echo ""
+            echo -e "${BOLD}$(_ NVIDIA_BRANCH_SELECT)${RESET}"
+            echo -e "  \033[1;33m1.\033[0m $(_ NVIDIA_BRANCH_LEGACY)"
+            echo -e "  \033[1;33m2.\033[0m $(_ NVIDIA_BRANCH_PRODUCTION)"
+            echo -e "  \033[1;33m3.\033[0m $(_ NVIDIA_BRANCH_FEATURE)"
+            echo -e "  \033[1;33m4.\033[0m $(_ NVIDIA_OPTION_REBUILD)"
+            echo -e "  \033[1;33m5.\033[0m $(_ NVIDIA_OPTION_RETURN)"
+            echo ""
+            echo -n "$(_ SELECT_OPERATION_RANGE range="1-5") "
+            local n_choice
+            read -r n_choice || n_choice="5"
+
+            case "${n_choice}" in
+                1)
+                    validate_privileges
+                    install_nvidia_run_driver "legacy"
+                    echo ""
+                    read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                    ;;
+                2)
+                    validate_privileges
+                    install_nvidia_run_driver "production"
+                    echo ""
+                    read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                    ;;
+                3)
+                    validate_privileges
+                    install_nvidia_run_driver "feature"
+                    echo ""
+                    read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                    ;;
+                4)
+                    validate_privileges
+                    build_nvidia_modules "ALL"
+                    generate_kernel_initramfs "ALL"
+                    enforce_secure_boot_armor
+                    sync_bootloader_configuration "$(uname -r)"
+                    register_flatpak_gl_sync
+                    echo ""
+                    read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                    ;;
+                5)
+                    return 0
+                    ;;
+                *)
+                    log_warn "Invalid selection."
+                    ;;
+            esac
+        done
+    fi
 }
 
 # --- [ INTERACTIVE TERMINAL MENU ] ---
@@ -527,8 +629,12 @@ interactive_menu() {
     INTERACTIVE_SESSION=1
     probe_gpu_hardware
     while true; do
+        set_terminal_title "slacky-update v${CURRENT_VERSION}"
+        local has_cachy
+        has_cachy=$(has_cachyos_kernels_installed 2>/dev/null || echo "false")
+
         echo ""
-        echo -e "${BOLD}Slacky-Update (v${CURRENT_VERSION} '${RELEASE_CODENAME}')${RESET}"
+        echo -e "${BLUE}${BOLD}Slacky-Update (v${CURRENT_VERSION} '${RELEASE_CODENAME}')${RESET}"
         check_slacky_update_self_update "${CURRENT_VERSION}"
         echo ""
         display_pending_status
@@ -537,13 +643,18 @@ interactive_menu() {
         if [ "${HAS_NVIDIA}" = "true" ]; then
             echo -e "  $(_ MENU_FULL_UPDATE)"
             echo -e "  $(_ MENU_KERNEL)"
-            echo -e "  $(_ MENU_NVIDIA)"
-            echo -e "  $(_ MENU_CLEAN)"
-            echo -e "  $(_ MENU_ARMOR)"
-            echo -e "  $(_ MENU_EXIT)"
+            if [ "${has_cachy}" = "true" ]; then
+                echo -e "  $(_ MENU_NVIDIA_CACHY)"
+            else
+                echo -e "  $(_ MENU_NVIDIA)"
+            fi
+            echo -e "  4. $(_ MENU_GAMING | sed -E 's/^[0-9]+\.\s*//')"
+            echo -e "  5. $(_ MENU_CLEAN | sed -E 's/^[0-9]+\.\s*//')"
+            echo -e "  6. $(_ MENU_ARMOR | sed -E 's/^[0-9]+\.\s*//')"
+            echo -e "  7. $(_ MENU_EXIT | sed -E 's/^[0-9]+\.\s*//')"
             echo ""
-            echo -n "$(_ SELECT_OPERATION_RANGE range="1-6")"
-            read -r choice || choice="6"
+            echo -n "$(_ SELECT_OPERATION_RANGE range="1-7")"
+            read -r choice || choice="7"
 
             case "${choice}" in
                 1)
@@ -566,17 +677,21 @@ interactive_menu() {
                     ;;
                 4)
                     echo ""
+                    interactive_cachyos_gaming_menu
+                    ;;
+                5)
+                    echo ""
                     clean_system_cache_and_orphans
                     echo ""
                     read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
                     ;;
-                5)
+                6)
                     echo ""
                     manage_armor_interactive
                     echo ""
                     read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
                     ;;
-                6)
+                7)
                     echo -e "\n${GREEN}$(_ SESSION_TERMINATED)${RESET}"
                     exit 0
                     ;;
@@ -589,12 +704,13 @@ interactive_menu() {
             echo -e "  $(_ MENU_FULL_UPDATE)"
             echo -e "  $(_ MENU_KERNEL)"
             echo -e "  3. $(_ MENU_AMD_ROCM | sed -E 's/^[0-9]+\.\s*//')"
-            echo -e "  4. $(_ MENU_CLEAN | sed -E 's/^[0-9]+\.\s*//')"
-            echo -e "  5. $(_ MENU_ARMOR | sed -E 's/^[0-9]+\.\s*//')"
-            echo -e "  6. $(_ MENU_EXIT | sed -E 's/^[0-9]+\.\s*//')"
+            echo -e "  4. $(_ MENU_GAMING | sed -E 's/^[0-9]+\.\s*//')"
+            echo -e "  5. $(_ MENU_CLEAN | sed -E 's/^[0-9]+\.\s*//')"
+            echo -e "  6. $(_ MENU_ARMOR | sed -E 's/^[0-9]+\.\s*//')"
+            echo -e "  7. $(_ MENU_EXIT | sed -E 's/^[0-9]+\.\s*//')"
             echo ""
-            echo -n "$(_ SELECT_OPERATION_RANGE range="1-6")"
-            read -r choice || choice="6"
+            echo -n "$(_ SELECT_OPERATION_RANGE range="1-7")"
+            read -r choice || choice="7"
 
             case "${choice}" in
                 1)
@@ -619,6 +735,58 @@ interactive_menu() {
                     ;;
                 4)
                     echo ""
+                    interactive_cachyos_gaming_menu
+                    ;;
+                5)
+                    echo ""
+                    clean_system_cache_and_orphans
+                    echo ""
+                    read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                    ;;
+                6)
+                    echo ""
+                    manage_armor_interactive
+                    echo ""
+                    read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                    ;;
+                7)
+                    echo -e "\n${GREEN}$(_ SESSION_TERMINATED)${RESET}"
+                    exit 0
+                    ;;
+                *)
+                    echo -e "\n${YELLOW}$(_ INVALID_SELECTION)${RESET}"
+                    sleep 1
+                    ;;
+            esac
+        else
+            # Pure Intel / Headless Menu (No dedicated GPU menu)
+            echo -e "  1. $(_ MENU_FULL_UPDATE | sed -E 's/^[0-9]+\.\s*//')"
+            echo -e "  2. $(_ MENU_KERNEL | sed -E 's/^[0-9]+\.\s*//')"
+            echo -e "  3. $(_ MENU_GAMING | sed -E 's/^[0-9]+\.\s*//')"
+            echo -e "  4. $(_ MENU_CLEAN | sed -E 's/^[0-9]+\.\s*//')"
+            echo -e "  5. $(_ MENU_ARMOR | sed -E 's/^[0-9]+\.\s*//')"
+            echo -e "  6. $(_ MENU_EXIT | sed -E 's/^[0-9]+\.\s*//')"
+            echo ""
+            echo -n "$(_ SELECT_OPERATION_RANGE range="1-6")"
+            read -r choice || choice="6"
+
+            case "${choice}" in
+                1)
+                    echo ""
+                    run_full_update
+                    ;;
+                2)
+                    echo ""
+                    manage_cachyos_kernel_interactive
+                    echo ""
+                    read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                    ;;
+                3)
+                    echo ""
+                    interactive_cachyos_gaming_menu
+                    ;;
+                4)
+                    echo ""
                     clean_system_cache_and_orphans
                     echo ""
                     read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
@@ -638,49 +806,6 @@ interactive_menu() {
                     sleep 1
                     ;;
             esac
-        else
-            # Pure Intel / Headless Menu (No dedicated GPU menu)
-            echo -e "  1. $(_ MENU_FULL_UPDATE | sed -E 's/^[0-9]+\.\s*//')"
-            echo -e "  2. $(_ MENU_KERNEL | sed -E 's/^[0-9]+\.\s*//')"
-            echo -e "  3. $(_ MENU_CLEAN | sed -E 's/^[0-9]+\.\s*//')"
-            echo -e "  4. $(_ MENU_ARMOR | sed -E 's/^[0-9]+\.\s*//')"
-            echo -e "  5. $(_ MENU_EXIT | sed -E 's/^[0-9]+\.\s*//')"
-            echo ""
-            echo -n "$(_ SELECT_OPERATION_RANGE range="1-5")"
-            read -r choice || choice="5"
-
-            case "${choice}" in
-                1)
-                    echo ""
-                    run_full_update
-                    ;;
-                2)
-                    echo ""
-                    manage_cachyos_kernel_interactive
-                    echo ""
-                    read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
-                    ;;
-                3)
-                    echo ""
-                    clean_system_cache_and_orphans
-                    echo ""
-                    read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
-                    ;;
-                4)
-                    echo ""
-                    manage_armor_interactive
-                    echo ""
-                    read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
-                    ;;
-                5)
-                    echo -e "\n${GREEN}$(_ SESSION_TERMINATED)${RESET}"
-                    exit 0
-                    ;;
-                *)
-                    echo -e "\n${YELLOW}$(_ INVALID_SELECTION)${RESET}"
-                    sleep 1
-                    ;;
-            esac
         fi
     done
 }
@@ -692,6 +817,9 @@ if [ "${1:-}" = "--non-interactive" ] || [ "${1:-}" = "-y" ]; then
 elif [ "${1:-}" = "--check" ]; then
     "${CHECK_BIN}"
     display_pending_status
+elif [ "${1:-}" = "--gaming" ] || [ "${1:-}" = "-g" ]; then
+    INTERACTIVE_SESSION=1
+    interactive_cachyos_gaming_menu
 elif [ "${1:-}" = "--heal-multilib" ] || [ "${1:-}" = "-m" ]; then
     validate_privileges
     heal_multilib_subsystem

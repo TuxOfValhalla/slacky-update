@@ -86,10 +86,20 @@ if [ -f "$PKG/usr/bin/goverlay" ]; then
 fi
 
 # Maintain compatibility symlinks
-mkdir -p "$PKG/usr/lib"
-ln -sf /usr/lib64/goverlay "$PKG/usr/lib/goverlay"
-ln -sf /usr/lib64/bgmod "$PKG/usr/lib/bgmod"
-ln -sf /usr/lib64/pascube "$PKG/usr/lib/pascube"
+mkdir -p "$PKG/usr/lib" "$PKG/usr/lib64/goverlay" "$PKG/usr/lib/goverlay"
+ln -sf /usr/lib64/goverlay "$PKG/usr/lib/goverlay" 2>/dev/null || true
+ln -sf /usr/lib64/bgmod "$PKG/usr/lib/bgmod" 2>/dev/null || true
+if [ -f "$PKG/usr/bin/pascube" ]; then
+  ln -sf /usr/bin/pascube "$PKG/usr/lib64/goverlay/pascube" 2>/dev/null || true
+  ln -sf /usr/bin/pascube "$PKG/usr/lib/goverlay/pascube" 2>/dev/null || true
+  ln -sf /usr/bin/pascube "$PKG/usr/lib64/pascube" 2>/dev/null || true
+  ln -sf /usr/bin/pascube "$PKG/usr/lib/pascube" 2>/dev/null || true
+elif [ -f "$PKG/usr/lib64/pascube" ]; then
+  ln -sf /usr/lib64/pascube "$PKG/usr/bin/pascube" 2>/dev/null || true
+  ln -sf /usr/lib64/pascube "$PKG/usr/lib64/goverlay/pascube" 2>/dev/null || true
+  ln -sf /usr/lib64/pascube "$PKG/usr/lib/goverlay/pascube" 2>/dev/null || true
+  ln -sf /usr/lib64/pascube "$PKG/usr/lib/pascube" 2>/dev/null || true
+fi
 
 # Set permissions
 cd "$PKG"

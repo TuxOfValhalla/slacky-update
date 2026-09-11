@@ -1,0 +1,19 @@
+# HOW TO EDIT THIS FILE:
+# The "handy ruler" below makes it easy to edit a package description.  Line
+# up the first '|' above the ':' following the base package name, and the '|'
+# on the right side marks the last possible column you can put a character in.
+# You must make exactly 11 lines for the formatting to be correct.  It's also
+# customary to leave one space after the ':'.
+
+            |-----handy-ruler------------------------------------------------------|
+bambu-studio: bambu-studio (Official 3D Slicer for Bambu Lab Printers)
+bambu-studio:
+bambu-studio: Bambu Studio is an open-source, cutting-edge, feature-rich slicing
+bambu-studio: software for 3D printers. It contains project-based workflows,
+bambu-studio: systematically optimized slicing algorithms, and an easy-to-use
+bambu-studio: graphical interface, bringing users an incredibly smooth printing
+bambu-studio: experience.
+bambu-studio:
+bambu-studio: Homepage: https://bambulab.com/en/download/studio
+bambu-studio:
+bambu-studio:

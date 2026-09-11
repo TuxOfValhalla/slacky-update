@@ -1,0 +1,13 @@
+Volt GUI (Vulkan GPU Control Panel & Settings Manager)
+
+volt-gui is an open-source graphical control panel and Vulkan implicit layer
+(VK_LAYER_VOLT_settings) for Vulkan games on Linux.
+
+It acts as a driver-agnostic alternative to AMD Adrenaline or NVIDIA Settings,
+giving you fine-grained control over frame limiting, anisotropic filtering,
+texture LOD bias, display resolutions, and GPU selection.
+
+Usage:
+  - Open Volt GUI from your desktop application launcher or run: volt-gui
+  - In Steam launch options, add: volt -- %command%
+  - In terminal / custom scripts, run: volt -- ./game

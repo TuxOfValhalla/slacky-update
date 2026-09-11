@@ -16,7 +16,7 @@ fi
 
 # Fallback: Check installed /opt trees or user storage mounts
 if [ -z "$UE_ROOT" ]; then
-    for cand in /opt/unreal-engine-* /opt/unreal-engine /home/tux/Games1/UnrealEngine-*; do
+    for cand in /opt/unreal-engine-* /opt/unreal-engine "${HOME:-/root}"/Games/UnrealEngine-* "${HOME:-/root}"/UnrealEngine-*; do
         if [ -d "$cand/Engine/Binaries/Linux" ]; then
             UE_ROOT="$cand"
             break

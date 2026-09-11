@@ -1,0 +1,13 @@
+[Desktop Entry]
+Name=Bambu Studio
+GenericName=3D Printing Slicer
+Comment=Cutting-edge 3D printer slicer for Bambu Lab
+Exec=bambu-studio %F
+Icon=bambu-studio
+Terminal=false
+Type=Application
+MimeType=model/stl;model/3mf;application/vnd.ms-package.3dmanufacturing-3dmodel+xml;
+Categories=Graphics;3DGraphics;Engineering;
+Keywords=3D;Printing;Slicer;Bambu;
+StartupNotify=true
+StartupWMClass=bambu-studio

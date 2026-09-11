@@ -1,0 +1,9 @@
+Bambu Studio is an open-source, cutting-edge, feature-rich slicing
+software for 3D printers, tailored for Bambu Lab machines.
+
+This SlackBuild repacks the official release AppImage into a native
+Slackware package installed under /opt/bambu-studio with desktop
+integration and USB udev rules.
+
+Download the official AppImage from:
+https://github.com/bambulab/BambuStudio/releases

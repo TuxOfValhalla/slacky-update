@@ -4,19 +4,21 @@
 set -euo pipefail
 
 PRGNAM="slacky-update"
-VERSION="0.9"
+VERSION="0.10"
 ARCH="noarch"
-BUILD="1_tux"
+BUILD="1_slacky"
 
 SRC_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 BUILD_DIR="/tmp/build-${PRGNAM}"
 PKG_DIR="/tmp/package-${PRGNAM}"
-OUTPUT_DIR="${SRC_DIR}"
+OUTPUT_DIR="${OUTPUT_DIR:-${SRC_DIR}/../slacky-updates_releases}"
+mkdir -p "${OUTPUT_DIR}" 2>/dev/null || OUTPUT_DIR="/tmp"
 
 PKG_NAME="${PRGNAM}-${VERSION}-${ARCH}-${BUILD}.txz"
 
 # --- [ CLEANUP PREVIOUS BUILDS ] ---
 rm -rf "${BUILD_DIR}" "${PKG_DIR}"
+rm -f "/tmp/${PRGNAM}-"*.txz 2>/dev/null || true
 mkdir -p "${BUILD_DIR}" "${PKG_DIR}" "${OUTPUT_DIR}"
 
 # --- [ STAGING FILES ] ---
@@ -31,7 +33,7 @@ mkdir -p "${PKG_DIR}/etc/cron.weekly"
 mkdir -p "${PKG_DIR}/var/cache/slacky-update"
 mkdir -p "${PKG_DIR}/install"
 
-chmod 1777 "${PKG_DIR}/var/cache/slacky-update"
+chmod 0755 "${PKG_DIR}/var/cache/slacky-update"
 
 # --- [ FILE INSTALLATION ] ---
 install -m 0755 "${SRC_DIR}/bin/slacky-update" "${PKG_DIR}/usr/local/bin/"
@@ -66,12 +68,26 @@ if [ -d "${SRC_DIR}/assets" ]; then
     fi
 fi
 
+if [ -d "${SRC_DIR}/keys" ]; then
+    mkdir -p "${PKG_DIR}/usr/share/slacky-update/keys"
+    install -m 0644 "${SRC_DIR}"/keys/* "${PKG_DIR}/usr/share/slacky-update/keys/" 2>/dev/null || true
+    mkdir -p "${PKG_DIR}/usr/local/lib/slacky-update/keys"
+    install -m 0644 "${SRC_DIR}"/keys/* "${PKG_DIR}/usr/local/lib/slacky-update/keys/" 2>/dev/null || true
+fi
+
+if [ -d "${SRC_DIR}/certs" ]; then
+    mkdir -p "${PKG_DIR}/usr/share/slacky-update/certs"
+    install -m 0644 "${SRC_DIR}"/certs/* "${PKG_DIR}/usr/share/slacky-update/certs/" 2>/dev/null || true
+    mkdir -p "${PKG_DIR}/usr/local/lib/slacky-update/certs"
+    install -m 0644 "${SRC_DIR}"/certs/* "${PKG_DIR}/usr/local/lib/slacky-update/certs/" 2>/dev/null || true
+fi
+
 # --- [ POST-INSTALL SCRIPT (doinst.sh) ] ---
 cat << 'DOINST_EOF' > "${PKG_DIR}/install/doinst.sh"
 #!/bin/sh
 
 mkdir -p /var/cache/slacky-update
-chmod 0777 /var/cache/slacky-update 2>/dev/null || true
+chmod 0755 /var/cache/slacky-update 2>/dev/null || true
 
 if [ -f /etc/cron.weekly/slacky-update-check ]; then
     chmod 0755 /etc/cron.weekly/slacky-update-check 2>/dev/null || true
@@ -100,8 +116,9 @@ chmod 755 "${PKG_DIR}/install/doinst.sh"
 cd "${PKG_DIR}"
 MAKEPKG_BIN=$(command -v makepkg 2>/dev/null || echo "/sbin/makepkg")
 "${MAKEPKG_BIN}" -l y -c n "${OUTPUT_DIR}/${PKG_NAME}"
-cp -f "${OUTPUT_DIR}/${PKG_NAME}" "${OUTPUT_DIR}/${PRGNAM}.txz"
+cp -f "${OUTPUT_DIR}/${PKG_NAME}" "${OUTPUT_DIR}/${PRGNAM}.txz" 2>/dev/null || true
 cp -f "${OUTPUT_DIR}/${PKG_NAME}" "/tmp/${PKG_NAME}" 2>/dev/null || true
+cp -f "${OUTPUT_DIR}/${PKG_NAME}" "/tmp/${PRGNAM}.txz" 2>/dev/null || true
 
 rm -rf "${BUILD_DIR}" "${PKG_DIR}"
 echo "==> Package build completed: ${OUTPUT_DIR}/${PKG_NAME}"

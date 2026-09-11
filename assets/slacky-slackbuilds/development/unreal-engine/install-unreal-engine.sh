@@ -27,9 +27,9 @@ echo -e "${C_RESET}"
 ZIP_FILE=""
 SEARCH_PATHS=(
     "$SCRIPT_DIR"
-    "/home/tux/Games1"
-    "${HOME}/Downloads"
-    "${HOME}/Downloads/UnrealEngine"
+    "${HOME:-/root}/Games"
+    "${HOME:-/root}/Downloads"
+    "${HOME:-/root}/Downloads/UnrealEngine"
     "/tmp"
 )
 
@@ -92,7 +92,7 @@ if [ -z "$TARGET_DIR" ]; then
     else
         echo -e "\n${C_BOLD}Select installation destination for Unreal Engine ${MAJOR_MINOR}:${C_RESET}"
         echo -e "  [1] Standard FHS system directory: ${C_CYAN}${DEFAULT_INSTALL_DIR}${C_RESET} (Default)"
-        echo -e "  [2] Custom location (e.g. secondary NVMe mount, e.g. /home/tux/Games1/UnrealEngine-${MAJOR_MINOR})"
+        echo -e "  [2] Custom location (e.g. secondary NVMe mount, e.g. /opt/games/UnrealEngine-${MAJOR_MINOR})"
         echo ""
         read -r -p "Enter choice [1/2] (Default: 1): " CHOICE
         case "${CHOICE:-1}" in
@@ -133,7 +133,7 @@ if [ -z "$ZIP_FILE" ] && [ ! -d "$TARGET_DIR/Engine/Binaries/Linux" ]; then
     echo -e "\n${C_RED}Error: Unreal Engine 5 archive not found.${C_RESET}"
     echo -e "Please download ${C_CYAN}Linux_Unreal_Engine_${VERSION}.*.zip${C_RESET} (or your preferred 5.x version) from:"
     echo -e "  --> ${C_BOLD}https://www.unrealengine.com/linux${C_RESET}"
-    echo -e "Place the downloaded ZIP file into ${C_CYAN}$SCRIPT_DIR${C_RESET} or ${C_CYAN}/home/tux/Games1/${C_RESET}, and run this script again."
+    echo -e "Place the downloaded ZIP file into ${C_CYAN}$SCRIPT_DIR${C_RESET} or ${C_CYAN}${HOME}/Downloads/${C_RESET}, and run this script again."
     exit 1
 fi
 

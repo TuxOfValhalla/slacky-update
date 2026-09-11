@@ -1,0 +1,167 @@
+#!/usr/bin/env bash
+# ==============================================================================
+#  Slackware build script for Volt GUI (Vulkan GPU Control Panel & Layer)
+#  Maintained by TuxOfValhalla <agnar1984@gmail.com>
+# ==============================================================================
+
+set -euo pipefail
+
+PRGNAM=volt-gui
+VERSION=${VERSION:-2.2.2}
+BUILD=${BUILD:-1_slacky}
+TAG=${TAG:-_slacky}
+
+if [ -z "${ARCH:-}" ]; then
+  case "$(uname -m)" in
+    i?86) ARCH=i586 ;;
+    arm*) ARCH=arm ;;
+    *) ARCH=$(uname -m) ;;
+  esac
+fi
+
+if [ "$ARCH" != "x86_64" ]; then
+  echo "Volt GUI is currently only supported on x86_64."
+  exit 1
+fi
+
+CWD=$(pwd)
+TMP=${TMP:-/tmp/SBo}
+PKG=$TMP/package-$PRGNAM
+OUTPUT=${OUTPUT:-/tmp}
+
+SRC_TAR=""
+for cand in "$CWD/$PRGNAM-$VERSION.tar.gz" \
+            "$CWD/v$VERSION.tar.gz" \
+            "$CWD/$PRGNAM-$VERSION.tar.xz" \
+            "$CWD/$PRGNAM"*".tar.gz"; do
+  if [ -f "$cand" ]; then
+    SRC_TAR="$cand"
+    break
+  fi
+done
+
+if [ -z "$SRC_TAR" ]; then
+  DOWNLOAD_URL="https://github.com/pythonlover02/volt-gui/archive/refs/tags/v${VERSION}.tar.gz"
+  echo "Downloading $DOWNLOAD_URL..."
+  curl -sSL -o "$CWD/$PRGNAM-$VERSION.tar.gz" "$DOWNLOAD_URL"
+  SRC_TAR="$CWD/$PRGNAM-$VERSION.tar.gz"
+fi
+
+rm -rf "$PKG"
+mkdir -p "$TMP" "$PKG" "$OUTPUT"
+cd "$TMP"
+rm -rf "$PRGNAM-$VERSION" "volt-gui-"*
+tar -xf "$SRC_TAR"
+cd "$PRGNAM"*
+
+chown -R root:root .
+find -L . \
+  \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 -o -perm 511 \) \
+  -exec chmod 755 {} \; -o \
+  \( -perm 666 -o -perm 664 -o -perm 600 -o -perm 444 -o -perm 440 -o -perm 400 \) \
+  -exec chmod 644 {} \;
+
+# Build Rust components (volt runner, volt-probe, libvolt.so Vulkan layer)
+echo "Building Volt Rust implicit layer & binaries with Cargo..."
+export RUSTUP_TOOLCHAIN=stable
+export CARGO_TARGET_DIR=target
+cargo build --release
+
+# Install Binaries
+mkdir -p "$PKG/usr/bin"
+if [ -f "target/release/volt" ]; then
+  install -m 755 target/release/volt "$PKG/usr/bin/volt"
+fi
+if [ -f "target/release/volt-probe" ]; then
+  install -m 755 target/release/volt-probe "$PKG/usr/bin/volt-probe"
+fi
+
+# Install libvolt.so (64-bit and 32-bit compatibility symlink)
+mkdir -p "$PKG/usr/lib64" "$PKG/usr/lib"
+if [ -f "target/release/libvolt.so" ]; then
+  install -m 755 target/release/libvolt.so "$PKG/usr/lib64/libvolt.so"
+  ln -sf /usr/lib64/libvolt.so "$PKG/usr/lib/libvolt.so"
+fi
+
+# Install Python GUI payload to /opt/volt-gui
+mkdir -p "$PKG/opt/volt-gui"
+if [ -d "src/volt-gui" ]; then
+  cp -a src/volt-gui/* "$PKG/opt/volt-gui/"
+elif [ -d "src" ]; then
+  cp -a src/* "$PKG/opt/volt-gui/"
+fi
+
+# Bundle PySide6 & Shiboken6 if pre-fetched in $CWD
+mkdir -p "$PKG/opt/volt-gui/lib"
+for wpkg in "$CWD"/*.pkg.tar.zst /var/cache/slacky-update/archives/*.pkg.tar.zst; do
+  [ -f "$wpkg" ] || continue
+  case "$(basename "$wpkg")" in
+    pyside6*|shiboken6*)
+      echo "Bundling isolated Python Qt runtime from $(basename "$wpkg")..."
+      wextract="$TMP/dep-extract-$(basename "$wpkg")"
+      rm -rf "$wextract"
+      mkdir -p "$wextract"
+      tar --zstd -xf "$wpkg" -C "$wextract"
+      if [ -d "$wextract/usr/lib" ]; then
+        for sp in "$wextract"/usr/lib/python*/site-packages; do
+          if [ -d "$sp" ]; then
+            cp -a "$sp/." "$PKG/opt/volt-gui/lib/" 2>/dev/null || true
+          fi
+        done
+      fi
+      rm -rf "$wextract"
+      ;;
+  esac
+done
+
+# Compile Python bytecode
+python3 -m compileall -q -d /opt/volt-gui "$PKG/opt/volt-gui" 2>/dev/null || true
+python3 -O -m compileall -q -d /opt/volt-gui "$PKG/opt/volt-gui" 2>/dev/null || true
+
+# Install Vulkan layer manifest
+mkdir -p "$PKG/usr/share/vulkan/implicit_layer.d"
+if [ -f "VkLayer_volt.json" ]; then
+  install -m 644 VkLayer_volt.json "$PKG/usr/share/vulkan/implicit_layer.d/VkLayer_volt.json"
+fi
+
+# Install Wrapper Script
+install -m 755 "$CWD/volt-gui-wrapper.sh" "$PKG/usr/bin/volt-gui"
+
+# Install Desktop Entry & Icon
+mkdir -p "$PKG/usr/share/applications"
+install -m 644 "$CWD/volt-gui.desktop" "$PKG/usr/share/applications/volt-gui.desktop"
+
+mkdir -p "$PKG/usr/share/pixmaps" "$PKG/usr/share/icons/hicolor/scalable/apps" "$PKG/usr/share/icons/hicolor/256x256/apps"
+if [ -f "src/volt-gui/icon.png" ]; then
+  install -m 644 src/volt-gui/icon.png "$PKG/usr/share/pixmaps/volt-gui.png"
+  install -m 644 src/volt-gui/icon.png "$PKG/usr/share/icons/hicolor/256x256/apps/volt-gui.png"
+elif [ -f "icon.png" ]; then
+  install -m 644 icon.png "$PKG/usr/share/pixmaps/volt-gui.png"
+  install -m 644 icon.png "$PKG/usr/share/icons/hicolor/256x256/apps/volt-gui.png"
+fi
+
+# Documentation
+mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION"
+[ -f "README.md" ] && cp -a README.md "$PKG/usr/doc/$PRGNAM-$VERSION/"
+cat "$CWD/slack-desc" > "$PKG/usr/doc/$PRGNAM-$VERSION/slack-desc" 2>/dev/null || true
+
+# Package metadata & doinst.sh
+mkdir -p "$PKG/install"
+cat "$CWD/slack-desc" > "$PKG/install/slack-desc"
+
+cat << 'EOF_DOINST' > "$PKG/install/doinst.sh"
+if [ -x /sbin/ldconfig ]; then
+  /sbin/ldconfig 2>/dev/null || true
+fi
+
+if [ -x /usr/bin/update-desktop-database ]; then
+  /usr/bin/update-desktop-database /usr/share/applications 2>/dev/null || true
+fi
+
+if [ -x /usr/bin/gtk-update-icon-cache ]; then
+  /usr/bin/gtk-update-icon-cache -f -t /usr/share/icons/hicolor 2>/dev/null || true
+fi
+EOF_DOINST
+
+cd "$PKG"
+/sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.txz"

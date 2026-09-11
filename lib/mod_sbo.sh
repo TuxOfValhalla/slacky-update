@@ -104,7 +104,7 @@ auto_refresh_sbo_tree_if_stale() {
     diff_days=$(( (now_ts - repo_mtime) / 86400 ))
 
     if [ "${diff_days}" -ge 7 ]; then
-        echo -e "${CYAN}[WHOA] $(_ SBO_SYNCING_INTEL)${RESET}"
+        log_info "$(_ SBO_SYNCING_INTEL)"
         sudo sbosnap fetch >/dev/null 2>&1 || true
         sudo touch /var/lib/sbotools/repo 2>/dev/null || true
     fi
@@ -114,6 +114,7 @@ update_sbo_packages() {
     if is_sbotools_installed; then
         echo -e "
 ${BLUE}${BOLD}$(_ UPGRADING_SBO)${RESET}"
+        auto_refresh_sbo_tree_if_stale
         sudo sboupgrade --all || {
             log_warn "sbotools upgrade completed with non-fatal warnings."
         }
@@ -346,6 +347,49 @@ install_curated_slackbuild() {
         fi
     fi
 
+    # Generic automated source downloader from .info file
+    local info_file
+    info_file=$(ls *.info 2>/dev/null | head -n 1 || true)
+    if [ -n "${info_file}" ] && [ -f "${info_file}" ]; then
+        local dl_urls=""
+        if [ "$(uname -m)" = "x86_64" ]; then
+            dl_urls=$(grep "^DOWNLOAD_x86_64=" "${info_file}" 2>/dev/null | cut -d'"' -f2 || true)
+            [ "${dl_urls}" = "UNSUPPORTED" ] && dl_urls=""
+        fi
+        if [ -z "${dl_urls}" ]; then
+            dl_urls=$(grep "^DOWNLOAD=" "${info_file}" 2>/dev/null | cut -d'"' -f2 || true)
+            [ "${dl_urls}" = "UNSUPPORTED" ] && dl_urls=""
+        fi
+
+        if [ -n "${dl_urls}" ]; then
+            for url in ${dl_urls}; do
+                local filename
+                filename=$(basename "${url}")
+                local found_cache
+                found_cache=$(ls "${build_tmp}/${filename}" \
+                                 "/var/cache/slacky-update/archives/${filename}" \
+                                 "${HOME}/Downloads/${filename}" \
+                                 "/tmp/${filename}" 2>/dev/null | head -n 1 || true)
+                if [ -n "${found_cache}" ] && [ -f "${found_cache}" ]; then
+                    if [ "${found_cache}" != "${build_tmp}/${filename}" ]; then
+                        log_info "Using cached source: ${found_cache}"
+                        cp -f "${found_cache}" "${build_tmp}/"
+                    fi
+                else
+                    log_info "Downloading source archive: ${url} ..."
+                    sudo mkdir -p /var/cache/slacky-update/archives
+                    if wget -c --no-check-certificate "${url}" -O "${build_tmp}/${filename}"; then
+                        sudo cp -f "${build_tmp}/${filename}" "/var/cache/slacky-update/archives/${filename}" 2>/dev/null || true
+                    elif curl -Lo "${build_tmp}/${filename}" "${url}"; then
+                        sudo cp -f "${build_tmp}/${filename}" "/var/cache/slacky-update/archives/${filename}" 2>/dev/null || true
+                    else
+                        log_warn "Download failed for ${url}."
+                    fi
+                fi
+            done
+        fi
+    fi
+
     log_info "Building and packaging ${prg} in isolated workspace..."
     chmod +x "${sb_script}"
     sudo env TMP="/tmp/SBo" OUTPUT="/tmp" ./${sb_script}
@@ -419,24 +463,21 @@ get_pkg_badge() {
 menu_category_games() {
     local suite_dir="$1"
     while true; do
-        local b_faugus b_heroic
+        local b_faugus
         b_faugus=$(get_pkg_badge "faugus-launcher")
-        b_heroic=$(get_pkg_badge "heroic-games-launcher")
         echo ""
         echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
         echo -e "${BOLD}${CYAN}                     🎮 Games & Launchers 🎮${RESET}"
         echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
         echo -e "  \033[1;33m1.\033[0m Faugus Launcher ${b_faugus} - Proton Cyber-Runner for Non-Steam Games"
-        echo -e "  \033[1;33m2.\033[0m Heroic Games Launcher ${b_heroic} - Epic Games & GOG Cyber-Deck"
-        echo -e "  \033[1;33m3.\033[0m $(_ SBO_BACK_OPTION)"
+        echo -e "  \033[1;33m2.\033[0m $(_ SBO_BACK_OPTION)"
         echo ""
-        echo -n "$(_ SELECT_OPERATION_RANGE range="1-3") "
+        echo -n "$(_ SELECT_OPERATION_RANGE range="1-2") "
         local sel
-        read -r sel || sel="3"
+        read -r sel || sel="2"
         case "${sel}" in
             1) install_curated_slackbuild "games/faugus-launcher" "${suite_dir}" ;;
-            2) install_curated_slackbuild "games/heroic-games-launcher" "${suite_dir}" ;;
-            3) return 0 ;;
+            2) return 0 ;;
             *) log_warn "Invalid selection." ;;
         esac
         echo ""
@@ -447,11 +488,10 @@ menu_category_games() {
 menu_category_graphics() {
     local suite_dir="$1"
     while true; do
-        local b_affinity b_blender b_freecad b_gamescope b_goverlay b_inkscape b_mangohud b_storyboarder
+        local b_affinity b_bambu b_blender b_goverlay b_inkscape b_mangohud b_storyboarder
         b_affinity=$(get_pkg_badge "affinity")
+        b_bambu=$(get_pkg_badge "bambu-studio")
         b_blender=$(get_pkg_badge "blender")
-        b_freecad=$(get_pkg_badge "freecad")
-        b_gamescope=$(get_pkg_badge "gamescope")
         b_goverlay=$(get_pkg_badge "goverlay")
         b_inkscape=$(get_pkg_badge "inkscape")
         b_mangohud=$(get_pkg_badge "mangohud")
@@ -461,28 +501,26 @@ menu_category_graphics() {
         echo -e "${BOLD}${CYAN}                     🎨 Graphics & Design 🎨${RESET}"
         echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
         echo -e "  \033[1;33m1.\033[0m Affinity Suite (Unified v3) ${b_affinity} - Creative Suite with WineFix & High-DPI"
-        echo -e "  \033[1;33m2.\033[0m Blender ${b_blender} - 3D Creation & Animation Studio"
-        echo -e "  \033[1;33m3.\033[0m FreeCAD ${b_freecad} - Parametric 3D CAD Modeler"
-        echo -e "  \033[1;33m4.\033[0m Gamescope ${b_gamescope} - SteamOS Micro-Compositor & Upscaler"
-        echo -e "  \033[1;33m5.\033[0m GOverlay ${b_goverlay} - Vulkan/OpenGL Overlay Config GUI"
-        echo -e "  \033[1;33m6.\033[0m Inkscape ${b_inkscape} - Professional Vector Graphics Editor"
-        echo -e "  \033[1;33m7.\033[0m MangoHud ${b_mangohud} - Radical In-Game HUD & Telemetry"
-        echo -e "  \033[1;33m8.\033[0m Wonder Unit Storyboarder ${b_storyboarder} - Fast Visual Storytelling & Animatics"
-        echo -e "  \033[1;33m9.\033[0m $(_ SBO_BACK_OPTION)"
+        echo -e "  \033[1;33m2.\033[0m Bambu Studio ${b_bambu} - High-Speed 3D Slicer for Bambu Lab"
+        echo -e "  \033[1;33m3.\033[0m Blender ${b_blender} - 3D Creation & Animation Studio"
+        echo -e "  \033[1;33m4.\033[0m GOverlay ${b_goverlay} - Vulkan/OpenGL Overlay Config GUI"
+        echo -e "  \033[1;33m5.\033[0m Inkscape ${b_inkscape} - Professional Vector Graphics Editor"
+        echo -e "  \033[1;33m6.\033[0m MangoHud ${b_mangohud} - Radical In-Game HUD & Telemetry"
+        echo -e "  \033[1;33m7.\033[0m Wonder Unit Storyboarder ${b_storyboarder} - Fast Visual Storytelling & Animatics"
+        echo -e "  \033[1;33m8.\033[0m $(_ SBO_BACK_OPTION)"
         echo ""
-        echo -n "$(_ SELECT_OPERATION_RANGE range="1-9") "
+        echo -n "$(_ SELECT_OPERATION_RANGE range="1-8") "
         local sel
-        read -r sel || sel="9"
+        read -r sel || sel="8"
         case "${sel}" in
             1) install_curated_slackbuild "graphics/affinity" "${suite_dir}" ;;
-            2) install_curated_slackbuild "graphics/blender" "${suite_dir}" ;;
-            3) install_curated_slackbuild "graphics/freecad" "${suite_dir}" ;;
-            4) install_curated_slackbuild "graphics/gamescope" "${suite_dir}" ;;
-            5) install_curated_slackbuild "graphics/goverlay" "${suite_dir}" ;;
-            6) install_curated_slackbuild "graphics/inkscape" "${suite_dir}" ;;
-            7) install_curated_slackbuild "graphics/mangohud" "${suite_dir}" ;;
-            8) install_curated_slackbuild "graphics/storyboarder" "${suite_dir}" ;;
-            9) return 0 ;;
+            2) install_curated_slackbuild "graphics/bambu-studio" "${suite_dir}" ;;
+            3) install_curated_slackbuild "graphics/blender" "${suite_dir}" ;;
+            4) install_curated_slackbuild "graphics/goverlay" "${suite_dir}" ;;
+            5) install_curated_slackbuild "graphics/inkscape" "${suite_dir}" ;;
+            6) install_curated_slackbuild "graphics/mangohud" "${suite_dir}" ;;
+            7) install_curated_slackbuild "graphics/storyboarder" "${suite_dir}" ;;
+            8) return 0 ;;
             *) log_warn "Invalid selection." ;;
         esac
         echo ""
@@ -543,16 +581,13 @@ menu_category_development() {
 menu_category_system() {
     local suite_dir="$1"
     while true; do
-        local b_ananicy b_gdu b_grub_btrfs b_lact b_openrgb b_snapper b_spacenavd b_spnavcfg b_wine b_winetricks
+        local b_ananicy b_gdu b_grub_btrfs b_lact b_openrgb b_snapper b_winetricks
         b_lact=$(get_pkg_badge "lact")
         b_snapper=$(get_pkg_badge "snapper")
         b_grub_btrfs=$(get_pkg_badge "grub-btrfs")
         b_ananicy=$(get_pkg_badge "ananicy-cpp")
         b_gdu=$(get_pkg_badge "gnome-disk-utility")
         b_openrgb=$(get_pkg_badge "openrgb")
-        b_spacenavd=$(get_pkg_badge "spacenavd")
-        b_spnavcfg=$(get_pkg_badge "spnavcfg")
-        b_wine=$(get_pkg_badge "wine-staging")
         b_winetricks=$(get_pkg_badge "winetricks")
         echo ""
         echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
@@ -564,15 +599,12 @@ menu_category_system() {
         echo -e "  \033[1;33m4.\033[0m Ananicy-cpp ${b_ananicy} - Auto-Nice Turbo Boost for Games & Apps"
         echo -e "  \033[1;33m5.\033[0m GNOME Disk Utility ${b_gdu} - Storage, Partitions & SMART Management"
         echo -e "  \033[1;33m6.\033[0m OpenRGB ${b_openrgb} - Open-Source RGB Lighting Control"
-        echo -e "  \033[1;33m7.\033[0m SpaceNavd ${b_spacenavd} - 3Dconnexion 3D Mouse Daemon"
-        echo -e "  \033[1;33m8.\033[0m SpNavCfg ${b_spnavcfg} - 3Dconnexion GUI Configurator"
-        echo -e "  \033[1;33m9.\033[0m Wine Staging ${b_wine} - Advanced Wine with Staging Patches"
-        echo -e "  \033[1;33m10.\033[0m Winetricks ${b_winetricks} - Easy Wine Prefix Config & DLL Helper"
-        echo -e "  \033[1;33m11.\033[0m $(_ SBO_BACK_OPTION)"
+        echo -e "  \033[1;33m7.\033[0m Winetricks ${b_winetricks} - Easy Wine Prefix Config & DLL Helper"
+        echo -e "  \033[1;33m8.\033[0m $(_ SBO_BACK_OPTION)"
         echo ""
-        echo -n "$(_ SELECT_OPERATION_RANGE range="1-11") "
+        echo -n "$(_ SELECT_OPERATION_RANGE range="1-8") "
         local sel
-        read -r sel || sel="11"
+        read -r sel || sel="8"
         case "${sel}" in
             1) install_curated_slackbuild "system/lact" "${suite_dir}" ;;
             2) install_curated_slackbuild "system/snapper" "${suite_dir}" ;;
@@ -580,11 +612,8 @@ menu_category_system() {
             4) install_curated_slackbuild "system/ananicy-cpp" "${suite_dir}" ;;
             5) install_curated_slackbuild "system/gnome-disk-utility" "${suite_dir}" ;;
             6) install_curated_slackbuild "system/openrgb" "${suite_dir}" ;;
-            7) install_curated_slackbuild "system/spacenavd" "${suite_dir}" ;;
-            8) install_curated_slackbuild "system/spnavcfg" "${suite_dir}" ;;
-            9) install_curated_slackbuild "system/wine-staging" "${suite_dir}" ;;
-            10) install_curated_slackbuild "system/winetricks" "${suite_dir}" ;;
-            11) return 0 ;;
+            7) install_curated_slackbuild "system/winetricks" "${suite_dir}" ;;
+            8) return 0 ;;
             *) log_warn "Invalid selection." ;;
         esac
         echo ""
@@ -620,24 +649,21 @@ menu_category_office() {
 menu_category_libraries() {
     local suite_dir="$1"
     while true; do
-        local b_handy b_spnav
+        local b_handy
         b_handy=$(get_pkg_badge "libhandy")
-        b_spnav=$(get_pkg_badge "libspnav")
         echo ""
         echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
         echo -e "${BOLD}${CYAN}                   📚 Libraries & Drivers 📚${RESET}"
         echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
         echo -e "  \033[1;33m1.\033[0m LibHandy ${b_handy} - GTK Adaptive UI Library"
-        echo -e "  \033[1;33m2.\033[0m LibSpNav ${b_spnav} - 3Dconnexion 3D Mouse User-Space Library"
-        echo -e "  \033[1;33m3.\033[0m $(_ SBO_BACK_OPTION)"
+        echo -e "  \033[1;33m2.\033[0m $(_ SBO_BACK_OPTION)"
         echo ""
-        echo -n "$(_ SELECT_OPERATION_RANGE range="1-3") "
+        echo -n "$(_ SELECT_OPERATION_RANGE range="1-2") "
         local sel
-        read -r sel || sel="3"
+        read -r sel || sel="2"
         case "${sel}" in
             1) install_curated_slackbuild "libraries/libhandy" "${suite_dir}" ;;
-            2) install_curated_slackbuild "libraries/libspnav" "${suite_dir}" ;;
-            3) return 0 ;;
+            2) return 0 ;;
             *) log_warn "Invalid selection." ;;
         esac
         echo ""
@@ -665,28 +691,26 @@ manage_curated_suite_interactive() {
         echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
         echo -e "${BOLD}${CYAN}                  ⚡ SLACKY-SLACKBUILDS CURATED HUB ⚡${RESET}"
         echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
-        echo -e "  \033[1;33m1.\033[0m 🎮 Games & Launchers (Faugus, Heroic)"
-        echo -e "  \033[1;33m2.\033[0m 🎨 Graphics & Design (Blender, FreeCAD, Gamescope, MangoHud, GOverlay, Inkscape)"
+        echo -e "  \033[1;33m1.\033[0m 🎮 Games & Launchers (Faugus)"
+        echo -e "  \033[1;33m2.\033[0m 🎨 Graphics & Design (Bambu Studio, Blender, MangoHud, GOverlay, Inkscape, Storyboarder)"
         echo -e "  \033[1;33m3.\033[0m 🎬 Multimedia & Video (DaVinci Resolve Studio)"
-        echo -e "  \033[1;33m4.\033[0m 🛠️ Development & Engines (Unreal Engine 5)"
-        echo -e "  \033[1;33m5.\033[0m ⚙️ System, Wine & Tuning (LACT, Snapper, GRUB-Btrfs, Ananicy-cpp, OpenRGB, SpaceMouse, Wine, Winetricks)"
-        echo -e "  \033[1;33m6.\033[0m 🏢 Office & Productivity (FreeOffice 2024)"
-        echo -e "  \033[1;33m7.\033[0m 📚 Libraries & Drivers (LibHandy, LibSpNav)"
-        echo -e "  \033[1;33m8.\033[0m $(_ SBO_BACK_OPTION)"
+        echo -e "  \033[1;33m4.\033[0m ⚙️ System, Wine & Tuning (LACT, Snapper, GRUB-Btrfs, Ananicy-cpp, GNOME Disk Utility, OpenRGB, Winetricks)"
+        echo -e "  \033[1;33m5.\033[0m 🏢 Office & Productivity (FreeOffice 2024)"
+        echo -e "  \033[1;33m6.\033[0m 📚 Libraries & Drivers (LibHandy)"
+        echo -e "  \033[1;33m7.\033[0m $(_ SBO_BACK_OPTION)"
         echo ""
-        echo -n "$(_ SELECT_OPERATION_RANGE range="1-8") "
+        echo -n "$(_ SELECT_OPERATION_RANGE range="1-7") "
         local cat_sel
-        read -r cat_sel || cat_sel="8"
+        read -r cat_sel || cat_sel="7"
 
         case "${cat_sel}" in
             1) menu_category_games "${suite_dir}" ;;
             2) menu_category_graphics "${suite_dir}" ;;
             3) menu_category_multimedia "${suite_dir}" ;;
-            4) menu_category_development "${suite_dir}" ;;
-            5) menu_category_system "${suite_dir}" ;;
-            6) menu_category_office "${suite_dir}" ;;
-            7) menu_category_libraries "${suite_dir}" ;;
-            8) return 0 ;;
+            4) menu_category_system "${suite_dir}" ;;
+            5) menu_category_office "${suite_dir}" ;;
+            6) menu_category_libraries "${suite_dir}" ;;
+            7) return 0 ;;
             *) log_warn "Invalid selection." ;;
         esac
     done

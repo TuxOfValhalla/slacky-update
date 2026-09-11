@@ -8,21 +8,25 @@ BIN="/usr/bin/ananicy-cpp"
 
 ananicy_start() {
   if [ -x "$BIN" ]; then
-    echo "Starting Ananicy C++ daemon: $BIN start"
-    rm -f "$PIDFILE"
-    $BIN start > /var/log/ananicy-cpp.log 2>&1 &
-    echo $! > "$PIDFILE"
+    echo "Starting Ananicy C++ daemon: $BIN start --manual-scanning"
+    if ! pgrep -x ananicy-cpp > /dev/null 2>&1; then
+      $BIN --force-remove-semaphore 2>/dev/null || true
+      rm -f "$PIDFILE" /var/run/ananicy-cpp.pid /dev/shm/sem.*ananicy* /dev/shm/*ananicy* 2>/dev/null || true
+    fi
+    if [ -d /sys/kernel/tracing ] && ! mountpoint -q /sys/kernel/tracing 2>/dev/null; then
+      mount -t tracefs nodev /sys/kernel/tracing 2>/dev/null || true
+    fi
+    $BIN start --manual-scanning > /var/log/ananicy-cpp.log 2>&1 &
   fi
 }
 
 ananicy_stop() {
   echo "Stopping Ananicy C++ daemon..."
-  if [ -f "$PIDFILE" ]; then
-    kill -TERM $(cat "$PIDFILE") 2>/dev/null
-    rm -f "$PIDFILE"
-  else
-    pkill -TERM -f "$BIN start" 2>/dev/null
-  fi
+  pkill -TERM -x ananicy-cpp 2>/dev/null || true
+  sleep 0.5
+  pkill -KILL -x ananicy-cpp 2>/dev/null || true
+  $BIN --force-remove-semaphore 2>/dev/null || true
+  rm -f "$PIDFILE" /var/run/ananicy-cpp.pid /dev/shm/sem.*ananicy* /dev/shm/*ananicy* 2>/dev/null || true
 }
 
 ananicy_restart() {
@@ -32,7 +36,7 @@ ananicy_restart() {
 }
 
 ananicy_status() {
-  if pgrep -f "$BIN start" > /dev/null 2>&1 || pgrep -f "$BIN" > /dev/null 2>&1; then
+  if pgrep -x ananicy-cpp > /dev/null 2>&1 || pgrep -f "$BIN" > /dev/null 2>&1; then
     echo "Ananicy C++ daemon is running."
   else
     echo "Ananicy C++ daemon is NOT running."

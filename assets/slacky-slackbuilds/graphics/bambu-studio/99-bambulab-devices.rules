@@ -1,0 +1,3 @@
+# Bambu Lab 3D printer USB and Serial Udev rules for Slackware
+SUBSYSTEM=="usb", ATTRS{idVendor}=="1a86", MODE="0666", TAG+="uaccess"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", MODE="0666", GROUP="dialout"

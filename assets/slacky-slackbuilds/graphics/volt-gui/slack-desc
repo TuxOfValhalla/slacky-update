@@ -1,0 +1,19 @@
+# HOW TO EDIT THIS FILE:
+# The "handy ruler" below makes it easier to edit a package description.  Line
+# up the first '|' above the ':' following the base package name, and the '|'
+# on the right side marks the last column you can put a character in.  You must
+# make exactly 11 lines for the formatting to be correct.  It's also
+# customary to leave one space after the ':'.
+
+        |-----handy-ruler------------------------------------------------------|
+volt-gui: volt-gui (Vulkan GPU Control Panel & Settings Manager)
+volt-gui:
+volt-gui: A driver-agnostic graphical control panel and Vulkan implicit layer
+volt-gui: (VK_LAYER_VOLT_settings) for Vulkan games on Linux.
+volt-gui:
+volt-gui: Provides an intuitive alternative to AMD Adrenaline and NVIDIA
+volt-gui: Settings, allowing seamless per-game profile management, frame
+volt-gui: limiting, anisotropic filtering, texture LOD bias, and GPU switching.
+volt-gui:
+volt-gui: Homepage: https://github.com/pythonlover02/volt-gui
+volt-gui:

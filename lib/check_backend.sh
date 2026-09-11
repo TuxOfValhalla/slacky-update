@@ -3,10 +3,18 @@
 
 set -euo pipefail
 
-STATUS_DIR="/var/cache/slacky-update"
-STATUS_FILE="${STATUS_DIR}/status.json"
-mkdir -p "${STATUS_DIR}" 2>/dev/null || true
-chmod 777 "${STATUS_DIR}" 2>/dev/null || true
+SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+if [ -f "${SCRIPT_DIR}/common.sh" ]; then
+    # shellcheck source=/dev/null
+    source "${SCRIPT_DIR}/common.sh"
+elif [ -f "/usr/share/slacky-update/lib/common.sh" ]; then
+    # shellcheck source=/dev/null
+    source "/usr/share/slacky-update/lib/common.sh"
+fi
+
+USER_CACHE_DIR="${XDG_CACHE_HOME:-${HOME:-/tmp}/.cache}/slacky-update"
+mkdir -p "${USER_CACHE_DIR}" 2>/dev/null || true
+STATUS_FILE="${USER_CACHE_DIR}/status.json"
 
 TMP_DIR=$(mktemp -d /tmp/slacky-update-check.XXXXXX)
 trap 'rm -rf "${TMP_DIR}"' EXIT
@@ -15,11 +23,13 @@ touch "${TMP_DIR}/slackware_updates"
 touch "${TMP_DIR}/flatpak_updates"
 touch "${TMP_DIR}/sbo_updates"
 touch "${TMP_DIR}/cachy_updates"
+touch "${TMP_DIR}/gaming_updates"
 touch "${TMP_DIR}/nvidia_updates"
 touch "${TMP_DIR}/slackware_status"
 touch "${TMP_DIR}/flatpak_status"
 touch "${TMP_DIR}/sbo_status"
 touch "${TMP_DIR}/cachy_status"
+touch "${TMP_DIR}/gaming_status"
 
 # --- [ 1. SLACKWARE REPOSITORY INSPECTION (UNPRIVILEGED) ] ---
 (
@@ -31,7 +41,26 @@ touch "${TMP_DIR}/cachy_status"
     CHANGELOG_FETCHED=0
     if [ -n "${MIRROR_URL}" ]; then
         CHANGELOG_URL="${MIRROR_URL%/}/ChangeLog.txt"
-        if curl -sSL -m 20 "${CHANGELOG_URL}" -o "${TMP_DIR}/ChangeLog.txt" 2>/dev/null && [ -s "${TMP_DIR}/ChangeLog.txt" ]; then
+        # Super-fast check: fetch top 16KB header from upstream
+        if curl -sSL -m 8 -r 0-16384 "${CHANGELOG_URL}" -o "${TMP_DIR}/ChangeLog_head.txt" 2>/dev/null && [ -s "${TMP_DIR}/ChangeLog_head.txt" ]; then
+            UPSTREAM_TOP_DATE=$(grep -E '^[A-Za-z]{3}\s+[A-Za-z]{3}\s+[0-9\s]{2}\s+[0-9:]+\s+[A-Z]+\s+[0-9]{4}' "${TMP_DIR}/ChangeLog_head.txt" 2>/dev/null | head -n1 || true)
+            LOCAL_TOP_DATE=""
+            if [ -f "/var/lib/slackpkg/ChangeLog.txt" ]; then
+                LOCAL_TOP_DATE=$(grep -E '^[A-Za-z]{3}\s+[A-Za-z]{3}\s+[0-9\s]{2}\s+[0-9:]+\s+[A-Z]+\s+[0-9]{4}' "/var/lib/slackpkg/ChangeLog.txt" 2>/dev/null | head -n1 || true)
+            fi
+
+            if [ -n "${UPSTREAM_TOP_DATE}" ] && [ "${UPSTREAM_TOP_DATE}" = "${LOCAL_TOP_DATE}" ] && [ -f "/var/lib/slackpkg/ChangeLog.txt" ]; then
+                cp -f "/var/lib/slackpkg/ChangeLog.txt" "${TMP_DIR}/ChangeLog.txt" 2>/dev/null || true
+                [ -s "${TMP_DIR}/ChangeLog.txt" ] && CHANGELOG_FETCHED=1
+            else
+                if curl -sSL -m 20 "${CHANGELOG_URL}" -o "${TMP_DIR}/ChangeLog.txt" 2>/dev/null && [ -s "${TMP_DIR}/ChangeLog.txt" ]; then
+                    CHANGELOG_FETCHED=1
+                else
+                    cp -f "${TMP_DIR}/ChangeLog_head.txt" "${TMP_DIR}/ChangeLog.txt" 2>/dev/null || true
+                    [ -s "${TMP_DIR}/ChangeLog.txt" ] && CHANGELOG_FETCHED=1
+                fi
+            fi
+        elif curl -sSL -m 20 "${CHANGELOG_URL}" -o "${TMP_DIR}/ChangeLog.txt" 2>/dev/null && [ -s "${TMP_DIR}/ChangeLog.txt" ]; then
             CHANGELOG_FETCHED=1
         fi
     fi
@@ -119,7 +148,7 @@ PYSLACK
 # --- [ 2. FLATPAK REPOSITORY INSPECTION ] ---
 (
     if command -v flatpak >/dev/null 2>&1; then
-        if raw_fp=$(timeout 30s flatpak remote-ls --updates --columns=name,branch,ref 2>/dev/null); then
+        if raw_fp=$(timeout 10s flatpak remote-ls --updates --columns=name,branch,ref 2>/dev/null); then
             echo "${raw_fp}" | awk -F'\t' '{if ($1 != "") print $1 " [" $2 "]"; else if ($3 != "") print $3}' > "${TMP_DIR}/flatpak_updates"
             echo "SUCCESS" > "${TMP_DIR}/flatpak_status"
         else
@@ -131,7 +160,23 @@ PYSLACK
 # --- [ 2.5. SBOTOOLS REPOSITORY INSPECTION ] ---
 (
     if command -v sbocheck >/dev/null 2>&1; then
-        if raw_sbo=$(timeout 30s sbocheck -n -o --nocolor 2>/dev/null); then
+        # Auto-fetch fresh SBo tree if snapshot is >= 7 days old
+        if [ -d "/var/lib/sbotools/repo" ]; then
+            repo_mtime=$(stat -c %Y /var/lib/sbotools/repo 2>/dev/null || echo 0)
+            now_ts=$(date +%s)
+            diff_days=$(( (now_ts - repo_mtime) / 86400 ))
+            if [ "${diff_days}" -ge 7 ]; then
+                if [ "$(id -u)" -eq 0 ]; then
+                    timeout 60s sbosnap fetch >/dev/null 2>&1 || true
+                    touch /var/lib/sbotools/repo 2>/dev/null || true
+                elif sudo -n true 2>/dev/null; then
+                    sudo -n timeout 60s sbosnap fetch >/dev/null 2>&1 || true
+                    sudo -n touch /var/lib/sbotools/repo 2>/dev/null || true
+                fi
+            fi
+        fi
+
+        if raw_sbo=$(timeout 20s sbocheck -n -o --nocolor 2>/dev/null); then
             echo "${raw_sbo}" | (grep -i "needs updating" || true) | awk '{print $1 " (" $2 " -> " substr($6, 2) ")"}' > "${TMP_DIR}/sbo_updates"
             echo "SUCCESS" > "${TMP_DIR}/sbo_status"
         else
@@ -164,7 +209,9 @@ check_cachyos_background() {
         APP_DIR="${LIB_DIR}"
     fi
     # shellcheck source=/dev/null
-    source "${APP_DIR}/mod_kernel.sh" 2>/dev/null || true
+    [ -f "${APP_DIR}/common.sh" ] && source "${APP_DIR}/common.sh" 2>/dev/null || true
+    # shellcheck source=/dev/null
+    [ -f "${APP_DIR}/mod_kernel.sh" ] && source "${APP_DIR}/mod_kernel.sh" 2>/dev/null || true
 
     if command -v get_installed_cachyos_flavors >/dev/null 2>&1; then
         local installed_flavors
@@ -183,6 +230,8 @@ check_cachyos_background() {
                         local flv_name="linux-cachyos"
                         [ "${flv}" = "bore" ] && flv_name="linux-cachyos-bore"
                         [ "${flv}" = "lto" ] && flv_name="linux-cachyos-bore-lto"
+                        [ "${flv}" = "rc" ] && flv_name="linux-cachyos-rc"
+                        [ "${flv}" = "lts" ] && flv_name="linux-cachyos-lts"
                         CACHY_UPDATES+=("${flv_name}-${latest_flv_ver} (Installed: ${cur_flv_ver})")
                     fi
                 fi
@@ -193,6 +242,45 @@ check_cachyos_background() {
     fi
 }
 check_cachyos_background &
+
+# --- [ 3.5. CACHYOS GAMING SUITE UPDATE CHECK ] ---
+check_cachyos_gaming_background() {
+    local GAMING_UPDATES=()
+    local LIB_DIR
+    LIB_DIR="$(dirname "$(readlink -f "$0")")"
+    if [ -f "${LIB_DIR}/mod_gaming.sh" ]; then
+        source "${LIB_DIR}/mod_gaming.sh" 2>/dev/null || true
+    elif [ -f "/usr/share/slacky-update/lib/mod_gaming.sh" ]; then
+        source "/usr/share/slacky-update/lib/mod_gaming.sh" 2>/dev/null || true
+    fi
+
+    if command -v check_all_installed_gaming_updates_fast >/dev/null 2>&1; then
+        check_all_installed_gaming_updates_fast > "${TMP_DIR}/gaming_updates" 2>/dev/null || true
+        echo "SUCCESS" > "${TMP_DIR}/gaming_status"
+    elif command -v get_gaming_catalog >/dev/null 2>&1; then
+        while IFS='|' read -r pkg_id name cat main_pat l32_pat ext_pat repos; do
+            [ -n "${pkg_id}" ] || continue
+            local cur_ver
+            cur_ver=$(get_installed_gaming_pkg_version "${pkg_id}" 2>/dev/null || echo "NONE")
+            [ "${cur_ver}" != "NONE" ] || continue
+
+            local latest_ver main_u l32_u ext_u
+            read -r latest_ver main_u l32_u ext_u <<< "$(resolve_cachyos_gaming_upstream_metadata "${pkg_id}" 2>/dev/null || echo "NONE NONE NONE NONE")"
+            if [ "${latest_ver}" != "NONE" ] && [ -n "${latest_ver}" ]; then
+                local is_newer
+                is_newer=$(compare_versions_strictly_greater "${latest_ver}" "${cur_ver}" 2>/dev/null || echo "false")
+                if [ "${is_newer}" = "true" ]; then
+                    GAMING_UPDATES+=("${name} ${latest_ver} (Installed: ${cur_ver})")
+                fi
+            fi
+        done <<< "$(get_gaming_catalog 2>/dev/null || echo "")"
+        printf "%s\n" "${GAMING_UPDATES[@]:-}" > "${TMP_DIR}/gaming_updates"
+        echo "SUCCESS" > "${TMP_DIR}/gaming_status"
+    else
+        echo "SUCCESS" > "${TMP_DIR}/gaming_status"
+    fi
+}
+check_cachyos_gaming_background &
 
 # --- [ 4. NVIDIA HARDWARE & DRIVER CHECK ] ---
 (
@@ -262,6 +350,15 @@ sys.exit(1)
 
             if [ "${MATCH_FOUND}" != "true" ]; then
                 NVIDIA_MISMATCH="true"
+                # Non-blocking background auto-heal for active loaded kernel
+                (
+                    ver_clean=$(echo "${NVIDIA_ACTIVE_VER}" | tr -d '[:space:]')
+                    ver_dash=$(echo "${ver_clean}" | tr '.' '-')
+                    flatpak install -y --non-interactive flathub \
+                        "runtime/org.freedesktop.Platform.GL.nvidia-${ver_dash}" \
+                        "runtime/org.freedesktop.Platform.GL32.nvidia-${ver_dash}" >/dev/null 2>&1 || \
+                    flatpak update -y --non-interactive >/dev/null 2>&1 || true
+                ) &
             fi
         fi
     fi
@@ -283,20 +380,47 @@ fi
 
 # --- [ 6. CACHE SERIALIZATION & ATOMIC PERSISTENCE ] ---
 python3 - "${TMP_DIR}" "${STATUS_FILE}" "${SB_STATE}" << 'PYJSON'
-import sys, os, json, time
+import sys, os, json, time, pwd
 from datetime import datetime, timezone
 
 tmp_dir = sys.argv[1]
 status_file = sys.argv[2]
 sb_state = sys.argv[3] if len(sys.argv) > 3 else "disabled"
 
-existing_data = {}
-if os.path.exists(status_file):
+# Identify candidate cache files
+candidates = [status_file]
+user_cache = os.path.expanduser("~/.cache/slacky-update/status.json")
+if user_cache not in candidates:
+    candidates.append(user_cache)
+
+sudo_u = os.environ.get("SUDO_USER")
+sudo_uid, sudo_gid, sudo_cache = None, None, None
+if sudo_u and os.getuid() == 0:
     try:
-        with open(status_file, "r", encoding="utf-8") as f:
-            existing_data = json.load(f)
+        pw = pwd.getpwnam(sudo_u)
+        sudo_uid, sudo_gid = pw.pw_uid, pw.pw_gid
+        sudo_cache = os.path.join(pw.pw_dir, ".cache", "slacky-update", "status.json")
+        if sudo_cache not in candidates:
+            candidates.append(sudo_cache)
     except Exception:
-        existing_data = {}
+        pass
+
+if "/var/cache/slacky-update/status.json" not in candidates:
+    candidates.append("/var/cache/slacky-update/status.json")
+
+existing_data = {}
+newest_ts = -1
+for c in candidates:
+    if os.path.exists(c):
+        try:
+            with open(c, "r", encoding="utf-8") as f:
+                c_data = json.load(f)
+                c_ts = float(c_data.get("last_check_ts", os.path.getmtime(c)))
+                if c_ts > newest_ts:
+                    newest_ts = c_ts
+                    existing_data = c_data
+        except Exception:
+            pass
 
 def read_file_lines(filename):
     filepath = os.path.join(tmp_dir, filename)
@@ -337,6 +461,7 @@ slackware_updates = get_persisted_list("slackware_updates", "slackware_status", 
 flatpak_updates = get_persisted_list("flatpak_updates", "flatpak_status", "flatpak_updates")
 sbo_updates = get_persisted_list("sbo_updates", "sbo_status", "sbo_updates")
 cachy_updates = get_persisted_list("cachy_updates", "cachy_status", "cachyos_kernel_updates")
+gaming_updates = get_persisted_list("gaming_updates", "gaming_status", "cachyos_gaming_updates")
 nvidia_updates = read_file_lines("nvidia_updates")
 nvidia_mismatch = read_file_content("nvidia_mismatch", "false").lower() == "true"
 nvidia_active_ver = read_file_content("nvidia_active_ver", "")
@@ -348,6 +473,7 @@ data = {
     "flatpak_updates": flatpak_updates,
     "sbo_updates": sbo_updates,
     "cachyos_kernel_updates": cachy_updates,
+    "cachyos_gaming_updates": gaming_updates,
     "nvidia_driver_updates": nvidia_updates,
     "reboot_required": False,
     "nvidia_gl_mismatch": nvidia_mismatch,
@@ -360,13 +486,53 @@ data = {
     "last_check_ts": int(time.time())
 }
 
-tmp_file = status_file + ".tmp"
-try:
-    os.makedirs(os.path.dirname(status_file), exist_ok=True)
-    with open(tmp_file, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
-    os.replace(tmp_file, status_file)
-    os.chmod(status_file, 0o666)
-except Exception:
-    pass
+def save_json_safely(target_path, uid=None, gid=None):
+    try:
+        os.makedirs(os.path.dirname(target_path), exist_ok=True)
+        tmp = target_path + ".tmp"
+        written = False
+        try:
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2)
+            if uid is not None and gid is not None:
+                try:
+                    os.chown(tmp, uid, gid)
+                except Exception:
+                    pass
+            os.replace(tmp, target_path)
+            if uid is not None and gid is not None:
+                try:
+                    os.chown(target_path, uid, gid)
+                except Exception:
+                    pass
+            written = True
+        except Exception:
+            if os.path.exists(tmp):
+                try:
+                    os.unlink(tmp)
+                except Exception:
+                    pass
+        
+        if not written:
+            with open(target_path, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2)
+            if uid is not None and gid is not None:
+                try:
+                    os.chown(target_path, uid, gid)
+                except Exception:
+                    pass
+        return True
+    except Exception:
+        return False
+
+# 1. Always write to current user status_file
+save_json_safely(status_file)
+
+# 2. If root under sudo, write to SUDO_USER cache with user ownership
+if sudo_cache and sudo_uid is not None and sudo_gid is not None:
+    save_json_safely(sudo_cache, sudo_uid, sudo_gid)
+
+# 3. If root, also update system cache
+if os.getuid() == 0:
+    save_json_safely("/var/cache/slacky-update/status.json")
 PYJSON

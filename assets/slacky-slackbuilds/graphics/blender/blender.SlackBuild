@@ -37,7 +37,19 @@ rm -rf "$PRGNAM-$VERSION-linux-x64"
 # Locate archive
 TARBALL=""
 for cand in "$CWD/$PRGNAM-$VERSION-linux-x64.tar.xz" \
-            "$CWD/$PRGNAM-$VERSION.tar.xz"; do
+            "$CWD/$PRGNAM-$VERSION.tar.xz" \
+            "$CWD/$PRGNAM-$VERSION-linux-x64.zip" \
+            "$CWD/$PRGNAM-$VERSION.zip" \
+            "/var/cache/slacky-update/archives/$PRGNAM-$VERSION-linux-x64.tar.xz" \
+            "/var/cache/slacky-update/archives/$PRGNAM-$VERSION.tar.xz" \
+            "/var/cache/slacky-update/archives/$PRGNAM-$VERSION-linux-x64.zip" \
+            "/var/cache/slacky-update/archives/$PRGNAM-$VERSION.zip" \
+            "$HOME/Downloads/$PRGNAM-$VERSION-linux-x64.tar.xz" \
+            "$HOME/Downloads/$PRGNAM-$VERSION.tar.xz" \
+            "$HOME/Downloads/$PRGNAM-$VERSION-linux-x64.zip" \
+            "$HOME/Downloads/$PRGNAM-$VERSION.zip" \
+            "/tmp/$PRGNAM-$VERSION-linux-x64.tar.xz" \
+            "/tmp/$PRGNAM-$VERSION.tar.xz"; do
   if [ -f "$cand" ]; then
     TARBALL="$cand"
     break
@@ -45,14 +57,35 @@ for cand in "$CWD/$PRGNAM-$VERSION-linux-x64.tar.xz" \
 done
 
 if [ -z "$TARBALL" ]; then
-  echo "Error: Blender archive not found."
-  echo "Please download blender-$VERSION-linux-x64.tar.xz from https://download.blender.org/release/Blender5.2/"
-  exit 1
+  # Fallback to wildcard search in common directories
+  cand_found=$(ls "$CWD"/${PRGNAM}-${VERSION}*.* \
+                  /var/cache/slacky-update/archives/${PRGNAM}-${VERSION}*.* \
+                  "$HOME"/Downloads/${PRGNAM}-${VERSION}*.* \
+                  /tmp/${PRGNAM}-${VERSION}*.* 2>/dev/null | head -n1 || true)
+  if [ -n "$cand_found" ] && [ -f "$cand_found" ]; then
+    TARBALL="$cand_found"
+  fi
 fi
 
-echo "Extracting Blender $VERSION..."
-tar -xf "$TARBALL"
+if [ -z "$TARBALL" ]; then
+  echo "Downloading Blender $VERSION official Linux tarball..."
+  wget -c --no-check-certificate "https://download.blender.org/release/Blender5.2/blender-$VERSION-linux-x64.tar.xz" -O "$CWD/blender-$VERSION-linux-x64.tar.xz" || \
+  curl -Lo "$CWD/blender-$VERSION-linux-x64.tar.xz" "https://download.blender.org/release/Blender5.2/blender-$VERSION-linux-x64.tar.xz"
+  TARBALL="$CWD/blender-$VERSION-linux-x64.tar.xz"
+fi
+
+if [[ "$TARBALL" == *.zip ]]; then
+  echo "Extracting Blender $VERSION (ZIP)..."
+  unzip -q -o "$TARBALL"
+else
+  echo "Extracting Blender $VERSION (TAR)..."
+  tar -xf "$TARBALL"
+fi
+
 EXTRACTED_DIR=$(find . -maxdepth 1 -type d -name "blender-$VERSION*" | head -n1)
+if [ -z "$EXTRACTED_DIR" ] || [ ! -d "$EXTRACTED_DIR" ]; then
+  EXTRACTED_DIR=$(find . -maxdepth 1 -type d -name "blender*" ! -name "package-*" | head -n1)
+fi
 cd "$EXTRACTED_DIR"
 
 chown -R root:root .
@@ -100,11 +133,9 @@ cat "$CWD/slack-desc" > "$PKG/usr/doc/$PRGNAM-$VERSION/slack-desc" 2>/dev/null |
 mkdir -p "$PKG/install"
 cat "$CWD/slack-desc" > "$PKG/install/slack-desc"
 
-cat << 'EOF_DOINST' > "$PKG/install/doinst.sh"
-if [ ! -d opt/blender ]; then
-  rm -f opt/blender 2>/dev/null || true
-  ln -sfn blender-5.2.1 opt/blender 2>/dev/null || true
-fi
+cat << EOF_DOINST > "$PKG/install/doinst.sh"
+( cd opt ; rm -rf blender )
+( cd opt ; ln -sf blender-$VERSION blender )
 
 if [ -x /usr/bin/update-desktop-database ]; then
   /usr/bin/update-desktop-database -q /usr/share/applications 2>/dev/null || true

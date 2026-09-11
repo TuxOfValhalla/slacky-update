@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Volt GUI
+Comment=Vulkan GPU Control Panel & Settings Manager
+Exec=volt-gui
+Icon=volt-gui
+Terminal=false
+Type=Application
+Categories=Settings;HardwareSettings;Game;Graphics;
+Keywords=vulkan;gpu;gaming;settings;adrenaline;control;
+StartupNotify=true

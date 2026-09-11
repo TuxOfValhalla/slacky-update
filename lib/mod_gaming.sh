@@ -1,0 +1,2921 @@
+#!/usr/bin/env bash
+# --- [ UNDERPANTS GNOMES: CACHYOS GAMING & HARDWARE MASTER SUITE ] ---
+
+set -euo pipefail
+
+# --- [ REPOSITORY ENDPOINTS ] ---
+CACHYOS_MAIN_REPO="https://mirror.cachyos.org/repo/x86_64/cachyos"
+CACHYOS_EXTRA_REPO="https://mirror.cachyos.org/repo/x86_64/cachyos-extra"
+ARCH_EXTRA_REPO="https://geo.mirror.pkgbuild.com/extra/os/x86_64"
+ARCH_MULTILIB_REPO="https://geo.mirror.pkgbuild.com/multilib/os/x86_64"
+
+# --- [ GAMING SUITE REGISTRY ] ---
+# Key: id | Name | Category | Primary Pkg Pattern | Lib32 Pattern | Extra Pkg Pattern | Repos
+get_gaming_catalog() {
+    cat << 'CATALOG_EOF'
+mangohud|MangoHud (+ 32-bit Multilib & mangoapp)|engine|mangohud-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|lib32-mangohud-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|glfw-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos-extra-v3,arch-extra,arch-multilib,cachyos
+gamemode|Feral GameMode (+ 32-bit Multilib & Governor)|engine|gamemode-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|lib32-gamemode-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||cachyos-extra-v3,arch-extra,arch-multilib,cachyos
+goverlay|GOverlay (MangoHud GUI Configurator)|engine|goverlay-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||qt6pas-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|arch-extra,cachyos
+scx|Sched-EXT SCX Schedulers, Tools & Manager|engine|scx-manager-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||scx-scheds(?:-git)?-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,scx-tools(?:-git)?-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos,arch-extra
+ananicy|Ananicy-CPP & CachyOS Rules (Auto-Priority & Latency)|engine|ananicy-cpp(?:-git)?-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst||cachyos-ananicy-rules(?:-git)?-[0-9a-zA-Z_\.%:-]*\.pkg\.tar\.zst|cachyos,cachyos-extra-v3
+heroic|Heroic Games Launcher (Epic, GOG, Amazon)|launcher|heroic-games-launcher-bin-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos,arch-extra
+lutris|Lutris Gaming Platform Manager|launcher|lutris(?:-git)?-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos,arch-extra
+faugus|Faugus Launcher (Fast Proton Launcher)|launcher|faugus-launcher-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos
+protonplus|ProtonPlus (Wine/GE & Proton Manager)|launcher|(?:proton-plus|protonplus|protonup-qt)-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos,arch-extra
+steam-devices|Steam Controller & Gamepad Udev Rules|launcher|game-devices-udev-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos,arch-extra
+lact|LACT (AMD/Intel GPU Overclocking & Fans)|hardware|lact-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||arch-extra,cachyos
+openrgb|OpenRGB (Hardware RGB Lighting Control)|hardware|openrgb(?:-git)?-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos,arch-extra
+easyeffects|EasyEffects Studio Audio DSP & JackHack96 Presets|audio|easyeffects-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||lsp-plugins-lv2-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,calf-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,mda\.lv2-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,zam-plugins-lv2-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,zita-convolver-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,rnnoise-[0-9a-zA-Z_\.:-]*\.pkg\.tar\.zst,libbs2b-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,soundtouch-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libebur128-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,webrtc-audio-processing-(?:2|1)-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,lilv-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,serd-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,sord-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,sratom-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,qt6-graphs-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,onetbb-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libmysofa-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,zix-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|arch-extra,cachyos
+pear-desktop|Pear Desktop (YouTube Music with Custom Plugins)|audio|pear-desktop-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||electron42-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libjpeg-turbo-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|chaotic-aur,chaotic-cdn,arch-extra
+audacity|Audacity (Digital Audio Editor & Recording Studio)|audio|audacity-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||suil-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,lilv-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,serd-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,sord-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,sratom-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,zix-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,portsmf-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,portaudio-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,portmidi-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libsbsms-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,vamp-plugin-sdk-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,soundtouch-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,twolame-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libid3tag-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libsoxr-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libmspack-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,wxwidgets-gtk3-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,wxwidgets-common-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libjpeg-turbo-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|arch-extra,cachyos-extra-v3,cachyos
+inkscape|Inkscape (Professional Vector Graphics Editor)|creative|inkscape-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||lib2geom-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,double-conversion-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,graphicsmagick-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libcdr-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,poppler-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libvisio-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libwpg-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,librevenge-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos-extra-v3,arch-extra,cachyos
+syncthing|Syncthing (Continuous P2P File Synchronization)|tools|syncthing-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||arch-extra,cachyos-extra-v3,cachyos
+obs-studio|OBS Studio (Isolated App-Bundle & Python 3.14)|community|obs-studio-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst||python-3\.[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,mbedtls-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,obs-studio-plugin-browser-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|arch-extra,arch-core,cachyos
+discord|Official Discord Linux Client|community|discord-[0-9][a-zA-Z0-9_\.:-]*\.pkg\.tar\.zst|||arch-extra,cachyos
+google-chrome|Google Chrome (Official Web Browser)|browser|google-chrome-[0-9a-zA-Z_\.:-]*\.pkg\.tar\.zst|||chaotic-aur,chaotic-cdn,cachyos
+microsoft-edge|Microsoft Edge (Official Web Browser)|browser|microsoft-edge-(?:stable|beta|dev)-bin-[0-9a-zA-Z_\.:-]*\.pkg\.tar\.zst|||chaotic-aur,chaotic-cdn,cachyos
+CATALOG_EOF
+}
+
+# --- [ HELPER FUNCTIONS ] ---
+is_vram_booster_supported() {
+    # AMD and Intel GPUs have in-kernel dmemcg support
+    if [ "${HAS_AMD:-false}" = "true" ] || [ "${HAS_INTEL:-false}" = "true" ]; then
+        return 0
+    fi
+
+    # Check for NVIDIA GPU
+    if [ "${HAS_NVIDIA:-false}" = "true" ] || [ -d /proc/driver/nvidia ] || (lspci 2>/dev/null | grep -iE 'vga|3d' | grep -qi nvidia); then
+        local nv_ver="0"
+        if command -v nvidia-smi >/dev/null 2>&1; then
+            nv_ver=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null | head -n 1 | tr -d ' ' || echo "0")
+        elif [ -f /proc/driver/nvidia/version ]; then
+            nv_ver=$(grep -o -E '[0-9]+\.[0-9]+(\.[0-9]+)?' /proc/driver/nvidia/version 2>/dev/null | head -n 1 || echo "0")
+        elif ls /var/log/packages/cachyos-nvidia-utils-* 1>/dev/null 2>&1; then
+            nv_ver=$(basename "$(ls /var/log/packages/cachyos-nvidia-utils-* 2>/dev/null | head -n 1)" | sed -E 's/cachyos-nvidia-utils-([0-9]+\.[0-9]+(\.[0-9]+)?).*/\1/' || echo "0")
+        fi
+
+        local major_ver
+        major_ver=$(echo "${nv_ver}" | cut -d'.' -f1)
+        if [ -n "${major_ver}" ] && [ "${major_ver}" -ge 615 ] 2>/dev/null; then
+            return 0
+        else
+            return 1
+        fi
+    fi
+
+    if uname -r | grep -qi cachyos; then
+        return 0
+    fi
+
+    return 1
+}
+
+is_elf_binary() {
+    [ -f "$1" ] || return 1
+    local magic
+    magic=$(head -c 4 "$1" 2>/dev/null || true)
+    [[ "${magic}" == $'\x7fELF' ]]
+}
+
+audit_user_hardware_groups() {
+    local target_user="${SUDO_USER:-${USER:-}}"
+    [ -n "${target_user}" ] || return 0
+    [ "${target_user}" != "root" ] || return 0
+
+    local needed_groups=("input" "plugdev" "video" "audio" "uucp")
+    local missing_groups=()
+
+    for grp in "${needed_groups[@]}"; do
+        if getent group "${grp}" >/dev/null 2>&1; then
+            if ! id -nG "${target_user}" 2>/dev/null | grep -qw "${grp}"; then
+                missing_groups+=("${grp}")
+            fi
+        fi
+    done
+
+    if [ "${#missing_groups[@]}" -gt 0 ]; then
+        log_info "Hardware Access Check: User '${target_user}' is missing from groups: ${missing_groups[*]}"
+        echo -n "Would you like to add '${target_user}' to these groups for unprivileged device access? [Y/n]: "
+        read -r reply_grp
+        reply_grp=${reply_grp:-Y}
+        if [[ "${reply_grp}" =~ ^[YyJjSsOo]$ ]]; then
+            validate_privileges
+            local grp_csv
+            grp_csv=$(IFS=,; echo "${missing_groups[*]}")
+            sudo usermod -a -G "${grp_csv}" "${target_user}" 2>/dev/null || true
+            log_success "Added '${target_user}' to groups: ${missing_groups[*]} (takes effect on next login)."
+        fi
+    fi
+}
+
+audit_multilib_readiness() {
+    local pkg_id="$1"
+    if [ "${pkg_id}" = "gamemode" ] || [ "${pkg_id}" = "mangohud" ] || [ "${pkg_id}" = "obs-vkcapture" ] || [ "${pkg_id}" = "yabridge" ]; then
+        if ! ls /var/log/packages/*multilib* >/dev/null 2>&1 && \
+           ! ls /var/log/packages/*compat32* >/dev/null 2>&1 && \
+           [ ! -f /lib/libc.so.6 ] && [ ! -f /lib/ld-linux.so.2 ] && \
+           [ ! -f /usr/lib/libc.so.6 ] && [ ! -f /usr/lib/libc.so ]; then
+            log_warn "Notice: 32-bit Multilib is not detected on this system."
+            log_warn "32-bit libraries for ${pkg_id} will be deployed, but 32-bit games require Slackware Multilib."
+            log_info "Tip: Alien Bob's multilib repository provides 32-bit compatibility for Slackware x86_64."
+        fi
+    fi
+}
+
+# --- [ PACKAGE STATUS RESOLUTION ] ---
+get_installed_gaming_pkg_version() {
+    local pkg_id="$1"
+    python3 -c "
+import os, re
+
+def clean_v_string(raw):
+    v = re.sub(r'-(?:x86_64(?:_v[0-9]+)?|noarch|i[3-6]86)-[0-9a-zA-Z_]+$', '', raw)
+    v = re.sub(r'-(?:x86_64(?:_v[0-9]+)?|noarch|i[3-6]86|any|aarch64)$', '', v)
+    v = re.sub(r'-[0-9]+(?:\.[0-9]+)?$', '', v)
+    v = re.sub(r'^[0-9]+(?:%3A|:|_)', '', v)
+    v = re.sub(r'(\d+\.\d+(?:\.\d+)?)\.r\d+.*$', r'\1', v)
+    return v
+
+def parse_v(v_str):
+    clean = re.sub(r'^[vV]', '', str(v_str)).strip()
+    tokens = re.split(r'[-._]', clean)
+    res = []
+    for t in tokens:
+        if not t: continue
+        sub = re.findall(r'(\d+|\D+)', t)
+        for s in sub:
+            if s.isdigit():
+                res.append((1, int(s)))
+            else:
+                res.append((0, s.lower()))
+    return res
+
+pkg_dir = '/var/log/packages'
+if not os.path.exists(pkg_dir):
+    print('NONE')
+    exit(0)
+
+prefix = 'cachyos-gnome-${pkg_id}-'
+found = []
+for p in os.listdir(pkg_dir):
+    if p.startswith(prefix):
+        clean = clean_v_string(p[len(prefix):])
+        found.append(clean)
+
+if not found:
+    for p in os.listdir(pkg_dir):
+        if re.match(rf'^${pkg_id}-[0-9]', p, re.IGNORECASE):
+            raw = re.sub(rf'^${pkg_id}-', '', p, flags=re.IGNORECASE)
+            clean = clean_v_string(raw)
+            found.append(clean)
+
+if found:
+    found.sort(key=parse_v)
+    print(found[-1])
+else:
+    print('NONE')
+" 2>/dev/null || echo "NONE"
+}
+
+check_all_installed_gaming_updates_fast() {
+    local catalog_raw
+    catalog_raw=$(get_gaming_catalog 2>/dev/null || echo "")
+    python3 - "${catalog_raw}" << 'PYFASTCHECK'
+import sys, os, re, time, datetime, json, urllib.request, urllib.parse, hashlib, concurrent.futures
+
+raw_catalog_lines = sys.argv[1].strip().splitlines()
+
+def get_cache_dir():
+    for d in ['/var/cache/slacky-update', os.path.expanduser('~/.cache/slacky-update'), '/tmp/slacky-update-cache']:
+        try:
+            os.makedirs(d, exist_ok=True)
+            test_f = os.path.join(d, '.write_test')
+            with open(test_f, 'w') as f: f.write('1')
+            os.remove(test_f)
+            return d
+        except Exception:
+            continue
+    return '/tmp'
+
+cache_dir = get_cache_dir()
+
+def get_chaotic_fastest_mirror(cdir):
+    m_file = os.path.join(cdir, 'chaotic_fastest_mirror.json')
+    now = time.time()
+    today_dt = datetime.datetime.now()
+    is_thursday = (today_dt.weekday() == 3)
+    today_str = today_dt.strftime('%Y-%m-%d')
+
+    if os.path.exists(m_file):
+        try:
+            with open(m_file, 'r', encoding='utf-8') as f:
+                d = json.load(f)
+            cached_m = d.get('mirror')
+            last_ts = d.get('timestamp', 0)
+            last_day = d.get('date', '')
+            if last_day == today_str and cached_m:
+                return cached_m
+            elif not is_thursday and (now - last_ts) < (7 * 86400) and cached_m:
+                return cached_m
+        except Exception:
+            pass
+
+    return 'https://cdn-mirror.chaotic.cx/chaotic-aur/x86_64/'
+
+chaotic_fastest = get_chaotic_fastest_mirror(cache_dir)
+
+repos = {
+    "cachyos": "https://mirror.cachyos.org/repo/x86_64/cachyos/",
+    "cachyos-v3": "https://mirror.cachyos.org/repo/x86_64_v3/cachyos-v3/",
+    "cachyos-extra": "https://mirror.cachyos.org/repo/x86_64/cachyos-extra/",
+    "cachyos-extra-v3": "https://mirror.cachyos.org/repo/x86_64_v3/cachyos-extra-v3/",
+    "chaotic-aur": chaotic_fastest,
+    "chaotic-cdn": "https://cdn-mirror.chaotic.cx/chaotic-aur/x86_64/",
+    "arch-core": "https://geo.mirror.pkgbuild.com/core/os/x86_64/",
+    "arch-extra": "https://geo.mirror.pkgbuild.com/extra/os/x86_64/",
+    "arch-multilib": "https://geo.mirror.pkgbuild.com/multilib/os/x86_64/"
+}
+
+catalog = {}
+for line in raw_catalog_lines:
+    if not line.strip():
+        continue
+    parts = line.split("|")
+    if len(parts) >= 7:
+        pid, name, cat, main_pat, l32_pat, ext_pat, repos_str = parts[:7]
+        r_list = [r.strip() for r in repos_str.split(",") if r.strip()]
+        href_pat = rf'href=[\'\"]?({main_pat})[\'\"]?' if main_pat else None
+        catalog[pid] = (name, href_pat, r_list)
+
+def fetch_url_cached(url, cdir, ttl=1800):
+    url_hash = hashlib.sha256(url.encode('utf-8')).hexdigest()[:16]
+    cache_file = os.path.join(cdir, f'repo_idx_{url_hash}.html')
+    now = time.time()
+    if os.path.exists(cache_file):
+        try:
+            mtime = os.path.getmtime(cache_file)
+            if (now - mtime) < ttl:
+                with open(cache_file, 'r', encoding='utf-8', errors='ignore') as f:
+                    return f.read()
+        except Exception:
+            pass
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64)"})
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            content = resp.read().decode("utf-8", errors="ignore")
+            try:
+                with open(cache_file, 'w', encoding='utf-8', errors='ignore') as f:
+                    f.write(content)
+            except Exception:
+                pass
+            return content
+    except Exception:
+        return ""
+
+def clean_pkg_version(pid, raw_v):
+    v = urllib.parse.unquote(str(raw_v))
+    v = re.sub(r'\.pkg\.tar\.(?:zst|xz|gz)$', '', v)
+    v = re.sub(r'-(?:x86_64(?:_v[0-9]+)?|noarch|i[3-6]86|any|aarch64)(?:-[0-9a-zA-Z_]+)?$', '', v)
+    v = re.sub(r'-[0-9]+(?:\.[0-9]+)?$', '', v)
+    v = re.sub(r'^[0-9]+(?:%3A|:|_)', '', v)
+    if pid:
+        v = re.sub(rf'^(?:cachyos-gnome-)?(?:{re.escape(pid)}|{re.escape(pid.replace("-", ""))})(?:-bin|-git|-manager|-launcher|-rules|-udev)?-', '', v, flags=re.IGNORECASE)
+    v = re.sub(r'^[a-zA-Z0-9_\-+]+?-([0-9])', r'\1', v)
+    return v
+
+def parse_version_key(v_str):
+    clean = clean_pkg_version('', v_str)
+    parts = re.split(r'[-._+~]', clean)
+    res = []
+    for p in parts:
+        if p.isdigit():
+            res.append((0, int(p), ''))
+        else:
+            num = ''.join(c for c in p if c.isdigit())
+            res.append((1, int(num) if num else 0, p))
+    return res
+
+def is_strictly_greater(v1, v2):
+    return parse_version_key(v1) > parse_version_key(v2)
+
+pkg_log_dir = "/var/log/packages"
+installed_pkgs = os.listdir(pkg_log_dir) if os.path.exists(pkg_log_dir) else []
+
+def parse_installed_pkg(pkg):
+    clean = re.sub(r'\.(t[xg]z|tlz)$', '', pkg)
+    m = re.match(r'^(.*?)-([0-9][a-zA-Z0-9_\.:~-]*)-(?:x86_64(?:_v[0-9]+)?|i[3-6]86|noarch|arm|aarch64)-[0-9a-zA-Z_]+$', clean)
+    if m:
+        name = m.group(1)
+        ver = m.group(2)
+        ver = re.sub(r'-[0-9]+(?:\.[0-9]+)?$', '', ver)
+        ver = re.sub(r'^[0-9]+(?:%3A|:|_)', '', ver)
+        return name, ver
+    return clean, 'NONE'
+
+detected_installed = {}
+for pkg in installed_pkgs:
+    name, ver = parse_installed_pkg(pkg)
+    if ver == 'NONE':
+        continue
+    for pid in catalog:
+        if name in (f"cachyos-gnome-{pid}", f"cachyos-gnome-gnome-{pid}", pid, f"{pid}-bin", f"{pid}-git", f"{pid}-manager", f"{pid}-launcher"):
+            detected_installed[pid] = ver
+
+needed_repos = set()
+for pid in detected_installed:
+    if pid in catalog:
+        _, pat, r_list = catalog[pid]
+        if pat:
+            for rk in r_list:
+                u = repos.get(rk)
+                if u:
+                    needed_repos.add(u)
+
+with concurrent.futures.ThreadPoolExecutor(max_workers=min(max(len(needed_repos), 1), 8)) as ex:
+    repo_contents = dict(zip(needed_repos, ex.map(lambda u: fetch_url_cached(u, cache_dir), needed_repos)))
+
+def check_single_package(pid, cur_ver):
+    if pid not in catalog:
+        return None
+    name, pat, r_list = catalog[pid]
+    if not pat or pid == "steam-devices":
+        return None
+    for rk in r_list:
+        base_u = repos.get(rk, "")
+        html = repo_contents.get(base_u, "")
+        if not html:
+            continue
+        matches = re.findall(pat, html)
+        if matches:
+            m = matches[0]
+            ver = m[1] if isinstance(m, tuple) and len(m) > 1 else (m[0] if isinstance(m, tuple) else m)
+            clean_ver = clean_pkg_version(pid, ver)
+            if is_strictly_greater(clean_ver, cur_ver):
+                return f"{name} {clean_ver} (Installed: {cur_ver})"
+            return None
+    return None
+
+updates = []
+with concurrent.futures.ThreadPoolExecutor(max_workers=8) as ex:
+    futures = [ex.submit(check_single_package, pid, ver) for pid, ver in detected_installed.items()]
+    for f in concurrent.futures.as_completed(futures):
+        res = f.result()
+        if res:
+            updates.append(res)
+
+for u in sorted(updates):
+    print(u)
+PYFASTCHECK
+}
+
+resolve_cachyos_gaming_upstream_metadata() {
+    local pkg_id="$1"
+    
+    python3 - "${pkg_id}" << 'PYRESOLVE'
+import sys, os, re, time, datetime, json, urllib.request, urllib.parse, hashlib, concurrent.futures
+
+pkg_id = sys.argv[1]
+
+if pkg_id == "steam-devices":
+    print("1.0.0.61 BUNDLED NONE NONE")
+    sys.exit(0)
+
+def get_cache_dir():
+    for d in ['/var/cache/slacky-update', os.path.expanduser('~/.cache/slacky-update'), '/tmp/slacky-update-cache']:
+        try:
+            os.makedirs(d, exist_ok=True)
+            test_f = os.path.join(d, '.write_test')
+            with open(test_f, 'w') as f: f.write('1')
+            os.remove(test_f)
+            return d
+        except Exception:
+            continue
+    return '/tmp'
+
+cache_dir = get_cache_dir()
+
+def get_chaotic_fastest_mirror(cdir):
+    m_file = os.path.join(cdir, 'chaotic_fastest_mirror.json')
+    now = time.time()
+    today_dt = datetime.datetime.now()
+    is_thursday = (today_dt.weekday() == 3)
+    today_str = today_dt.strftime('%Y-%m-%d')
+
+    if os.path.exists(m_file):
+        try:
+            with open(m_file, 'r', encoding='utf-8') as f:
+                d = json.load(f)
+            cached_m = d.get('mirror')
+            last_ts = d.get('timestamp', 0)
+            last_day = d.get('date', '')
+            if last_day == today_str and cached_m:
+                return cached_m
+            elif not is_thursday and (now - last_ts) < (7 * 86400) and cached_m:
+                return cached_m
+        except Exception:
+            pass
+
+    mirrors = [
+        'https://cdn-mirror.chaotic.cx/chaotic-aur/x86_64/',
+        'https://geo-mirror.chaotic.cx/chaotic-aur/x86_64/',
+        'https://de-1-mirror.chaotic.cx/chaotic-aur/x86_64/',
+        'https://de-2-mirror.chaotic.cx/chaotic-aur/x86_64/',
+        'https://de-4-mirror.chaotic.cx/chaotic-aur/x86_64/',
+        'https://es-mirror.chaotic.cx/chaotic-aur/x86_64/',
+        'https://bg-mirror.chaotic.cx/chaotic-aur/x86_64/',
+        'https://nl-1-mirror.chaotic.cx/chaotic-aur/x86_64/',
+        'https://fr-1-mirror.chaotic.cx/chaotic-aur/x86_64/',
+        'https://ca-mirror.chaotic.cx/chaotic-aur/x86_64/',
+        'https://us-mi-mirror.chaotic.cx/chaotic-aur/x86_64/',
+        'https://us-ut-mirror.chaotic.cx/chaotic-aur/x86_64/'
+    ]
+
+    def ping_m(u):
+        t0 = time.time()
+        try:
+            req = urllib.request.Request(u + 'chaotic-mirrorlist.pkg.tar.zst', headers={'User-Agent': 'Mozilla/5.0', 'Range': 'bytes=0-256'})
+            with urllib.request.urlopen(req, timeout=1.8) as resp:
+                resp.read(256)
+                return ((time.time() - t0) * 1000, u)
+        except Exception:
+            return (999999, u)
+
+    best_url = 'https://cdn-mirror.chaotic.cx/chaotic-aur/x86_64/'
+    best_lat = 999999
+    try:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(mirrors)) as ex:
+            results = list(ex.map(ping_m, mirrors))
+        valid = [r for r in results if r[0] < 90000]
+        if valid:
+            valid.sort(key=lambda x: x[0])
+            best_lat, best_url = valid[0]
+    except Exception:
+        pass
+
+    try:
+        with open(m_file, 'w', encoding='utf-8') as f:
+            json.dump({
+                'mirror': best_url,
+                'latency_ms': round(best_lat, 2) if best_lat < 90000 else None,
+                'timestamp': now,
+                'date': today_str,
+                'day_of_week': today_dt.strftime('%A')
+            }, f, indent=2)
+    except Exception:
+        pass
+
+    return best_url
+
+chaotic_fastest = get_chaotic_fastest_mirror(cache_dir)
+
+repos = {
+    "cachyos": "https://mirror.cachyos.org/repo/x86_64/cachyos/",
+    "cachyos-v3": "https://mirror.cachyos.org/repo/x86_64_v3/cachyos-v3/",
+    "cachyos-extra": "https://mirror.cachyos.org/repo/x86_64/cachyos-extra/",
+    "cachyos-extra-v3": "https://mirror.cachyos.org/repo/x86_64_v3/cachyos-extra-v3/",
+    "chaotic-aur": chaotic_fastest,
+    "chaotic-cdn": "https://cdn-mirror.chaotic.cx/chaotic-aur/x86_64/",
+    "arch-core": "https://geo.mirror.pkgbuild.com/core/os/x86_64/",
+    "arch-extra": "https://geo.mirror.pkgbuild.com/extra/os/x86_64/",
+    "arch-multilib": "https://geo.mirror.pkgbuild.com/multilib/os/x86_64/"
+}
+
+catalog = {
+    "mangohud": (r'href=[\'\"]?(mangohud-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(lib32-mangohud-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(glfw-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["cachyos-extra-v3", "arch-extra", "cachyos"], ["arch-multilib", "cachyos"]),
+    "gamemode": (r'href=[\'\"]?(gamemode-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.%:-]*\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(lib32-gamemode-[0-9][a-zA-Z0-9_\.%:-]*\.pkg\.tar\.zst)[\'\"]?', None, ["cachyos-extra-v3", "arch-extra", "cachyos"], ["arch-multilib", "cachyos"]),
+    "goverlay": (r'href=[\'\"]?(goverlay-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(qt6pas-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["arch-extra", "cachyos"], []),
+    "scx": (r'href=[\'\"]?(scx-manager-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(scx-scheds(?:-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(scx-tools(?:-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    ], ["cachyos", "arch-extra"], []),
+    "easyeffects": (r'href=[\'\"]?(easyeffects-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(lsp-plugins-lv2-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(calf-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(mda\.lv2-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(zam-plugins-lv2-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(zita-convolver-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(rnnoise-(?:1%3A|1:)?([0-9a-zA-Z_\.:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libbs2b-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(soundtouch-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libebur128-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(webrtc-audio-processing-(?:2|1)-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(lilv-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(serd-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(sord-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(sratom-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(qt6-graphs-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(onetbb-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libmysofa-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(zix-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    ], ["arch-extra", "cachyos", "arch-core"], []),
+    "pear-desktop": (r'href=[\'\"]?(pear-desktop-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(electron42-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libjpeg-turbo-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    ], ["chaotic-aur", "chaotic-cdn", "arch-extra"], []),
+    "yabridge": (r'href=[\'\"]?(yabridge-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(lib32-yabridge-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(yabridgectl-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["arch-extra", "cachyos", "chaotic-aur"], ["arch-multilib", "cachyos"]),
+    "audacity": (r'href=[\'\"]?(audacity-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(suil-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(lilv-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(serd-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(sord-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(sratom-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(zix-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(portsmf-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(portaudio-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(portmidi-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libsbsms-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(vamp-plugin-sdk-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(soundtouch-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(twolame-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libid3tag-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libsoxr-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libmspack-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(wxwidgets-gtk3-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(wxwidgets-common-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libjpeg-turbo-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    ], ["arch-extra", "cachyos-extra-v3", "cachyos", "arch-core"], []),
+    "spotify": (r'href=[\'\"]?(spotify(?:-launcher)?-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos-extra-v3", "chaotic-aur", "cachyos"], []),
+    "inkscape": (r'href=[\'\"]?(inkscape-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(lib2geom-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(double-conversion-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(graphicsmagick-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libcdr-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(poppler-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libvisio-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libwpg-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(librevenge-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    ], ["cachyos-extra-v3", "arch-extra", "cachyos"], []),
+    "darktable": (r'href=[\'\"]?(darktable-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos-extra-v3", "arch-extra", "cachyos"], []),
+    "syncthing": (r'href=[\'\"]?(syncthing-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos-extra-v3", "cachyos"], []),
+    "parabolic": (r'href=[\'\"]?((?:parabolic|tube-converter)-([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos", "arch-extra"], []),
+    "ananicy": (r'href=[\'\"]?(ananicy-cpp(?:-git)?-([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(cachyos-ananicy-rules(?:-git)?-([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libbpf-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    ], ["cachyos", "cachyos-extra-v3", "arch-core"], []),
+    "gamescope": (r'href=[\'\"]?(gamescope-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(lib32-gamescope-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(libavif-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["cachyos", "arch-extra"], ["cachyos", "arch-multilib"]),
+    "heroic": (r'href=[\'\"]?(heroic-games-launcher-bin-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "arch-extra"], []),
+    "lutris": (r'href=[\'\"]?(lutris(?:-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(webkit2gtk-4\.1-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libsoup3-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(python-moddb-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(python-pypresence-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(python-evdev-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(python-distro-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    ], ["arch-extra", "cachyos", "arch-core", "cachyos-extra-v3"], []),
+    "faugus": (r'href=[\'\"]?(faugus-launcher-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(python-vdf-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(icoextract-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(python-pefile-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    ], ["cachyos", "arch-extra"], []),
+    "protonplus": (r'href=[\'\"]?((?:proton-plus|protonplus|protonup-qt)-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "arch-extra"], []),
+    "steam-devices": (None, None, None, [], []),
+    "retroarch": (r'href=[\'\"]?(retroarch-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(retroarch-assets-ozone-(?:[0-9]+%3A)?([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["arch-extra", "cachyos"], []),
+    "lact": (r'href=[\'\"]?(lact-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
+    "openrgb": (r'href=[\'\"]?(openrgb(?:-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "arch-extra"], []),
+    "solaar": (r'href=[\'\"]?(solaar-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos-extra-v3", "cachyos"], []),
+    "coolercontrol": (r'href=[\'\"]?(coolercontrol-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(coolercontrold-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["cachyos", "arch-extra"], []),
+    "lian-li-linux": (r'href=[\'\"]?(lian-li-linux(?:-git)?-([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos"], []),
+    "asusctl": (r'href=[\'\"]?(asusctl-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
+    "brave": (r'href=[\'\"]?(brave-bin-(?:1%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "chaotic-aur", "chaotic-cdn"], []),
+    "zen-browser": (r'href=[\'\"]?(zen-browser-bin-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "chaotic-aur", "chaotic-cdn"], []),
+    "vivaldi": (r'href=[\'\"]?(vivaldi-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(vivaldi-ffmpeg-codecs-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["arch-extra", "cachyos", "chaotic-aur"], []),
+    "google-chrome": (r'href=[\'\"]?(google-chrome-([0-9][a-zA-Z0-9_\.:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "chaotic-cdn", "cachyos"], []),
+    "microsoft-edge": (r'href=[\'\"]?(microsoft-edge-(?:stable|beta|dev)-bin-([0-9][a-zA-Z0-9_\.:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "chaotic-cdn", "cachyos"], []),
+    "opera": (r'href=[\'\"]?(opera-([0-9][a-zA-Z0-9_\.-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(opera-ffmpeg-codecs-([0-9][a-zA-Z0-9_\.-]*)\.pkg\.tar\.zst)[\'\"]?', ["chaotic-aur", "cachyos", "arch-extra"], []),
+    "obs-studio": (r'href=[\'\"]?(obs-studio-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(python-(3\.[0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(mbedtls-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(obs-studio-plugin-browser-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(cef-minimal-obs(?:-bin)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libdatachannel-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libjuice-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(librist-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libusrsctp-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    ], ["arch-extra", "cachyos", "cachyos-extra-v3", "chaotic-aur", "arch-core"], []),
+    "discord": (r'href=[\'\"]?(discord-(?:[0-9]+%3A|[0-9]+:)?([0-9][a-zA-Z0-9_\.:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
+    "vesktop": (r'href=[\'\"]?(vesktop(?:-bin)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos"], []),
+    "obs-vkcapture": (r'href=[\'\"]?(obs-vkcapture-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(lib32-obs-vkcapture-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, ["cachyos", "arch-extra"], ["cachyos", "arch-multilib"]),
+    "sunshine": (r'href=[\'\"]?(sunshine-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(libayatana-appindicator-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(miniupnpc-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(numactl-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    ], ["cachyos", "arch-extra"], [])
+}
+
+if pkg_id not in catalog:
+    print("NONE NONE NONE NONE")
+    sys.exit(0)
+
+main_pat, lib32_pat, extra_pat, main_repos, lib32_repos = catalog[pkg_id]
+
+def fetch_url_cached(url, cdir, ttl=1800):
+    url_hash = hashlib.sha256(url.encode('utf-8')).hexdigest()[:16]
+    cache_file = os.path.join(cdir, f'repo_idx_{url_hash}.html')
+    now = time.time()
+    if os.path.exists(cache_file):
+        try:
+            mtime = os.path.getmtime(cache_file)
+            if (now - mtime) < ttl:
+                with open(cache_file, 'r', encoding='utf-8', errors='ignore') as f:
+                    return f.read()
+        except Exception:
+            pass
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64)"})
+        with urllib.request.urlopen(req, timeout=6) as resp:
+            content = resp.read().decode("utf-8", errors="ignore")
+            try:
+                with open(cache_file, 'w', encoding='utf-8', errors='ignore') as f:
+                    f.write(content)
+            except Exception:
+                pass
+            return content
+    except Exception:
+        return ""
+
+def fetch_match(pat, r_list):
+    if not pat:
+        return None, None
+    for r_key in r_list:
+        base_url = repos.get(r_key, "")
+        if not base_url:
+            continue
+        html = fetch_url_cached(base_url, cache_dir)
+        if not html:
+            continue
+        matches = re.findall(pat, html)
+        if matches:
+            m = matches[0]
+            if isinstance(m, tuple):
+                fn = m[0]
+                ver = m[1] if len(m) > 1 else m[0]
+            else:
+                fn = m
+                ver = m
+            return ver, base_url.rstrip("/") + "/" + fn
+    return None, None
+
+main_ver, main_url = fetch_match(main_pat, main_repos)
+
+aur_pkg_names = {
+    "google-chrome": ("google-chrome", "google-chrome-{ver}-x86_64.pkg.tar.zst"),
+    "microsoft-edge": ("microsoft-edge-stable-bin", "microsoft-edge-stable-bin-{ver}-x86_64.pkg.tar.zst"),
+    "brave": ("brave-bin", "brave-bin-{ver}-x86_64.pkg.tar.zst"),
+    "zen-browser": ("zen-browser-bin", "zen-browser-bin-{ver}-x86_64.pkg.tar.zst"),
+    "opera": ("opera", "opera-{ver}-x86_64.pkg.tar.zst"),
+    "lian-li-linux": ("lianli-linux-git", "lianli-linux-git-{ver}-x86_64.pkg.tar.zst"),
+    "parabolic": ("parabolic", "parabolic-{ver}-x86_64.pkg.tar.zst")
+}
+
+if (not main_ver or not main_url) and pkg_id in aur_pkg_names:
+    aur_name, filename_tmpl = aur_pkg_names[pkg_id]
+    try:
+        rpc_url = f"https://aur.archlinux.org/rpc/v5/info?arg[]={aur_name}"
+        rpc_raw = fetch_url_cached(rpc_url, cache_dir, ttl=1800)
+        if rpc_raw:
+            data = json.loads(rpc_raw)
+            for r in data.get("results", []):
+                if r.get("Name") == aur_name:
+                    v = r.get("Version")
+                    main_ver = v
+                    fn = filename_tmpl.format(ver=v)
+                    main_url = f"{chaotic_fastest.rstrip('/')}/{fn}"
+                    break
+    except Exception:
+        pass
+
+if not main_ver or not main_url:
+    print("NONE NONE NONE NONE")
+    sys.exit(0)
+
+lib32_url = "NONE"
+if lib32_pat:
+    _, l32_u = fetch_match(lib32_pat, lib32_repos or main_repos)
+    if l32_u:
+        lib32_url = l32_u
+
+extra_url = "NONE"
+if extra_pat:
+    patterns = extra_pat if isinstance(extra_pat, (list, tuple)) else [extra_pat]
+    extra_repo_list = list(dict.fromkeys(main_repos + ["arch-extra", "arch-core", "cachyos-extra", "cachyos", "chaotic-aur", "chaotic-cdn"]))
+    extra_urls = []
+    for p in patterns:
+        _, ext_u = fetch_match(p, extra_repo_list)
+        if ext_u:
+            extra_urls.append(ext_u)
+        elif "cef-minimal-obs" in p:
+            try:
+                rpc_url = "https://aur.archlinux.org/rpc/v5/info?arg[]=cef-minimal-obs-bin"
+                rpc_raw = fetch_url_cached(rpc_url, cache_dir, ttl=1800)
+                if rpc_raw:
+                    data = json.loads(rpc_raw)
+                    for r in data.get("results", []):
+                        if r.get("Name") == "cef-minimal-obs-bin":
+                            v = r.get("Version")
+                            extra_urls.append(f"{chaotic_fastest.rstrip('/')}/cef-minimal-obs-bin-{v}-x86_64.pkg.tar.zst")
+                            break
+            except Exception:
+                pass
+    if extra_urls:
+        extra_url = ",".join(extra_urls)
+
+decoded_ver = urllib.parse.unquote(main_ver)
+clean_ver = decoded_ver
+clean_ver = re.sub(r'-(?:x86_64(?:_v[0-9]+)?|noarch|i[3-6]86|any|aarch64).*$', '', clean_ver)
+clean_ver = re.sub(r'-[0-9]+(?:\.[0-9]+)?$', '', clean_ver)
+clean_ver = re.sub(r'^[0-9]+(?:%3A|:|_)', '', clean_ver)
+print(f"{clean_ver} {main_url} {lib32_url} {extra_url}")
+PYRESOLVE
+}
+
+# --- [ PACKAGE CLEANUP & RESOLUTION ] ---
+cleanup_foreign_gaming_pkgs() {
+    local pkg_id="$1"
+    local patterns=()
+    case "${pkg_id}" in
+        mangohud)
+            patterns=("mangohud-[0-9]*" "mangohud-common-[0-9]*" "MangoHud-[0-9]*" "lib32-mangohud-[0-9]*")
+            ;;
+        gamemode)
+            patterns=("gamemode-[0-9]*" "feral-gamemode-[0-9]*" "lib32-gamemode-[0-9]*")
+            ;;
+        goverlay)
+            patterns=("goverlay-[0-9]*")
+            ;;
+        scx)
+            patterns=("scx-[0-9]*" "scx-manager-[0-9]*" "scx-scheds-[0-9]*" "scx-tools-[0-9]*" "cachyos-gnome-scx-[0-9]*")
+            ;;
+        easyeffects)
+            patterns=("easyeffects-[0-9]*" "cachyos-gnome-easyeffects-[0-9]*")
+            ;;
+        pear-desktop)
+            patterns=("pear-desktop-[0-9]*" "cachyos-gnome-pear-desktop-[0-9]*")
+            ;;
+        ananicy)
+            patterns=("ananicy-[0-9]*" "ananicy-cpp-[0-9]*" "cachyos-ananicy-rules-[0-9]*")
+            ;;
+        gamescope)
+            patterns=("gamescope-[0-9]*" "lib32-gamescope-[0-9]*")
+            ;;
+        heroic)
+            patterns=("heroic-[0-9]*" "heroic-games-launcher-[0-9]*" "heroic-bin-[0-9]*")
+            ;;
+        lutris)
+            patterns=("lutris-[0-9]*")
+            ;;
+        faugus)
+            patterns=("faugus-[0-9]*" "faugus-launcher-[0-9]*")
+            ;;
+        protonplus)
+            patterns=("protonplus-[0-9]*" "proton-plus-[0-9]*" "protonup-qt-[0-9]*")
+            ;;
+        steam-devices)
+            patterns=("game-devices-udev-[0-9]*" "steam-devices-[0-9]*")
+            ;;
+        lact)
+            patterns=("lact-[0-9]*")
+            ;;
+        openrgb)
+            patterns=("openrgb-[0-9]*")
+            ;;
+        brave)
+            patterns=("brave-bin-[0-9]*" "brave-browser-[0-9]*" "brave-[0-9]*")
+            ;;
+        zen-browser)
+            patterns=("zen-browser-bin-[0-9]*" "zen-browser-[0-9]*")
+            ;;
+        vivaldi)
+            patterns=("vivaldi-[0-9]*" "vivaldi-ffmpeg-codecs-[0-9]*")
+            ;;
+        google-chrome)
+            patterns=("google-chrome-[0-9]*" "google-chrome-stable-[0-9]*")
+            ;;
+        microsoft-edge)
+            patterns=("microsoft-edge-[0-9]*" "microsoft-edge-stable-[0-9]*" "microsoft-edge-stable-bin-[0-9]*")
+            ;;
+        opera)
+            patterns=("opera-[0-9]*" "opera-ffmpeg-codecs-[0-9]*")
+            ;;
+        obs-studio)
+            patterns=("obs-studio-[0-9]*" "obs-[0-9]*")
+            ;;
+        discord)
+            patterns=("discord-[0-9]*")
+            ;;
+        vesktop)
+            patterns=("vesktop-[0-9]*" "vesktop-bin-[0-9]*")
+            ;;
+        obs-vkcapture)
+            patterns=("obs-vkcapture-[0-9]*" "lib32-obs-vkcapture-[0-9]*")
+            ;;
+        sunshine)
+            patterns=("sunshine-[0-9]*")
+            ;;
+        yabridge)
+            patterns=("yabridge-[0-9]*" "lib32-yabridge-[0-9]*" "yabridgectl-[0-9]*")
+            ;;
+        audacity)
+            patterns=("audacity-[0-9]*")
+            ;;
+        spotify)
+            patterns=("spotify-[0-9]*" "spotify-launcher-[0-9]*")
+            ;;
+        inkscape)
+            patterns=("inkscape-[0-9]*")
+            ;;
+        darktable)
+            patterns=("darktable-[0-9]*")
+            ;;
+        retroarch)
+            patterns=("retroarch-[0-9]*" "retroarch-assets-[0-9]*")
+            ;;
+        solaar)
+            patterns=("solaar-[0-9]*")
+            ;;
+        coolercontrol)
+            patterns=("coolercontrol-[0-9]*" "coolercontrold-[0-9]*")
+            ;;
+        lian-li-linux)
+            patterns=("lian-li-linux-[0-9]*" "lian-li-[0-9]*")
+            ;;
+        asusctl)
+            patterns=("asusctl-[0-9]*")
+            ;;
+        syncthing)
+            patterns=("syncthing-[0-9]*")
+            ;;
+        parabolic)
+            patterns=("parabolic-[0-9]*" "tube-converter-[0-9]*")
+            ;;
+    esac
+
+    for pat in "${patterns[@]}" "cachyos-gnome-${pkg_id}-*"; do
+        for p in /var/log/packages/${pat}; do
+            [ -f "${p}" ] || continue
+            local bname
+            bname=$(basename "${p}")
+            log_info "Removing older or superseded package: ${bname}..."
+            validate_privileges
+            sudo "${PKG_REMOVE_CMD}" "${bname}" 2>/dev/null || true
+        done
+    done
+}
+
+# --- [ TRANSMUTATION & BUILD ENGINE ] ---
+transmute_and_deploy_gaming_pkg() {
+    local pkg_id="$1"
+    
+    # Pre-flight readiness checks
+    audit_multilib_readiness "${pkg_id}"
+    if [ "${pkg_id}" = "solaar" ] || [ "${pkg_id}" = "lian-li-linux" ] || [ "${pkg_id}" = "steam-devices" ] || [ "${pkg_id}" = "openrgb" ] || [ "${pkg_id}" = "coolercontrol" ]; then
+        audit_user_hardware_groups
+    fi
+
+    if [ "${pkg_id}" = "scx" ]; then
+        local running_kver
+        running_kver=$(uname -r)
+        if [ ! -d /sys/kernel/sched_ext ] && [[ ! "${running_kver}" =~ (cachyos|sched_ext) ]]; then
+            log_warn "Active running kernel (${running_kver}) does not support Sched-EXT (sched_ext)."
+            log_warn "Sched-EXT requires a kernel compiled with sched_ext support (such as CachyOS)."
+            echo -n "Do you wish to proceed with installing scx anyway? [y/N]: "
+            read -r reply_scx
+            if [[ ! "${reply_scx}" =~ ^[YyJjSsOo]$ ]]; then
+                log_info "scx installation aborted by user."
+                return 0
+            fi
+        fi
+    fi
+
+    if [ "${pkg_id}" = "yabridge" ]; then
+        if ! command -v wine >/dev/null 2>&1; then
+            log_warn "Wine was not detected on this system."
+            log_warn "yabridge requires Wine to bridge Windows VST2/VST3 plugins into Linux DAWs."
+            echo -n "Do you wish to proceed with installing yabridge anyway? [y/N]: "
+            read -r reply_wine
+            if [[ ! "${reply_wine}" =~ ^[YyJjSsOo]$ ]]; then
+                log_info "yabridge installation aborted by user."
+                return 0
+            fi
+        fi
+    fi
+
+    log_info "Resolving upstream package metadata for ${pkg_id}..."
+    local ver main_url lib32_url extra_url
+    read -r ver main_url lib32_url extra_url <<< "$(resolve_cachyos_gaming_upstream_metadata "${pkg_id}" || echo "NONE NONE NONE NONE")"
+
+    if [ "${ver}" = "NONE" ] || [ -z "${main_url}" ] || [ "${main_url}" = "NONE" ]; then
+        log_error "Failed to resolve CachyOS upstream package for: ${pkg_id}"
+        return 1
+    fi
+
+    log_info "Transmuting ${pkg_id} (v${ver}) to native Slackware txz package..."
+
+    local staging_base
+    staging_base=$(mktemp -d "$(get_user_staging_dir)/gnome-${pkg_id}-${ver}.XXXXXX" 2>/dev/null || mktemp -d /tmp/slacky-gnome.XXXXXX)
+    local cache_dir="${staging_base}/downloads"
+    local staging_root="${staging_base}/pkg"
+    local tmp_extract="${staging_base}/extract"
+    trap 'rm -rf "${staging_base:-}" 2>/dev/null || true' INT TERM
+
+    mkdir -p "${cache_dir}" "${staging_root}" "${tmp_extract}/main" "${tmp_extract}/lib32" "${tmp_extract}/extra"
+
+    if [ "${main_url}" = "BUNDLED" ]; then
+        if [ "${pkg_id}" = "steam-devices" ]; then
+            log_info "Deploying bundled Steam controller & Gamepad udev rules..."
+            local udev_dir=""
+            for cand in "${APP_DIR}/../assets/udev/game-devices-udev" \
+                        "/usr/share/slacky-update/assets/udev/game-devices-udev" \
+                        "/usr/local/lib/slacky-update/assets/udev/game-devices-udev"; do
+                if [ -d "${cand}" ]; then
+                    udev_dir="${cand}"
+                    break
+                fi
+            done
+            mkdir -p "${staging_root}/lib/udev/rules.d"
+            if [ -n "${udev_dir}" ]; then
+                cp -a "${udev_dir}"/*.rules "${staging_root}/lib/udev/rules.d/" 2>/dev/null || true
+            fi
+        fi
+    else
+        local main_file="${cache_dir}/$(basename "${main_url}")"
+        local dl_items=()
+        dl_items+=("${main_url}|${main_file}|${main_url}.sig|${main_file}.sig")
+
+        if [ "${lib32_url}" != "NONE" ] && [ -n "${lib32_url}" ]; then
+            local lib32_file="${cache_dir}/$(basename "${lib32_url}")"
+            dl_items+=("${lib32_url}|${lib32_file}|${lib32_url}.sig|${lib32_file}.sig")
+        fi
+
+        if [ "${extra_url}" != "NONE" ] && [ -n "${extra_url}" ]; then
+            IFS=',' read -ra EXTRA_URLS <<< "${extra_url}"
+            for single_extra_url in "${EXTRA_URLS[@]}"; do
+                [ -n "${single_extra_url}" ] || continue
+                local extra_file="${cache_dir}/$(basename "${single_extra_url}")"
+                dl_items+=("${single_extra_url}|${extra_file}|${single_extra_url}.sig|${extra_file}.sig")
+            done
+        fi
+
+        if ! download_parallel_pacman "Underpants Gnomes: ${pkg_id}" "${dl_items[@]}"; then
+            log_error "Failed to download packages for ${pkg_id}."
+            rm -rf "${staging_base}"
+            return 1
+        fi
+
+        if ! verify_cachyos_gpg_signature "${main_file}" "${main_file}.sig"; then
+            log_error "GPG signature verification failed for ${pkg_id}! Aborting transmutation to protect system integrity."
+            rm -rf "${staging_base}"
+            return 1
+        fi
+
+        tar --zstd -xf "${main_file}" -C "${tmp_extract}/main" 2>/dev/null || tar -xf "${main_file}" -C "${tmp_extract}/main" 2>/dev/null || true
+    fi
+
+    # Extract 32-bit Multilib if present
+    if [ "${lib32_url}" != "NONE" ] && [ -n "${lib32_url}" ]; then
+        local lib32_file="${cache_dir}/$(basename "${lib32_url}")"
+        if [ -f "${lib32_file}" ]; then
+            if ! verify_cachyos_gpg_signature "${lib32_file}" "${lib32_file}.sig"; then
+                log_error "GPG signature verification failed for 32-bit ${pkg_id}! Aborting."
+                rm -rf "${staging_base}"
+                return 1
+            fi
+            tar --zstd -xf "${lib32_file}" -C "${tmp_extract}/lib32" 2>/dev/null || true
+        fi
+    fi
+
+    # Extract Extra subpackage(s) if present (e.g. scx-scheds, python-vdf, icoextract, pefile)
+    if [ "${extra_url}" != "NONE" ] && [ -n "${extra_url}" ]; then
+        IFS=',' read -ra EXTRA_URLS <<< "${extra_url}"
+        local extra_idx=0
+        for single_extra_url in "${EXTRA_URLS[@]}"; do
+            [ -n "${single_extra_url}" ] || continue
+            extra_idx=$((extra_idx + 1))
+            local extra_file="${cache_dir}/$(basename "${single_extra_url}")"
+            if [ -f "${extra_file}" ]; then
+                if [ -f "${extra_file}.sig" ]; then
+                    if ! verify_cachyos_gpg_signature "${extra_file}" "${extra_file}.sig"; then
+                        log_warn "GPG signature verification failed for auxiliary $(basename "${single_extra_url}"). Skipping."
+                        continue
+                    fi
+                fi
+                mkdir -p "${tmp_extract}/extra_${extra_idx}"
+                tar --zstd -xf "${extra_file}" -C "${tmp_extract}/extra_${extra_idx}" 2>/dev/null || tar -xf "${extra_file}" -C "${tmp_extract}/extra_${extra_idx}" 2>/dev/null || true
+            fi
+        done
+    fi
+
+    # Map file hierarchy into Slackware standard structure:
+    if [ "${pkg_id}" = "obs-studio" ]; then
+        log_info "Packaging OBS Studio as isolated App-Bundle in /opt/obs-studio..."
+        mkdir -p "${staging_root}/opt/obs-studio/bin" \
+                 "${staging_root}/opt/obs-studio/lib" \
+                 "${staging_root}/opt/obs-studio/share" \
+                 "${staging_root}/usr/bin" \
+                 "${staging_root}/usr/share" \
+                 "${staging_root}/install"
+
+        # Copy main package into /opt/obs-studio
+        if [ -d "${tmp_extract}/main/usr/bin" ]; then
+            cp -a "${tmp_extract}/main/usr/bin/." "${staging_root}/opt/obs-studio/bin/"
+        fi
+        if [ -d "${tmp_extract}/main/usr/lib" ]; then
+            cp -a "${tmp_extract}/main/usr/lib/." "${staging_root}/opt/obs-studio/lib/"
+        fi
+        if [ -d "${tmp_extract}/main/usr/share" ]; then
+            cp -a "${tmp_extract}/main/usr/share/." "${staging_root}/opt/obs-studio/share/"
+            if [ -d "${tmp_extract}/main/usr/share/applications" ]; then
+                mkdir -p "${staging_root}/usr/share/applications"
+                cp -a "${tmp_extract}/main/usr/share/applications/." "${staging_root}/usr/share/applications/"
+            fi
+            if [ -d "${tmp_extract}/main/usr/share/icons" ]; then
+                mkdir -p "${staging_root}/usr/share/icons"
+                cp -a "${tmp_extract}/main/usr/share/icons/." "${staging_root}/usr/share/icons/"
+            fi
+            if [ -d "${tmp_extract}/main/usr/share/pixmaps" ]; then
+                mkdir -p "${staging_root}/usr/share/pixmaps"
+                cp -a "${tmp_extract}/main/usr/share/pixmaps/." "${staging_root}/usr/share/pixmaps/"
+            fi
+            if [ -d "${tmp_extract}/main/usr/share/metainfo" ]; then
+                mkdir -p "${staging_root}/usr/share/metainfo"
+                cp -a "${tmp_extract}/main/usr/share/metainfo/." "${staging_root}/usr/share/metainfo/"
+            fi
+        fi
+
+        # Copy auxiliary packages (bundled python 3.14/3.13, mbedtls, browser plugin, CEF, WebRTC) into /opt/obs-studio/lib
+        for extra_dir in "${tmp_extract}"/extra*; do
+            [ -d "${extra_dir}" ] || continue
+            if [ -d "${extra_dir}/usr/lib" ]; then
+                cp -a "${extra_dir}/usr/lib/." "${staging_root}/opt/obs-studio/lib/"
+            fi
+            if [ -d "${extra_dir}/usr/lib64" ]; then
+                cp -a "${extra_dir}/usr/lib64/." "${staging_root}/opt/obs-studio/lib/"
+            fi
+            if [ -d "${extra_dir}/usr/share" ]; then
+                cp -a "${extra_dir}/usr/share/." "${staging_root}/opt/obs-studio/share/"
+            fi
+            if [ -d "${extra_dir}/opt" ]; then
+                cp -a "${extra_dir}/opt/." "${staging_root}/opt/"
+            fi
+        done
+
+        # If CEF shared library is missing, cleanly omit obs-browser plugin to prevent startup error popup
+        if [ ! -f "${staging_root}/opt/obs-studio/lib/libcef.so" ] && \
+           [ ! -f "${staging_root}/opt/obs-studio/lib/cef/libcef.so" ] && \
+           [ ! -f "${staging_root}/opt/obs-studio/lib/obs-plugins/libcef.so" ] && \
+           [ ! -f "${staging_root}/opt/obs-studio/lib/obs-plugins/obs-browser/libcef.so" ]; then
+            rm -f "${staging_root}/opt/obs-studio/lib/obs-plugins/obs-browser.so" 2>/dev/null || true
+            rm -rf "${staging_root}/opt/obs-studio/share/obs/obs-plugins/obs-browser" 2>/dev/null || true
+        fi
+
+        # Create wrapper scripts
+        cat << 'OBS_WRAPPER_EOF' > "${staging_root}/usr/bin/obs"
+#!/bin/sh
+# OBS Studio Isolated App-Bundle Launcher for Slackware
+export OBS_PATH="/opt/obs-studio"
+export LD_LIBRARY_PATH="/opt/obs-studio/lib:/opt/obs-studio/lib/obs-plugins:/opt/obs-studio/lib/cef:${LD_LIBRARY_PATH:-}"
+for pyd in /opt/obs-studio/lib/python3.*; do
+  if [ -d "$pyd" ]; then
+    export PYTHONHOME="$pyd"
+    export PYTHONPATH="$pyd:$pyd/site-packages:${PYTHONPATH:-}"
+    break
+  fi
+done
+exec /opt/obs-studio/bin/obs "$@"
+OBS_WRAPPER_EOF
+        chmod 755 "${staging_root}/usr/bin/obs"
+
+        if [ -f "${staging_root}/opt/obs-studio/bin/obs-ffmpeg-mux" ]; then
+            cat << 'OBS_MUX_EOF' > "${staging_root}/usr/bin/obs-ffmpeg-mux"
+#!/bin/sh
+export LD_LIBRARY_PATH="/opt/obs-studio/lib:${LD_LIBRARY_PATH:-}"
+exec /opt/obs-studio/bin/obs-ffmpeg-mux "$@"
+OBS_MUX_EOF
+            chmod 755 "${staging_root}/usr/bin/obs-ffmpeg-mux"
+        fi
+
+        for df in "${staging_root}/usr/share/applications"/*.desktop; do
+            [ -f "${df}" ] || continue
+            sed -i 's|^Exec=obs.*|Exec=/usr/bin/obs %U|g; s|^TryExec=obs.*|TryExec=/usr/bin/obs|g' "${df}"
+        done
+    elif [ "${pkg_id}" = "lutris" ]; then
+        log_info "Packaging Lutris as isolated App-Bundle in /opt/lutris..."
+        mkdir -p "${staging_root}/opt/lutris/bin" \
+                 "${staging_root}/opt/lutris/lib" \
+                 "${staging_root}/opt/lutris/share" \
+                 "${staging_root}/usr/bin" \
+                 "${staging_root}/usr/share" \
+                 "${staging_root}/install"
+
+        # Copy main package into /opt/lutris
+        if [ -d "${tmp_extract}/main/usr/bin" ]; then
+            cp -a "${tmp_extract}/main/usr/bin/." "${staging_root}/opt/lutris/bin/"
+        fi
+        if [ -d "${tmp_extract}/main/usr/lib" ]; then
+            cp -a "${tmp_extract}/main/usr/lib/." "${staging_root}/opt/lutris/lib/"
+        fi
+        if [ -d "${tmp_extract}/main/usr/share" ]; then
+            cp -a "${tmp_extract}/main/usr/share/." "${staging_root}/opt/lutris/share/"
+            if [ -d "${tmp_extract}/main/usr/share/applications" ]; then
+                mkdir -p "${staging_root}/usr/share/applications"
+                cp -a "${tmp_extract}/main/usr/share/applications/." "${staging_root}/usr/share/applications/"
+            fi
+            if [ -d "${tmp_extract}/main/usr/share/icons" ]; then
+                mkdir -p "${staging_root}/usr/share/icons"
+                cp -a "${tmp_extract}/main/usr/share/icons/." "${staging_root}/usr/share/icons/"
+            fi
+            if [ -d "${tmp_extract}/main/usr/share/pixmaps" ]; then
+                mkdir -p "${staging_root}/usr/share/pixmaps"
+                cp -a "${tmp_extract}/main/usr/share/pixmaps/." "${staging_root}/usr/share/pixmaps/"
+            fi
+            if [ -d "${tmp_extract}/main/usr/share/metainfo" ]; then
+                mkdir -p "${staging_root}/usr/share/metainfo"
+                cp -a "${tmp_extract}/main/usr/share/metainfo/." "${staging_root}/usr/share/metainfo/"
+            fi
+
+            # Ensure cross-desktop icon compatibility (KDE Plasma, XFCE, GNOME)
+            if [ -d "${staging_root}/usr/share/icons" ]; then
+                find "${staging_root}/usr/share/icons" -type f -name "net.lutris.Lutris.png" | while read -r icon_file; do
+                    icon_dir="$(dirname "${icon_file}")"
+                    ln -sf "net.lutris.Lutris.png" "${icon_dir}/lutris.png" 2>/dev/null || true
+                done
+                find "${staging_root}/usr/share/icons" -type f -name "net.lutris.Lutris.svg" | while read -r icon_file; do
+                    icon_dir="$(dirname "${icon_file}")"
+                    ln -sf "net.lutris.Lutris.svg" "${icon_dir}/lutris.svg" 2>/dev/null || true
+                done
+            fi
+            mkdir -p "${staging_root}/usr/share/pixmaps"
+            if [ -f "${staging_root}/usr/share/icons/hicolor/128x128/apps/net.lutris.Lutris.png" ]; then
+                cp -a "${staging_root}/usr/share/icons/hicolor/128x128/apps/net.lutris.Lutris.png" "${staging_root}/usr/share/pixmaps/lutris.png" 2>/dev/null || true
+                cp -a "${staging_root}/usr/share/icons/hicolor/128x128/apps/net.lutris.Lutris.png" "${staging_root}/usr/share/pixmaps/net.lutris.Lutris.png" 2>/dev/null || true
+            elif [ -f "${staging_root}/usr/share/icons/hicolor/scalable/apps/net.lutris.Lutris.svg" ]; then
+                cp -a "${staging_root}/usr/share/icons/hicolor/scalable/apps/net.lutris.Lutris.svg" "${staging_root}/usr/share/pixmaps/lutris.svg" 2>/dev/null || true
+                cp -a "${staging_root}/usr/share/icons/hicolor/scalable/apps/net.lutris.Lutris.svg" "${staging_root}/usr/share/pixmaps/net.lutris.Lutris.svg" 2>/dev/null || true
+            fi
+        fi
+
+        # Copy auxiliary packages (webkit2gtk, libsoup, python-moddb, python-pypresence, python-evdev, python-distro)
+        for extra_dir in "${tmp_extract}"/extra*; do
+            [ -d "${extra_dir}" ] || continue
+            if [ -d "${extra_dir}/usr/lib" ]; then
+                cp -a "${extra_dir}/usr/lib/." "${staging_root}/opt/lutris/lib/"
+            fi
+            if [ -d "${extra_dir}/usr/lib64" ]; then
+                cp -a "${extra_dir}/usr/lib64/." "${staging_root}/opt/lutris/lib/"
+            fi
+            if [ -d "${extra_dir}/usr/share" ]; then
+                cp -a "${extra_dir}/usr/share/." "${staging_root}/opt/lutris/share/"
+            fi
+        done
+
+        # Patch webconnect_dialog.py in Lutris site-packages so WebKit2 absence is non-fatal:
+        python3 - "${staging_root}" << 'PYPATCH'
+import sys, os, glob, re
+
+root_dir = sys.argv[1]
+for path in glob.glob(os.path.join(root_dir, "opt", "lutris", "**", "webconnect_dialog.py"), recursive=True):
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        safe_replacement = """try:
+    try:
+        gi.require_version("WebKit2", "4.1")
+    except Exception:
+        gi.require_version("WebKit2", "4.0")
+    from gi.repository import WebKit2
+except Exception:
+    class _DummyWebKit:
+        def __getattr__(self, name):
+            return object
+    WebKit2 = _DummyWebKit()"""
+
+        new_content = re.sub(
+            r'try:\s+gi\.require_version\("WebKit2",\s*"4\.1"\).*?from\s+gi\.repository\s+import\s+WebKit2',
+            safe_replacement,
+            content,
+            flags=re.DOTALL
+        )
+        if new_content == content:
+            new_content = re.sub(
+                r'gi\.require_version\("WebKit2".*?from\s+gi\.repository\s+import\s+WebKit2',
+                safe_replacement,
+                content,
+                flags=re.DOTALL
+            )
+
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(new_content)
+    except Exception:
+        pass
+PYPATCH
+
+        # Create launcher wrapper
+        cat << 'LUTRIS_WRAPPER_EOF' > "${staging_root}/usr/bin/lutris"
+#!/bin/sh
+# Lutris Isolated App-Bundle Launcher for Slackware
+export LUTRIS_PATH="/opt/lutris"
+export GI_TYPELIB_PATH="/opt/lutris/lib/girepository-1.0:/usr/lib64/girepository-1.0:${GI_TYPELIB_PATH:-}"
+export LD_LIBRARY_PATH="/opt/lutris/lib:/opt/lutris/lib64:${LD_LIBRARY_PATH:-}"
+for sp in /opt/lutris/lib/python3.*/site-packages /opt/lutris/lib64/python3.*/site-packages; do
+  if [ -d "$sp" ]; then
+    export PYTHONPATH="$sp:${PYTHONPATH:-}"
+  fi
+done
+exec /usr/bin/python3 /opt/lutris/bin/lutris "$@"
+LUTRIS_WRAPPER_EOF
+        chmod 755 "${staging_root}/usr/bin/lutris"
+
+        for df in "${staging_root}/usr/share/applications"/*.desktop; do
+            [ -f "${df}" ] || continue
+            sed -i 's|^Exec=lutris.*|Exec=/usr/bin/lutris %U|g; s|^TryExec=lutris.*|TryExec=/usr/bin/lutris|g' "${df}"
+        done
+    elif [ "${pkg_id}" = "pear-desktop" ]; then
+        log_info "Packaging Pear Desktop (YouTube Music) as isolated App-Bundle in /opt/pear-desktop..."
+        mkdir -p "${staging_root}/opt/pear-desktop" \
+                 "${staging_root}/opt/pear-desktop/lib" \
+                 "${staging_root}/opt/pear-desktop/resources" \
+                 "${staging_root}/usr/bin" \
+                 "${staging_root}/usr/share/applications" \
+                 "${staging_root}/usr/share/icons" \
+                 "${staging_root}/usr/share/pixmaps" \
+                 "${staging_root}/install"
+
+        # Copy Electron42 runtime and auxiliary libraries (libjpeg.so.8) into /opt/pear-desktop
+        for extra_dir in "${tmp_extract}"/extra*; do
+            [ -d "${extra_dir}" ] || continue
+            if [ -d "${extra_dir}/usr/lib/electron42" ]; then
+                cp -a "${extra_dir}/usr/lib/electron42/." "${staging_root}/opt/pear-desktop/"
+            fi
+            if [ -d "${extra_dir}/usr/lib" ]; then
+                cp -a "${extra_dir}/usr/lib"/libjpeg*.so* "${staging_root}/opt/pear-desktop/lib/" 2>/dev/null || true
+                cp -a "${extra_dir}/usr/lib"/libturbojpeg*.so* "${staging_root}/opt/pear-desktop/lib/" 2>/dev/null || true
+            fi
+            if [ -d "${extra_dir}/usr/lib64" ]; then
+                cp -a "${extra_dir}/usr/lib64"/libjpeg*.so* "${staging_root}/opt/pear-desktop/lib/" 2>/dev/null || true
+                cp -a "${extra_dir}/usr/lib64"/libturbojpeg*.so* "${staging_root}/opt/pear-desktop/lib/" 2>/dev/null || true
+            fi
+        done
+
+        # Copy app.asar and unpacked assets into /opt/pear-desktop
+        if [ -d "${tmp_extract}/main/usr/lib/pear-desktop" ]; then
+            cp -a "${tmp_extract}/main/usr/lib/pear-desktop/." "${staging_root}/opt/pear-desktop/"
+            if [ -f "${tmp_extract}/main/usr/lib/pear-desktop/app.asar" ]; then
+                cp -a "${tmp_extract}/main/usr/lib/pear-desktop/app.asar" "${staging_root}/opt/pear-desktop/resources/"
+            fi
+            if [ -d "${tmp_extract}/main/usr/lib/pear-desktop/app.asar.unpacked" ]; then
+                cp -a "${tmp_extract}/main/usr/lib/pear-desktop/app.asar.unpacked" "${staging_root}/opt/pear-desktop/resources/"
+            fi
+        fi
+
+        # Ensure electron binary permissions
+        [ -f "${staging_root}/opt/pear-desktop/electron" ] && chmod 755 "${staging_root}/opt/pear-desktop/electron"
+        [ -f "${staging_root}/opt/pear-desktop/chrome-sandbox" ] && chmod 4755 "${staging_root}/opt/pear-desktop/chrome-sandbox" 2>/dev/null || true
+
+        # Copy desktop files
+        if [ -d "${tmp_extract}/main/usr/share/applications" ]; then
+            cp -a "${tmp_extract}/main/usr/share/applications/." "${staging_root}/usr/share/applications/"
+        fi
+
+        # Create standard /usr/share/applications/pear-desktop.desktop
+        cat << 'PEAR_DESKTOP_EOF' > "${staging_root}/usr/share/applications/pear-desktop.desktop"
+[Desktop Entry]
+Name=Pear Desktop
+GenericName=YouTube Music Desktop
+Comment=YouTube Music Desktop App with Custom Plugins
+Exec=/usr/bin/pear-desktop %U
+Terminal=false
+Type=Application
+Icon=pear-desktop
+Categories=AudioVideo;Audio;Player;Music;
+StartupWMClass=pear-desktop
+MimeType=x-scheme-handler/youtubemusic;
+PEAR_DESKTOP_EOF
+
+        # Copy icons
+        if [ -d "${tmp_extract}/main/usr/share/icons" ]; then
+            cp -a "${tmp_extract}/main/usr/share/icons/." "${staging_root}/usr/share/icons/"
+        fi
+        if [ -d "${tmp_extract}/main/usr/lib/pear-desktop/app.asar.unpacked/assets/generated/icons/png" ]; then
+            for isize in 16 24 32 48 64 128 256 512 1024; do
+                local icon_src="${tmp_extract}/main/usr/lib/pear-desktop/app.asar.unpacked/assets/generated/icons/png/${isize}x${isize}.png"
+                if [ -f "${icon_src}" ]; then
+                    mkdir -p "${staging_root}/usr/share/icons/hicolor/${isize}x${isize}/apps"
+                    cp -a "${icon_src}" "${staging_root}/usr/share/icons/hicolor/${isize}x${isize}/apps/pear-desktop.png"
+                    cp -a "${icon_src}" "${staging_root}/usr/share/icons/hicolor/${isize}x${isize}/apps/youtube-music.png"
+                    cp -a "${icon_src}" "${staging_root}/usr/share/icons/hicolor/${isize}x${isize}/apps/com.github.th-ch.youtube-music.png"
+                fi
+            done
+        fi
+
+        # Cross-desktop icon symmetry
+        if [ -d "${staging_root}/usr/share/icons" ]; then
+            find "${staging_root}/usr/share/icons" -type f -name "com.github.th-ch.youtube-music.png" | while read -r icon_file; do
+                icon_dir="$(dirname "${icon_file}")"
+                ln -sf "com.github.th-ch.youtube-music.png" "${icon_dir}/pear-desktop.png" 2>/dev/null || true
+                ln -sf "com.github.th-ch.youtube-music.png" "${icon_dir}/youtube-music.png" 2>/dev/null || true
+            done
+        fi
+        mkdir -p "${staging_root}/usr/share/pixmaps"
+        if [ -f "${staging_root}/usr/share/icons/hicolor/128x128/apps/com.github.th-ch.youtube-music.png" ]; then
+            cp -a "${staging_root}/usr/share/icons/hicolor/128x128/apps/com.github.th-ch.youtube-music.png" "${staging_root}/usr/share/pixmaps/pear-desktop.png" 2>/dev/null || true
+            cp -a "${staging_root}/usr/share/icons/hicolor/128x128/apps/com.github.th-ch.youtube-music.png" "${staging_root}/usr/share/pixmaps/youtube-music.png" 2>/dev/null || true
+            cp -a "${staging_root}/usr/share/icons/hicolor/128x128/apps/com.github.th-ch.youtube-music.png" "${staging_root}/usr/share/pixmaps/com.github.th-ch.youtube-music.png" 2>/dev/null || true
+        fi
+
+        # Create launcher wrapper
+        cat << 'PEAR_WRAPPER_EOF' > "${staging_root}/usr/bin/pear-desktop"
+#!/bin/sh
+# Pear Desktop (YouTube Music) Isolated App-Bundle Launcher for Slackware
+export LD_LIBRARY_PATH="/opt/pear-desktop:/opt/pear-desktop/lib:${LD_LIBRARY_PATH:-}"
+XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+PEAR_USER_FLAGS=""
+if [ -f "$XDG_CONFIG_HOME/pear-flags.conf" ]; then
+    PEAR_USER_FLAGS="$(grep -v '^#' "$XDG_CONFIG_HOME/pear-flags.conf" | tr '\n' ' ')"
+fi
+export ELECTRON_IS_DEV=0
+exec /opt/pear-desktop/electron /opt/pear-desktop/app.asar ${PEAR_USER_FLAGS} "$@"
+PEAR_WRAPPER_EOF
+        chmod 755 "${staging_root}/usr/bin/pear-desktop"
+        ln -sf pear-desktop "${staging_root}/usr/bin/youtube-music"
+
+        for df in "${staging_root}/usr/share/applications"/*.desktop; do
+            [ -f "${df}" ] || continue
+            sed -i 's|^Exec=.*|Exec=/usr/bin/pear-desktop %U|g; s|^TryExec=.*|TryExec=/usr/bin/pear-desktop|g' "${df}"
+        done
+    else
+        # Standard native package transmutation:
+        mkdir -p "${staging_root}/usr/bin" \
+                 "${staging_root}/usr/lib64" \
+                 "${staging_root}/usr/lib" \
+                 "${staging_root}/usr/share" \
+                 "${staging_root}/etc" \
+                 "${staging_root}/lib/udev/rules.d" \
+                 "${staging_root}/install"
+
+        # Copy files from main extract:
+        if [ -d "${tmp_extract}/main/opt" ]; then
+            mkdir -p "${staging_root}/opt"
+            cp -a "${tmp_extract}/main/opt/." "${staging_root}/opt/"
+        fi
+
+        if [ -d "${tmp_extract}/main/usr/bin" ]; then
+            cp -a "${tmp_extract}/main/usr/bin/." "${staging_root}/usr/bin/"
+        fi
+
+        if [ -d "${tmp_extract}/main/usr/share" ]; then
+            cp -a "${tmp_extract}/main/usr/share/." "${staging_root}/usr/share/"
+        fi
+
+        if [ -d "${tmp_extract}/main/etc" ]; then
+            cp -a "${tmp_extract}/main/etc/." "${staging_root}/etc/"
+        fi
+
+        if [ -d "${tmp_extract}/main/usr/lib/udev/rules.d" ]; then
+            cp -a "${tmp_extract}/main/usr/lib/udev/rules.d/." "${staging_root}/lib/udev/rules.d/"
+        elif [ -d "${tmp_extract}/main/lib/udev/rules.d" ]; then
+            cp -a "${tmp_extract}/main/lib/udev/rules.d/." "${staging_root}/lib/udev/rules.d/"
+        fi
+
+        if [ -d "${tmp_extract}/main/usr/lib" ]; then
+            (
+                cd "${tmp_extract}/main/usr/lib"
+                find . -maxdepth 1 ! -name "." ! -name "udev" ! -name "systemd" ! -name "environment.d" -exec cp -a {} "${staging_root}/usr/lib64/" \; 2>/dev/null || true
+            )
+        fi
+
+        # Copy 32-bit Multilib files -> Slackware /usr/lib
+        if [ -d "${tmp_extract}/lib32/usr/lib32" ]; then
+            (
+                cd "${tmp_extract}/lib32/usr/lib32"
+                find . -maxdepth 1 ! -name "." ! -name "udev" ! -name "systemd" -exec cp -a {} "${staging_root}/usr/lib/" \; 2>/dev/null || true
+            )
+        elif [ -d "${tmp_extract}/lib32/usr/lib" ]; then
+            (
+                cd "${tmp_extract}/lib32/usr/lib"
+                find . -maxdepth 1 ! -name "." ! -name "udev" ! -name "systemd" -exec cp -a {} "${staging_root}/usr/lib/" \; 2>/dev/null || true
+            )
+        fi
+
+        # Copy Extra subpackage files:
+        for extra_dir in "${tmp_extract}"/extra*; do
+            [ -d "${extra_dir}" ] || continue
+            if [ -d "${extra_dir}/usr/bin" ]; then
+                cp -a "${extra_dir}/usr/bin/." "${staging_root}/usr/bin/"
+            fi
+            if [ -d "${extra_dir}/usr/lib" ]; then
+                (
+                    cd "${extra_dir}/usr/lib"
+                    find . -maxdepth 1 ! -name "." ! -name "udev" ! -name "systemd" -exec cp -a {} "${staging_root}/usr/lib64/" \; 2>/dev/null || true
+                )
+            fi
+            if [ -d "${extra_dir}/usr/lib64" ]; then
+                (
+                    cd "${extra_dir}/usr/lib64"
+                    find . -maxdepth 1 ! -name "." ! -name "udev" ! -name "systemd" -exec cp -a {} "${staging_root}/usr/lib64/" \; 2>/dev/null || true
+                )
+            fi
+            if [ -d "${extra_dir}/usr/share" ]; then
+                cp -a "${extra_dir}/usr/share/." "${staging_root}/usr/share/"
+            fi
+            if [ -d "${extra_dir}/etc" ]; then
+                mkdir -p "${staging_root}/etc"
+                cp -a "${extra_dir}/etc/." "${staging_root}/etc/"
+            fi
+        done
+
+        # Remap Python site-packages from upstream (e.g. python3.14, python3.13) to host Slackware Python (python3.12)
+        local py_sys_ver
+        py_sys_ver=$(python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>/dev/null || echo "3.12")
+        
+        mkdir -p "${staging_root}/usr/lib64/python${py_sys_ver}/site-packages"
+        for pydir in "${staging_root}/usr/lib64"/python3.* "${staging_root}/usr/lib"/python3.*; do
+            [ -d "${pydir}/site-packages" ] || continue
+            if [ "${pydir}" != "${staging_root}/usr/lib64/python${py_sys_ver}" ]; then
+                log_info "Remapping Python site-packages ($(basename "${pydir}")) -> python${py_sys_ver}..."
+                find "${pydir}/site-packages" -type f -name "*.so" 2>/dev/null | while read -r so_file; do
+                    local bso
+                    bso=$(basename "${so_file}")
+                    if [[ "${bso}" =~ \.cpython-(31[3-9]|3[2-9][0-9]) ]] && [[ ! "${bso}" =~ \.abi3\. ]]; then
+                        log_warn "Omitting incompatible binary CPython extension (${bso}) from host site-packages."
+                        rm -f "${so_file}" 2>/dev/null || true
+                    fi
+                done
+                cp -a "${pydir}/site-packages/." "${staging_root}/usr/lib64/python${py_sys_ver}/site-packages/"
+                rm -rf "${pydir}" 2>/dev/null || true
+            fi
+        done
+        find "${staging_root}/usr/lib64/python${py_sys_ver}/site-packages" -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+    fi
+
+    # Browser conveniences in /usr/bin:
+    if [ "${pkg_id}" = "brave" ]; then
+        [ -f "${staging_root}/opt/brave.com/brave/brave" ] && [ ! -e "${staging_root}/usr/bin/brave" ] && ln -sf /opt/brave.com/brave/brave "${staging_root}/usr/bin/brave"
+        [ -f "${staging_root}/usr/bin/brave-browser" ] && [ ! -e "${staging_root}/usr/bin/brave" ] && ln -sf brave-browser "${staging_root}/usr/bin/brave"
+    fi
+    if [ "${pkg_id}" = "zen-browser" ]; then
+        [ -f "${staging_root}/opt/zen-browser/zen" ] && [ ! -e "${staging_root}/usr/bin/zen" ] && ln -sf /opt/zen-browser/zen "${staging_root}/usr/bin/zen"
+        [ -f "${staging_root}/opt/zen-browser/zen" ] && [ ! -e "${staging_root}/usr/bin/zen-browser" ] && ln -sf /opt/zen-browser/zen "${staging_root}/usr/bin/zen-browser"
+    fi
+    if [ "${pkg_id}" = "google-chrome" ]; then
+        [ -f "${staging_root}/usr/bin/google-chrome-stable" ] && [ ! -e "${staging_root}/usr/bin/google-chrome" ] && ln -sf google-chrome-stable "${staging_root}/usr/bin/google-chrome"
+        [ -f "${staging_root}/opt/google/chrome/google-chrome" ] && [ ! -e "${staging_root}/usr/bin/google-chrome" ] && ln -sf /opt/google/chrome/google-chrome "${staging_root}/usr/bin/google-chrome"
+    fi
+    if [ "${pkg_id}" = "microsoft-edge" ]; then
+        [ -f "${staging_root}/usr/bin/microsoft-edge-stable" ] && [ ! -e "${staging_root}/usr/bin/microsoft-edge" ] && ln -sf microsoft-edge-stable "${staging_root}/usr/bin/microsoft-edge"
+        [ -f "${staging_root}/usr/bin/microsoft-edge" ] && [ ! -e "${staging_root}/usr/bin/edge" ] && ln -sf microsoft-edge "${staging_root}/usr/bin/edge"
+        [ -f "${staging_root}/opt/microsoft/msedge/microsoft-edge" ] && [ ! -e "${staging_root}/usr/bin/microsoft-edge" ] && ln -sf /opt/microsoft/msedge/microsoft-edge "${staging_root}/usr/bin/microsoft-edge"
+    fi
+    if [ "${pkg_id}" = "vivaldi" ]; then
+        [ -f "${staging_root}/usr/bin/vivaldi-stable" ] && [ ! -e "${staging_root}/usr/bin/vivaldi" ] && ln -sf vivaldi-stable "${staging_root}/usr/bin/vivaldi"
+        [ -f "${staging_root}/opt/vivaldi/vivaldi" ] && [ ! -e "${staging_root}/usr/bin/vivaldi" ] && ln -sf /opt/vivaldi/vivaldi "${staging_root}/usr/bin/vivaldi"
+    fi
+    if [ "${pkg_id}" = "opera" ]; then
+        if [ -d "${staging_root}/usr/lib/opera" ] && [ -f "${staging_root}/usr/lib64/libffmpeg.so" ]; then
+            mv -f "${staging_root}/usr/lib64/libffmpeg.so" "${staging_root}/usr/lib/opera/" 2>/dev/null || true
+        fi
+        [ -f "${staging_root}/usr/lib/opera/opera" ] && [ ! -e "${staging_root}/usr/bin/opera" ] && ln -sf /usr/lib/opera/opera "${staging_root}/usr/bin/opera"
+        [ -f "${staging_root}/opt/opera/opera" ] && [ ! -e "${staging_root}/usr/bin/opera" ] && ln -sf /opt/opera/opera "${staging_root}/usr/bin/opera"
+    fi
+
+    # Universal Vulkan Layer Manifest Remapping for Slackware 64-bit & Multilib:
+    for layer_dir in "${staging_root}/usr/share/vulkan/implicit_layer.d" \
+                     "${staging_root}/usr/share/vulkan/explicit_layer.d" \
+                     "${staging_root}/etc/vulkan/implicit_layer.d" \
+                     "${staging_root}/etc/vulkan/explicit_layer.d"; do
+        [ -d "${layer_dir}" ] || continue
+        for jf in "${layer_dir}"/*.json; do
+            [ -f "${jf}" ] || continue
+            local bjf
+            bjf=$(basename "${jf}")
+            if [[ "${bjf}" == *"x86_64"* ]] || [[ "${bjf}" == *"64"* ]] || [ "${bjf}" = "MangoHud.json" ] || [ "${bjf}" = "MangoApp.json" ] || [ "${bjf}" = "obs_vkcapture.json" ]; then
+                # 64-bit manifest: rewrite /usr/lib/ to /usr/lib64/
+                sed -i 's|/usr/lib/mangohud/|/usr/lib64/mangohud/|g; s|/usr/lib/libMango|/usr/lib64/libMango|g; s|/usr/lib/libmango|/usr/lib64/libmango|g; s|/usr/lib/libobs|/usr/lib64/libobs|g' "${jf}"
+            elif [[ "${bjf}" == *"x86"* ]] || [[ "${bjf}" == *"i686"* ]] || [[ "${bjf}" == *"32"* ]] || [[ "${bjf}" == *"lib32"* ]]; then
+                # 32-bit manifest: rewrite /usr/lib32/ to /usr/lib/
+                sed -i 's|/usr/lib32/|/usr/lib/|g' "${jf}"
+            fi
+        done
+        # Ensure standard non-suffixed symlinks exist (e.g. MangoHud.json -> MangoHud.x86_64.json)
+        if [ -f "${layer_dir}/MangoHud.x86_64.json" ] && [ ! -e "${layer_dir}/MangoHud.json" ]; then
+            ln -sf MangoHud.x86_64.json "${layer_dir}/MangoHud.json"
+        fi
+        if [ -f "${layer_dir}/MangoApp.x86_64.json" ] && [ ! -e "${layer_dir}/MangoApp.json" ]; then
+            ln -sf MangoApp.x86_64.json "${layer_dir}/MangoApp.json"
+        fi
+        if [ -f "${layer_dir}/obs_vkcapture_x86_64.json" ] && [ ! -e "${layer_dir}/obs_vkcapture.json" ]; then
+            ln -sf obs_vkcapture_x86_64.json "${layer_dir}/obs_vkcapture.json"
+        fi
+    done
+
+    # Service & Special Integrations:
+    if [ "${pkg_id}" = "mangohud" ]; then
+        # Fix /usr/bin/mangohud launcher script paths
+        if [ -f "${staging_root}/usr/bin/mangohud" ]; then
+            sed -i 's|/usr/lib/mangohud/|/usr/lib64/mangohud/|g; s|/usr/lib32/mangohud/|/usr/lib/mangohud/|g; s|/usr/lib32/|/usr/lib/|g' "${staging_root}/usr/bin/mangohud"
+            chmod 755 "${staging_root}/usr/bin/mangohud"
+        fi
+
+        # Create library symlinks for compatibility in /usr/lib64 and /usr/lib
+        if [ -d "${staging_root}/usr/lib64/mangohud" ]; then
+            for so in "${staging_root}/usr/lib64/mangohud"/*.so*; do
+                [ -f "${so}" ] || continue
+                local soname
+                soname=$(basename "${so}")
+                [ -e "${staging_root}/usr/lib64/${soname}" ] || ln -sf "mangohud/${soname}" "${staging_root}/usr/lib64/${soname}"
+            done
+        fi
+        if [ -d "${staging_root}/usr/lib/mangohud" ]; then
+            for so in "${staging_root}/usr/lib/mangohud"/*.so*; do
+                [ -f "${so}" ] || continue
+                local soname
+                soname=$(basename "${so}")
+                [ -e "${staging_root}/usr/lib/${soname}" ] || ln -sf "mangohud/${soname}" "${staging_root}/usr/lib/${soname}"
+            done
+        fi
+
+        # Default configuration template
+        mkdir -p "${staging_root}/usr/share/mangohud"
+        if [ -f "${staging_root}/usr/share/doc/mangohud/MangoHud.conf.example" ]; then
+            cp -a "${staging_root}/usr/share/doc/mangohud/MangoHud.conf.example" "${staging_root}/usr/share/mangohud/MangoHud.conf" 2>/dev/null || true
+        fi
+    fi
+
+    if [ "${pkg_id}" = "goverlay" ]; then
+        # If /usr/lib64/goverlay or /usr/lib/goverlay is an ELF binary, move it to /usr/bin/goverlay
+        if [ -f "${staging_root}/usr/lib64/goverlay" ]; then
+            if is_elf_binary "${staging_root}/usr/lib64/goverlay"; then
+                mv -f "${staging_root}/usr/lib64/goverlay" "${staging_root}/usr/bin/goverlay"
+            else
+                rm -f "${staging_root}/usr/lib64/goverlay"
+            fi
+        fi
+        if [ -f "${staging_root}/usr/lib/goverlay" ]; then
+            if is_elf_binary "${staging_root}/usr/lib/goverlay"; then
+                mv -f "${staging_root}/usr/lib/goverlay" "${staging_root}/usr/bin/goverlay"
+            else
+                rm -f "${staging_root}/usr/lib/goverlay"
+            fi
+        fi
+
+        # If /usr/lib64/pascube or /usr/lib/pascube is an ELF binary, move it to /usr/bin/pascube
+        if [ -f "${staging_root}/usr/lib64/pascube" ]; then
+            if is_elf_binary "${staging_root}/usr/lib64/pascube"; then
+                mv -f "${staging_root}/usr/lib64/pascube" "${staging_root}/usr/bin/pascube"
+            else
+                rm -f "${staging_root}/usr/lib64/pascube"
+            fi
+        fi
+        if [ -f "${staging_root}/usr/lib/pascube" ]; then
+            if is_elf_binary "${staging_root}/usr/lib/pascube"; then
+                mv -f "${staging_root}/usr/lib/pascube" "${staging_root}/usr/bin/pascube"
+            else
+                rm -f "${staging_root}/usr/lib/pascube"
+            fi
+        fi
+
+        # Ensure binaries in /usr/bin are executable
+        [ -f "${staging_root}/usr/bin/goverlay" ] && chmod 755 "${staging_root}/usr/bin/goverlay"
+        [ -f "${staging_root}/usr/bin/pascube" ] && chmod 755 "${staging_root}/usr/bin/pascube"
+
+        # Create compatibility symlinks in /usr/lib64 and /usr/lib pointing to /usr/bin binaries
+        mkdir -p "${staging_root}/usr/lib64" "${staging_root}/usr/lib"
+        rm -rf "${staging_root}/usr/lib64/goverlay" "${staging_root}/usr/lib/goverlay" 2>/dev/null || true
+        rm -rf "${staging_root}/usr/lib64/pascube" "${staging_root}/usr/lib/pascube" 2>/dev/null || true
+
+        if [ -f "${staging_root}/usr/bin/goverlay" ]; then
+            ln -sf /usr/bin/goverlay "${staging_root}/usr/lib64/goverlay"
+            ln -sf /usr/bin/goverlay "${staging_root}/usr/lib/goverlay"
+        fi
+        if [ -f "${staging_root}/usr/bin/pascube" ]; then
+            ln -sf /usr/bin/pascube "${staging_root}/usr/lib64/pascube"
+            ln -sf /usr/bin/pascube "${staging_root}/usr/lib/pascube"
+        fi
+    fi
+
+    if [ "${pkg_id}" = "inkscape" ]; then
+        # Inkscape internal library RUNPATH points to $ORIGIN/../lib/inkscape
+        # Ensure /usr/lib/inkscape symlinks to /usr/lib64/inkscape on Slackware 64-bit
+        mkdir -p "${staging_root}/usr/lib" "${staging_root}/usr/lib64/inkscape" "${staging_root}/etc/ld.so.conf.d"
+        rm -rf "${staging_root}/usr/lib/inkscape" 2>/dev/null || true
+        ln -sf /usr/lib64/inkscape "${staging_root}/usr/lib/inkscape"
+        echo "/usr/lib64/inkscape" > "${staging_root}/etc/ld.so.conf.d/inkscape.conf"
+    fi
+
+    if [ "${pkg_id}" = "lact" ]; then
+        mkdir -p "${staging_root}/etc/rc.d"
+        cat << 'LACT_RC_EOF' > "${staging_root}/etc/rc.d/rc.lact"
+#!/bin/sh
+#
+# /etc/rc.d/rc.lact - LACT daemon service script for Slackware
+#
+
+PIDFILE="/run/lactd.pid"
+SOCKFILE="/run/lactd.sock"
+BIN="/usr/bin/lact"
+
+lact_start() {
+  if [ -x "$BIN" ]; then
+    echo "Starting LACT daemon: $BIN daemon"
+    rm -f "$SOCKFILE" "$PIDFILE"
+    $BIN daemon > /var/log/lactd.log 2>&1 &
+    echo $! > "$PIDFILE"
+  fi
+}
+
+lact_stop() {
+  echo "Stopping LACT daemon..."
+  if [ -f "$PIDFILE" ]; then
+    kill -TERM $(cat "$PIDFILE") 2>/dev/null
+    rm -f "$PIDFILE"
+  else
+    pkill -TERM -f "$BIN daemon" 2>/dev/null
+  fi
+  rm -f "$SOCKFILE"
+}
+
+lact_restart() {
+  lact_stop
+  sleep 1
+  lact_start
+}
+
+lact_status() {
+  if pgrep -f "$BIN daemon" > /dev/null 2>&1; then
+    echo "LACT daemon is running."
+    $BIN cli profile get 2>/dev/null || true
+  else
+    echo "LACT daemon is NOT running."
+  fi
+}
+
+case "$1" in
+  'start')
+    lact_start
+    ;;
+  'stop')
+    lact_stop
+    ;;
+  'restart')
+    lact_restart
+    ;;
+  'status')
+    lact_status
+    ;;
+  *)
+    echo "Usage: $0 {start|stop|restart|status}"
+    exit 1
+    ;;
+esac
+LACT_RC_EOF
+        chmod 755 "${staging_root}/etc/rc.d/rc.lact"
+    fi
+
+    if [ "${pkg_id}" = "ananicy" ]; then
+        mkdir -p "${staging_root}/etc/rc.d"
+        cat << 'ANANICY_RC_EOF' > "${staging_root}/etc/rc.d/rc.ananicy-cpp"
+#!/bin/sh
+#
+# /etc/rc.d/rc.ananicy-cpp - Ananicy C++ auto-nice daemon for Slackware
+#
+
+PIDFILE="/run/ananicy-cpp.pid"
+BIN="/usr/bin/ananicy-cpp"
+
+ananicy_start() {
+  if [ -x "$BIN" ]; then
+    echo "Starting Ananicy C++ daemon: $BIN start --manual-scanning"
+    if ! pgrep -x ananicy-cpp > /dev/null 2>&1; then
+      $BIN --force-remove-semaphore 2>/dev/null || true
+      rm -f "$PIDFILE" /var/run/ananicy-cpp.pid /dev/shm/sem.*ananicy* /dev/shm/*ananicy* 2>/dev/null || true
+    fi
+    if [ -d /sys/kernel/tracing ] && ! mountpoint -q /sys/kernel/tracing 2>/dev/null; then
+      mount -t tracefs nodev /sys/kernel/tracing 2>/dev/null || true
+    fi
+    $BIN start --manual-scanning > /var/log/ananicy-cpp.log 2>&1 &
+  fi
+}
+
+ananicy_stop() {
+  echo "Stopping Ananicy C++ daemon..."
+  pkill -TERM -x ananicy-cpp 2>/dev/null || true
+  sleep 0.5
+  pkill -KILL -x ananicy-cpp 2>/dev/null || true
+  $BIN --force-remove-semaphore 2>/dev/null || true
+  rm -f "$PIDFILE" /var/run/ananicy-cpp.pid /dev/shm/sem.*ananicy* /dev/shm/*ananicy* 2>/dev/null || true
+}
+
+ananicy_restart() {
+  ananicy_stop
+  sleep 1
+  ananicy_start
+}
+
+ananicy_status() {
+  if pgrep -x ananicy-cpp > /dev/null 2>&1 || pgrep -f "$BIN" > /dev/null 2>&1; then
+    echo "Ananicy C++ daemon is running."
+  else
+    echo "Ananicy C++ daemon is NOT running."
+  fi
+}
+
+case "$1" in
+  'start')
+    ananicy_start
+    ;;
+  'stop')
+    ananicy_stop
+    ;;
+  'restart')
+    ananicy_restart
+    ;;
+  'status')
+    ananicy_status
+    ;;
+  *)
+    echo "Usage: $0 {start|stop|restart|status}"
+    exit 1
+    ;;
+esac
+ANANICY_RC_EOF
+        chmod 755 "${staging_root}/etc/rc.d/rc.ananicy-cpp"
+    fi
+
+    if [ "${pkg_id}" = "scx" ]; then
+        mkdir -p "${staging_root}/etc/rc.d" "${staging_root}/etc/dbus-1/system.d"
+        if [ -f "${staging_root}/usr/share/dbus-1/system.d/org.scx.Loader.conf" ]; then
+            cp -a "${staging_root}/usr/share/dbus-1/system.d/org.scx.Loader.conf" "${staging_root}/etc/dbus-1/system.d/" 2>/dev/null || true
+        fi
+        cat << 'SCX_RC_EOF' > "${staging_root}/etc/rc.d/rc.scx"
+#!/bin/sh
+# /etc/rc.d/rc.scx - Sched-EXT Gaming Scheduler & Loader Daemon for Slackware
+
+DEFAULT_SCHED="${SCX_SCHED:-scx_lavd}"
+
+scx_start() {
+    if command -v scx_loader >/dev/null 2>&1; then
+        echo "Starting Sched-EXT loader daemon (scx_loader)..."
+        nohup scx_loader >/var/log/scx_loader.log 2>&1 &
+    elif command -v "${DEFAULT_SCHED}" >/dev/null 2>&1; then
+        echo "Starting Sched-EXT gaming scheduler: ${DEFAULT_SCHED}"
+        nohup "${DEFAULT_SCHED}" >/var/log/scx.log 2>&1 &
+    else
+        echo "Sched-EXT scheduler or scx_loader not found."
+    fi
+}
+
+scx_stop() {
+    echo "Stopping Sched-EXT schedulers..."
+    pkill -x scx_loader 2>/dev/null || true
+    pkill -f "scx_" 2>/dev/null || true
+}
+
+scx_status() {
+    if pgrep -x scx_loader >/dev/null 2>&1; then
+        echo "Sched-EXT loader daemon is active (PID: $(pgrep -x scx_loader))"
+    fi
+    if pgrep -f "scx_" | grep -v "$(pgrep -x scx_loader 2>/dev/null)" >/dev/null 2>&1; then
+        echo "Sched-EXT scheduler is active: $(pgrep -a -f "scx_" | grep -v "scx_loader" | head -n1)"
+    elif ! pgrep -x scx_loader >/dev/null 2>&1; then
+        echo "No Sched-EXT scheduler or loader running."
+    fi
+}
+
+case "$1" in
+    start) scx_start ;;
+    stop) scx_stop ;;
+    restart) scx_stop; sleep 1; scx_start ;;
+    status) scx_status ;;
+    *) echo "Usage: $0 {start|stop|restart|status}" ;;
+esac
+SCX_RC_EOF
+        chmod 755 "${staging_root}/etc/rc.d/rc.scx"
+    fi
+
+    if [ "${pkg_id}" = "easyeffects" ]; then
+        log_info "Fetching JackHack96 EasyEffects studio presets & impulse responses..."
+        mkdir -p "${staging_root}/etc/easyeffects/output" \
+                 "${staging_root}/etc/easyeffects/irs" \
+                 "${staging_root}/etc/skel/.config/easyeffects/output" \
+                 "${staging_root}/etc/skel/.config/easyeffects/irs"
+        
+        local presets_tar="${staging_base}/easyeffects-presets.tar.gz"
+        curl -fsSL "https://github.com/JackHack96/EasyEffects-Presets/archive/refs/heads/master.tar.gz" -o "${presets_tar}" 2>/dev/null || true
+        if [ -f "${presets_tar}" ]; then
+            local extract_tmp="${staging_base}/presets_tmp"
+            mkdir -p "${extract_tmp}"
+            tar -xzf "${presets_tar}" -C "${extract_tmp}" 2>/dev/null || true
+            local p_root
+            p_root=$(find "${extract_tmp}" -maxdepth 1 -type d -name "EasyEffects-Presets*" | head -n1)
+            if [ -n "${p_root}" ] && [ -d "${p_root}" ]; then
+                cp -a "${p_root}"/*.json "${staging_root}/etc/easyeffects/output/" 2>/dev/null || true
+                cp -a "${p_root}"/*.json "${staging_root}/etc/skel/.config/easyeffects/output/" 2>/dev/null || true
+                if [ -d "${p_root}/irs" ]; then
+                    cp -a "${p_root}/irs"/* "${staging_root}/etc/easyeffects/irs/" 2>/dev/null || true
+                    cp -a "${p_root}/irs"/* "${staging_root}/etc/skel/.config/easyeffects/irs/" 2>/dev/null || true
+                fi
+            fi
+            rm -rf "${extract_tmp}" "${presets_tar}" 2>/dev/null || true
+        fi
+    fi
+
+    if [ "${pkg_id}" = "openrgb" ]; then
+        mkdir -p "${staging_root}/lib/udev/rules.d"
+        cat << 'OPENRGB_UDEV_EOF' > "${staging_root}/lib/udev/rules.d/60-openrgb.rules"
+# OpenRGB Udev rules for Slackware
+SUBSYSTEM=="usb", ATTR{idVendor}=="*", MODE="0666", TAG+="uaccess"
+SUBSYSTEM=="hidraw", MODE="0666", TAG+="uaccess"
+KERNEL=="i2c-[0-9]*", GROUP="users", MODE="0666"
+OPENRGB_UDEV_EOF
+
+        # Ensure cross-desktop icon compatibility (KDE Plasma, XFCE, GNOME)
+        if [ -d "${staging_root}/usr/share/icons" ]; then
+            find "${staging_root}/usr/share/icons" -type f -name "org.openrgb.OpenRGB.png" | while read -r icon_file; do
+                icon_dir="$(dirname "${icon_file}")"
+                ln -sf "org.openrgb.OpenRGB.png" "${icon_dir}/openrgb.png" 2>/dev/null || true
+            done
+            find "${staging_root}/usr/share/icons" -type f -name "org.openrgb.OpenRGB.svg" | while read -r icon_file; do
+                icon_dir="$(dirname "${icon_file}")"
+                ln -sf "org.openrgb.OpenRGB.svg" "${icon_dir}/openrgb.svg" 2>/dev/null || true
+            done
+        fi
+        mkdir -p "${staging_root}/usr/share/pixmaps"
+        if [ -f "${staging_root}/usr/share/icons/hicolor/128x128/apps/org.openrgb.OpenRGB.png" ]; then
+            cp -a "${staging_root}/usr/share/icons/hicolor/128x128/apps/org.openrgb.OpenRGB.png" "${staging_root}/usr/share/pixmaps/openrgb.png" 2>/dev/null || true
+            cp -a "${staging_root}/usr/share/icons/hicolor/128x128/apps/org.openrgb.OpenRGB.png" "${staging_root}/usr/share/pixmaps/org.openrgb.OpenRGB.png" 2>/dev/null || true
+        elif [ -f "${staging_root}/usr/share/icons/hicolor/scalable/apps/org.openrgb.OpenRGB.svg" ]; then
+            cp -a "${staging_root}/usr/share/icons/hicolor/scalable/apps/org.openrgb.OpenRGB.svg" "${staging_root}/usr/share/pixmaps/openrgb.svg" 2>/dev/null || true
+            cp -a "${staging_root}/usr/share/icons/hicolor/scalable/apps/org.openrgb.OpenRGB.svg" "${staging_root}/usr/share/pixmaps/org.openrgb.OpenRGB.svg" 2>/dev/null || true
+        fi
+    fi
+
+    if [ "${pkg_id}" = "gamemode" ]; then
+        mkdir -p "${staging_root}/usr/lib64" "${staging_root}/usr/lib" "${staging_root}/etc/rc.d"
+        if [ -f "${staging_root}/usr/lib64/libgamemode.so.0" ] && [ ! -e "${staging_root}/usr/lib64/libgamemode.so" ]; then
+            ln -sf libgamemode.so.0 "${staging_root}/usr/lib64/libgamemode.so"
+        fi
+        if [ -f "${staging_root}/usr/lib/libgamemode.so.0" ] && [ ! -e "${staging_root}/usr/lib/libgamemode.so" ]; then
+            ln -sf libgamemode.so.0 "${staging_root}/usr/lib/libgamemode.so"
+        fi
+        cat << 'GAMEMODE_RC_EOF' > "${staging_root}/etc/rc.d/rc.gamemode"
+#!/bin/sh
+# /etc/rc.d/rc.gamemode - Feral GameMode daemon service for Slackware
+BIN="/usr/bin/gamemoded"
+
+gamemode_start() {
+  if [ -x "$BIN" ]; then
+    echo "Starting GameMode daemon: $BIN -d"
+    $BIN -d >/var/log/gamemoded.log 2>&1 &
+  fi
+}
+gamemode_stop() {
+  echo "Stopping GameMode daemon..."
+  pkill -x gamemoded 2>/dev/null || true
+}
+gamemode_status() {
+  if pgrep -x gamemoded >/dev/null 2>&1; then
+    echo "GameMode daemon is running (PID: $(pgrep -x gamemoded))."
+  else
+    echo "GameMode daemon is NOT running."
+  fi
+}
+case "$1" in
+  start) gamemode_start ;;
+  stop) gamemode_stop ;;
+  restart) gamemode_stop; sleep 1; gamemode_start ;;
+  status) gamemode_status ;;
+  *) echo "Usage: $0 {start|stop|restart|status}" ;;
+esac
+GAMEMODE_RC_EOF
+        chmod 755 "${staging_root}/etc/rc.d/rc.gamemode"
+    fi
+
+    if [ "${pkg_id}" = "coolercontrol" ]; then
+        mkdir -p "${staging_root}/etc/rc.d" "${staging_root}/lib/udev/rules.d"
+        cat << 'COOLER_RC_EOF' > "${staging_root}/etc/rc.d/rc.coolercontrol"
+#!/bin/sh
+# /etc/rc.d/rc.coolercontrol - CoolerControl daemon for Slackware
+BIN="/usr/bin/coolercontrold"
+PIDFILE="/run/coolercontrold.pid"
+
+cooler_start() {
+  if [ -x "$BIN" ]; then
+    echo "Starting CoolerControl daemon: $BIN"
+    $BIN >/var/log/coolercontrold.log 2>&1 &
+    echo $! > "$PIDFILE"
+  fi
+}
+cooler_stop() {
+  echo "Stopping CoolerControl daemon..."
+  if [ -f "$PIDFILE" ]; then
+    kill -TERM $(cat "$PIDFILE") 2>/dev/null || true
+    rm -f "$PIDFILE"
+  else
+    pkill -TERM -x coolercontrold 2>/dev/null || true
+  fi
+}
+cooler_status() {
+  if pgrep -x coolercontrold >/dev/null 2>&1; then
+    echo "CoolerControl daemon is running (PID: $(pgrep -x coolercontrold))."
+  else
+    echo "CoolerControl daemon is NOT running."
+  fi
+}
+case "$1" in
+  start) cooler_start ;;
+  stop) cooler_stop ;;
+  restart) cooler_stop; sleep 1; cooler_start ;;
+  status) cooler_status ;;
+  *) echo "Usage: $0 {start|stop|restart|status}" ;;
+esac
+COOLER_RC_EOF
+        chmod 755 "${staging_root}/etc/rc.d/rc.coolercontrol"
+    fi
+
+    if [ "${pkg_id}" = "solaar" ]; then
+        mkdir -p "${staging_root}/lib/udev/rules.d"
+        cat << 'SOLAAR_UDEV_EOF' > "${staging_root}/lib/udev/rules.d/42-logitech-unify-permissions.rules"
+# Solaar Logitech Unifying and Lightspeed receiver udev rules for Slackware
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="046d", MODE="0666", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTRS{idVendor}=="046d", MODE="0666", TAG+="uaccess"
+SOLAAR_UDEV_EOF
+    fi
+
+    if [ "${pkg_id}" = "lian-li-linux" ]; then
+        mkdir -p "${staging_root}/lib/udev/rules.d"
+        cat << 'LIANLI_UDEV_EOF' > "${staging_root}/lib/udev/rules.d/99-lian-li.rules"
+# Lian Li Uni Fan & Strimer Controller Udev rules for Slackware
+SUBSYSTEM=="usb", ATTRS{idVendor}=="0cf2", MODE="0666", TAG+="uaccess"
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="0cf2", MODE="0666", TAG+="uaccess"
+LIANLI_UDEV_EOF
+    fi
+
+    if [ "${pkg_id}" = "asusctl" ]; then
+        mkdir -p "${staging_root}/etc/rc.d"
+        cat << 'ASUS_RC_EOF' > "${staging_root}/etc/rc.d/rc.asusd"
+#!/bin/sh
+# /etc/rc.d/rc.asusd - ASUS ROG/TUF Control Daemon for Slackware
+BIN="/usr/bin/asusd"
+PIDFILE="/run/asusd.pid"
+
+asus_start() {
+  if [ -x "$BIN" ]; then
+    echo "Starting ASUS control daemon: $BIN"
+    $BIN >/var/log/asusd.log 2>&1 &
+    echo $! > "$PIDFILE"
+  fi
+}
+asus_stop() {
+  echo "Stopping ASUS control daemon..."
+  if [ -f "$PIDFILE" ]; then
+    kill -TERM $(cat "$PIDFILE") 2>/dev/null || true
+    rm -f "$PIDFILE"
+  else
+    pkill -TERM -x asusd 2>/dev/null || true
+  fi
+}
+asus_status() {
+  if pgrep -x asusd >/dev/null 2>&1; then
+    echo "ASUS control daemon is running (PID: $(pgrep -x asusd))."
+  else
+    echo "ASUS control daemon is NOT running."
+  fi
+}
+case "$1" in
+  start) asus_start ;;
+  stop) asus_stop ;;
+  restart) asus_stop; sleep 1; asus_start ;;
+  status) asus_status ;;
+  *) echo "Usage: $0 {start|stop|restart|status}" ;;
+esac
+ASUS_RC_EOF
+        chmod 755 "${staging_root}/etc/rc.d/rc.asusd"
+    fi
+
+    if [ "${pkg_id}" = "syncthing" ]; then
+        mkdir -p "${staging_root}/etc/rc.d"
+        cat << 'SYNCTHING_RC_EOF' > "${staging_root}/etc/rc.d/rc.syncthing"
+#!/bin/sh
+# /etc/rc.d/rc.syncthing - Syncthing P2P daemon service for Slackware
+BIN="/usr/bin/syncthing"
+
+syncthing_start() {
+  if [ -x "$BIN" ]; then
+    echo "Starting Syncthing service..."
+    su - nobody -s /bin/sh -c "$BIN serve --no-browser --home=/var/lib/syncthing >/var/log/syncthing.log 2>&1 &" 2>/dev/null || true
+  fi
+}
+syncthing_stop() {
+  echo "Stopping Syncthing service..."
+  pkill -TERM -x syncthing 2>/dev/null || true
+}
+syncthing_status() {
+  if pgrep -x syncthing >/dev/null 2>&1; then
+    echo "Syncthing is running (PID: $(pgrep -x syncthing))."
+  else
+    echo "Syncthing is NOT running."
+  fi
+}
+case "$1" in
+  start) syncthing_start ;;
+  stop) syncthing_stop ;;
+  restart) syncthing_stop; sleep 1; syncthing_start ;;
+  status) syncthing_status ;;
+  *) echo "Usage: $0 {start|stop|restart|status}" ;;
+esac
+SYNCTHING_RC_EOF
+        chmod 755 "${staging_root}/etc/rc.d/rc.syncthing"
+    fi
+
+    if [ "${pkg_id}" = "yabridge" ]; then
+        mkdir -p "${staging_root}/usr/bin"
+        [ -f "${staging_root}/usr/bin/yabridgectl" ] && chmod 755 "${staging_root}/usr/bin/yabridgectl"
+    fi
+
+    if [ "${pkg_id}" = "spotify" ]; then
+        [ -f "${staging_root}/usr/bin/spotify-launcher" ] && [ ! -e "${staging_root}/usr/bin/spotify" ] && ln -sf spotify-launcher "${staging_root}/usr/bin/spotify"
+    fi
+
+    if [ "${pkg_id}" = "audacity" ]; then
+        # Audacity installs internal private libraries to /usr/lib/audacity or /usr/lib64/audacity.
+        # Ensure symmetric directories and symlinks for both /usr/lib64 and /usr/lib
+        mkdir -p "${staging_root}/usr/lib64" "${staging_root}/usr/lib" "${staging_root}/etc/ld.so.conf.d"
+        for subdir in audacity suil-0 wx; do
+            if [ -d "${staging_root}/usr/lib64/${subdir}" ] && [ ! -d "${staging_root}/usr/lib/${subdir}" ]; then
+                ln -sf "../lib64/${subdir}" "${staging_root}/usr/lib/${subdir}"
+            elif [ -d "${staging_root}/usr/lib/${subdir}" ] && [ ! -d "${staging_root}/usr/lib64/${subdir}" ]; then
+                cp -a "${staging_root}/usr/lib/${subdir}" "${staging_root}/usr/lib64/"
+                rm -rf "${staging_root}/usr/lib/${subdir}"
+                ln -sf "../lib64/${subdir}" "${staging_root}/usr/lib/${subdir}"
+            fi
+        done
+
+        # Register library paths in dynamic linker config
+        cat << 'AUDACITY_LD_EOF' > "${staging_root}/etc/ld.so.conf.d/audacity.conf"
+/usr/lib64/audacity
+/usr/lib/audacity
+/usr/lib64
+/usr/lib
+AUDACITY_LD_EOF
+
+        # Wrap /usr/bin/audacity to ensure LD_LIBRARY_PATH always finds private libraries
+        if [ -f "${staging_root}/usr/bin/audacity" ]; then
+            mv -f "${staging_root}/usr/bin/audacity" "${staging_root}/usr/lib64/audacity/audacity.bin" 2>/dev/null || true
+            cat << 'AUDACITY_WRAPPER_EOF' > "${staging_root}/usr/bin/audacity"
+#!/bin/sh
+# Audacity wrapper for Slackware ensuring private shared libraries resolve
+export LD_LIBRARY_PATH="/usr/lib64/audacity:/usr/lib/audacity:/usr/lib64:/usr/lib:${LD_LIBRARY_PATH:-}"
+if [ -x /usr/lib64/audacity/audacity.bin ]; then
+    exec /usr/lib64/audacity/audacity.bin "$@"
+elif [ -x /usr/lib/audacity/audacity.bin ]; then
+    exec /usr/lib/audacity/audacity.bin "$@"
+elif [ -x /usr/lib64/audacity/audacity ]; then
+    exec /usr/lib64/audacity/audacity "$@"
+elif [ -x /usr/lib/audacity/audacity ]; then
+    exec /usr/lib/audacity/audacity "$@"
+else
+    exec /usr/bin/audacity.bin "$@"
+fi
+AUDACITY_WRAPPER_EOF
+            chmod 755 "${staging_root}/usr/bin/audacity"
+        fi
+
+        # Ensure cross-desktop icon compatibility (KDE Plasma Wayland, XFCE, GNOME)
+        if [ -d "${staging_root}/usr/share/icons" ]; then
+            for sz in 16x16 22x22 24x24 32x32 48x48 64x64 128x128 256x256 512x512; do
+                if [ -f "${staging_root}/usr/share/icons/hicolor/${sz}/audacity.png" ]; then
+                    mkdir -p "${staging_root}/usr/share/icons/hicolor/${sz}/apps"
+                    mv -f "${staging_root}/usr/share/icons/hicolor/${sz}/audacity.png" "${staging_root}/usr/share/icons/hicolor/${sz}/apps/audacity.png"
+                    ln -sf audacity.png "${staging_root}/usr/share/icons/hicolor/${sz}/apps/Audacity.png" 2>/dev/null || true
+                elif [ -f "${staging_root}/usr/share/icons/hicolor/${sz}/apps/audacity.png" ]; then
+                    ln -sf audacity.png "${staging_root}/usr/share/icons/hicolor/${sz}/apps/Audacity.png" 2>/dev/null || true
+                fi
+            done
+            if [ -f "${staging_root}/usr/share/icons/hicolor/scalable/apps/audacity.svg" ]; then
+                ln -sf audacity.svg "${staging_root}/usr/share/icons/hicolor/scalable/apps/Audacity.svg" 2>/dev/null || true
+            fi
+        fi
+        mkdir -p "${staging_root}/usr/share/pixmaps"
+        if [ -f "${staging_root}/usr/share/icons/hicolor/48x48/apps/audacity.png" ]; then
+            cp -a "${staging_root}/usr/share/icons/hicolor/48x48/apps/audacity.png" "${staging_root}/usr/share/pixmaps/audacity.png" 2>/dev/null || true
+            cp -a "${staging_root}/usr/share/icons/hicolor/48x48/apps/audacity.png" "${staging_root}/usr/share/pixmaps/Audacity.png" 2>/dev/null || true
+        elif [ -f "${staging_root}/usr/share/icons/hicolor/32x32/apps/audacity.png" ]; then
+            cp -a "${staging_root}/usr/share/icons/hicolor/32x32/apps/audacity.png" "${staging_root}/usr/share/pixmaps/audacity.png" 2>/dev/null || true
+            cp -a "${staging_root}/usr/share/icons/hicolor/32x32/apps/audacity.png" "${staging_root}/usr/share/pixmaps/Audacity.png" 2>/dev/null || true
+        fi
+        if [ -f "${staging_root}/usr/share/icons/hicolor/scalable/apps/audacity.svg" ]; then
+            cp -a "${staging_root}/usr/share/icons/hicolor/scalable/apps/audacity.svg" "${staging_root}/usr/share/pixmaps/audacity.svg" 2>/dev/null || true
+        fi
+    fi
+
+    if [ "${pkg_id}" = "steam-devices" ]; then
+        mkdir -p "${staging_root}/lib/udev/rules.d"
+        cat << 'STEAM_UDEV_EOF' > "${staging_root}/lib/udev/rules.d/60-steam-input.rules"
+# Steam Controller and Gamepad Udev rules for Slackware
+# Valve USB & Wireless
+SUBSYSTEM=="usb", ATTRS{idVendor}=="28de", MODE="0666", TAG+="uaccess"
+KERNEL=="uinput", MODE="0660", GROUP="users", TAG+="uaccess"
+# DualShock 4 & DualSense
+KERNEL=="hidraw*", ATTRS{idVendor}=="054c", MODE="0666", TAG+="uaccess"
+# Nintendo Switch Pro
+KERNEL=="hidraw*", ATTRS{idVendor}=="057e", MODE="0666", TAG+="uaccess"
+# Xbox Wireless
+KERNEL=="hidraw*", ATTRS{idVendor}=="045e", MODE="0666", TAG+="uaccess"
+STEAM_UDEV_EOF
+    fi
+
+    if [ "${pkg_id}" = "vram-booster" ]; then
+        mkdir -p "${staging_root}/etc/rc.d"
+        cat << 'RC_DMEMCG_EOF' > "${staging_root}/etc/rc.d/rc.dmemcg-booster"
+#!/bin/sh
+#
+# /etc/rc.d/rc.dmemcg-booster - Device Memory Cgroups (dmemcg) VRAM Booster Daemon for Slackware
+#
+
+PIDFILE="/run/dmemcg-booster.pid"
+BIN="/usr/bin/dmemcg-booster"
+
+dmemcg_mount_cgroup2() {
+  if [ -d /sys/fs/cgroup ] && ! mountpoint -q /sys/fs/cgroup 2>/dev/null; then
+    mount -t cgroup2 none /sys/fs/cgroup 2>/dev/null || true
+  fi
+  if [ -f /sys/fs/cgroup/cgroup.subtree_control ]; then
+    echo "+memory" > /sys/fs/cgroup/cgroup.subtree_control 2>/dev/null || true
+  fi
+}
+
+dmemcg_start() {
+  if [ -x "$BIN" ]; then
+    echo "Starting dmemcg-booster VRAM daemon: $BIN --use-system-bus"
+    dmemcg_mount_cgroup2
+    if ! pgrep -x dmemcg-booster > /dev/null 2>&1; then
+      rm -f "$PIDFILE" 2>/dev/null || true
+      $BIN --use-system-bus > /var/log/dmemcg-booster.log 2>&1 &
+      echo $! > "$PIDFILE" 2>/dev/null || true
+    fi
+  fi
+}
+
+dmemcg_stop() {
+  echo "Stopping dmemcg-booster VRAM daemon..."
+  pkill -TERM -x dmemcg-booster 2>/dev/null || true
+  sleep 0.5
+  pkill -KILL -x dmemcg-booster 2>/dev/null || true
+  rm -f "$PIDFILE" 2>/dev/null || true
+}
+
+dmemcg_restart() {
+  dmemcg_stop
+  sleep 1
+  dmemcg_start
+}
+
+dmemcg_status() {
+  if pgrep -x dmemcg-booster > /dev/null 2>&1; then
+    echo "dmemcg-booster is running."
+  else
+    echo "dmemcg-booster is NOT running."
+  fi
+}
+
+case "$1" in
+  'start')
+    dmemcg_start
+    ;;
+  'stop')
+    dmemcg_stop
+    ;;
+  'restart')
+    dmemcg_restart
+    ;;
+  'status')
+    dmemcg_status
+    ;;
+  *)
+    echo "Usage: $0 {start|stop|restart|status}"
+    exit 1
+esac
+RC_DMEMCG_EOF
+        chmod 755 "${staging_root}/etc/rc.d/rc.dmemcg-booster"
+    fi
+
+    # Clean Arch metadata
+    rm -f "${staging_root}/.BUILDINFO" "${staging_root}/.INSTALL" "${staging_root}/.MTREE" "${staging_root}/.PKGINFO"
+
+    # Check if this package delivers udev hardware rules
+    local has_udev_rules=0
+    if [ -d "${staging_root}/lib/udev/rules.d" ] || [ -d "${staging_root}/etc/udev/rules.d" ] || [ -d "${staging_root}/usr/lib/udev/rules.d" ]; then
+        if find "${staging_root}/lib/udev/rules.d" "${staging_root}/etc/udev/rules.d" "${staging_root}/usr/lib/udev/rules.d" -type f -name "*.rules" 2>/dev/null | grep -q .; then
+            has_udev_rules=1
+        fi
+    fi
+
+    # Write Slackware slack-desc
+    local pkg_name="cachyos-gnome-${pkg_id}"
+    cat << DESC_EOF > "${staging_root}/install/slack-desc"
+${pkg_name}: ${pkg_name} (Underpants Gnomes CachyOS Gaming Suite)
+${pkg_name}:
+${pkg_name}: High-performance native gaming and hardware utility (${pkg_id}),
+${pkg_name}: optimized and packaged directly from CachyOS / Arch for Slackware.
+${pkg_name}:
+${pkg_name}: Part of the Underpants Gnomes Gaming Master Suite.
+${pkg_name}: Maintained by slacky-update.
+${pkg_name}:
+${pkg_name}: Profit!
+${pkg_name}:
+DESC_EOF
+
+    # Write doinst.sh
+    cat << 'DOINST_EOF' > "${staging_root}/install/doinst.sh"
+if [ -x /sbin/ldconfig ]; then
+  /sbin/ldconfig 2>/dev/null || true
+fi
+if [ -x /usr/bin/update-desktop-database ]; then
+  /usr/bin/update-desktop-database /usr/share/applications 2>/dev/null || true
+fi
+if [ -x /usr/bin/gtk-update-icon-cache ]; then
+  /usr/bin/gtk-update-icon-cache -f -t /usr/share/icons/hicolor 2>/dev/null || true
+fi
+if [ -x /usr/bin/glib-compile-schemas ]; then
+  /usr/bin/glib-compile-schemas /usr/share/glib-2.0/schemas 2>/dev/null || true
+fi
+if [ -x /usr/bin/update-mime-database ]; then
+  /usr/bin/update-mime-database /usr/share/mime 2>/dev/null || true
+fi
+DOINST_EOF
+
+    if [ "${has_udev_rules}" -eq 1 ]; then
+        cat << 'UDEV_DOINST_EOF' >> "${staging_root}/install/doinst.sh"
+if [ -x /sbin/udevadm ]; then
+  /sbin/udevadm control --reload-rules 2>/dev/null || true
+  /sbin/udevadm trigger 2>/dev/null || true
+fi
+UDEV_DOINST_EOF
+    fi
+
+    cat << 'DOINST_TAIL_EOF' >> "${staging_root}/install/doinst.sh"
+if [ -f /lib64/libelogind.so.0 ] && [ ! -e /usr/lib64/libsystemd.so.0 ]; then
+  mkdir -p /usr/lib64
+  ln -sf /lib64/libelogind.so.0 /usr/lib64/libsystemd.so.0 2>/dev/null || true
+fi
+if [ -f /lib/libelogind.so.0 ] && [ ! -e /usr/lib/libsystemd.so.0 ]; then
+  mkdir -p /usr/lib
+  ln -sf /lib/libelogind.so.0 /usr/lib/libsystemd.so.0 2>/dev/null || true
+fi
+if [ -f /usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json ] && [ ! -e /usr/share/vulkan/implicit_layer.d/MangoHud.json ]; then
+  ln -sf MangoHud.x86_64.json /usr/share/vulkan/implicit_layer.d/MangoHud.json 2>/dev/null || true
+fi
+if [ -f /usr/share/vulkan/implicit_layer.d/MangoApp.x86_64.json ] && [ ! -e /usr/share/vulkan/implicit_layer.d/MangoApp.json ]; then
+  ln -sf MangoApp.x86_64.json /usr/share/vulkan/implicit_layer.d/MangoApp.json 2>/dev/null || true
+fi
+
+# Slackware rc.local integration for daemons:
+if [ -f /etc/rc.d/rc.ananicy-cpp ]; then
+  chmod 755 /etc/rc.d/rc.ananicy-cpp 2>/dev/null || true
+  if [ -f /etc/rc.d/rc.local ] && ! grep -q "rc.ananicy-cpp" /etc/rc.d/rc.local 2>/dev/null; then
+    cat << 'RC_EOF' >> /etc/rc.d/rc.local
+
+# Start Ananicy C++ auto-nice daemon:
+if [ -x /etc/rc.d/rc.ananicy-cpp ]; then
+  /etc/rc.d/rc.ananicy-cpp start
+fi
+RC_EOF
+  fi
+  if [ -f /etc/rc.d/rc.local_shutdown ] && ! grep -q "rc.ananicy-cpp" /etc/rc.d/rc.local_shutdown 2>/dev/null; then
+    cat << 'RC_EOF' >> /etc/rc.d/rc.local_shutdown
+
+# Stop Ananicy C++ auto-nice daemon:
+if [ -x /etc/rc.d/rc.ananicy-cpp ]; then
+  /etc/rc.d/rc.ananicy-cpp stop
+fi
+RC_EOF
+  fi
+fi
+
+if [ -f /etc/rc.d/rc.lact ]; then
+  chmod 755 /etc/rc.d/rc.lact 2>/dev/null || true
+  if [ -f /etc/rc.d/rc.local ] && ! grep -q "rc.lact" /etc/rc.d/rc.local 2>/dev/null; then
+    cat << 'RC_EOF' >> /etc/rc.d/rc.local
+
+# Start LACT GPU control daemon:
+if [ -x /etc/rc.d/rc.lact ]; then
+  /etc/rc.d/rc.lact start
+fi
+RC_EOF
+  fi
+  if [ -f /etc/rc.d/rc.local_shutdown ] && ! grep -q "rc.lact" /etc/rc.d/rc.local_shutdown 2>/dev/null; then
+    cat << 'RC_EOF' >> /etc/rc.d/rc.local_shutdown
+
+# Stop LACT GPU control daemon:
+if [ -x /etc/rc.d/rc.lact ]; then
+  /etc/rc.d/rc.lact stop
+fi
+RC_EOF
+  fi
+fi
+
+if [ -f /etc/rc.d/rc.scx ]; then
+  chmod 755 /etc/rc.d/rc.scx 2>/dev/null || true
+  if [ -f /etc/rc.d/rc.local ] && ! grep -q "rc.scx" /etc/rc.d/rc.local 2>/dev/null; then
+    cat << 'RC_EOF' >> /etc/rc.d/rc.local
+
+# Start Sched-EXT gaming scheduler:
+if [ -x /etc/rc.d/rc.scx ]; then
+  /etc/rc.d/rc.scx start
+fi
+RC_EOF
+  fi
+  if [ -f /etc/rc.d/rc.local_shutdown ] && ! grep -q "rc.scx" /etc/rc.d/rc.local_shutdown 2>/dev/null; then
+    cat << 'RC_EOF' >> /etc/rc.d/rc.local_shutdown
+
+# Stop Sched-EXT gaming scheduler:
+if [ -x /etc/rc.d/rc.scx ]; then
+  /etc/rc.d/rc.scx stop
+fi
+RC_EOF
+  fi
+fi
+
+if [ -f /etc/rc.d/rc.coolercontrol ]; then
+  chmod 755 /etc/rc.d/rc.coolercontrol 2>/dev/null || true
+  if [ -f /etc/rc.d/rc.local ] && ! grep -q "rc.coolercontrol" /etc/rc.d/rc.local 2>/dev/null; then
+    cat << 'RC_EOF' >> /etc/rc.d/rc.local
+
+# Start CoolerControl daemon:
+if [ -x /etc/rc.d/rc.coolercontrol ]; then
+  /etc/rc.d/rc.coolercontrol start
+fi
+RC_EOF
+  fi
+  if [ -f /etc/rc.d/rc.local_shutdown ] && ! grep -q "rc.coolercontrol" /etc/rc.d/rc.local_shutdown 2>/dev/null; then
+    cat << 'RC_EOF' >> /etc/rc.d/rc.local_shutdown
+
+# Stop CoolerControl daemon:
+if [ -x /etc/rc.d/rc.coolercontrol ]; then
+  /etc/rc.d/rc.coolercontrol stop
+fi
+RC_EOF
+  fi
+fi
+
+if [ -f /etc/rc.d/rc.asusd ]; then
+  chmod 755 /etc/rc.d/rc.asusd 2>/dev/null || true
+  if [ -f /etc/rc.d/rc.local ] && ! grep -q "rc.asusd" /etc/rc.d/rc.local 2>/dev/null; then
+    cat << 'RC_EOF' >> /etc/rc.d/rc.local
+
+# Start ASUS control daemon:
+if [ -x /etc/rc.d/rc.asusd ]; then
+  /etc/rc.d/rc.asusd start
+fi
+RC_EOF
+  fi
+  if [ -f /etc/rc.d/rc.local_shutdown ] && ! grep -q "rc.asusd" /etc/rc.d/rc.local_shutdown 2>/dev/null; then
+    cat << 'RC_EOF' >> /etc/rc.d/rc.local_shutdown
+
+# Stop ASUS control daemon:
+if [ -x /etc/rc.d/rc.asusd ]; then
+  /etc/rc.d/rc.asusd stop
+fi
+RC_EOF
+  fi
+fi
+
+if [ -f /etc/rc.d/rc.syncthing ]; then
+  chmod 755 /etc/rc.d/rc.syncthing 2>/dev/null || true
+  if [ -f /etc/rc.d/rc.local ] && ! grep -q "rc.syncthing" /etc/rc.d/rc.local 2>/dev/null; then
+    cat << 'RC_EOF' >> /etc/rc.d/rc.local
+
+# Start Syncthing service:
+if [ -x /etc/rc.d/rc.syncthing ]; then
+  /etc/rc.d/rc.syncthing start
+fi
+RC_EOF
+  fi
+  if [ -f /etc/rc.d/rc.local_shutdown ] && ! grep -q "rc.syncthing" /etc/rc.d/rc.local_shutdown 2>/dev/null; then
+    cat << 'RC_EOF' >> /etc/rc.d/rc.local_shutdown
+
+# Stop Syncthing service:
+if [ -x /etc/rc.d/rc.syncthing ]; then
+  /etc/rc.d/rc.syncthing stop
+fi
+RC_EOF
+  fi
+fi
+
+if [ -f /etc/rc.d/rc.dmemcg-booster ]; then
+  chmod 755 /etc/rc.d/rc.dmemcg-booster 2>/dev/null || true
+  if [ -f /etc/rc.d/rc.local ] && ! grep -q "rc.dmemcg-booster" /etc/rc.d/rc.local 2>/dev/null; then
+    cat << 'RC_EOF' >> /etc/rc.d/rc.local
+
+# Start dmemcg-booster VRAM daemon:
+if [ -x /etc/rc.d/rc.dmemcg-booster ]; then
+  /etc/rc.d/rc.dmemcg-booster start
+fi
+RC_EOF
+  fi
+  if [ -f /etc/rc.d/rc.local_shutdown ] && ! grep -q "rc.dmemcg-booster" /etc/rc.d/rc.local_shutdown 2>/dev/null; then
+    cat << 'RC_EOF' >> /etc/rc.d/rc.local_shutdown
+
+# Stop dmemcg-booster VRAM daemon:
+if [ -x /etc/rc.d/rc.dmemcg-booster ]; then
+  /etc/rc.d/rc.dmemcg-booster stop
+fi
+RC_EOF
+  fi
+fi
+
+if [ -d /etc/easyeffects/output ]; then
+  for u_home in /home/*; do
+    [ -d "${u_home}" ] || continue
+    u_uid=$(stat -c '%u' "${u_home}" 2>/dev/null || echo 0)
+    [ "${u_uid}" -ge 1000 ] || continue
+    u_name=$(basename "${u_home}")
+    mkdir -p "${u_home}/.config/easyeffects/output" "${u_home}/.config/easyeffects/irs" 2>/dev/null || true
+    cp -n /etc/easyeffects/output/*.json "${u_home}/.config/easyeffects/output/" 2>/dev/null || true
+    if [ -d /etc/easyeffects/irs ]; then
+      cp -n /etc/easyeffects/irs/* "${u_home}/.config/easyeffects/irs/" 2>/dev/null || true
+    fi
+    for jf in "${u_home}/.config/easyeffects/output"/*.json; do
+      [ -f "${jf}" ] || continue
+      sed -i "s|<PRESETS_DIRECTORY>|${u_home}/.config/easyeffects|g" "${jf}" 2>/dev/null || true
+    done
+    chown -R "${u_name}:users" "${u_home}/.config/easyeffects" 2>/dev/null || true
+  done
+fi
+DOINST_TAIL_EOF
+    chmod 755 "${staging_root}/install/doinst.sh"
+
+    # Permissions
+    chmod -R u=rwX,go=rX "${staging_root}"
+    [ -d "${staging_root}/etc/rc.d" ] && chmod 755 "${staging_root}/etc/rc.d/"* 2>/dev/null || true
+
+    log_info "Assembling Slackware package: ${pkg_name}-${ver}-x86_64-1_slacky.txz..."
+    local txz_out="${staging_base}/${pkg_name}-${ver}-x86_64-1_slacky.txz"
+    rm -f "${txz_out}"
+    (
+        cd "${staging_root}"
+        "${PKG_MAKE_CMD}" -l y -c n --compress -1 "${txz_out}" >/dev/null 2>&1
+    )
+
+    if [ -f "${txz_out}" ]; then
+        chmod 644 "${txz_out}"
+        cleanup_foreign_gaming_pkgs "${pkg_id}"
+        validate_privileges
+        log_info "Installing ${pkg_name} to system..."
+        sudo "${PKG_UPGRADE_CMD}" --install-new --reinstall "${txz_out}"
+
+        log_info "[1/4] Updating dynamic linker cache (ldconfig)..."
+        sudo /sbin/ldconfig 2>/dev/null || true
+
+        log_info "[2/4] Registering desktop application entries & GSettings..."
+        if [ -x /usr/bin/update-desktop-database ]; then
+            sudo /usr/bin/update-desktop-database /usr/share/applications 2>/dev/null || true
+        fi
+        if [ -x /usr/bin/glib-compile-schemas ]; then
+            sudo /usr/bin/glib-compile-schemas /usr/share/glib-2.0/schemas 2>/dev/null || true
+        fi
+
+        log_info "[3/4] Rebuilding GTK/KDE icon theme cache & MIME database..."
+        if [ -x /usr/bin/gtk-update-icon-cache ]; then
+            sudo /usr/bin/gtk-update-icon-cache -f -t /usr/share/icons/hicolor 2>/dev/null || true
+        fi
+        if [ -x /usr/bin/update-mime-database ]; then
+            sudo /usr/bin/update-mime-database /usr/share/mime 2>/dev/null || true
+        fi
+
+        # Conditional hardware device udev trigger
+        if [ "${has_udev_rules}" -eq 1 ]; then
+            log_info "[*] Reloading hardware device udev rules..."
+            if [ -x /sbin/udevadm ]; then
+                sudo /sbin/udevadm control --reload-rules 2>/dev/null || true
+                sudo /sbin/udevadm trigger 2>/dev/null || true
+            fi
+        fi
+
+        # GameMode libelogind D-Bus compatibility symlink
+        if [ "${pkg_id}" = "gamemode" ]; then
+            if [ -f /lib64/libelogind.so.0 ] && [ ! -e /usr/lib64/libsystemd.so.0 ]; then
+                sudo mkdir -p /usr/lib64
+                sudo ln -sf /lib64/libelogind.so.0 /usr/lib64/libsystemd.so.0 2>/dev/null || true
+            fi
+            if [ -f /lib/libelogind.so.0 ] && [ ! -e /usr/lib/libsystemd.so.0 ]; then
+                sudo mkdir -p /usr/lib
+                sudo ln -sf /lib/libelogind.so.0 /usr/lib/libsystemd.so.0 2>/dev/null || true
+            fi
+        fi
+
+        # Start daemons if applicable
+        if [ "${pkg_id}" = "lact" ] && [ -x /etc/rc.d/rc.lact ]; then
+            sudo /etc/rc.d/rc.lact start 2>/dev/null || true
+        elif [ "${pkg_id}" = "ananicy" ] && [ -x /etc/rc.d/rc.ananicy-cpp ]; then
+            sudo /etc/rc.d/rc.ananicy-cpp restart 2>/dev/null || true
+        elif [ "${pkg_id}" = "scx" ]; then
+            if [ -f /usr/share/dbus-1/system.d/org.scx.Loader.conf ] && [ ! -f /etc/dbus-1/system.d/org.scx.Loader.conf ]; then
+                sudo cp -a /usr/share/dbus-1/system.d/org.scx.Loader.conf /etc/dbus-1/system.d/ 2>/dev/null || true
+            fi
+            sudo killall -HUP dbus-daemon 2>/dev/null || true
+            if [ -x /etc/rc.d/rc.scx ]; then
+                sudo /etc/rc.d/rc.scx restart 2>/dev/null || true
+            fi
+        elif [ "${pkg_id}" = "easyeffects" ]; then
+            if [ -d /etc/easyeffects/output ]; then
+                for u_home in "${HOME:-}" /home/*; do
+                    [ -d "${u_home}" ] || continue
+                    [ -w "${u_home}" ] || continue
+                    mkdir -p "${u_home}/.config/easyeffects/output" "${u_home}/.config/easyeffects/irs" 2>/dev/null || true
+                    cp -n /etc/easyeffects/output/*.json "${u_home}/.config/easyeffects/output/" 2>/dev/null || true
+                    if [ -d /etc/easyeffects/irs ]; then
+                        cp -n /etc/easyeffects/irs/* "${u_home}/.config/easyeffects/irs/" 2>/dev/null || true
+                    fi
+                    for jf in "${u_home}/.config/easyeffects/output"/*.json; do
+                        [ -f "${jf}" ] || continue
+                        sed -i "s|<PRESETS_DIRECTORY>|${u_home}/.config/easyeffects|g" "${jf}" 2>/dev/null || true
+                    done
+                done
+            fi
+        elif [ "${pkg_id}" = "coolercontrol" ] && [ -x /etc/rc.d/rc.coolercontrol ]; then
+            sudo /etc/rc.d/rc.coolercontrol restart 2>/dev/null || true
+        elif [ "${pkg_id}" = "asusctl" ] && [ -x /etc/rc.d/rc.asusd ]; then
+            sudo /etc/rc.d/rc.asusd restart 2>/dev/null || true
+        elif [ "${pkg_id}" = "syncthing" ] && [ -x /etc/rc.d/rc.syncthing ]; then
+            sudo /etc/rc.d/rc.syncthing restart 2>/dev/null || true
+        elif [ "${pkg_id}" = "vram-booster" ] && [ -x /etc/rc.d/rc.dmemcg-booster ]; then
+            sudo /etc/rc.d/rc.dmemcg-booster restart 2>/dev/null || true
+        elif [ "${pkg_id}" = "openrgb" ]; then
+            # Clean up / migrate legacy AppImage desktop entries in user autostart and local applications
+            for u_home in /home/* "${HOME:-}"; do
+                [ -d "${u_home}" ] || continue
+                for d_dir in "${u_home}/.config/autostart" "${u_home}/.local/share/applications"; do
+                    [ -d "${d_dir}" ] || continue
+                    for f in "${d_dir}"/*[oO]pen[rR][gG][bB]*.desktop; do
+                        [ -f "${f}" ] || continue
+                        sed -i -E 's|Exec=.*[oO]pen[rR][gG][bB].*AppImage|Exec=/usr/bin/openrgb|g; s|Exec=.*OpenRGB-[^ ]*|Exec=/usr/bin/openrgb|g' "${f}" 2>/dev/null || true
+                    done
+                done
+            done
+        fi
+
+        log_info "[4/4] Synchronizing system status & background registry..."
+        sleep 0.5
+        trigger_silent_background_refresh 2>/dev/null || true
+        log_success "${pkg_name} (v${ver}) deployed successfully!"
+    else
+        log_error "Failed to create ${pkg_name} txz package."
+        rm -rf "${staging_base}"
+        return 1
+    fi
+
+    rm -rf "${staging_base}" 2>/dev/null || true
+    trap - INT TERM
+}
+
+uninstall_cachyos_gaming_pkg() {
+    local pkg_id="$1"
+    validate_privileges
+    local prefix="cachyos-gnome-${pkg_id}-"
+    local found=0
+    for p in /var/log/packages/${prefix}*; do
+        [ -f "${p}" ] || continue
+        local bname
+        bname=$(basename "${p}")
+        log_info "Removing package: ${bname}..."
+        
+        # Stop daemon if running
+        if [ "${pkg_id}" = "lact" ] && [ -x /etc/rc.d/rc.lact ]; then
+            sudo /etc/rc.d/rc.lact stop 2>/dev/null || true
+        elif [ "${pkg_id}" = "scx" ] && [ -x /etc/rc.d/rc.scx ]; then
+            sudo /etc/rc.d/rc.scx stop 2>/dev/null || true
+        elif [ "${pkg_id}" = "ananicy" ] && [ -x /etc/rc.d/rc.ananicy-cpp ]; then
+            sudo /etc/rc.d/rc.ananicy-cpp stop 2>/dev/null || true
+        elif [ "${pkg_id}" = "coolercontrol" ] && [ -x /etc/rc.d/rc.coolercontrol ]; then
+            sudo /etc/rc.d/rc.coolercontrol stop 2>/dev/null || true
+        elif [ "${pkg_id}" = "asusctl" ] && [ -x /etc/rc.d/rc.asusd ]; then
+            sudo /etc/rc.d/rc.asusd stop 2>/dev/null || true
+        elif [ "${pkg_id}" = "syncthing" ] && [ -x /etc/rc.d/rc.syncthing ]; then
+            sudo /etc/rc.d/rc.syncthing stop 2>/dev/null || true
+        elif [ "${pkg_id}" = "vram-booster" ] && [ -x /etc/rc.d/rc.dmemcg-booster ]; then
+            sudo /etc/rc.d/rc.dmemcg-booster stop 2>/dev/null || true
+        elif [ "${pkg_id}" = "gamemode" ] && [ -x /etc/rc.d/rc.gamemode ]; then
+            sudo /etc/rc.d/rc.gamemode stop 2>/dev/null || true
+        fi
+
+        # Remove rc.local persistence entries
+        if [ -f /etc/rc.d/rc.local ]; then
+            sudo sed -i "/rc\.${pkg_id}/d" /etc/rc.d/rc.local 2>/dev/null || true
+            sudo sed -i "/rc\.ananicy-cpp/d" /etc/rc.d/rc.local 2>/dev/null || true
+            sudo sed -i "/rc\.coolercontrol/d" /etc/rc.d/rc.local 2>/dev/null || true
+            sudo sed -i "/rc\.asusd/d" /etc/rc.d/rc.local 2>/dev/null || true
+            sudo sed -i "/rc\.syncthing/d" /etc/rc.d/rc.local 2>/dev/null || true
+            sudo sed -i "/rc\.dmemcg-booster/d" /etc/rc.d/rc.local 2>/dev/null || true
+            sudo sed -i "/rc\.gamemode/d" /etc/rc.d/rc.local 2>/dev/null || true
+        fi
+        if [ -f /etc/rc.d/rc.local_shutdown ]; then
+            sudo sed -i "/rc\.${pkg_id}/d" /etc/rc.d/rc.local_shutdown 2>/dev/null || true
+            sudo sed -i "/rc\.ananicy-cpp/d" /etc/rc.d/rc.local_shutdown 2>/dev/null || true
+            sudo sed -i "/rc\.coolercontrol/d" /etc/rc.d/rc.local_shutdown 2>/dev/null || true
+            sudo sed -i "/rc\.asusd/d" /etc/rc.d/rc.local_shutdown 2>/dev/null || true
+            sudo sed -i "/rc\.syncthing/d" /etc/rc.d/rc.local_shutdown 2>/dev/null || true
+            sudo sed -i "/rc\.dmemcg-booster/d" /etc/rc.d/rc.local_shutdown 2>/dev/null || true
+            sudo sed -i "/rc\.gamemode/d" /etc/rc.d/rc.local_shutdown 2>/dev/null || true
+        fi
+
+        sudo "${PKG_REMOVE_CMD}" "${bname}" 2>/dev/null || true
+        found=1
+    done
+
+    if [ "${found}" -eq 1 ]; then
+        log_info "[1/3] Updating dynamic linker cache (ldconfig)..."
+        sudo /sbin/ldconfig 2>/dev/null || true
+        log_info "[2/3] Updating desktop application entries & GSettings..."
+        if [ -x /usr/bin/update-desktop-database ]; then
+            sudo /usr/bin/update-desktop-database /usr/share/applications 2>/dev/null || true
+        fi
+        if [ -x /usr/bin/glib-compile-schemas ]; then
+            sudo /usr/bin/glib-compile-schemas /usr/share/glib-2.0/schemas 2>/dev/null || true
+        fi
+        log_info "[3/3] Rebuilding GTK/KDE icon theme cache & MIME database..."
+        if [ -x /usr/bin/gtk-update-icon-cache ]; then
+            sudo /usr/bin/gtk-update-icon-cache -f -t /usr/share/icons/hicolor 2>/dev/null || true
+        fi
+        if [ -x /usr/bin/update-mime-database ]; then
+            sudo /usr/bin/update-mime-database /usr/share/mime 2>/dev/null || true
+        fi
+        sleep 0.5
+        trigger_silent_background_refresh 2>/dev/null || true
+        log_success "${pkg_id} uninstalled cleanly."
+    else
+        log_warn "No installed package found for: ${pkg_id}"
+    fi
+}
+
+sync_all_installed_cachyos_gaming_packages() {
+    log_info "Auditing installed Underpants Gnomes Gaming packages for upstream updates..."
+    local updated_count=0
+    
+    while IFS='|' read -r pkg_id name cat main_pat l32_pat ext_pat repos; do
+        [ -n "${pkg_id}" ] || continue
+        local cur_ver
+        cur_ver=$(get_installed_gaming_pkg_version "${pkg_id}")
+        [ "${cur_ver}" != "NONE" ] || continue
+
+        local latest_ver main_u l32_u ext_u
+        read -r latest_ver main_u l32_u ext_u <<< "$(resolve_cachyos_gaming_upstream_metadata "${pkg_id}" || echo "NONE NONE NONE NONE")"
+        
+        if [ "${latest_ver}" != "NONE" ] && [ -n "${latest_ver}" ]; then
+            local is_newer
+            is_newer=$(compare_versions_strictly_greater "${latest_ver}" "${cur_ver}" 2>/dev/null || echo "false")
+            if [ "${is_newer}" = "true" ]; then
+                log_info "Upgrade available for ${name}: v${cur_ver} -> v${latest_ver}"
+                if transmute_and_deploy_gaming_pkg "${pkg_id}"; then
+                    updated_count=$((updated_count + 1))
+                else
+                    log_error "Failed to upgrade ${name}. Continuing with remaining packages..."
+                fi
+            fi
+        fi
+    done <<< "$(get_gaming_catalog)"
+
+    if [ "${updated_count}" -gt 0 ]; then
+        log_success "Underpants Gnomes Gaming Suite update complete (${updated_count} packages upgraded)."
+    else
+        log_info "All installed Underpants Gnomes Gaming packages are up to date."
+    fi
+    trigger_silent_background_refresh 2>/dev/null || true
+}
+
+# --- [ INTERACTIVE TUI GAMING MASTER STATION ] ---
+interactive_cachyos_gaming_menu() {
+    set_terminal_title "slacky-update: Underpants Gnomes Gaming Master Suite"
+    
+    while true; do
+        echo ""
+        echo -e "${BLUE}${BOLD}"
+        echo "================================================================================"
+        echo " 🧙  UNDERPANTS GNOMES: CACHYOS GAMING & HARDWARE MASTER SUITE (SLACKWARE)  🧙 "
+        echo "================================================================================"
+        echo -e "${RESET}"
+        echo -e " ${CYAN}Step 1: Steal Underpants  •  Step 2: Transmute to Slackware  •  Step 3: PROFIT!${RESET}\n"
+
+        local index=1
+        local item_ids=()
+        local item_names=()
+        local item_statuses=()
+
+        echo -e "${YELLOW}${BOLD}--- [ The Engine: Performance, HUD & Schedulers ] ---${RESET}"
+        while IFS='|' read -r pkg_id name cat main_pat l32_pat ext_pat repos; do
+            [ "${cat}" = "engine" ] || continue
+            if [ "${pkg_id}" = "vram-booster" ] && ! is_vram_booster_supported; then
+                continue
+            fi
+            local cur_ver
+            cur_ver=$(get_installed_gaming_pkg_version "${pkg_id}")
+            local st_color="${RED}"
+            local st_text="[Not Installed]"
+            if [ "${cur_ver}" != "NONE" ]; then
+                st_color="${GREEN}"
+                st_text="[Installed: v${cur_ver} ✓]"
+            fi
+            printf "  ${BOLD}%2d.${RESET} %-45s ${st_color}%s${RESET}\n" "${index}" "${name}" "${st_text}"
+            item_ids+=("${pkg_id}")
+            item_names+=("${name}")
+            item_statuses+=("${cur_ver}")
+            index=$((index + 1))
+        done <<< "$(get_gaming_catalog)"
+
+        echo -e "\n${YELLOW}${BOLD}--- [ Storefronts & Launcher Managers ] ---${RESET}"
+        while IFS='|' read -r pkg_id name cat main_pat l32_pat ext_pat repos; do
+            [ "${cat}" = "launcher" ] || continue
+            local cur_ver
+            cur_ver=$(get_installed_gaming_pkg_version "${pkg_id}")
+            local st_color="${RED}"
+            local st_text="[Not Installed]"
+            if [ "${cur_ver}" != "NONE" ]; then
+                st_color="${GREEN}"
+                st_text="[Installed: v${cur_ver} ✓]"
+            fi
+            printf "  ${BOLD}%2d.${RESET} %-45s ${st_color}%s${RESET}\n" "${index}" "${name}" "${st_text}"
+            item_ids+=("${pkg_id}")
+            item_names+=("${name}")
+            item_statuses+=("${cur_ver}")
+            index=$((index + 1))
+        done <<< "$(get_gaming_catalog)"
+
+        echo -e "\n${YELLOW}${BOLD}--- [ Hardware Control & Tuning ] ---${RESET}"
+        while IFS='|' read -r pkg_id name cat main_pat l32_pat ext_pat repos; do
+            [ "${cat}" = "hardware" ] || continue
+            local cur_ver
+            cur_ver=$(get_installed_gaming_pkg_version "${pkg_id}")
+            local st_color="${RED}"
+            local st_text="[Not Installed]"
+            if [ "${cur_ver}" != "NONE" ]; then
+                st_color="${GREEN}"
+                st_text="[Installed: v${cur_ver} ✓]"
+            fi
+            printf "  ${BOLD}%2d.${RESET} %-45s ${st_color}%s${RESET}\n" "${index}" "${name}" "${st_text}"
+            item_ids+=("${pkg_id}")
+            item_names+=("${name}")
+            item_statuses+=("${cur_ver}")
+            index=$((index + 1))
+        done <<< "$(get_gaming_catalog)"
+
+        echo -e "\n${YELLOW}${BOLD}--- [ 🎧 Studio Audio DSP & Acoustic Processing ] ---${RESET}"
+        while IFS='|' read -r pkg_id name cat main_pat l32_pat ext_pat repos; do
+            [ "${cat}" = "audio" ] || continue
+            local cur_ver
+            cur_ver=$(get_installed_gaming_pkg_version "${pkg_id}")
+            local st_color="${RED}"
+            local st_text="[Not Installed]"
+            if [ "${cur_ver}" != "NONE" ]; then
+                st_color="${GREEN}"
+                st_text="[Installed: v${cur_ver} ✓]"
+            fi
+            printf "  ${BOLD}%2d.${RESET} %-45s ${st_color}%s${RESET}\n" "${index}" "${name}" "${st_text}"
+            item_ids+=("${pkg_id}")
+            item_names+=("${name}")
+            item_statuses+=("${cur_ver}")
+            index=$((index + 1))
+        done <<< "$(get_gaming_catalog)"
+
+        echo -e "\n${YELLOW}${BOLD}--- [ 🎨 Creative, 3D & Photography Studio ] ---${RESET}"
+        while IFS='|' read -r pkg_id name cat main_pat l32_pat ext_pat repos; do
+            [ "${cat}" = "creative" ] || continue
+            local cur_ver
+            cur_ver=$(get_installed_gaming_pkg_version "${pkg_id}")
+            local st_color="${RED}"
+            local st_text="[Not Installed]"
+            if [ "${cur_ver}" != "NONE" ]; then
+                st_color="${GREEN}"
+                st_text="[Installed: v${cur_ver} ✓]"
+            fi
+            printf "  ${BOLD}%2d.${RESET} %-45s ${st_color}%s${RESET}\n" "${index}" "${name}" "${st_text}"
+            item_ids+=("${pkg_id}")
+            item_names+=("${name}")
+            item_statuses+=("${cur_ver}")
+            index=$((index + 1))
+        done <<< "$(get_gaming_catalog)"
+
+        echo -e "\n${YELLOW}${BOLD}--- [ 🛠️ Power Tools & Media Sync ] ---${RESET}"
+        while IFS='|' read -r pkg_id name cat main_pat l32_pat ext_pat repos; do
+            [ "${cat}" = "tools" ] || continue
+            local cur_ver
+            cur_ver=$(get_installed_gaming_pkg_version "${pkg_id}")
+            local st_color="${RED}"
+            local st_text="[Not Installed]"
+            if [ "${cur_ver}" != "NONE" ]; then
+                st_color="${GREEN}"
+                st_text="[Installed: v${cur_ver} ✓]"
+            fi
+            printf "  ${BOLD}%2d.${RESET} %-45s ${st_color}%s${RESET}\n" "${index}" "${name}" "${st_text}"
+            item_ids+=("${pkg_id}")
+            item_names+=("${name}")
+            item_statuses+=("${cur_ver}")
+            index=$((index + 1))
+        done <<< "$(get_gaming_catalog)"
+
+        echo -e "\n${YELLOW}${BOLD}--- [ Community, Capture & Streaming ] ---${RESET}"
+        while IFS='|' read -r pkg_id name cat main_pat l32_pat ext_pat repos; do
+            [ "${cat}" = "community" ] || continue
+            local cur_ver
+            cur_ver=$(get_installed_gaming_pkg_version "${pkg_id}")
+            local st_color="${RED}"
+            local st_text="[Not Installed]"
+            if [ "${cur_ver}" != "NONE" ]; then
+                st_color="${GREEN}"
+                st_text="[Installed: v${cur_ver} ✓]"
+            fi
+            printf "  ${BOLD}%2d.${RESET} %-45s ${st_color}%s${RESET}\n" "${index}" "${name}" "${st_text}"
+            item_ids+=("${pkg_id}")
+            item_names+=("${name}")
+            item_statuses+=("${cur_ver}")
+            index=$((index + 1))
+        done <<< "$(get_gaming_catalog)"
+
+        echo -e "\n${YELLOW}${BOLD}--- [ 🌐 Web Navigators & Browsers ] ---${RESET}"
+        while IFS='|' read -r pkg_id name cat main_pat l32_pat ext_pat repos; do
+            [ "${cat}" = "browser" ] || continue
+            local cur_ver
+            cur_ver=$(get_installed_gaming_pkg_version "${pkg_id}")
+            local st_color="${RED}"
+            local st_text="[Not Installed]"
+            if [ "${cur_ver}" != "NONE" ]; then
+                st_color="${GREEN}"
+                st_text="[Installed: v${cur_ver} ✓]"
+            fi
+            printf "  ${BOLD}%2d.${RESET} %-45s ${st_color}%s${RESET}\n" "${index}" "${name}" "${st_text}"
+            item_ids+=("${pkg_id}")
+            item_names+=("${name}")
+            item_statuses+=("${cur_ver}")
+            index=$((index + 1))
+        done <<< "$(get_gaming_catalog)"
+
+        echo -e "\n${BLUE}================================================================================"
+        echo -e " ${BOLD}Actions:${RESET}"
+        echo -e "  ${GREEN}${BOLD}A.${RESET} ⚡ 1-Click Total Gaming Rig (Deploy All Recommended Components)"
+        echo -e "  ${CYAN}${BOLD}U.${RESET} 🔄 Synchronize & Upgrade All Installed Gaming Packages"
+        echo -e "  ${YELLOW}${BOLD}D.${RESET} 🗑️  Uninstall a Component"
+        echo -e "  ${BOLD}Q.${RESET} 🚪 Catch You on the Flip Side (Return to Main Menu)"
+        echo -e "${BLUE}================================================================================${RESET}"
+        echo ""
+        read -r -p "Pick your play [1-${#item_ids[@]}, A, U, D, Q]: " user_choice
+        user_choice=$(echo "${user_choice}" | tr '[:lower:]' '[:upper:]' | xargs)
+
+        case "${user_choice}" in
+            Q|"")
+                trigger_silent_background_refresh 2>/dev/null || true
+                break
+                ;;
+            A)
+                echo ""
+                log_info "Starting 1-Click Total Gaming Rig Deployment..."
+                validate_privileges
+                for pid in "${item_ids[@]}"; do
+                    transmute_and_deploy_gaming_pkg "${pid}" || log_warn "Warning deploying ${pid}"
+                done
+                log_success "Total Gaming Rig Deployment completed! Pure Profit!"
+                echo ""
+                read -r -p "Press Enter to continue..."
+                ;;
+            U)
+                echo ""
+                validate_privileges
+                sync_all_installed_cachyos_gaming_packages
+                echo ""
+                read -r -p "Press Enter to continue..."
+                ;;
+            D)
+                echo ""
+                read -r -p "Enter number to uninstall [1-${#item_ids[@]}]: " del_num
+                if [[ "${del_num}" =~ ^[0-9]+$ ]] && [ "${del_num}" -ge 1 ] && [ "${del_num}" -le "${#item_ids[@]}" ]; then
+                    local target_del_idx=$((del_num - 1))
+                    local del_id="${item_ids[${target_del_idx}]}"
+                    uninstall_cachyos_gaming_pkg "${del_id}"
+                else
+                    log_warn "Invalid selection."
+                fi
+                echo ""
+                read -r -p "Press Enter to continue..."
+                ;;
+            *)
+                # Parse single or comma-separated numbers (e.g. 1, 3, 5)
+                IFS=',' read -r -a selected_nums <<< "${user_choice}"
+                local valid_found=0
+                for num_item in "${selected_nums[@]}"; do
+                    local n
+                    n=$(echo "${num_item}" | xargs)
+                    if [[ "${n}" =~ ^[0-9]+$ ]] && [ "${n}" -ge 1 ] && [ "${n}" -le "${#item_ids[@]}" ]; then
+                        local sel_idx=$((n - 1))
+                        local sel_id="${item_ids[${sel_idx}]}"
+                        valid_found=1
+                        echo ""
+                        transmute_and_deploy_gaming_pkg "${sel_id}" || log_error "Failed to deploy ${sel_id}"
+                    fi
+                done
+                if [ "${valid_found}" -eq 1 ]; then
+                    log_success "Selected package operations complete!"
+                    echo ""
+                    read -r -p "Press Enter to continue..."
+                fi
+                ;;
+        esac
+    done
+}

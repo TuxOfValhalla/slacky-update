@@ -88,10 +88,13 @@ for k in to_remove:
         log_success "Removed kernel artifacts for: ${kver}"
     done <<< "${remove_list}"
 
-        if [ "${removed_any}" -eq 1 ]; then
-        log_info "Updating bootloader after kernel purge..."
-        if command -v sync_bootloader_configuration >/dev/null 2>&1; then
-            sync_bootloader_configuration "$(uname -r)"
+    local sync_boot="${1:-sync}"
+    if [ "${removed_any}" -eq 1 ]; then
+        if [ "${sync_boot}" != "--no-sync" ]; then
+            log_info "Updating bootloader after kernel purge..."
+            if command -v sync_bootloader_configuration >/dev/null 2>&1; then
+                sync_bootloader_configuration "$(uname -r)"
+            fi
         fi
         log_success "Kernel retention cleanup completed."
     fi
@@ -203,10 +206,13 @@ for k in to_remove:
         done
     fi
 
+    local sync_boot="${1:-sync}"
     if [ "${removed_any}" -eq 1 ]; then
-        log_info "Updating bootloader after kernel cleanup..."
-        if command -v sync_bootloader_configuration >/dev/null 2>&1; then
-            sync_bootloader_configuration "$(uname -r)"
+        if [ "${sync_boot}" != "--no-sync" ]; then
+            log_info "Updating bootloader after kernel cleanup..."
+            if command -v sync_bootloader_configuration >/dev/null 2>&1; then
+                sync_bootloader_configuration "$(uname -r)"
+            fi
         fi
         log_success "Slackware kernel retention cleanup completed."
     fi

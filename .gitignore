@@ -1,7 +1,13 @@
 *.txz
 *.tar.gz
 *.tar.xz
+*.key
+*.priv
+*.pem
+*.der
+*.sig
 /tmp/
 __pycache__/
 *.pyc
 .DS_Store
+
