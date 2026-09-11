@@ -227,12 +227,28 @@ check_cachyos_background() {
                     local is_flv_newer
                     is_flv_newer=$(compare_versions_strictly_greater "${latest_flv_ver}" "${cur_flv_ver}" 2>/dev/null || echo "false")
                     if [ "${is_flv_newer}" = "true" ]; then
-                        local flv_name="linux-cachyos"
-                        [ "${flv}" = "bore" ] && flv_name="linux-cachyos-bore"
-                        [ "${flv}" = "lto" ] && flv_name="linux-cachyos-bore-lto"
-                        [ "${flv}" = "rc" ] && flv_name="linux-cachyos-rc"
-                        [ "${flv}" = "lts" ] && flv_name="linux-cachyos-lts"
-                        CACHY_UPDATES+=("${flv_name}-${latest_flv_ver} (Installed: ${cur_flv_ver})")
+                        # On modern NVIDIA systems, verify either precompiled module or DKMS toolchain is available
+                        local nv_ready=1
+                        if [ "${HAS_NVIDIA:-false}" = "true" ]; then
+                            local gpu_arch="MODERN"
+                            if command -v detect_nvidia_gpu >/dev/null 2>&1; then
+                                gpu_arch=$(detect_nvidia_gpu)
+                            fi
+                            if [ "${gpu_arch}" = "MODERN" ]; then
+                                if [ "${nv_url}" = "NONE" ] && ! command -v dkms >/dev/null 2>&1; then
+                                    nv_ready=0
+                                fi
+                            fi
+                        fi
+
+                        if [ "${nv_ready}" -eq 1 ]; then
+                            local flv_name="linux-cachyos"
+                            [ "${flv}" = "bore" ] && flv_name="linux-cachyos-bore"
+                            [ "${flv}" = "lto" ] && flv_name="linux-cachyos-bore-lto"
+                            [ "${flv}" = "rc" ] && flv_name="linux-cachyos-rc"
+                            [ "${flv}" = "lts" ] && flv_name="linux-cachyos-lts"
+                            CACHY_UPDATES+=("${flv_name}-${latest_flv_ver} (Installed: ${cur_flv_ver})")
+                        fi
                     fi
                 fi
             done

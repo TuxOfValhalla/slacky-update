@@ -18,22 +18,43 @@ gamemode|Feral GameMode (+ 32-bit Multilib & Governor)|engine|gamemode-(?:[0-9]+
 goverlay|GOverlay (MangoHud GUI Configurator)|engine|goverlay-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||qt6pas-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|arch-extra,cachyos
 scx|Sched-EXT SCX Schedulers, Tools & Manager|engine|scx-manager-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||scx-scheds(?:-git)?-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,scx-tools(?:-git)?-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos,arch-extra
 ananicy|Ananicy-CPP & CachyOS Rules (Auto-Priority & Latency)|engine|ananicy-cpp(?:-git)?-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst||cachyos-ananicy-rules(?:-git)?-[0-9a-zA-Z_\.%:-]*\.pkg\.tar\.zst|cachyos,cachyos-extra-v3
+gamescope|Gamescope (Micro-Compositor & HDR/Upscaling)|engine|gamescope-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|lib32-gamescope-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|libavif-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos,arch-extra
+retroarch|RetroArch (Multi-System Emulator & Shaders)|engine|retroarch-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||retroarch-assets-ozone-(?:[0-9]+%3A)?[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|arch-extra,cachyos
 heroic|Heroic Games Launcher (Epic, GOG, Amazon)|launcher|heroic-games-launcher-bin-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos,arch-extra
-lutris|Lutris Gaming Platform Manager|launcher|lutris(?:-git)?-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos,arch-extra
-faugus|Faugus Launcher (Fast Proton Launcher)|launcher|faugus-launcher-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos
+lutris|Lutris Gaming Platform Manager|launcher|lutris(?:-git)?-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||webkit2gtk-4\.1-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libsoup3-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,python-moddb-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,python-pypresence-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,python-evdev-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,python-distro-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos,arch-extra
+faugus|Faugus Launcher (Fast Proton Launcher)|launcher|faugus-launcher-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||python-vdf-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,icoextract-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,python-pefile-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos
 protonplus|ProtonPlus (Wine/GE & Proton Manager)|launcher|(?:proton-plus|protonplus|protonup-qt)-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos,arch-extra
 steam-devices|Steam Controller & Gamepad Udev Rules|launcher|game-devices-udev-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos,arch-extra
 lact|LACT (AMD/Intel GPU Overclocking & Fans)|hardware|lact-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||arch-extra,cachyos
 openrgb|OpenRGB (Hardware RGB Lighting Control)|hardware|openrgb(?:-git)?-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos,arch-extra
+solaar|Solaar (Logitech Wireless Device Manager)|hardware|solaar-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||arch-extra,cachyos-extra-v3,cachyos
+coolercontrol|CoolerControl (All-in-One Liquid & Fan Control)|hardware|coolercontrol-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||coolercontrold-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos,arch-extra
+lian-li-linux|Lian Li Uni Fan & Controller Daemon|hardware|lian-li-linux(?:-git)?-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|||chaotic-aur,cachyos
+asusctl|ASUS ROG Laptop Control Daemon & CLI|hardware|asusctl-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||arch-extra,cachyos
 easyeffects|EasyEffects Studio Audio DSP & JackHack96 Presets|audio|easyeffects-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||lsp-plugins-lv2-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,calf-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,mda\.lv2-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,zam-plugins-lv2-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,zita-convolver-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,rnnoise-[0-9a-zA-Z_\.:-]*\.pkg\.tar\.zst,libbs2b-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,soundtouch-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libebur128-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,webrtc-audio-processing-(?:2|1)-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,lilv-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,serd-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,sord-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,sratom-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,qt6-graphs-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,onetbb-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libmysofa-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,zix-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|arch-extra,cachyos
 pear-desktop|Pear Desktop (YouTube Music with Custom Plugins)|audio|pear-desktop-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||electron42-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libjpeg-turbo-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|chaotic-aur,chaotic-cdn,arch-extra
 audacity|Audacity (Digital Audio Editor & Recording Studio)|audio|audacity-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||suil-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,lilv-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,serd-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,sord-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,sratom-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,zix-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,portsmf-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,portaudio-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,portmidi-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libsbsms-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,vamp-plugin-sdk-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,soundtouch-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,twolame-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libid3tag-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libsoxr-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libmspack-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,wxwidgets-gtk3-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,wxwidgets-common-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libjpeg-turbo-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|arch-extra,cachyos-extra-v3,cachyos
+yabridge|Yabridge (+ yabridgectl VST2/VST3 Plugin Bridge)|audio|yabridge-(?:bin-)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||yabridgectl-(?:bin-)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos,arch-extra,chaotic-aur
+spotify|Spotify Launcher (Official Native Client Bootstrap)|audio|spotify-launcher-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||arch-extra,cachyos
 inkscape|Inkscape (Professional Vector Graphics Editor)|creative|inkscape-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||lib2geom-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,double-conversion-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,graphicsmagick-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libcdr-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,poppler-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libvisio-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libwpg-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,librevenge-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos-extra-v3,arch-extra,cachyos
+darktable|Darktable (Advanced RAW Photo Workflow & Editor)|creative|darktable-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos-extra-v3,arch-extra,cachyos
+parabolic|Parabolic (Video & Audio Media Downloader)|creative|(?:parabolic|tube-converter)-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|||chaotic-aur,cachyos,arch-extra
 syncthing|Syncthing (Continuous P2P File Synchronization)|tools|syncthing-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||arch-extra,cachyos-extra-v3,cachyos
-obs-studio|OBS Studio (Isolated App-Bundle & Python 3.14)|community|obs-studio-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst||python-3\.[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,mbedtls-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,obs-studio-plugin-browser-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|arch-extra,arch-core,cachyos
+obs-studio|OBS Studio (Isolated App-Bundle & Python 3.14)|community|obs-studio-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst||python-3\.[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,mbedtls-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,obs-studio-plugin-browser-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,cef-minimal-obs(?:-bin)?-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,libdatachannel-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,libjuice-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,librist-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,libusrsctp-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|arch-extra,arch-core,cachyos
+obs-vkcapture|OBS VKCapture (+ 32-bit Multilib Vulkan/GL)|community|obs-vkcapture-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|lib32-obs-vkcapture-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||cachyos,arch-extra
 discord|Official Discord Linux Client|community|discord-[0-9][a-zA-Z0-9_\.:-]*\.pkg\.tar\.zst|||arch-extra,cachyos
+vesktop|Vesktop (Discord Client with Vencord & Wayland Screen)|community|vesktop(?:-bin)?-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos
+sunshine|Sunshine (Self-Hosted Game Stream Host)|community|sunshine-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||libayatana-appindicator-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,miniupnpc-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,numactl-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos,arch-extra
 google-chrome|Google Chrome (Official Web Browser)|browser|google-chrome-[0-9a-zA-Z_\.:-]*\.pkg\.tar\.zst|||chaotic-aur,chaotic-cdn,cachyos
 microsoft-edge|Microsoft Edge (Official Web Browser)|browser|microsoft-edge-(?:stable|beta|dev)-bin-[0-9a-zA-Z_\.:-]*\.pkg\.tar\.zst|||chaotic-aur,chaotic-cdn,cachyos
+brave|Brave Browser (Privacy Browser with AdBlock)|browser|brave-bin-(?:1%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos,chaotic-aur,chaotic-cdn
+zen-browser|Zen Browser (Gecko-Based Ergonomic Browser)|browser|zen-browser-bin-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos,chaotic-aur,chaotic-cdn
+vivaldi|Vivaldi (Power-User Feature-Rich Browser)|browser|vivaldi-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||vivaldi-ffmpeg-codecs-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|arch-extra,cachyos,chaotic-aur
+opera|Opera Browser (Web Browser with Built-in VPN)|browser|opera-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||opera-ffmpeg-codecs-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|chaotic-aur,cachyos,arch-extra
+limine|Limine Bootloader (>= 12.x EFI & Tools)|bootloader|limine-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos
+limine-entry-tool|Limine Entry Tool (Config & Enrollment Generator)|bootloader|limine-entry-tool-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos
+limine-snapper-sync|Limine Snapper Sync (Btrfs Snapshot Integrator)|bootloader|limine-snapper-sync-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos
+sbctl|sbctl (Secure Boot Key Manager & Signer)|bootloader|sbctl-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||arch-extra,cachyos
 CATALOG_EOF
 }
 
@@ -2701,179 +2722,57 @@ interactive_cachyos_gaming_menu() {
         local item_names=()
         local item_statuses=()
 
-        echo -e "${YELLOW}${BOLD}--- [ The Engine: Performance, HUD & Schedulers ] ---${RESET}"
-        while IFS='|' read -r pkg_id name cat main_pat l32_pat ext_pat repos; do
-            [ "${cat}" = "engine" ] || continue
-            if [ "${pkg_id}" = "vram-booster" ] && ! is_vram_booster_supported; then
-                continue
-            fi
-            local cur_ver
-            cur_ver=$(get_installed_gaming_pkg_version "${pkg_id}")
-            local st_color="${RED}"
-            local st_text="[Not Installed]"
-            if [ "${cur_ver}" != "NONE" ]; then
-                st_color="${GREEN}"
-                st_text="[Installed: v${cur_ver} ✓]"
-            fi
-            printf "  ${BOLD}%2d.${RESET} %-45s ${st_color}%s${RESET}\n" "${index}" "${name}" "${st_text}"
-            item_ids+=("${pkg_id}")
-            item_names+=("${name}")
-            item_statuses+=("${cur_ver}")
-            index=$((index + 1))
-        done <<< "$(get_gaming_catalog)"
+        render_gaming_cat() {
+            local cat_filter="$1"
+            local cat_title="$2"
+            local printed_header=0
 
-        echo -e "\n${YELLOW}${BOLD}--- [ Storefronts & Launcher Managers ] ---${RESET}"
-        while IFS='|' read -r pkg_id name cat main_pat l32_pat ext_pat repos; do
-            [ "${cat}" = "launcher" ] || continue
-            local cur_ver
-            cur_ver=$(get_installed_gaming_pkg_version "${pkg_id}")
-            local st_color="${RED}"
-            local st_text="[Not Installed]"
-            if [ "${cur_ver}" != "NONE" ]; then
-                st_color="${GREEN}"
-                st_text="[Installed: v${cur_ver} ✓]"
-            fi
-            printf "  ${BOLD}%2d.${RESET} %-45s ${st_color}%s${RESET}\n" "${index}" "${name}" "${st_text}"
-            item_ids+=("${pkg_id}")
-            item_names+=("${name}")
-            item_statuses+=("${cur_ver}")
-            index=$((index + 1))
-        done <<< "$(get_gaming_catalog)"
+            while IFS='|' read -r pkg_id name cat main_pat l32_pat ext_pat repos; do
+                [ "${cat}" = "${cat_filter}" ] || continue
+                if [ "${pkg_id}" = "vram-booster" ] && ! is_vram_booster_supported; then
+                    continue
+                fi
+                local cur_ver
+                cur_ver=$(get_installed_gaming_pkg_version "${pkg_id}")
+                if [ "${cur_ver}" != "NONE" ]; then
+                    if [ "${printed_header}" -eq 0 ]; then
+                        echo -e "\n${YELLOW}${BOLD}--- [ ${cat_title} ] ---${RESET}"
+                        printed_header=1
+                    fi
+                    local st_color="${GREEN}"
+                    local st_text="[Installed: v${cur_ver} ✓]"
+                    printf "  ${BOLD}%2d.${RESET} %-45s ${st_color}%s${RESET}\n" "${index}" "${name}" "${st_text}"
+                    item_ids+=("${pkg_id}")
+                    item_names+=("${name}")
+                    item_statuses+=("${cur_ver}")
+                    index=$((index + 1))
+                fi
+            done <<< "$(get_gaming_catalog)"
+        }
 
-        echo -e "\n${YELLOW}${BOLD}--- [ Hardware Control & Tuning ] ---${RESET}"
-        while IFS='|' read -r pkg_id name cat main_pat l32_pat ext_pat repos; do
-            [ "${cat}" = "hardware" ] || continue
-            local cur_ver
-            cur_ver=$(get_installed_gaming_pkg_version "${pkg_id}")
-            local st_color="${RED}"
-            local st_text="[Not Installed]"
-            if [ "${cur_ver}" != "NONE" ]; then
-                st_color="${GREEN}"
-                st_text="[Installed: v${cur_ver} ✓]"
-            fi
-            printf "  ${BOLD}%2d.${RESET} %-45s ${st_color}%s${RESET}\n" "${index}" "${name}" "${st_text}"
-            item_ids+=("${pkg_id}")
-            item_names+=("${name}")
-            item_statuses+=("${cur_ver}")
-            index=$((index + 1))
-        done <<< "$(get_gaming_catalog)"
-
-        echo -e "\n${YELLOW}${BOLD}--- [ 🎧 Studio Audio DSP & Acoustic Processing ] ---${RESET}"
-        while IFS='|' read -r pkg_id name cat main_pat l32_pat ext_pat repos; do
-            [ "${cat}" = "audio" ] || continue
-            local cur_ver
-            cur_ver=$(get_installed_gaming_pkg_version "${pkg_id}")
-            local st_color="${RED}"
-            local st_text="[Not Installed]"
-            if [ "${cur_ver}" != "NONE" ]; then
-                st_color="${GREEN}"
-                st_text="[Installed: v${cur_ver} ✓]"
-            fi
-            printf "  ${BOLD}%2d.${RESET} %-45s ${st_color}%s${RESET}\n" "${index}" "${name}" "${st_text}"
-            item_ids+=("${pkg_id}")
-            item_names+=("${name}")
-            item_statuses+=("${cur_ver}")
-            index=$((index + 1))
-        done <<< "$(get_gaming_catalog)"
-
-        echo -e "\n${YELLOW}${BOLD}--- [ 🎨 Creative, 3D & Photography Studio ] ---${RESET}"
-        while IFS='|' read -r pkg_id name cat main_pat l32_pat ext_pat repos; do
-            [ "${cat}" = "creative" ] || continue
-            local cur_ver
-            cur_ver=$(get_installed_gaming_pkg_version "${pkg_id}")
-            local st_color="${RED}"
-            local st_text="[Not Installed]"
-            if [ "${cur_ver}" != "NONE" ]; then
-                st_color="${GREEN}"
-                st_text="[Installed: v${cur_ver} ✓]"
-            fi
-            printf "  ${BOLD}%2d.${RESET} %-45s ${st_color}%s${RESET}\n" "${index}" "${name}" "${st_text}"
-            item_ids+=("${pkg_id}")
-            item_names+=("${name}")
-            item_statuses+=("${cur_ver}")
-            index=$((index + 1))
-        done <<< "$(get_gaming_catalog)"
-
-        echo -e "\n${YELLOW}${BOLD}--- [ 🛠️ Power Tools & Media Sync ] ---${RESET}"
-        while IFS='|' read -r pkg_id name cat main_pat l32_pat ext_pat repos; do
-            [ "${cat}" = "tools" ] || continue
-            local cur_ver
-            cur_ver=$(get_installed_gaming_pkg_version "${pkg_id}")
-            local st_color="${RED}"
-            local st_text="[Not Installed]"
-            if [ "${cur_ver}" != "NONE" ]; then
-                st_color="${GREEN}"
-                st_text="[Installed: v${cur_ver} ✓]"
-            fi
-            printf "  ${BOLD}%2d.${RESET} %-45s ${st_color}%s${RESET}\n" "${index}" "${name}" "${st_text}"
-            item_ids+=("${pkg_id}")
-            item_names+=("${name}")
-            item_statuses+=("${cur_ver}")
-            index=$((index + 1))
-        done <<< "$(get_gaming_catalog)"
-
-        echo -e "\n${YELLOW}${BOLD}--- [ Community, Capture & Streaming ] ---${RESET}"
-        while IFS='|' read -r pkg_id name cat main_pat l32_pat ext_pat repos; do
-            [ "${cat}" = "community" ] || continue
-            local cur_ver
-            cur_ver=$(get_installed_gaming_pkg_version "${pkg_id}")
-            local st_color="${RED}"
-            local st_text="[Not Installed]"
-            if [ "${cur_ver}" != "NONE" ]; then
-                st_color="${GREEN}"
-                st_text="[Installed: v${cur_ver} ✓]"
-            fi
-            printf "  ${BOLD}%2d.${RESET} %-45s ${st_color}%s${RESET}\n" "${index}" "${name}" "${st_text}"
-            item_ids+=("${pkg_id}")
-            item_names+=("${name}")
-            item_statuses+=("${cur_ver}")
-            index=$((index + 1))
-        done <<< "$(get_gaming_catalog)"
-
-        echo -e "\n${YELLOW}${BOLD}--- [ 🌐 Web Navigators & Browsers ] ---${RESET}"
-        while IFS='|' read -r pkg_id name cat main_pat l32_pat ext_pat repos; do
-            [ "${cat}" = "browser" ] || continue
-            local cur_ver
-            cur_ver=$(get_installed_gaming_pkg_version "${pkg_id}")
-            local st_color="${RED}"
-            local st_text="[Not Installed]"
-            if [ "${cur_ver}" != "NONE" ]; then
-                st_color="${GREEN}"
-                st_text="[Installed: v${cur_ver} ✓]"
-            fi
-            printf "  ${BOLD}%2d.${RESET} %-45s ${st_color}%s${RESET}\n" "${index}" "${name}" "${st_text}"
-            item_ids+=("${pkg_id}")
-            item_names+=("${name}")
-            item_statuses+=("${cur_ver}")
-            index=$((index + 1))
-        done <<< "$(get_gaming_catalog)"
+        render_gaming_cat "engine" "The Engine: Performance, HUD & Schedulers"
+        render_gaming_cat "launcher" "Storefronts & Launcher Managers"
+        render_gaming_cat "hardware" "Hardware Control & Tuning"
+        render_gaming_cat "audio" "🎧 Studio Audio DSP & Acoustic Processing"
+        render_gaming_cat "creative" "🎨 Creative, 3D & Photography Studio"
+        render_gaming_cat "tools" "🛠️ Power Tools & Media Sync"
+        render_gaming_cat "community" "Community, Capture & Streaming"
+        render_gaming_cat "browser" "🌐 Web Navigators & Browsers"
 
         echo -e "\n${BLUE}================================================================================"
         echo -e " ${BOLD}Actions:${RESET}"
-        echo -e "  ${GREEN}${BOLD}A.${RESET} ⚡ 1-Click Total Gaming Rig (Deploy All Recommended Components)"
         echo -e "  ${CYAN}${BOLD}U.${RESET} 🔄 Synchronize & Upgrade All Installed Gaming Packages"
         echo -e "  ${YELLOW}${BOLD}D.${RESET} 🗑️  Uninstall a Component"
         echo -e "  ${BOLD}Q.${RESET} 🚪 Catch You on the Flip Side (Return to Main Menu)"
         echo -e "${BLUE}================================================================================${RESET}"
         echo ""
-        read -r -p "Pick your play [1-${#item_ids[@]}, A, U, D, Q]: " user_choice
+        read -r -p "Pick your play [1-${#item_ids[@]}, U, D, Q]: " user_choice
         user_choice=$(echo "${user_choice}" | tr '[:lower:]' '[:upper:]' | xargs)
 
         case "${user_choice}" in
             Q|"")
                 trigger_silent_background_refresh 2>/dev/null || true
                 break
-                ;;
-            A)
-                echo ""
-                log_info "Starting 1-Click Total Gaming Rig Deployment..."
-                validate_privileges
-                for pid in "${item_ids[@]}"; do
-                    transmute_and_deploy_gaming_pkg "${pid}" || log_warn "Warning deploying ${pid}"
-                done
-                log_success "Total Gaming Rig Deployment completed! Pure Profit!"
-                echo ""
-                read -r -p "Press Enter to continue..."
                 ;;
             U)
                 echo ""

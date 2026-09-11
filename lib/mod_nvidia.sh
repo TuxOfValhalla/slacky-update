@@ -267,15 +267,16 @@ register_flatpak_gl_sync() {
 
             local pkgs_to_install=()
             if ! echo "${installed_runtimes}" | grep -q "org.freedesktop.Platform.GL.nvidia-${ver_dash}"; then
-                pkgs_to_install+=("runtime/org.freedesktop.Platform.GL.nvidia-${ver_dash}")
+                pkgs_to_install+=("org.freedesktop.Platform.GL.nvidia-${ver_dash}")
             fi
             if ! echo "${installed_runtimes}" | grep -q "org.freedesktop.Platform.GL32.nvidia-${ver_dash}"; then
-                pkgs_to_install+=("runtime/org.freedesktop.Platform.GL32.nvidia-${ver_dash}")
+                pkgs_to_install+=("org.freedesktop.Platform.GL32.nvidia-${ver_dash}")
             fi
 
             if [ "${#pkgs_to_install[@]}" -gt 0 ]; then
                 log_info "Downloading Flatpak runtimes in advance: ${pkgs_to_install[*]}"
-                flatpak install -y --non-interactive flathub "${pkgs_to_install[@]}" 2>/dev/null || {
+                flatpak install -y --non-interactive flathub "${pkgs_to_install[@]}" 2>/dev/null || \
+                flatpak install -y --non-interactive --system flathub "${pkgs_to_install[@]}" 2>/dev/null || {
                     log_warn "Flatpak runtime pre-fetch from Flathub deferred (runtime may not be published yet; will auto-heal after reboot)."
                 }
             else
@@ -299,9 +300,21 @@ has_cachyos_kernels_installed() {
         echo "false"
     fi
 }
+get_cachyos_nvidia_repo_url() {
+    local tier="generic"
+    if command -v detect_cpu_tier >/dev/null 2>&1; then
+        tier=$(detect_cpu_tier)
+    fi
+    if command -v get_cachyos_repo_url >/dev/null 2>&1; then
+        get_cachyos_repo_url "${tier}"
+    else
+        echo "https://mirror.cachyos.org/repo/x86_64/cachyos/"
+    fi
+}
 
 detect_cachyos_nvidia_upstream_version() {
-    local cachy_repo="https://mirror.cachyos.org/repo/x86_64/cachyos/"
+    local cachy_repo
+    cachy_repo=$(get_cachyos_nvidia_repo_url)
     local ver
     ver=$(curl -sSL -m 10 "${cachy_repo}" 2>/dev/null | grep -o -E 'nvidia-utils-[0-9]+\.[0-9]+(\.[0-9]+)?' | sed 's/nvidia-utils-//' | sort -V | tail -n 1 || echo "")
     echo "${ver}"
@@ -310,7 +323,8 @@ detect_cachyos_nvidia_upstream_version() {
 build_and_deploy_cachyos_nvidia_userspace() {
     local target_ver="$1"
 
-    local cachy_repo="https://mirror.cachyos.org/repo/x86_64/cachyos/"
+    local cachy_repo
+    cachy_repo=$(get_cachyos_nvidia_repo_url)
     local html
     html=$(curl -sSL -m 15 "${cachy_repo}" 2>/dev/null || echo "")
     if [ -z "${html}" ]; then
@@ -628,6 +642,48 @@ get_nvidia_module_version() {
     echo "${ver:-Unknown}"
 }
 
+prune_stale_nvidia_modules_for_kernel() {
+    local target_kver="$1"
+    local target_ver="$2"
+    [ -n "${target_kver}" ] || return 0
+    [ -n "${target_ver}" ] || return 0
+
+    local dirs_to_check=()
+    [ -d "/lib/modules/${target_kver}" ] && dirs_to_check+=("/lib/modules/${target_kver}")
+    [ -d "/usr/lib/modules/${target_kver}" ] && dirs_to_check+=("/usr/lib/modules/${target_kver}")
+
+    for d in "${dirs_to_check[@]}"; do
+        while IFS= read -r -d '' mod_file; do
+            local mod_ver
+            mod_ver=$(get_nvidia_module_version "${mod_file}")
+            if [ -n "${mod_ver}" ] && [ "${mod_ver}" != "${target_ver}" ] && [ "${mod_ver}" != "Unknown" ]; then
+                log_info "Removing stale NVIDIA module (v${mod_ver} != v${target_ver}): ${mod_file}"
+                sudo rm -f "${mod_file}" 2>/dev/null || true
+            fi
+        done < <(find "${d}" -type f -name "nvidia*.ko*" -print0 2>/dev/null)
+    done
+
+    # Remove duplicates if both extramodules/ and kernel/drivers/video/ exist
+    for d in "${dirs_to_check[@]}"; do
+        if [ -d "${d}/extramodules" ] && ls "${d}/extramodules"/nvidia*.ko* >/dev/null 2>&1; then
+            if [ -d "${d}/kernel/drivers/video" ] && ls "${d}/kernel/drivers/video"/nvidia*.ko* >/dev/null 2>&1; then
+                local extra_ver kernel_ver
+                extra_ver=$(get_nvidia_module_version "$(ls "${d}/extramodules"/nvidia.ko* 2>/dev/null | head -n1)")
+                kernel_ver=$(get_nvidia_module_version "$(ls "${d}/kernel/drivers/video"/nvidia.ko* 2>/dev/null | head -n1)")
+                if [ "${extra_ver}" = "${target_ver}" ]; then
+                    log_info "Retaining precompiled extramodules (v${target_ver}) and removing duplicate DKMS modules for ${target_kver}..."
+                    sudo rm -f "${d}/kernel/drivers/video"/nvidia*.ko* 2>/dev/null || true
+                elif [ "${kernel_ver}" = "${target_ver}" ]; then
+                    log_info "Retaining DKMS modules (v${target_ver}) and removing duplicate extramodules for ${target_kver}..."
+                    sudo rm -f "${d}/extramodules"/nvidia*.ko* 2>/dev/null || true
+                fi
+            fi
+        fi
+    done
+
+    sudo depmod -a "${target_kver}" 2>/dev/null || true
+}
+
 sync_stock_kernel_nvidia_module() {
     local stock_kver="$1"
     local cachy_nv_ver="$2"
@@ -654,7 +710,8 @@ sync_stock_kernel_nvidia_module() {
         gpu_arch=$(detect_nvidia_gpu)
     fi
 
-    local cachy_repo="https://mirror.cachyos.org/repo/x86_64/cachyos"
+    local cachy_repo
+    cachy_repo=$(get_cachyos_nvidia_repo_url | sed 's|/*$||')
     local staging_dir
     staging_dir="$(get_user_staging_dir)/dkms"
     mkdir -p "${staging_dir}"
@@ -765,6 +822,45 @@ sync_all_stock_kernels_nvidia() {
     fi
 }
 
+ensure_cachyos_nvidia_dkms_source_unpacked() {
+    local cachy_nv_ver="$1"
+    local gpu_arch="${2:-MODERN}"
+    local cachy_repo
+    cachy_repo=$(get_cachyos_nvidia_repo_url | sed 's|/*$||')
+    local staging_dir
+    staging_dir="$(get_user_staging_dir)/dkms"
+    mkdir -p "${staging_dir}"
+
+    local dkms_pkg=""
+    local dkms_name="nvidia"
+    local dkms_ver="${cachy_nv_ver}"
+
+    if [ "${gpu_arch}" = "PASCAL" ]; then
+        local phtml
+        phtml=$(curl -sSL --connect-timeout 15 -m 30 "${cachy_repo}/" 2>/dev/null || echo "")
+        dkms_pkg=$(echo "${phtml}" | grep -o -E 'nvidia-580xx-dkms-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst' | head -n 1 || echo "")
+        dkms_name="nvidia"
+        dkms_ver=$(echo "${dkms_pkg}" | grep -o -E '580\.[0-9]+(\.[0-9]+)?' | head -n 1 || echo "580.178.04")
+    else
+        local mhtml
+        mhtml=$(curl -sSL --connect-timeout 15 -m 30 "${cachy_repo}/" 2>/dev/null || echo "")
+        dkms_pkg=$(echo "${mhtml}" | grep -o -E 'nvidia-open-dkms-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst' | head -n 1 || echo "")
+        dkms_name="nvidia"
+    fi
+
+    if [ -n "${dkms_pkg}" ]; then
+        local dkms_archive="${staging_dir}/${dkms_pkg}"
+        local dkms_items=("${cachy_repo}/${dkms_pkg}|${dkms_archive}|${cachy_repo}/${dkms_pkg}.sig|${dkms_archive}.sig")
+        if download_parallel_pacman "CachyOS NVIDIA DKMS (${dkms_pkg})" "${dkms_items[@]}" 2>/dev/null; then
+            if verify_cachyos_gpg_signature "${dkms_archive}" "${dkms_archive}.sig" 2>/dev/null; then
+                validate_privileges
+                sudo tar --zstd -xf "${dkms_archive}" -C / 2>/dev/null || true
+            fi
+        fi
+    fi
+    echo "${dkms_name}|${dkms_ver}"
+}
+
 sync_all_cachyos_kernels_nvidia() {
     local cachy_nv_ver="$1"
     [ -n "${cachy_nv_ver}" ] || return 0
@@ -775,7 +871,8 @@ sync_all_cachyos_kernels_nvidia() {
     fi
     [ "${gpu_arch}" = "LEGACY" ] && return 0
 
-    local cachy_repo="https://mirror.cachyos.org/repo/x86_64/cachyos"
+    local cachy_repo
+    cachy_repo=$(get_cachyos_nvidia_repo_url | sed 's|/*$||')
     local html
     html=$(curl -sSL -m 15 "${cachy_repo}/" 2>/dev/null || echo "")
     [ -n "${html}" ] || return 0
@@ -817,44 +914,89 @@ sync_all_cachyos_kernels_nvidia() {
                         pref="linux-cachyos-lts"
                     fi
 
+                    # 1. Primary Fast-Path: Precompiled CachyOS binary module
                     local pkg_pattern="${pref}-nvidia-open-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst"
-                    local matched_pkg
-                    matched_pkg=$(echo "${html}" | grep -o -E "${pkg_pattern}" | head -n 1 || echo "")
+                    local matched_pkg=""
+                    local candidate_pkgs
+                    candidate_pkgs=$(echo "${html}" | grep -o -E "${pkg_pattern}" || echo "")
+                    local kver_clean
+                    kver_clean=$(echo "${kver}" | sed -E 's/-cachyos.*$//')
+                    for c_pkg in ${candidate_pkgs}; do
+                        if echo "${c_pkg}" | grep -q "${kver_clean}"; then
+                            matched_pkg="${c_pkg}"
+                            break
+                        elif [[ "${kver}" =~ -rc ]] && [[ "${c_pkg}" =~ -rc ]]; then
+                            local k_rc p_rc
+                            k_rc=$(echo "${kver}" | grep -o -E 'rc[0-9]+' || echo "")
+                            p_rc=$(echo "${c_pkg}" | grep -o -E 'rc[0-9]+' || echo "")
+                            if [ -n "${k_rc}" ] && [ "${k_rc}" = "${p_rc}" ]; then
+                                matched_pkg="${c_pkg}"
+                                break
+                            fi
+                        fi
+                    done
+
+                    local deployed_precompiled=0
                     if [ -n "${matched_pkg}" ]; then
                         local staging_dir
                         staging_dir="$(get_user_staging_dir)/cachy-nv-modules"
                         mkdir -p "${staging_dir}"
                         local nv_file="${staging_dir}/${matched_pkg}"
                         local nv_items=("${cachy_repo}/${matched_pkg}|${nv_file}|${cachy_repo}/${matched_pkg}.sig|${nv_file}.sig")
-                        if ! download_parallel_pacman "CachyOS NVIDIA Module (${kver})" "${nv_items[@]}"; then
-                            log_error "Failed to download NVIDIA driver package: ${matched_pkg}"
-                            continue
+                        if download_parallel_pacman "CachyOS NVIDIA Module (${kver})" "${nv_items[@]}" && verify_cachyos_gpg_signature "${nv_file}" "${nv_file}.sig"; then
+                            validate_privileges
+                            log_info "Deploying precompiled NVIDIA open driver to kernel ${kver}..."
+                            # Cleanup any previous DKMS build for this specific CachyOS kernel now that precompiled is available
+                            if command -v dkms >/dev/null 2>&1; then
+                                sudo dkms remove -m nvidia -k "${kver}" --all >/dev/null 2>&1 || true
+                            fi
+                            sudo tar --zstd -xf "${nv_file}" -C /
+                            prune_stale_nvidia_modules_for_kernel "${kver}" "${cachy_nv_ver}"
+                            if command -v generate_kernel_initramfs >/dev/null 2>&1; then
+                                generate_kernel_initramfs "${kver}"
+                            fi
+                            deployed_precompiled=1
                         fi
-                        if ! verify_cachyos_gpg_signature "${nv_file}" "${nv_file}.sig"; then
-                            log_error "GPG signature verification failed for ${matched_pkg}! Skipping."
-                            continue
-                        fi
-                        validate_privileges
-                        log_info "Deploying updated NVIDIA open driver to kernel ${kver}..."
-                        sudo tar --zstd -xf "${nv_file}" -C /
-                        sudo depmod -a "${kver}" 2>/dev/null || true
-                        if command -v generate_kernel_initramfs >/dev/null 2>&1; then
-                            generate_kernel_initramfs "${kver}"
+                    fi
+
+                    # 2. Secondary Hybrid Fallback: DKMS Bridge for older/intermediate CachyOS kernels
+                    if [ "${deployed_precompiled}" -eq 0 ]; then
+                        if command -v dkms >/dev/null 2>&1 && ([ -d "/lib/modules/${kver}/build" ] || [ -d "/usr/src/linux-headers-${kver}" ]); then
+                            log_info "No precompiled module matching ${kver} found on mirrors. Engaging DKMS Bridge..."
+                            ensure_cachyos_nvidia_dkms_source_unpacked "${cachy_nv_ver}" "MODERN" >/dev/null 2>&1 || true
+                            validate_privileges
+                            log_info "Building nvidia-open ${cachy_nv_ver} for CachyOS kernel ${kver} via DKMS..."
+                            if sudo dkms build -m nvidia -v "${cachy_nv_ver}" -k "${kver}" 2>/dev/null; then
+                                sudo dkms install -m nvidia -v "${cachy_nv_ver}" -k "${kver}" 2>/dev/null || log_warn "DKMS install warning for ${kver}"
+                                prune_stale_nvidia_modules_for_kernel "${kver}" "${cachy_nv_ver}"
+                                if command -v generate_kernel_initramfs >/dev/null 2>&1; then
+                                    generate_kernel_initramfs "${kver}"
+                                fi
+                            else
+                                log_warn "DKMS build was unsuccessful for kernel: ${kver} (skipping install)"
+                            fi
+                        else
+                            log_warn "Could not resolve precompiled module or DKMS toolchain for CachyOS kernel ${kver}."
                         fi
                     fi
                 elif [ "${gpu_arch}" = "PASCAL" ]; then
                     if command -v dkms >/dev/null 2>&1; then
                         validate_privileges
+                        ensure_cachyos_nvidia_dkms_source_unpacked "${cachy_nv_ver}" "PASCAL" >/dev/null 2>&1 || true
                         local dkms_ver
                         dkms_ver=$(dkms status 2>/dev/null | grep -E '^nvidia/' | awk -F'[,/]' '{print $2}' | tr -d ' ' | head -n 1 || echo "580.178.04")
                         log_info "Building nvidia ${dkms_ver} for CachyOS kernel ${kver} via DKMS..."
                         sudo dkms build -m nvidia -v "${dkms_ver}" -k "${kver}" 2>/dev/null || true
                         sudo dkms install -m nvidia -v "${dkms_ver}" -k "${kver}" 2>/dev/null || true
+                        prune_stale_nvidia_modules_for_kernel "${kver}" "${cachy_nv_ver}"
                         if command -v generate_kernel_initramfs >/dev/null 2>&1; then
                             generate_kernel_initramfs "${kver}"
                         fi
                     fi
                 fi
+            else
+                # Module is already matching; ensure no duplicate stale modules linger in extramodules/ or drivers/video
+                prune_stale_nvidia_modules_for_kernel "${kver}" "${cachy_nv_ver}"
             fi
         done
     done
@@ -868,11 +1010,26 @@ ensure_cachyos_nvidia_duties() {
     has_cachy=$(has_cachyos_kernels_installed)
     [ "${has_cachy}" = "true" ] || return 0
 
+    # Clean up obsolete kernels (including older RC kernels where only the latest is kept)
+    if command -v purge_old_cachyos_kernels >/dev/null 2>&1; then
+        purge_old_cachyos_kernels --no-sync
+    fi
+
     local cachy_nv_ver
     cachy_nv_ver=$(detect_cachyos_nvidia_upstream_version)
     if [ -z "${cachy_nv_ver}" ]; then
         log_warn "Unable to detect CachyOS NVIDIA upstream version."
         return 0
+    fi
+
+    # Prune any stale competing modules across all installed kernel directories
+    if [ -d "/lib/modules" ]; then
+        for kdir in /lib/modules/*; do
+            [ -d "${kdir}" ] || continue
+            local kver
+            kver=$(basename "${kdir}")
+            prune_stale_nvidia_modules_for_kernel "${kver}" "${cachy_nv_ver}"
+        done
     fi
 
     log_info "CachyOS-Master NVIDIA mode active. Target driver version: ${cachy_nv_ver}"
@@ -935,13 +1092,23 @@ ensure_cachyos_nvidia_duties() {
         sync_all_stock_kernels_nvidia "${cachy_nv_ver}"
     fi
 
-    # 3. Secure Boot & Flatpak only if userspace or kernel modules changed
-    if [ "${need_userspace}" = "true" ] || [ "${pending_rebuilds}" -gt 0 ]; then
-        configure_nvidia_modprobe
-        if command -v enforce_secure_boot_armor >/dev/null 2>&1; then
-            enforce_secure_boot_armor
-        fi
-        register_flatpak_gl_sync "${cachy_nv_ver}"
+    # 3. Secure Boot, Initramfs & Bootloader synchronization (Always enforced on Full Suite Sync)
+    configure_nvidia_modprobe
+    log_info "Regenerating Dracut initramfs images for all installed kernels with NVIDIA ${cachy_nv_ver}..."
+    if command -v generate_kernel_initramfs >/dev/null 2>&1; then
+        generate_kernel_initramfs "ALL"
     fi
+
+    if command -v enforce_secure_boot_armor >/dev/null 2>&1; then
+        enforce_secure_boot_armor
+    fi
+
+    log_info "Synchronizing bootloader configurations (GRUB / Limine)..."
+    if command -v sync_bootloader_configuration >/dev/null 2>&1; then
+        sync_bootloader_configuration "$(uname -r)"
+    fi
+
+    register_flatpak_gl_sync "${cachy_nv_ver}"
+    log_success "CachyOS-Master NVIDIA Full Suite synchronization completed for all kernels!"
 }
 

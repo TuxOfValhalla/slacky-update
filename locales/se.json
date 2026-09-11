@@ -160,5 +160,10 @@
   "MENU_GAMING": "4. Underpants Gnomes Speallorádju (Natiiva CachyOS Speallopakkehta)",
   "MENU_GAMING_TRAY": "🎮 CachyOS Speallopakkehta...",
   "UPGRADING_GAMING": "Ođasmahttá Underpants Gnomes speallopakkeha ja návccaid...",
-  "PROMPT_UPGRADE_GAMING": "Ođasmahtátgo CachyOS Underpants Gnomes speallopakkehiid? [Y/n] "
+  "PROMPT_UPGRADE_GAMING": "Ođasmahtátgo CachyOS Underpants Gnomes speallopakkehiid? [Y/n] ",
+  "CAT_BOOTLOADER": "Limine Bootloader & Secure Boot",
+  "MENU_LIMINE": "Limine Bootloader & Secure Boot-matrise (BLAKE2B-hashing, Snapshots & Self-Heal)",
+  "MENU_SBCTL": "UEFI Secure Boot Kontrollsenter (sbctl-nøkkelregistrering & MOK)",
+  "PROMPT_INSTALL_LIMINE": "Installere Limine Bootloader i sameksistens-modus? [J/n] ",
+  "LIMINE_INSTALL_SUCCESS": "Limine Bootloader er installert! GRUB fallback forblir intakt."
 }

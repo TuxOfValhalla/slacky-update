@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# --- [ SLACKWARE KERNEL POST-INSTALL HOOK FOR LIMINE & DRACUT ] ---
+# Installed to /etc/kernel/postinst.d/slacky-limine-hook
+
+set -euo pipefail
+
+# 1. Skip if slacky-update batch transaction is currently running
+if [ "${SLACKY_UPDATE_RUNNING:-0}" = "1" ] || [ -f "/tmp/slacky-update-running.lock" ]; then
+    exit 0
+fi
+
+KVER="${1:-}"
+if [ -z "${KVER}" ]; then
+    KVER="$(uname -r)"
+fi
+
+# Locate slacky-update library scripts
+APP_DIR=""
+for cand in "/usr/share/slacky-update/lib" "/usr/local/lib/slacky-update" "/usr/lib64/slacky-update"; do
+    if [ -d "${cand}" ] && [ -f "${cand}/common.sh" ]; then
+        APP_DIR="${cand}"
+        break
+    fi
+done
+
+if [ -n "${APP_DIR}" ]; then
+    # shellcheck source=/dev/null
+    source "${APP_DIR}/common.sh"
+    # shellcheck source=/dev/null
+    [ -f "${APP_DIR}/mod_kernel.sh" ] && source "${APP_DIR}/mod_kernel.sh"
+    # shellcheck source=/dev/null
+    [ -f "${APP_DIR}/mod_limine.sh" ] && source "${APP_DIR}/mod_limine.sh"
+    # shellcheck source=/dev/null
+    [ -f "${APP_DIR}/mod_armor.sh" ] && source "${APP_DIR}/mod_armor.sh"
+fi
+
+# 2. Regenerate Dracut Initramfs
+if command -v dracut >/dev/null 2>&1; then
+    if command -v generate_kernel_initramfs >/dev/null 2>&1; then
+        generate_kernel_initramfs "${KVER}" || true
+    else
+        dracut --force "/boot/initramfs-${KVER}.img" "${KVER}" 2>/dev/null || true
+    fi
+fi
+
+# 3. Synchronize Limine Bootloader if installed
+if command -v is_limine_installed >/dev/null 2>&1 && [ "$(is_limine_installed)" = "true" ]; then
+    generate_limine_configuration || true
+    enroll_and_sign_limine || true
+fi
+
+# 4. Synchronize GRUB Menu (Fallback Safety)
+if command -v sync_bootloader_configuration >/dev/null 2>&1; then
+    sync_bootloader_configuration "${KVER}" || true
+elif command -v grub-mkconfig >/dev/null 2>&1 && [ -f "/boot/grub/grub.cfg" ]; then
+    grub-mkconfig -o /boot/grub/grub.cfg >/dev/null 2>&1 || true
+fi
+
+exit 0

@@ -417,6 +417,12 @@ is_pkg_installed() {
         return 0
     fi
     case "${base_name}" in
+        gnome-disk-utility|gnome-disks)
+            command -v gnome-disks >/dev/null 2>&1 || [ -f "/usr/bin/gnome-disks" ]
+            ;;
+        grub-btrfs)
+            [ -f "/etc/default/grub-btrfs/config" ] || [ -f "/etc/grub.d/41_snapshots-btrfs" ] || command -v grub-btrfs >/dev/null 2>&1
+            ;;
         affinity|affinity-suite|affinity_suite)
             [ -f "${HOME}/.local/share/applications/Affinity.desktop" ] || \
             [ -f "${HOME}/.local/share/applications/affinity.desktop" ] || \
@@ -460,215 +466,125 @@ get_pkg_badge() {
     fi
 }
 
-menu_category_games() {
-    local suite_dir="$1"
+render_curated_category_menu() {
+    local cat_title="$1"
+    local suite_dir="$2"
+    shift 2
+    local entries=("$@")
+
     while true; do
-        local b_faugus
-        b_faugus=$(get_pkg_badge "faugus-launcher")
+        local items_name=()
+        local items_path=()
+        local items_desc=()
+
+        for ((i=0; i<${#entries[@]}; i+=3)); do
+            local prg="${entries[i]}"
+            local path="${entries[i+1]}"
+            local desc="${entries[i+2]}"
+
+            if is_pkg_installed "${prg}"; then
+                local b_inst
+                b_inst=$(get_pkg_badge "${prg}")
+                items_name+=("${path##*/} ${b_inst}")
+                items_path+=("${path}")
+                items_desc+=("${desc}")
+            fi
+        done
+
         echo ""
         echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
-        echo -e "${BOLD}${CYAN}                     🎮 Games & Launchers 🎮${RESET}"
+        echo -e "${BOLD}${CYAN}                     ${cat_title}${RESET}"
         echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
-        echo -e "  \033[1;33m1.\033[0m Faugus Launcher ${b_faugus} - Proton Cyber-Runner for Non-Steam Games"
-        echo -e "  \033[1;33m2.\033[0m $(_ SBO_BACK_OPTION)"
+
+        local idx=1
+        for ((j=0; j<${#items_name[@]}; j++)); do
+            echo -e "  \033[1;33m${idx}.\033[0m ${items_name[j]} - ${items_desc[j]}"
+            idx=$((idx + 1))
+        done
+
+        if [ "${#items_name[@]}" -eq 0 ]; then
+            echo -e "  ${YELLOW}No installed components found in this category.${RESET}"
+        fi
+
+        echo -e "  \033[1;33m${idx}.\033[0m $(_ SBO_BACK_OPTION)"
         echo ""
-        echo -n "$(_ SELECT_OPERATION_RANGE range="1-2") "
+        echo -n "$(_ SELECT_OPERATION_RANGE range="1-${idx}") "
         local sel
-        read -r sel || sel="2"
-        case "${sel}" in
-            1) install_curated_slackbuild "games/faugus-launcher" "${suite_dir}" ;;
-            2) return 0 ;;
-            *) log_warn "Invalid selection." ;;
-        esac
+        read -r sel || sel="${idx}"
+
+        if [ "${sel}" -eq "${idx}" ]; then
+            return 0
+        elif [ "${sel}" -ge 1 ] && [ "${sel}" -lt "${idx}" ]; then
+            local sel_idx=$((sel - 1))
+            install_curated_slackbuild "${items_path[sel_idx]}" "${suite_dir}"
+        else
+            log_warn "Invalid selection."
+        fi
         echo ""
         read -r -p "$(_ PRESS_ENTER_CONTINUE) " || true
     done
+}
+
+menu_category_games() {
+    local suite_dir="$1"
+    render_curated_category_menu "🎮 Games & Launchers 🎮" "${suite_dir}" \
+        "faugus-launcher" "games/faugus-launcher" "Proton Cyber-Runner for Non-Steam Games" \
+        "heroic-games-launcher" "games/heroic-games-launcher" "Epic, GOG & Amazon Native GUI"
 }
 
 menu_category_graphics() {
     local suite_dir="$1"
-    while true; do
-        local b_affinity b_bambu b_blender b_goverlay b_inkscape b_mangohud b_storyboarder
-        b_affinity=$(get_pkg_badge "affinity")
-        b_bambu=$(get_pkg_badge "bambu-studio")
-        b_blender=$(get_pkg_badge "blender")
-        b_goverlay=$(get_pkg_badge "goverlay")
-        b_inkscape=$(get_pkg_badge "inkscape")
-        b_mangohud=$(get_pkg_badge "mangohud")
-        b_storyboarder=$(get_pkg_badge "storyboarder")
-        echo ""
-        echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
-        echo -e "${BOLD}${CYAN}                     🎨 Graphics & Design 🎨${RESET}"
-        echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
-        echo -e "  \033[1;33m1.\033[0m Affinity Suite (Unified v3) ${b_affinity} - Creative Suite with WineFix & High-DPI"
-        echo -e "  \033[1;33m2.\033[0m Bambu Studio ${b_bambu} - High-Speed 3D Slicer for Bambu Lab"
-        echo -e "  \033[1;33m3.\033[0m Blender ${b_blender} - 3D Creation & Animation Studio"
-        echo -e "  \033[1;33m4.\033[0m GOverlay ${b_goverlay} - Vulkan/OpenGL Overlay Config GUI"
-        echo -e "  \033[1;33m5.\033[0m Inkscape ${b_inkscape} - Professional Vector Graphics Editor"
-        echo -e "  \033[1;33m6.\033[0m MangoHud ${b_mangohud} - Radical In-Game HUD & Telemetry"
-        echo -e "  \033[1;33m7.\033[0m Wonder Unit Storyboarder ${b_storyboarder} - Fast Visual Storytelling & Animatics"
-        echo -e "  \033[1;33m8.\033[0m $(_ SBO_BACK_OPTION)"
-        echo ""
-        echo -n "$(_ SELECT_OPERATION_RANGE range="1-8") "
-        local sel
-        read -r sel || sel="8"
-        case "${sel}" in
-            1) install_curated_slackbuild "graphics/affinity" "${suite_dir}" ;;
-            2) install_curated_slackbuild "graphics/bambu-studio" "${suite_dir}" ;;
-            3) install_curated_slackbuild "graphics/blender" "${suite_dir}" ;;
-            4) install_curated_slackbuild "graphics/goverlay" "${suite_dir}" ;;
-            5) install_curated_slackbuild "graphics/inkscape" "${suite_dir}" ;;
-            6) install_curated_slackbuild "graphics/mangohud" "${suite_dir}" ;;
-            7) install_curated_slackbuild "graphics/storyboarder" "${suite_dir}" ;;
-            8) return 0 ;;
-            *) log_warn "Invalid selection." ;;
-        esac
-        echo ""
-        read -r -p "$(_ PRESS_ENTER_CONTINUE) " || true
-    done
+    render_curated_category_menu "🎨 Graphics & Design 🎨" "${suite_dir}" \
+        "affinity" "graphics/affinity" "Creative Suite with WineFix & High-DPI" \
+        "bambu-studio" "graphics/bambu-studio" "High-Speed 3D Slicer for Bambu Lab" \
+        "blender" "graphics/blender" "3D Creation & Animation Studio" \
+        "freecad" "graphics/freecad" "Parametric 3D CAD Modeler" \
+        "gamescope" "graphics/gamescope" "Micro-Compositor & HDR Engine" \
+        "goverlay" "graphics/goverlay" "Vulkan/OpenGL Overlay Config GUI" \
+        "inkscape" "graphics/inkscape" "Professional Vector Graphics Editor" \
+        "mangohud" "graphics/mangohud" "Radical In-Game HUD & Telemetry" \
+        "storyboarder" "graphics/storyboarder" "Fast Visual Storytelling & Animatics" \
+        "volt-gui" "graphics/volt-gui" "Undervolt & Power Management Suite"
 }
 
 menu_category_multimedia() {
     local suite_dir="$1"
-    while true; do
-        local b_davinci
-        b_davinci=$(get_pkg_badge "davinci-resolve-studio")
-        echo ""
-        echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
-        echo -e "${BOLD}${CYAN}                    🎬 Multimedia & Video 🎬${RESET}"
-        echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
-        echo -e "  \033[1;33m1.\033[0m DaVinci Resolve Studio ${b_davinci} - Hollywood Post-Production Suite"
-        echo -e "  \033[1;33m2.\033[0m $(_ SBO_BACK_OPTION)"
-        echo ""
-        echo -n "$(_ SELECT_OPERATION_RANGE range="1-2") "
-        local sel
-        read -r sel || sel="2"
-        case "${sel}" in
-            1) install_curated_slackbuild "multimedia/davinci-resolve-studio" "${suite_dir}" ;;
-            2) return 0 ;;
-            *) log_warn "Invalid selection." ;;
-        esac
-        echo ""
-        read -r -p "$(_ PRESS_ENTER_CONTINUE) " || true
-    done
+    render_curated_category_menu "🎬 Multimedia & Video 🎬" "${suite_dir}" \
+        "davinci-resolve-studio" "multimedia/davinci-resolve-studio" "Hollywood Post-Production Suite"
 }
 
 menu_category_development() {
     local suite_dir="$1"
-    while true; do
-        local b_unreal
-        b_unreal=$(get_pkg_badge "unreal-engine")
-        echo ""
-        echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
-        echo -e "${BOLD}${CYAN}                  🛠️ Development & Engines 🛠️${RESET}"
-        echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
-        echo -e "  \033[1;33m1.\033[0m Unreal Engine 5 ${b_unreal} - Next-Gen Real-Time 3D Game Engine"
-        echo -e "  \033[1;33m2.\033[0m $(_ SBO_BACK_OPTION)"
-        echo ""
-        echo -n "$(_ SELECT_OPERATION_RANGE range="1-2") "
-        local sel
-        read -r sel || sel="2"
-        case "${sel}" in
-            1) install_curated_slackbuild "development/unreal-engine" "${suite_dir}" ;;
-            2) return 0 ;;
-            *) log_warn "Invalid selection." ;;
-        esac
-        echo ""
-        read -r -p "$(_ PRESS_ENTER_CONTINUE) " || true
-    done
+    render_curated_category_menu "🛠️ Development & Engines 🛠️" "${suite_dir}" \
+        "unreal-engine" "development/unreal-engine" "Next-Gen Real-Time 3D Game Engine"
 }
 
 menu_category_system() {
     local suite_dir="$1"
-    while true; do
-        local b_ananicy b_gdu b_grub_btrfs b_lact b_openrgb b_snapper b_winetricks
-        b_lact=$(get_pkg_badge "lact")
-        b_snapper=$(get_pkg_badge "snapper")
-        b_grub_btrfs=$(get_pkg_badge "grub-btrfs")
-        b_ananicy=$(get_pkg_badge "ananicy-cpp")
-        b_gdu=$(get_pkg_badge "gnome-disk-utility")
-        b_openrgb=$(get_pkg_badge "openrgb")
-        b_winetricks=$(get_pkg_badge "winetricks")
-        echo ""
-        echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
-        echo -e "${BOLD}${CYAN}                   ⚙️ System, Wine & Tuning ⚙️${RESET}"
-        echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
-        echo -e "  \033[1;33m1.\033[0m LACT ${b_lact} - GPU Control & Overclocking for Radeon & Nvidia"
-        echo -e "  \033[1;33m2.\033[0m Snapper ${b_snapper} - Btrfs Snapshot Manager"
-        echo -e "  \033[1;33m3.\033[0m GRUB-Btrfs ${b_grub_btrfs} - Bootable Btrfs Snapshots in GRUB"
-        echo -e "  \033[1;33m4.\033[0m Ananicy-cpp ${b_ananicy} - Auto-Nice Turbo Boost for Games & Apps"
-        echo -e "  \033[1;33m5.\033[0m GNOME Disk Utility ${b_gdu} - Storage, Partitions & SMART Management"
-        echo -e "  \033[1;33m6.\033[0m OpenRGB ${b_openrgb} - Open-Source RGB Lighting Control"
-        echo -e "  \033[1;33m7.\033[0m Winetricks ${b_winetricks} - Easy Wine Prefix Config & DLL Helper"
-        echo -e "  \033[1;33m8.\033[0m $(_ SBO_BACK_OPTION)"
-        echo ""
-        echo -n "$(_ SELECT_OPERATION_RANGE range="1-8") "
-        local sel
-        read -r sel || sel="8"
-        case "${sel}" in
-            1) install_curated_slackbuild "system/lact" "${suite_dir}" ;;
-            2) install_curated_slackbuild "system/snapper" "${suite_dir}" ;;
-            3) install_curated_slackbuild "system/grub-btrfs" "${suite_dir}" ;;
-            4) install_curated_slackbuild "system/ananicy-cpp" "${suite_dir}" ;;
-            5) install_curated_slackbuild "system/gnome-disk-utility" "${suite_dir}" ;;
-            6) install_curated_slackbuild "system/openrgb" "${suite_dir}" ;;
-            7) install_curated_slackbuild "system/winetricks" "${suite_dir}" ;;
-            8) return 0 ;;
-            *) log_warn "Invalid selection." ;;
-        esac
-        echo ""
-        read -r -p "$(_ PRESS_ENTER_CONTINUE) " || true
-    done
+    render_curated_category_menu "⚙️ System, Wine & Tuning ⚙️" "${suite_dir}" \
+        "lact" "system/lact" "GPU Control & Overclocking for Radeon & Nvidia" \
+        "snapper" "system/snapper" "Btrfs Snapshot Manager" \
+        "grub-btrfs" "system/grub-btrfs" "Bootable Btrfs Snapshots in GRUB" \
+        "ananicy-cpp" "system/ananicy-cpp" "Auto-Nice Turbo Boost for Games & Apps" \
+        "gnome-disk-utility" "system/gnome-disk-utility" "Storage, Partitions & SMART Management" \
+        "openrgb" "system/openrgb" "Open-Source RGB Lighting Control" \
+        "spacenavd" "system/spacenavd" "3Dconnexion 6DOF Controller Daemon" \
+        "spnavcfg" "system/spnavcfg" "3Dconnexion Controller GUI Configurator" \
+        "wine-staging" "system/wine-staging" "Bleeding-Edge Windows Compatibility" \
+        "winetricks" "system/winetricks" "Easy Wine Prefix Config & DLL Helper"
 }
 
 menu_category_office() {
     local suite_dir="$1"
-    while true; do
-        local b_fo
-        b_fo=$(get_pkg_badge "freeoffice2024")
-        echo ""
-        echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
-        echo -e "${BOLD}${CYAN}                  🏢 Office & Productivity 🏢${RESET}"
-        echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
-        echo -e "  \033[1;33m1.\033[0m FreeOffice 2024 ${b_fo} - Microsoft Office Compatible Suite"
-        echo -e "  \033[1;33m2.\033[0m $(_ SBO_BACK_OPTION)"
-        echo ""
-        echo -n "$(_ SELECT_OPERATION_RANGE range="1-2") "
-        local sel
-        read -r sel || sel="2"
-        case "${sel}" in
-            1) install_curated_slackbuild "office/freeoffice2024" "${suite_dir}" ;;
-            2) return 0 ;;
-            *) log_warn "Invalid selection." ;;
-        esac
-        echo ""
-        read -r -p "$(_ PRESS_ENTER_CONTINUE) " || true
-    done
+    render_curated_category_menu "🏢 Office & Productivity 🏢" "${suite_dir}" \
+        "freeoffice2024" "office/freeoffice2024" "Microsoft Office Compatible Suite"
 }
 
 menu_category_libraries() {
     local suite_dir="$1"
-    while true; do
-        local b_handy
-        b_handy=$(get_pkg_badge "libhandy")
-        echo ""
-        echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
-        echo -e "${BOLD}${CYAN}                   📚 Libraries & Drivers 📚${RESET}"
-        echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
-        echo -e "  \033[1;33m1.\033[0m LibHandy ${b_handy} - GTK Adaptive UI Library"
-        echo -e "  \033[1;33m2.\033[0m $(_ SBO_BACK_OPTION)"
-        echo ""
-        echo -n "$(_ SELECT_OPERATION_RANGE range="1-2") "
-        local sel
-        read -r sel || sel="2"
-        case "${sel}" in
-            1) install_curated_slackbuild "libraries/libhandy" "${suite_dir}" ;;
-            2) return 0 ;;
-            *) log_warn "Invalid selection." ;;
-        esac
-        echo ""
-        read -r -p "$(_ PRESS_ENTER_CONTINUE) " || true
-    done
+    render_curated_category_menu "📚 Libraries & Drivers 📚" "${suite_dir}" \
+        "libhandy" "libraries/libhandy" "GTK Adaptive UI Library" \
+        "libspnav" "libraries/libspnav" "Open Library for 3D Navigation Devices"
 }
 
 manage_curated_suite_interactive() {
@@ -691,26 +607,28 @@ manage_curated_suite_interactive() {
         echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
         echo -e "${BOLD}${CYAN}                  ⚡ SLACKY-SLACKBUILDS CURATED HUB ⚡${RESET}"
         echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
-        echo -e "  \033[1;33m1.\033[0m 🎮 Games & Launchers (Faugus)"
-        echo -e "  \033[1;33m2.\033[0m 🎨 Graphics & Design (Bambu Studio, Blender, MangoHud, GOverlay, Inkscape, Storyboarder)"
-        echo -e "  \033[1;33m3.\033[0m 🎬 Multimedia & Video (DaVinci Resolve Studio)"
-        echo -e "  \033[1;33m4.\033[0m ⚙️ System, Wine & Tuning (LACT, Snapper, GRUB-Btrfs, Ananicy-cpp, GNOME Disk Utility, OpenRGB, Winetricks)"
-        echo -e "  \033[1;33m5.\033[0m 🏢 Office & Productivity (FreeOffice 2024)"
-        echo -e "  \033[1;33m6.\033[0m 📚 Libraries & Drivers (LibHandy)"
-        echo -e "  \033[1;33m7.\033[0m $(_ SBO_BACK_OPTION)"
+        echo -e "  \033[1;33m1.\033[0m 🎮 Games & Launchers"
+        echo -e "  \033[1;33m2.\033[0m 🎨 Graphics & Design"
+        echo -e "  \033[1;33m3.\033[0m 🎬 Multimedia & Video"
+        echo -e "  \033[1;33m4.\033[0m 🛠️ Development & Engines"
+        echo -e "  \033[1;33m5.\033[0m ⚙️ System, Wine & Tuning"
+        echo -e "  \033[1;33m6.\033[0m 🏢 Office & Productivity"
+        echo -e "  \033[1;33m7.\033[0m 📚 Libraries & Drivers"
+        echo -e "  \033[1;33m8.\033[0m $(_ SBO_BACK_OPTION)"
         echo ""
-        echo -n "$(_ SELECT_OPERATION_RANGE range="1-7") "
+        echo -n "$(_ SELECT_OPERATION_RANGE range="1-8") "
         local cat_sel
-        read -r cat_sel || cat_sel="7"
+        read -r cat_sel || cat_sel="8"
 
         case "${cat_sel}" in
             1) menu_category_games "${suite_dir}" ;;
             2) menu_category_graphics "${suite_dir}" ;;
             3) menu_category_multimedia "${suite_dir}" ;;
-            4) menu_category_system "${suite_dir}" ;;
-            5) menu_category_office "${suite_dir}" ;;
-            6) menu_category_libraries "${suite_dir}" ;;
-            7) return 0 ;;
+            4) menu_category_development "${suite_dir}" ;;
+            5) menu_category_system "${suite_dir}" ;;
+            6) menu_category_office "${suite_dir}" ;;
+            7) menu_category_libraries "${suite_dir}" ;;
+            8) return 0 ;;
             *) log_warn "Invalid selection." ;;
         esac
     done

@@ -52,7 +52,10 @@ if active in cachy_kernels:
 
 for flv, klist in by_flavor.items():
     sorted_k = sorted(klist, key=parse_ver, reverse=True)
-    to_keep.update(sorted_k[:2])
+    if flv == 'rc':
+        to_keep.update(sorted_k[:1])
+    else:
+        to_keep.update(sorted_k[:2])
 
 to_remove = [k for k in cachy_kernels if k not in to_keep]
 for k in to_remove:

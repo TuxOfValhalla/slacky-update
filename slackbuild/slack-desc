@@ -1,0 +1,19 @@
+# HOW TO EDIT THIS FILE:
+# The "handy ruler" below makes it easier to edit a package description.  Line
+# up the first '|' above the ':' following the base package name, and the '|'
+# on the right side marks the last column you can put a character in.  You must
+# make exactly 11 lines for the formatting to be correct.  It's also
+# customary to leave one space after the ':'.
+
+             |-----handy-ruler------------------------------------------------------|
+slacky-update: slacky-update (Slackware & CachyOS Workstation Suite)
+slacky-update:
+slacky-update: A comprehensive update and management engine for Slackware Linux.
+slacky-update: Integrates CachyOS kernels (BORE, LTS, RC), NVIDIA DKMS and
+slacky-update: CachyOS-Master suite sync, Dracut initramfs, UEFI Secure Boot
+slacky-update: automation (MOK), Underpants Gnomes gaming suite, multilib audit,
+slacky-update: SBo SlackBuilds hub, and automated fail-safe recovery.
+slacky-update:
+slacky-update: Homepage: https://codeberg.org/tuxofvalhalla/slacky-update
+slacky-update:
+slacky-update:

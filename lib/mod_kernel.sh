@@ -1081,46 +1081,16 @@ PYGRUB
         fi
     fi
 
-    # 2. Limine Bootloader Configuration
-    local initrd_target="initrd-${kver_full}.gz"
-    if [ -f "/boot/initramfs-${kver_full}.img" ]; then
-        initrd_target="initramfs-${kver_full}.img"
-    fi
-
-    for limine_cfg in /boot/limine.conf /boot/limine/limine.conf /boot/efi/limine.conf; do
-        if [ -f "${limine_cfg}" ]; then
-            log_info "Synchronizing Limine bootloader configuration (${limine_cfg})..."
-            if ! grep -q "vmlinuz-${kver_full}" "${limine_cfg}"; then
-                python3 - << PYLIM
-import os
-
-cfg_path = "${limine_cfg}"
-kver = "${kver_full}"
-initrd_name = "${initrd_target}"
-root_cmd = "${root_cmd}${root_extra}"
-params = "${required_params}".strip()
-full_cmd = f"{root_cmd} rw quiet splash {params}".strip()
-
-entry = f"""
-/CachyOS Linux ({kver})
-    protocol: linux
-    kernel_path: boot():/boot/vmlinuz-{kver}
-    initrd_path: boot():/boot/{initrd_name}
-    cmdline: {full_cmd}
-"""
-
-try:
-    with open(cfg_path, "r", encoding="utf-8") as f:
-        content = f.read()
-    if f"vmlinuz-{kver}" not in content:
-        with open(cfg_path, "a", encoding="utf-8") as f:
-            f.write(entry)
-except Exception:
-    pass
-PYLIM
-            fi
+    # 2. Limine Bootloader Configuration (if installed)
+    if command -v is_limine_installed >/dev/null 2>&1 && [ "$(is_limine_installed)" = "true" ]; then
+        log_info "Synchronizing Limine bootloader configuration..."
+        if command -v generate_limine_configuration >/dev/null 2>&1; then
+            generate_limine_configuration || true
         fi
-    done
+        if command -v enroll_and_sign_limine >/dev/null 2>&1; then
+            enroll_and_sign_limine || true
+        fi
+    fi
 
     # 3. ELILO Bootloader Configuration (Standard Slackware UEFI)
     local elilo_cfg="/boot/efi/EFI/Slackware/elilo.conf"
@@ -1133,7 +1103,7 @@ PYLIM
             validate_privileges
             log_info "Deploying ${kver_full} kernel and initrd to /boot/efi/EFI/Slackware/..."
             sudo cp -f "/boot/vmlinuz-${kver_full}" /boot/efi/EFI/Slackware/vmlinuz 2>/dev/null || true
-            sudo cp -f "/boot/${initrd_target}" /boot/efi/EFI/Slackware/initrd.gz 2>/dev/null || true
+            sudo cp -f "/boot/${initrd_target:-initramfs-${kver_full}.img}" /boot/efi/EFI/Slackware/initrd.gz 2>/dev/null || true
             local elilo_bin
             elilo_bin=$(command -v elilo 2>/dev/null || echo "/sbin/elilo")
             if [ -x "${elilo_bin}" ]; then
@@ -1338,7 +1308,7 @@ deploy_cachyos_kernel_packages() {
             local dkms_pkg
             dkms_pkg=$(curl -sSL -m 10 "${cachy_base}/" 2>/dev/null | grep -o -E 'nvidia-580xx-dkms-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst' | head -n 1 || echo "")
             if [ -n "${dkms_pkg}" ]; then
-                local dkms_file="${dest_dir}/${dkms_pkg}"
+                local dkms_file="${staging_dir}/${dkms_pkg}"
                 log_info "Downloading ${dkms_pkg}..."
                 sudo curl -sSL -o "${dkms_file}" "${cachy_base}/${dkms_pkg}"
                 if ! verify_cachyos_package_integrity "${dkms_file}"; then
@@ -1361,13 +1331,10 @@ deploy_cachyos_kernel_packages() {
             if [ "${nv_url}" != "NONE" ] && [ -n "${nv_url}" ]; then
                 local nv_filename
                 nv_filename=$(basename "${nv_url}")
-                local nv_src="${staging_dir}/${nv_filename}"
-                local nv_file="${dest_dir}/${nv_filename}"
-                if [ -f "${nv_src}" ]; then
-                    sudo cp -f "${nv_src}" "${nv_file}" 2>/dev/null || true
-                elif [ ! -f "${nv_file}" ]; then
+                local nv_file="${staging_dir}/${nv_filename}"
+                if [ ! -f "${nv_file}" ]; then
                     log_info "Modern NVIDIA GPU detected. Downloading prebuilt matching CachyOS NVIDIA Open driver (${nv_filename})..."
-                    sudo curl -sSL -o "${nv_file}" "${nv_url}"
+                    curl -sSL -o "${nv_file}" "${nv_url}" 2>/dev/null || sudo curl -sSL -o "${nv_file}" "${nv_url}"
                 fi
                 if ! verify_cachyos_package_integrity "${nv_file}"; then
                     log_error "NVIDIA driver package integrity verification failed! Skipping extraction."
@@ -1376,6 +1343,20 @@ deploy_cachyos_kernel_packages() {
                     log_info "Extracting NVIDIA driver package to system root..."
                     sudo tar --zstd -xf "${nv_file}" -C /
                 fi
+            elif command -v dkms >/dev/null 2>&1; then
+                log_info "No precompiled NVIDIA package matching v${ver} on mirrors. Engaging DKMS Bridge for ${kver_full}..."
+                local cachy_nv_ver="595.44.02"
+                if ls /var/log/packages/cachyos-nvidia-utils-* 1>/dev/null 2>&1; then
+                    cachy_nv_ver=$(basename "$(ls /var/log/packages/cachyos-nvidia-utils-* 2>/dev/null | head -n 1)" | sed -E 's/cachyos-nvidia-utils-([0-9]+\.[0-9]+(\.[0-9]+)?).*/\1/' || echo "595.44.02")
+                fi
+                if command -v ensure_cachyos_nvidia_dkms_source_unpacked >/dev/null 2>&1; then
+                    ensure_cachyos_nvidia_dkms_source_unpacked "${cachy_nv_ver}" "MODERN" >/dev/null 2>&1 || true
+                fi
+                log_info "Building nvidia-open ${cachy_nv_ver} for kernel ${kver_full} via DKMS..."
+                sudo dkms build -m nvidia -v "${cachy_nv_ver}" -k "${kver_full}" 2>/dev/null || log_warn "DKMS build warning for ${kver_full}"
+                sudo dkms install -m nvidia -v "${cachy_nv_ver}" -k "${kver_full}" 2>/dev/null || log_warn "DKMS install warning for ${kver_full}"
+            else
+                log_warn "Notice: No precompiled NVIDIA package or DKMS toolchain available for ${kver_full}."
             fi
         fi
     fi
@@ -1404,8 +1385,19 @@ deploy_cachyos_kernel_packages() {
     fi
 
     if command -v dkms >/dev/null 2>&1; then
-        log_info "Rebuilding registered DKMS modules for kernel: ${kver_full}..."
-        sudo dkms autoinstall -k "${kver_full}" 2>/dev/null || true
+        if find "/lib/modules/${kver_full}" "/usr/lib/modules/${kver_full}" -name "nvidia*.ko*" 2>/dev/null | grep -q "nvidia"; then
+            # Kernel already has precompiled NVIDIA modules (e.g. from CachyOS package).
+            # Build all non-nvidia registered DKMS modules (e.g. v4l2loopback, broadcom-wl, VirtualBox)
+            for mod_entry in $(dkms status 2>/dev/null | grep -v '^nvidia' | awk -F'[,/]' '{print $1"/"$2}' | tr -d ' ' | sort -u); do
+                [ -n "${mod_entry}" ] || continue
+                local m_name m_ver
+                IFS='/' read -r m_name m_ver <<< "${mod_entry}"
+                sudo dkms install -m "${m_name}" -v "${m_ver}" -k "${kver_full}" 2>/dev/null || true
+            done
+        else
+            log_info "Rebuilding registered DKMS modules for kernel: ${kver_full}..."
+            sudo dkms autoinstall -k "${kver_full}" 2>/dev/null || true
+        fi
     fi
 
     if [ "${HAS_NVIDIA}" = "true" ]; then
@@ -1423,16 +1415,16 @@ deploy_cachyos_kernel_packages() {
         fi
     fi
 
-    # 2. Generate initramfs image (Dracut / mkinitrd)
-    generate_kernel_initramfs "${kver_full}"
-
-    # 3. Enforce Secure Boot MOK signing for new kernel image and modules
-    if command -v enforce_secure_boot_armor >/dev/null 2>&1; then
-        enforce_secure_boot_armor
+    # 2. Generate initramfs image (Dracut) and sync bootloader unless deferred
+    if [ "${DEFER_BOOT_SYNC:-0}" != "1" ]; then
+        generate_kernel_initramfs "${kver_full}"
+        if command -v enforce_secure_boot_armor >/dev/null 2>&1; then
+            enforce_secure_boot_armor
+        fi
+        sync_bootloader_configuration "${kver_full}"
+    else
+        log_info "Batch mode active: Dracut initramfs and bootloader sync deferred to end of update."
     fi
-
-    # 4. Synchronize bootloader (GRUB / Limine)
-    sync_bootloader_configuration "${kver_full}"
 }
 
 # --- [ HYBRID INITRAMFS ENGINE ROUTER ] ---

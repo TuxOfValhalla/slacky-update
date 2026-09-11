@@ -4,11 +4,11 @@
 ### *The Most Tubular System Update Station, Kernel Time Machine, SBo SlackBuild Hub & Driver Mojo Command Center for Slackware Linux*
 
 [![Slackware -current](https://img.shields.io/badge/Slackware--current-15.0%2B-blue?style=for-the-badge&logo=slackware&logoColor=white)](http://www.slackware.com/)
-[![Release](https://img.shields.io/badge/Release-v0.10%20'Underpants%20Gnomes'-purple?style=for-the-badge)](https://github.com/TuxOfValhalla/slacky-update/releases)
+[![Release](https://img.shields.io/badge/Release-v0.11%20'Underpants%20Gnomes%20hotfix'-purple?style=for-the-badge)](https://github.com/TuxOfValhalla/slacky-update/releases)
 [![Mirror: Codeberg](https://img.shields.io/badge/Mirror-Codeberg-2185d0?style=for-the-badge&logo=codeberg&logoColor=white)](https://codeberg.org/TuxOfValhalla/slacky-update)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-green.svg?style=for-the-badge)](LICENSE)
 [![Zero-Binary](https://img.shields.io/badge/Architecture-100%25%20Pure%20Source%20(Zero--Binary)-brightgreen?style=for-the-badge)](lib/)
-[![Language](https://img.shields.io/badge/Locales-24%20Languages%20(162%20Keys)-yellow?style=for-the-badge)](locales/)
+[![Language](https://img.shields.io/badge/Locales-24%20Languages%20(168%20Keys)-yellow?style=for-the-badge)](locales/)
 [![Stack](https://img.shields.io/badge/Stack-Bash%20%7C%20Python3%20%7C%20PyQt5-orange?style=for-the-badge)](bin/)
 
 ---
@@ -18,18 +18,12 @@
 
 *Canonical source: [GitHub](https://github.com/TuxOfValhalla/slacky-update) | Official European mirror: [Codeberg](https://codeberg.org/TuxOfValhalla/slacky-update)*
 
-**Release v0.10 'Underpants Gnomes'** (*"Phase 1: Collect Kernels. Phase 2: Transmute & Package. Phase 3: Profit!"*) delivers major kernel management, workstation, and gaming enhancements:
-* **The Underpants Gnomes Suite:** 36 native transmuted gaming, audio, creative, and hardware packages (MangoHud, GameMode, Sched-EXT, Yabridge, DaVinci plugins, Solaar, CoolerControl, LACT, OpenRGB, Syncthing, Browsers) with GPG verification, SysVinit daemons, and isolated `/opt` App-Bundles.
-* **Interactive Granular Kernel Uninstaller:** Selectively inspect and purge installed kernels with disk usage reporting, active kernel protection (`uname -r`), mandatory CachyOS LTS / Slackware fallback guardrails, and permanent preservation of official `kernel-headers`.
-* **100% `.run`-Independent CachyOS NVIDIA Architecture:** Deploys precompiled `linux-cachyos-*-nvidia-open` packages for CachyOS kernels and `nvidia-open-dkms` (or `nvidia-580xx-dkms` for Pascal) for Slackware stock kernels, completely eliminating large `.run` file downloads on CachyOS systems.
-* **Dynamic NVIDIA Interface & Automated Rollback:** Context-aware menu automatically presents CachyOS Master controls on CachyOS systems, and provides seamless 1-click rollback to standalone official `.run` drivers with DKMS when reverting to pure Slackware.
-* **Turbo Multi-Stream Package Pre-fetcher:** 10 concurrent worker streams delivering warm-cache handoffs to `slackpkg` for 5–10× faster package download phases.
-* **Curated SBo SlackBuilds Hub:** 25 pre-configured, tested SlackBuild recipes (including Wonder Unit Storyboarder, Serif Affinity Suite, DaVinci Resolve Studio, Unreal Engine 5, MangoHud, Gamescope, LACT, and OpenRGB) with automated recipe synchronization and Ponce -current routing.
-* **Optional System & Gaming Tweaks Module:** Modular tuning suite featuring process limits, memory/THP tuning, TCP BBR network congestion control, NTSYNC kernel synchronization, and 27 controller/gamepad udev rules with real-time status badges.
-* **CachyOS Time Machine:** High-performance BORE / sched-ext kernel deployment with CPU microarchitecture tier detection (*znver4 / x86_64_v4*), reversible stock kernel removal, and intelligent GRUB priority management.
-* **AMD ROCm / HIP Creator Station:** Full compute stack integration with DaVinci Resolve FFmpeg/AAC export plugins and Rusticl collision prevention.
-* **Secure Boot MOK Forcefield:** 1-Click automated UEFI Secure Boot provisioning, Microsoft-signed shim and GRUB deployment, MOK key generation, and smart signature verification (`modinfo -F signer`).
-* **24 Multi-Lingual Locales:** Full internationalization with 100% key parity (162/162 keys) across 24 languages with instant desktop tray switching.
+**Release v0.11 'Underpants Gnomes hotfix'** (*"Phase 1: Collect Drivers. Phase 2: Purge Stale Modules. Phase 3: Profit!"*) delivers critical graphics and kernel stability enhancements:
+* **NVIDIA Stale Kernel Module Purge & Depmod Shield:** Automatically detects and purges conflicting or stale `extramodules/nvidia*.ko.zst` and `kernel/drivers/video/` module copies across all installed kernels, permanently eliminating boot-time TTY fallbacks caused by module version mismatches.
+* **CachyOS-Master NVIDIA 615.x Full Suite Multilib Sync:** Synchronizes 64-bit and 32-bit multilib graphics, OpenCL, and VA-API NVDEC with proactive Dracut regeneration across all installed kernels.
+* **Intelligent Kernel Retention Policy:** Automatically retains the 2 newest standard/BORE kernels and 1 newest RC kernel, preventing ESP space bloat while preserving rock-solid rollback points.
+* **Flatpak GL Runtime & Proton Compatibility:** Restores flatpak NVIDIA GL runtime matching and ensures smooth integration with Steam and Proton.
+* **The Underpants Gnomes Suite:** 36 native transmuted gaming, audio, creative, and hardware packages (MangoHud, GameMode, Sched-EXT, Yabridge, DaVinci plugins, Solaar, CoolerControl, LACT, OpenRGB, Syncthing, Browsers) with GPG verification and SysVinit daemons.
 
 </div>
 

@@ -3,8 +3,8 @@
 
 set -euo pipefail
 
-CURRENT_VERSION="0.10"
-RELEASE_CODENAME="Underpants Gnomes"
+CURRENT_VERSION="0.11"
+RELEASE_CODENAME="Underpants Gnomes hotfix"
 
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 if [ -d "${SCRIPT_DIR}/../lib" ] && [ -f "${SCRIPT_DIR}/../lib/common.sh" ]; then
@@ -33,6 +33,10 @@ source "${APP_DIR}/mod_sbo.sh"
 source "${APP_DIR}/mod_kernel.sh"
 # shellcheck source=/dev/null
 source "${APP_DIR}/mod_armor.sh"
+# shellcheck source=/dev/null
+[ -f "${APP_DIR}/mod_limine.sh" ] && source "${APP_DIR}/mod_limine.sh"
+# shellcheck source=/dev/null
+[ -f "${APP_DIR}/mod_secureboot.sh" ] && source "${APP_DIR}/mod_secureboot.sh"
 # shellcheck source=/dev/null
 source "${APP_DIR}/mod_clean.sh"
 # shellcheck source=/dev/null
@@ -233,6 +237,10 @@ run_full_update() {
     echo -e "\n${CYAN}$(_ VALIDATING_ADMIN)${RESET}"
     validate_privileges
 
+    export DEFER_BOOT_SYNC=1
+    export SLACKY_UPDATE_RUNNING=1
+    touch /tmp/slacky-update-running.lock 2>/dev/null || true
+
     local snap_before_file snap_after_file
     snap_before_file=$(mktemp /tmp/slacky-snap-before.XXXXXX)
     snap_after_file=$(mktemp /tmp/slacky-snap-after.XXXXXX)
@@ -402,6 +410,10 @@ except Exception:
     else
         log_info "No kernel or driver changes detected. Skipping initramfs generation and signing."
     fi
+
+    rm -f /tmp/slacky-update-running.lock 2>/dev/null || true
+    unset DEFER_BOOT_SYNC || true
+    unset SLACKY_UPDATE_RUNNING || true
 
     echo -e "\n${CYAN}$(_ REFRESHING_CACHE)${RESET}"
     "${CHECK_BIN}" 2>/dev/null || true
@@ -654,6 +666,7 @@ interactive_menu() {
             echo -e "  7. $(_ MENU_EXIT | sed -E 's/^[0-9]+\.\s*//')"
             echo ""
             echo -n "$(_ SELECT_OPERATION_RANGE range="1-7")"
+            local choice
             read -r choice || choice="7"
 
             case "${choice}" in
@@ -710,6 +723,7 @@ interactive_menu() {
             echo -e "  7. $(_ MENU_EXIT | sed -E 's/^[0-9]+\.\s*//')"
             echo ""
             echo -n "$(_ SELECT_OPERATION_RANGE range="1-7")"
+            local choice
             read -r choice || choice="7"
 
             case "${choice}" in
@@ -768,6 +782,7 @@ interactive_menu() {
             echo -e "  6. $(_ MENU_EXIT | sed -E 's/^[0-9]+\.\s*//')"
             echo ""
             echo -n "$(_ SELECT_OPERATION_RANGE range="1-6")"
+            local choice
             read -r choice || choice="6"
 
             case "${choice}" in
@@ -817,6 +832,12 @@ if [ "${1:-}" = "--non-interactive" ] || [ "${1:-}" = "-y" ]; then
 elif [ "${1:-}" = "--check" ]; then
     "${CHECK_BIN}"
     display_pending_status
+elif [ "${1:-}" = "--limine" ] || [ "${1:-}" = "-l" ]; then
+    INTERACTIVE_SESSION=1
+    manage_limine_interactive
+elif [ "${1:-}" = "--secure-boot" ] || [ "${1:-}" = "--sb" ]; then
+    INTERACTIVE_SESSION=1
+    manage_secureboot_interactive
 elif [ "${1:-}" = "--gaming" ] || [ "${1:-}" = "-g" ]; then
     INTERACTIVE_SESSION=1
     interactive_cachyos_gaming_menu

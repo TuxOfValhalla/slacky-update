@@ -156,9 +156,14 @@
   "KERNEL_MANAGE_OPTION_REMOVE": "1. 🗑️ Slett / saner individuelle kjerner (Slackware & CachyOS)",
   "KERNEL_MANAGE_OPTION_RESTORE": "2. 🛟 Gjenopprett offisielle Slackware-kjerner (Reintegrer i oppstartslaster)",
   "SLACKWARE_CORE_UP_TO_DATE": "Slackware systempakker er helt à jour. Hopper over slackpkg-transaksjoner.",
-  "CAT_GAMING": "CachyOS Spillpakke",
-  "MENU_GAMING": "4. Underpants Gnomes Spillrigg (Nativ CachyOS Spillpakke & Ytelse)",
-  "MENU_GAMING_TRAY": "🎮 CachyOS Spillpakke...",
-  "UPGRADING_GAMING": "Oppgraderer Underpants Gnomes spillpakker og ytelsesverktøy...",
-  "PROMPT_UPGRADE_GAMING": "Oppgradere CachyOS Underpants Gnomes spillpakker? [Y/n] "
+  "CAT_GAMING": "CachyOS Gaming Suite",
+  "MENU_GAMING": "4. Underpants Gnomes Gaming Rig (Native CachyOS Gaming Master Suite)",
+  "MENU_GAMING_TRAY": "🎮 CachyOS Gaming Suite...",
+  "UPGRADING_GAMING": "Pumping up Underpants Gnomes Gaming Suite...",
+  "PROMPT_UPGRADE_GAMING": "Oppgradere CachyOS Underpants Gnomes spillpakker? [J/n] ",
+  "CAT_BOOTLOADER": "Limine Bootloader & Secure Boot",
+  "MENU_LIMINE": "Limine Bootloader & Secure Boot-matrise (BLAKE2B-hashing, Snapshots & Self-Heal)",
+  "MENU_SBCTL": "UEFI Secure Boot Kontrollsenter (sbctl-nøkkelregistrering & MOK)",
+  "PROMPT_INSTALL_LIMINE": "Installere Limine Bootloader i sameksistens-modus? [J/n] ",
+  "LIMINE_INSTALL_SUCCESS": "Limine Bootloader er installert! GRUB fallback forblir intakt."
 }

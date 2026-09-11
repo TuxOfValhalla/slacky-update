@@ -160,5 +160,10 @@
   "MENU_GAMING": "4. Underpants Gnomes 游戏工作站 (原生 CachyOS 游戏与性能套件)",
   "MENU_GAMING_TRAY": "🎮 CachyOS 游戏套件...",
   "UPGRADING_GAMING": "正在升级 Underpants Gnomes 游戏套件与性能组件...",
-  "PROMPT_UPGRADE_GAMING": "是否升级 CachyOS Underpants Gnomes 游戏套件包? [Y/n] "
+  "PROMPT_UPGRADE_GAMING": "是否升级 CachyOS Underpants Gnomes 游戏套件包? [Y/n] ",
+  "CAT_BOOTLOADER": "Limine Bootloader & Secure Boot",
+  "MENU_LIMINE": "Limine Bootloader & Secure Boot Matrix (BLAKE2B Hashing, Snapshots & Self-Heal)",
+  "MENU_SBCTL": "UEFI Secure Boot Control Center (sbctl Key Enrollment & MOK)",
+  "PROMPT_INSTALL_LIMINE": "Deploy Limine Bootloader in Coexistence Mode? [Y/n] ",
+  "LIMINE_INSTALL_SUCCESS": "Limine Bootloader successfully installed! GRUB fallback preserved."
 }

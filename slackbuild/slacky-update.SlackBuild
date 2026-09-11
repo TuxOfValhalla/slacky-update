@@ -4,7 +4,7 @@
 set -euo pipefail
 
 PRGNAM="slacky-update"
-VERSION="0.10"
+VERSION="0.11"
 ARCH="noarch"
 BUILD="1_slacky"
 
@@ -30,6 +30,7 @@ mkdir -p "${PKG_DIR}/usr/share/applications"
 mkdir -p "${PKG_DIR}/usr/share/icons/hicolor/128x128/apps"
 mkdir -p "${PKG_DIR}/etc/xdg/autostart"
 mkdir -p "${PKG_DIR}/etc/cron.weekly"
+mkdir -p "${PKG_DIR}/etc/kernel/postinst.d"
 mkdir -p "${PKG_DIR}/var/cache/slacky-update"
 mkdir -p "${PKG_DIR}/install"
 
@@ -52,6 +53,14 @@ install -m 0644 "${SRC_DIR}/desktop/slacky-update-tray.desktop" "${PKG_DIR}/etc/
 
 install -m 0755 "${SRC_DIR}/cron/slacky-update-check" "${PKG_DIR}/etc/cron.weekly/"
 
+if [ -f "${SRC_DIR}/assets/hooks/slacky-limine-hook" ]; then
+    install -m 0755 "${SRC_DIR}/assets/hooks/slacky-limine-hook" "${PKG_DIR}/etc/kernel/postinst.d/"
+fi
+
+if [ -f "${SRC_DIR}/slackbuild/slack-desc" ]; then
+    install -m 0644 "${SRC_DIR}/slackbuild/slack-desc" "${PKG_DIR}/install/"
+fi
+
 if [ -d "${SRC_DIR}/assets" ]; then
     mkdir -p "${PKG_DIR}/usr/share/slacky-update/assets"
     install -m 0644 "${SRC_DIR}"/assets/*.png "${PKG_DIR}/usr/share/icons/hicolor/128x128/apps/" 2>/dev/null || true
@@ -65,6 +74,11 @@ if [ -d "${SRC_DIR}/assets" ]; then
         cp -a "${SRC_DIR}/assets/udev" "${PKG_DIR}/usr/share/slacky-update/assets/"
         mkdir -p "${PKG_DIR}/usr/local/lib/slacky-update/assets"
         cp -a "${SRC_DIR}/assets/udev" "${PKG_DIR}/usr/local/lib/slacky-update/assets/"
+    fi
+    if [ -d "${SRC_DIR}/assets/hooks" ]; then
+        cp -a "${SRC_DIR}/assets/hooks" "${PKG_DIR}/usr/share/slacky-update/assets/"
+        mkdir -p "${PKG_DIR}/usr/local/lib/slacky-update/assets"
+        cp -a "${SRC_DIR}/assets/hooks" "${PKG_DIR}/usr/local/lib/slacky-update/assets/"
     fi
 fi
 
@@ -91,6 +105,10 @@ chmod 0755 /var/cache/slacky-update 2>/dev/null || true
 
 if [ -f /etc/cron.weekly/slacky-update-check ]; then
     chmod 0755 /etc/cron.weekly/slacky-update-check 2>/dev/null || true
+fi
+
+if [ -f /etc/kernel/postinst.d/slacky-limine-hook ]; then
+    chmod 0755 /etc/kernel/postinst.d/slacky-limine-hook 2>/dev/null || true
 fi
 
 if [ -x /usr/bin/update-desktop-database ]; then
