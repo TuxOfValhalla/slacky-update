@@ -466,6 +466,35 @@ get_pkg_badge() {
     fi
 }
 
+is_curated_sbo_whitelisted() {
+    local prg="$1"
+    # Pre-release filter toggle (flip to false to test/view all SlackBuilds)
+    local filter_untested=true
+    if [ "${filter_untested}" != "true" ]; then
+        return 0
+    fi
+
+    # If already installed on system, always display
+    if is_pkg_installed "${prg}"; then
+        return 0
+    fi
+
+    # Whitelist of tested & verified curated SlackBuilds for v0.12 Pre-Release
+    case "${prg}" in
+        faugus-launcher|\
+        affinity|bambu-studio|blender|goverlay|inkscape|mangohud|storyboarder|\
+        davinci-resolve-studio|\
+        lact|snapper|grub-btrfs|ananicy-cpp|gnome-disk-utility|openrgb|winetricks|\
+        freeoffice2024|\
+        libhandy)
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
 render_curated_category_menu() {
     local cat_title="$1"
     local suite_dir="$2"
@@ -482,13 +511,15 @@ render_curated_category_menu() {
             local path="${entries[i+1]}"
             local desc="${entries[i+2]}"
 
-            if is_pkg_installed "${prg}"; then
-                local b_inst
-                b_inst=$(get_pkg_badge "${prg}")
-                items_name+=("${path##*/} ${b_inst}")
-                items_path+=("${path}")
-                items_desc+=("${desc}")
+            if ! is_curated_sbo_whitelisted "${prg}"; then
+                continue
             fi
+
+            local b_badge
+            b_badge=$(get_pkg_badge "${prg}")
+            items_name+=("${path##*/} ${b_badge}")
+            items_path+=("${path}")
+            items_desc+=("${desc}")
         done
 
         echo ""
@@ -497,13 +528,13 @@ render_curated_category_menu() {
         echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
 
         local idx=1
-        for ((j=0; j<${#items_name[@]}; j++)); do
-            echo -e "  \033[1;33m${idx}.\033[0m ${items_name[j]} - ${items_desc[j]}"
-            idx=$((idx + 1))
-        done
-
-        if [ "${#items_name[@]}" -eq 0 ]; then
-            echo -e "  ${YELLOW}No installed components found in this category.${RESET}"
+        if [ ${#items_name[@]} -eq 0 ]; then
+            echo -e "  \033[1;30m(No verified packages currently available in this category)\033[0m"
+        else
+            for ((j=0; j<${#items_name[@]}; j++)); do
+                echo -e "  \033[1;33m${idx}.\033[0m ${items_name[j]} - ${items_desc[j]}"
+                idx=$((idx + 1))
+            done
         fi
 
         echo -e "  \033[1;33m${idx}.\033[0m $(_ SBO_BACK_OPTION)"

@@ -3,6 +3,7 @@
   "SYSTEM_DEFAULT_LANG": "Systemstandard (Auto)",
   "CLI_TITLE": "Slacky-Update v{version}",
   "CAT_SLACKWARE": "Slackware-paketit",
+  "CAT_SLACKPKGPLUS": "Multilib- ja Slackpkg+-paketit",
   "CAT_FLATPAK": "Flatpak-sovellukset",
   "CAT_KERNEL": "CachyOS-ydin",
   "CAT_NVIDIA": "NVIDIA-ajuri",
@@ -165,5 +166,19 @@
   "MENU_LIMINE": "Limine Bootloader & Secure Boot Matrix (BLAKE2B Hashing, Snapshots & Self-Heal)",
   "MENU_SBCTL": "UEFI Secure Boot Control Center (sbctl Key Enrollment & MOK)",
   "PROMPT_INSTALL_LIMINE": "Deploy Limine Bootloader in Coexistence Mode? [Y/n] ",
-  "LIMINE_INSTALL_SUCCESS": "Limine Bootloader successfully installed! GRUB fallback preserved."
+  "LIMINE_INSTALL_SUCCESS": "Limine Bootloader successfully installed! GRUB fallback preserved.",
+  "MENU_FIELD_GUIDE": "Järjestelmäkäsikirja ja mobiilivienti (PDF / Sähköposti / QR-koodi)",
+  "PIPELINE_HEADER": "Synkronoidaan ydinmatriisi, initramfs, Limine BLAKE2B ja Secure Boot...",
+  "PIPELINE_STEP1_NVIDIA": "Täsmäävät CachyOS NVIDIA -ajurimoduulit aktiivisina ydinpuussa.",
+  "PIPELINE_STEP2_DEPMOD": "Uudelleenrakennetaan ytimen symboliriippuvuuspuu (depmod)...",
+  "PIPELINE_STEP3_DRACUT": "Dracut Initramfs -luonti",
+  "PIPELINE_STEP4_LIMINE": "Limine-määritys ja BLAKE2B-tiiviste",
+  "PIPELINE_STEP5_SBCTL": "Secure Boot yhtenäinen allekirjoitusten varmennus",
+  "PIPELINE_ALL_UP_TO_DATE": "Kaikki asennetut levykuvat ovat ajan tasalla",
+  "PIPELINE_BLAKE2B_ENROLLED": "BLAKE2B rekisteröity onnistuneesti",
+  "DRACUT_HARDWARE_PARALLEL": "Laitteistovahti: Suorituskykyinen moniydinjärjestelmä havaittu. Rinnakkainen Dracut käytössä.",
+  "DRACUT_HARDWARE_SEQUENTIAL": "Laitteistovahti: Vakiolaitteisto havaittu. Peräkkäinen Dracut käytössä muistin säästämiseksi.",
+  "MENU_CMDLINE": "Määritä ytimen käynnistysparametrit (CMDLINE & Gaming Hub)",
+  "CMDLINE_TITLE": "YTIMEN KÄYNNISTYSPARAMETRIT JA GAMING HUB",
+  "CMDLINE_SAVED_SUCCESS": "Ytimen CMDLINE päivitetty, limine.conf luotu, BLAKE2B rekisteröity ja allekirjoitettu!"
 }

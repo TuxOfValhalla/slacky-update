@@ -4,7 +4,7 @@
 set -euo pipefail
 
 PRGNAM="slacky-update"
-VERSION="0.11"
+VERSION="0.12.0"
 ARCH="noarch"
 BUILD="1_slacky"
 
@@ -22,21 +22,29 @@ rm -f "/tmp/${PRGNAM}-"*.txz 2>/dev/null || true
 mkdir -p "${BUILD_DIR}" "${PKG_DIR}" "${OUTPUT_DIR}"
 
 # --- [ STAGING FILES ] ---
+mkdir -p "${PKG_DIR}/usr/bin"
 mkdir -p "${PKG_DIR}/usr/local/bin"
 mkdir -p "${PKG_DIR}/usr/local/lib/slacky-update"
 mkdir -p "${PKG_DIR}/usr/share/slacky-update/lib"
 mkdir -p "${PKG_DIR}/usr/share/slacky-update/locales"
+mkdir -p "${PKG_DIR}/usr/share/slacky-update/docs"
+mkdir -p "${PKG_DIR}/usr/local/lib/slacky-update/docs"
 mkdir -p "${PKG_DIR}/usr/share/applications"
 mkdir -p "${PKG_DIR}/usr/share/icons/hicolor/128x128/apps"
 mkdir -p "${PKG_DIR}/etc/xdg/autostart"
+mkdir -p "${PKG_DIR}/etc/cron.hourly"
 mkdir -p "${PKG_DIR}/etc/cron.weekly"
 mkdir -p "${PKG_DIR}/etc/kernel/postinst.d"
+mkdir -p "${PKG_DIR}/etc/boot/hooks/pre.d"
+mkdir -p "${PKG_DIR}/etc/boot/hooks/post.d"
 mkdir -p "${PKG_DIR}/var/cache/slacky-update"
 mkdir -p "${PKG_DIR}/install"
 
 chmod 0755 "${PKG_DIR}/var/cache/slacky-update"
 
 # --- [ FILE INSTALLATION ] ---
+install -m 0755 "${SRC_DIR}/bin/slacky-update" "${PKG_DIR}/usr/bin/"
+install -m 0755 "${SRC_DIR}/bin/slacky-update-tray" "${PKG_DIR}/usr/bin/"
 install -m 0755 "${SRC_DIR}/bin/slacky-update" "${PKG_DIR}/usr/local/bin/"
 install -m 0755 "${SRC_DIR}/bin/slacky-update-tray" "${PKG_DIR}/usr/local/bin/"
 install -m 0755 "${SRC_DIR}"/lib/*.sh "${PKG_DIR}/usr/local/lib/slacky-update/"
@@ -47,10 +55,24 @@ install -m 0644 "${SRC_DIR}/lib/slacky_update_i18n.py" "${PKG_DIR}/usr/share/sla
 install -m 0644 "${SRC_DIR}/lib/slacky_update_i18n.py" "${PKG_DIR}/usr/local/lib/slacky-update/"
 install -m 0644 "${SRC_DIR}"/locales/*.json "${PKG_DIR}/usr/share/slacky-update/locales/"
 
+if [ -d "${SRC_DIR}/docs" ]; then
+    install -m 0644 "${SRC_DIR}"/docs/*.md "${PKG_DIR}/usr/share/slacky-update/docs/" 2>/dev/null || true
+    install -m 0644 "${SRC_DIR}"/docs/*.md "${PKG_DIR}/usr/local/lib/slacky-update/docs/" 2>/dev/null || true
+fi
+if [ -f "${SRC_DIR}/SURVIVAL_GUIDE.md" ]; then
+    install -m 0644 "${SRC_DIR}/SURVIVAL_GUIDE.md" "${PKG_DIR}/usr/share/slacky-update/docs/" 2>/dev/null || true
+    install -m 0644 "${SRC_DIR}/SURVIVAL_GUIDE.md" "${PKG_DIR}/usr/local/lib/slacky-update/docs/" 2>/dev/null || true
+fi
+if [ -f "${SRC_DIR}/TECHNICAL_COMPANION_GUIDE.md" ]; then
+    install -m 0644 "${SRC_DIR}/TECHNICAL_COMPANION_GUIDE.md" "${PKG_DIR}/usr/share/slacky-update/docs/" 2>/dev/null || true
+    install -m 0644 "${SRC_DIR}/TECHNICAL_COMPANION_GUIDE.md" "${PKG_DIR}/usr/local/lib/slacky-update/docs/" 2>/dev/null || true
+fi
+
 install -m 0644 "${SRC_DIR}/desktop/slacky-update.desktop" "${PKG_DIR}/usr/share/applications/"
 install -m 0644 "${SRC_DIR}/desktop/slacky-update-tray.desktop" "${PKG_DIR}/usr/share/applications/"
 install -m 0644 "${SRC_DIR}/desktop/slacky-update-tray.desktop" "${PKG_DIR}/etc/xdg/autostart/"
 
+install -m 0755 "${SRC_DIR}/cron/slacky-snapper-limine-sync" "${PKG_DIR}/etc/cron.hourly/"
 install -m 0755 "${SRC_DIR}/cron/slacky-update-check" "${PKG_DIR}/etc/cron.weekly/"
 
 if [ -f "${SRC_DIR}/assets/hooks/slacky-limine-hook" ]; then
@@ -102,6 +124,21 @@ cat << 'DOINST_EOF' > "${PKG_DIR}/install/doinst.sh"
 
 mkdir -p /var/cache/slacky-update
 chmod 0755 /var/cache/slacky-update 2>/dev/null || true
+
+mkdir -p /etc/boot/hooks/pre.d /etc/boot/hooks/post.d 2>/dev/null || true
+if [ -d /usr/lib64/limine ] && [ ! -d /usr/lib/limine ] && [ ! -L /usr/lib/limine ]; then
+    ln -sf /usr/lib64/limine /usr/lib/limine 2>/dev/null || true
+fi
+if [ -x /usr/bin/limine-enroll-config ] && [ ! -e /etc/boot/hooks/post.d/90-limine-enroll-config ]; then
+    ln -sf /usr/bin/limine-enroll-config /etc/boot/hooks/post.d/90-limine-enroll-config 2>/dev/null || true
+fi
+if [ -x /usr/bin/limine-reset-enroll ] && [ ! -e /etc/boot/hooks/pre.d/10-limine-reset-enroll ]; then
+    ln -sf /usr/bin/limine-reset-enroll /etc/boot/hooks/pre.d/10-limine-reset-enroll 2>/dev/null || true
+fi
+
+if [ -f /etc/cron.hourly/slacky-snapper-limine-sync ]; then
+    chmod 0755 /etc/cron.hourly/slacky-snapper-limine-sync 2>/dev/null || true
+fi
 
 if [ -f /etc/cron.weekly/slacky-update-check ]; then
     chmod 0755 /etc/cron.weekly/slacky-update-check 2>/dev/null || true

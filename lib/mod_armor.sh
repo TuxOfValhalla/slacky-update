@@ -4,6 +4,13 @@
 set -euo pipefail
 
 audit_secure_boot_readiness() {
+    resolve_mok_keypair
+
+    # If we already have a valid MOK keypair (from existing signed kernels or /etc/mok), we are ready to sign!
+    if [ -n "${MOK_KEY}" ] && { [ -n "${MOK_CRT}" ] || [ -n "${MOK_DER}" ]; }; then
+        return 0
+    fi
+
     local mokutil_bin
     mokutil_bin=$(command -v mokutil 2>/dev/null || echo "/usr/bin/mokutil")
 
@@ -12,13 +19,6 @@ audit_secure_boot_readiness() {
     fi
 
     if ! "${mokutil_bin}" --sb-state 2>/dev/null | grep -qi "enabled"; then
-        return 0
-    fi
-
-    resolve_mok_keypair
-
-    # If we already have a valid MOK keypair (from existing signed kernels or /etc/mok), we are ready to sign!
-    if [ -n "${MOK_KEY}" ] && { [ -n "${MOK_CRT}" ] || [ -n "${MOK_DER}" ]; }; then
         return 0
     fi
 
@@ -236,8 +236,11 @@ except Exception:
     trap - INT TERM
     if [ "${newly_signed}" -eq 1 ]; then
         sudo depmod -a "${target_kver}" 2>/dev/null || true
-        log_success "Applied MOK signature to kernel modules for: ${target_kver}"
+        if [ "${ARMOR_PIPELINE_MODE:-0}" != "1" ]; then
+            log_success "Applied MOK signature to kernel modules for: ${target_kver}"
+        fi
         ARMOR_NEWLY_SIGNED=1
+        ARMOR_SIGNED_LIST+=("${target_kver}")
     fi
     return 0
 }
@@ -293,18 +296,29 @@ sign_kernel_images() {
 }
 
 enforce_secure_boot_armor() {
+    local mode="${1:-}"
     validate_privileges
     audit_secure_boot_readiness
     resolve_mok_keypair
 
     if [ -z "${MOK_KEY}" ] || { [ -z "${MOK_CRT}" ] && [ -z "${MOK_DER}" ]; }; then
-        log_info "No MOK keypair configured. Skipping Secure Boot signing."
+        if [ "${mode}" = "--pipeline" ]; then
+            echo "Skipped (No MOK configured)"
+        else
+            log_info "No MOK keypair configured. Skipping Secure Boot signing."
+        fi
         return 0
     fi
 
-    log_info "Verifying and enforcing Secure Boot MOK armor..."
+    local ARMOR_PIPELINE_MODE=0
+    if [ "${mode}" = "--pipeline" ]; then
+        ARMOR_PIPELINE_MODE=1
+    else
+        log_info "Verifying and enforcing Secure Boot MOK armor..."
+    fi
 
     ARMOR_NEWLY_SIGNED=0
+    local ARMOR_SIGNED_LIST=()
 
     # 1. Sign kernel binaries in /boot
     sign_kernel_images
@@ -319,8 +333,18 @@ enforce_secure_boot_armor() {
         done
     fi
 
-    if [ "${ARMOR_NEWLY_SIGNED}" -eq 0 ]; then
-        log_info "All kernel images and modules are verified signed with active MOK."
+    if [ "${ARMOR_PIPELINE_MODE}" -eq 1 ]; then
+        if [ "${#ARMOR_SIGNED_LIST[@]}" -gt 0 ]; then
+            local joined
+            joined=$(IFS=', '; echo "${ARMOR_SIGNED_LIST[*]}")
+            echo "Signed kernel modules (${joined})"
+        else
+            echo "Verified signed with active MOK"
+        fi
+    else
+        if [ "${ARMOR_NEWLY_SIGNED}" -eq 0 ]; then
+            log_info "All kernel images and modules are verified signed with active MOK."
+        fi
     fi
 
     # 3. Silent Self-Heal Guard: Verify EFI bootloader integrity

@@ -284,7 +284,7 @@ class SlackyUpdateTray(QSystemTrayIcon):
         data = self.load_status()
         total_updates = 0
         if data:
-            total_updates = len(data.get("slackware_updates", [])) + len(data.get("flatpak_updates", [])) + len(data.get("sbo_updates", [])) + len(data.get("cachyos_kernel_updates", [])) + len(data.get("cachyos_gaming_updates", [])) + len(data.get("nvidia_driver_updates", []))
+            total_updates = len(data.get("slackware_updates", [])) + len(data.get("slackpkgplus_updates", [])) + len(data.get("flatpak_updates", [])) + len(data.get("sbo_updates", [])) + len(data.get("cachyos_kernel_updates", [])) + len(data.get("cachyos_gaming_updates", [])) + len(data.get("nvidia_driver_updates", []))
         if total_updates > 0 or (data and data.get("nvidia_gl_mismatch", False)):
             self.setIcon(self.icon_pending_full)
         else:
@@ -352,6 +352,7 @@ class SlackyUpdateTray(QSystemTrayIcon):
         data = self.load_status()
 
         slack_list = data.get("slackware_updates", []) if data else []
+        slackpkgplus_list = data.get("slackpkgplus_updates", []) if data else []
         flatpak_list = data.get("flatpak_updates", []) if data else []
         sbo_list = data.get("sbo_updates", []) if data else []
         cachy_list = data.get("cachyos_kernel_updates", []) if data else []
@@ -359,7 +360,7 @@ class SlackyUpdateTray(QSystemTrayIcon):
         nvidia_list = data.get("nvidia_driver_updates", []) if data else []
         nvidia_mismatch = data.get("nvidia_gl_mismatch", False) if data else False
 
-        total_updates = len(slack_list) + len(flatpak_list) + len(sbo_list) + len(cachy_list) + len(gaming_list) + len(nvidia_list)
+        total_updates = len(slack_list) + len(slackpkgplus_list) + len(flatpak_list) + len(sbo_list) + len(cachy_list) + len(gaming_list) + len(nvidia_list)
 
         if not self.is_checking and not self.pulse_timer.isActive():
             if nvidia_mismatch or total_updates > 0:
@@ -375,6 +376,8 @@ class SlackyUpdateTray(QSystemTrayIcon):
                 details = []
                 if slack_list:
                     details.append(f"{_('CAT_SLACKWARE')}: {len(slack_list)}")
+                if slackpkgplus_list:
+                    details.append(f"{_('CAT_SLACKPKGPLUS')}: {len(slackpkgplus_list)}")
                 if flatpak_list:
                     details.append(f"{_('CAT_FLATPAK')}: {len(flatpak_list)}")
                 if sbo_list:
@@ -408,12 +411,13 @@ class SlackyUpdateTray(QSystemTrayIcon):
         data = self.load_status()
 
         slack_list = data.get("slackware_updates", []) if data else []
+        slackpkgplus_list = data.get("slackpkgplus_updates", []) if data else []
         flatpak_list = data.get("flatpak_updates", []) if data else []
         sbo_list = data.get("sbo_updates", []) if data else []
         cachy_list = data.get("cachyos_kernel_updates", []) if data else []
         gaming_list = data.get("cachyos_gaming_updates", []) if data else []
         nvidia_list = data.get("nvidia_driver_updates", []) if data else []
-        total_updates = len(slack_list) + len(flatpak_list) + len(sbo_list) + len(cachy_list) + len(gaming_list) + len(nvidia_list)
+        total_updates = len(slack_list) + len(slackpkgplus_list) + len(flatpak_list) + len(sbo_list) + len(cachy_list) + len(gaming_list) + len(nvidia_list)
 
         self.pending_menu.setTitle(_("UPDATES_AVAILABLE", count=total_updates))
         self.pending_menu.clear()
@@ -421,6 +425,7 @@ class SlackyUpdateTray(QSystemTrayIcon):
         if total_updates > 0:
             pipeline = [
                 (_("CAT_SLACKWARE"), slack_list),
+                (_("CAT_SLACKPKGPLUS"), slackpkgplus_list),
                 (_("CAT_FLATPAK"), flatpak_list),
                 (_("CAT_SBO"), sbo_list),
                 (_("CAT_KERNEL"), cachy_list),
@@ -430,10 +435,20 @@ class SlackyUpdateTray(QSystemTrayIcon):
             for title, pkgs in pipeline:
                 if pkgs:
                     self.pending_menu.addSection(f"{title} ({len(pkgs)})")
-                    for pkg in pkgs:
-                        action = QAction(f"  {pkg}", self.pending_menu)
-                        action.setEnabled(False)
-                        self.pending_menu.addAction(action)
+                    if len(pkgs) <= 25:
+                        for pkg in pkgs:
+                            action = QAction(f"  {pkg}", self.pending_menu)
+                            action.setEnabled(False)
+                            self.pending_menu.addAction(action)
+                    else:
+                        for pkg in pkgs[:20]:
+                            action = QAction(f"  {pkg}", self.pending_menu)
+                            action.setEnabled(False)
+                            self.pending_menu.addAction(action)
+                        rem_count = len(pkgs) - 20
+                        more_act = QAction(f"  ... and {rem_count} more", self.pending_menu)
+                        more_act.setEnabled(False)
+                        self.pending_menu.addAction(more_act)
         else:
             no_up = QAction(_("ALL_PACKAGES_UP_TO_DATE"), self.pending_menu)
             no_up.setEnabled(False)

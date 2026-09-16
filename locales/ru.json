@@ -3,6 +3,7 @@
   "SYSTEM_DEFAULT_LANG": "Системный по умолчанию (Auto)",
   "CLI_TITLE": "Slacky-Update v{version}",
   "CAT_SLACKWARE": "Пакеты Slackware",
+  "CAT_SLACKPKGPLUS": "Пакеты Multilib и Slackpkg+",
   "CAT_FLATPAK": "Приложения Flatpak",
   "CAT_KERNEL": "Ядро CachyOS",
   "CAT_NVIDIA": "Драйвер NVIDIA",
@@ -165,5 +166,19 @@
   "MENU_LIMINE": "Limine Bootloader & Secure Boot Matrix (BLAKE2B Hashing, Snapshots & Self-Heal)",
   "MENU_SBCTL": "UEFI Secure Boot Control Center (sbctl Key Enrollment & MOK)",
   "PROMPT_INSTALL_LIMINE": "Deploy Limine Bootloader in Coexistence Mode? [Y/n] ",
-  "LIMINE_INSTALL_SUCCESS": "Limine Bootloader successfully installed! GRUB fallback preserved."
+  "LIMINE_INSTALL_SUCCESS": "Limine Bootloader successfully installed! GRUB fallback preserved.",
+  "MENU_FIELD_GUIDE": "Руководство пользователя и мобильный экспорт (PDF / Email / QR-код)",
+  "PIPELINE_HEADER": "Синхронизация матрицы ядер, initramfs, Limine BLAKE2B и Secure Boot...",
+  "PIPELINE_STEP1_NVIDIA": "Сопоставление модулей драйвера NVIDIA CachyOS в дереве ядра.",
+  "PIPELINE_STEP2_DEPMOD": "Перестроение дерева зависимостей символов ядра (depmod)...",
+  "PIPELINE_STEP3_DRACUT": "Генерация Initramfs через Dracut",
+  "PIPELINE_STEP4_LIMINE": "Конфигурация Limine и хеш BLAKE2B",
+  "PIPELINE_STEP5_SBCTL": "Единая проверка подписей Secure Boot",
+  "PIPELINE_ALL_UP_TO_DATE": "Все установленные образы обновлены",
+  "PIPELINE_BLAKE2B_ENROLLED": "Хеш BLAKE2B успешно зарегистрирован",
+  "DRACUT_HARDWARE_PARALLEL": "Аппаратная защита: Обнаружена высокопроизводительная многоядерная система. Включен параллельный Dracut.",
+  "DRACUT_HARDWARE_SEQUENTIAL": "Аппаратная защита: Обнаружено стандартное оборудование. Включен последовательный Dracut для экономии памяти.",
+  "MENU_CMDLINE": "Настройка параметров загрузки ядра (CMDLINE и Gaming Hub)",
+  "CMDLINE_TITLE": "ПАРАМЕТРЫ ЗАГРУЗКИ ЯДРА И GAMING HUB",
+  "CMDLINE_SAVED_SUCCESS": "CMDLINE ядра обновлена, limine.conf сгенерирован, BLAKE2B зарегистрирован и подписан!"
 }

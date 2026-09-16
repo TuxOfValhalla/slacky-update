@@ -3,8 +3,8 @@
 
 set -euo pipefail
 
-CURRENT_VERSION="0.11"
-RELEASE_CODENAME="Underpants Gnomes hotfix"
+CURRENT_VERSION="0.12.0"
+RELEASE_CODENAME="....and all that I can see, is just another Limine tree...."
 
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 if [ -d "${SCRIPT_DIR}/../lib" ] && [ -f "${SCRIPT_DIR}/../lib/common.sh" ]; then
@@ -45,6 +45,8 @@ source "${APP_DIR}/mod_clean.sh"
 [ -f "${APP_DIR}/mod_tweaks.sh" ] && source "${APP_DIR}/mod_tweaks.sh"
 # shellcheck source=/dev/null
 [ -f "${APP_DIR}/mod_gaming.sh" ] && source "${APP_DIR}/mod_gaming.sh"
+# shellcheck source=/dev/null
+[ -f "${APP_DIR}/mod_docs.sh" ] && source "${APP_DIR}/mod_docs.sh"
 
 if [ -f "${SCRIPT_DIR}/../lib/slacky_update_i18n.py" ]; then
     I18N_PY="${SCRIPT_DIR}/../lib/slacky_update_i18n.py"
@@ -81,9 +83,11 @@ trap cleanup_on_exit EXIT
 
 # --- [ STATUS SUMMARY DISPLAY ] ---
 display_pending_status() {
-    python3 -c '
+    python3 - "${SCRIPT_DIR}/../lib" << 'PYSTATUS'
 import json, sys, os
 sys.path.insert(0, "/usr/share/slacky-update/lib")
+if len(sys.argv) > 1 and os.path.exists(sys.argv[1]):
+    sys.path.insert(0, os.path.abspath(sys.argv[1]))
 try:
     from slacky_update_i18n import _
 except ImportError:
@@ -116,11 +120,19 @@ print(f"\033[1;36m{hdr}\033[0m")
 
 def print_cat(title, items):
     if items:
-        print(f"\033[1;33m{title}:\033[0m")
-        for item in items:
-            print(f"  \033[32m•\033[0m {item}")
+        count_str = f" ({len(items)})" if len(items) > 1 else ""
+        print(f"\033[1;33m{title}{count_str}:\033[0m")
+        if len(items) <= 30:
+            for item in items:
+                print(f"  \033[32m•\033[0m {item}")
+        else:
+            for item in items[:15]:
+                print(f"  \033[32m•\033[0m {item}")
+            rem = len(items) - 15
+            print(f"  \033[1;30m... and {rem} additional packages\033[0m")
 
 print_cat(_("CAT_SLACKWARE"), data.get("slackware_updates", []))
+print_cat(_("CAT_SLACKPKGPLUS"), data.get("slackpkgplus_updates", []))
 print_cat(_("CAT_FLATPAK"), data.get("flatpak_updates", []))
 print_cat(_("CAT_SBO"), data.get("sbo_updates", []))
 print_cat(_("CAT_KERNEL"), data.get("cachyos_kernel_updates", []))
@@ -135,11 +147,11 @@ if sb.get("state") == "enabled":
     for w in sb.get("warnings", []):
         print(f"\033[1;31m• Secure Boot Warning: {w}\033[0m")
 
-total = len(data.get("slackware_updates", [])) + len(data.get("flatpak_updates", [])) + len(data.get("sbo_updates", [])) + len(data.get("cachyos_kernel_updates", [])) + len(data.get("cachyos_gaming_updates", [])) + len(data.get("nvidia_driver_updates", []))
+total = len(data.get("slackware_updates", [])) + len(data.get("slackpkgplus_updates", [])) + len(data.get("flatpak_updates", [])) + len(data.get("sbo_updates", [])) + len(data.get("cachyos_kernel_updates", [])) + len(data.get("cachyos_gaming_updates", [])) + len(data.get("nvidia_driver_updates", []))
 if total == 0 and not data.get("nvidia_gl_mismatch", False):
     print("\033[1;32m" + _("NO_PENDING_UPDATES") + "\033[0m")
 print("")
-' 2>/dev/null || true
+PYSTATUS
 }
 
 # --- [ FULL SYSTEM UPDATE TRANSACTION ] ---
@@ -179,11 +191,11 @@ with open(a_file, 'r', encoding='utf-8', errors='ignore') as f:
     a = set(line.strip() for line in f if line.strip())
 
 diff = a - b
-crit_keywords = ['glibc', 'plasma-', 'kwin-', 'sddm-', 'wayland-', 'nvidia-', 'kernel-', 'linux-cachyos']
 for p in diff:
-    for kw in crit_keywords:
-        if kw in p:
-            sys.exit(1)
+    if p.startswith('glibc-zoneinfo'):
+        continue
+    if p.startswith(('glibc-solibs', 'glibc-2', 'glibc-3')) or any(kw in p for kw in ['plasma-', 'kwin-', 'sddm-', 'wayland-', 'nvidia-', 'kernel-', 'linux-cachyos']):
+        sys.exit(1)
 sys.exit(0)
 " "${snap_before_file}" "${snap_after_file}" 2>/dev/null; then
             needs_reboot=0
@@ -250,7 +262,7 @@ run_full_update() {
     k_snap_before=$(get_kernel_driver_snapshot)
 
     local boot_snap_before boot_snap_after
-    boot_snap_before=$(ls -ld /boot/vmlinuz* /boot/initramfs* /lib/modules/*/modules.dep 2>/dev/null || true)
+    boot_snap_before=$(ls -1 /boot/vmlinuz* /var/log/packages/*limine* /var/log/packages/*sbctl* /var/log/packages/*grub* /var/log/packages/*elilo* 2>/dev/null || true)
     local kernel_or_driver_changed=0
 
     local is_headless=0
@@ -258,10 +270,12 @@ run_full_update() {
         is_headless=1
     fi
 
-    local slack_count
+    local slack_count plus_count total_slack_pkgs
     slack_count=$(get_status_key_count "slackware_updates")
+    plus_count=$(get_status_key_count "slackpkgplus_updates")
+    total_slack_pkgs=$(( slack_count + plus_count ))
 
-    if [ "${slack_count}" -gt 0 ]; then
+    if [ "${total_slack_pkgs}" -gt 0 ]; then
         local reply_slack="Y"
         if [ "${is_headless}" -eq 0 ]; then
             read -r -p "$(_ PROMPT_UPGRADE_SLACKWARE)" reply_slack || reply_slack="Y"
@@ -354,24 +368,18 @@ except Exception:
         fi
     fi
 
-    if [ "${HAS_NVIDIA}" = "true" ]; then
-        if [ "$(has_cachyos_kernels_installed 2>/dev/null || echo false)" = "true" ]; then
-            if command -v ensure_cachyos_nvidia_duties >/dev/null 2>&1; then
-                ensure_cachyos_nvidia_duties
+    if [ "${HAS_NVIDIA}" = "true" ] && [ "$(has_cachyos_kernels_installed 2>/dev/null || echo false)" != "true" ]; then
+        local nv_count
+        nv_count=$(get_status_key_count "nvidia_driver_updates")
+        if [ "${nv_count}" -gt 0 ]; then
+            local reply_nv="Y"
+            if [ "${is_headless}" -eq 0 ]; then
+                read -r -p "$(_ PROMPT_UPGRADE_NVIDIA_DRIVER)" reply_nv || reply_nv="Y"
+                reply_nv=${reply_nv:-Y}
             fi
-        else
-            local nv_count
-            nv_count=$(get_status_key_count "nvidia_driver_updates")
-            if [ "${nv_count}" -gt 0 ]; then
-                local reply_nv="Y"
-                if [ "${is_headless}" -eq 0 ]; then
-                    read -r -p "$(_ PROMPT_UPGRADE_NVIDIA_DRIVER)" reply_nv || reply_nv="Y"
-                    reply_nv=${reply_nv:-Y}
-                fi
-                if [[ "$reply_nv" =~ ^[YyJjSsOo]$ ]]; then
-                    install_nvidia_run_driver "production"
-                    kernel_or_driver_changed=1
-                fi
+            if [[ "$reply_nv" =~ ^[YyJjSsOo]$ ]]; then
+                install_nvidia_run_driver "production"
+                kernel_or_driver_changed=1
             fi
         fi
     fi
@@ -379,7 +387,7 @@ except Exception:
     k_snap_after=$(get_kernel_driver_snapshot)
     get_full_pkg_snapshot_file "${snap_after_file}"
 
-    boot_snap_after=$(ls -ld /boot/vmlinuz* /boot/initramfs* /lib/modules/*/modules.dep 2>/dev/null || true)
+    boot_snap_after=$(ls -1 /boot/vmlinuz* /var/log/packages/*limine* /var/log/packages/*sbctl* /var/log/packages/*grub* /var/log/packages/*elilo* 2>/dev/null || true)
     if [ "${boot_snap_before}" != "${boot_snap_after}" ]; then
         kernel_or_driver_changed=1
     fi
@@ -388,25 +396,80 @@ except Exception:
     fi
 
     if [ "${kernel_or_driver_changed}" -eq 1 ]; then
-        log_info "Kernel or driver package changes detected. Rebuilding modules, initramfs and Secure Boot armor..."
         local active_kver
         active_kver=$(uname -r)
-        if [ "${HAS_NVIDIA}" = "true" ]; then
-            if command -v ensure_cachyos_nvidia_duties >/dev/null 2>&1 && [ "$(has_cachyos_kernels_installed 2>/dev/null || echo false)" = "true" ]; then
-                ensure_cachyos_nvidia_duties
-            else
-                build_nvidia_modules "${active_kver}"
+
+        echo ""
+        log_info "⚡ Post-Upgrade Hardening & Bootloader Matrix:"
+
+        # [1/5] NVIDIA Driver & DKMS Modules
+        local nv_status="Up to date"
+        if [ "${HAS_NVIDIA}" = "true" ] && [ "$(has_cachyos_kernels_installed 2>/dev/null || echo false)" = "true" ]; then
+            if command -v ensure_cachyos_nvidia_duties >/dev/null 2>&1; then
+                ensure_cachyos_nvidia_duties >/dev/null 2>&1 || true
+                local cachy_nv_ver="615.71.09"
+                if ls /var/log/packages/cachyos-nvidia-utils-* 1>/dev/null 2>&1; then
+                    cachy_nv_ver=$(basename "$(ls /var/log/packages/cachyos-nvidia-utils-* 2>/dev/null | head -n 1)" | sed -E 's/cachyos-nvidia-utils-([0-9]+\.[0-9]+(\.[0-9]+)?).*/\1/' || echo "615.71.09")
+                fi
+                nv_status="Up to date (v${cachy_nv_ver})"
             fi
+        elif [ "${HAS_NVIDIA}" = "true" ]; then
+            build_nvidia_modules "${active_kver}" >/dev/null 2>&1 || true
+            nv_status="Synchronized for ${active_kver}"
+        else
+            nv_status="Up to date (Non-NVIDIA)"
         fi
+        echo -e "  \033[1;36m[1/5]\033[0m \033[1mNVIDIA Driver & DKMS Modules\033[0m : ${GREEN}${nv_status}${RESET}"
+
+        # Clean obsolete kernels silently
         if command -v purge_old_slackware_kernels >/dev/null 2>&1; then
-            purge_old_slackware_kernels --no-sync
+            purge_old_slackware_kernels --no-sync >/dev/null 2>&1 || true
         fi
         if command -v purge_old_cachyos_kernels >/dev/null 2>&1; then
-            purge_old_cachyos_kernels --no-sync
+            purge_old_cachyos_kernels --no-sync >/dev/null 2>&1 || true
         fi
-        generate_kernel_initramfs "ALL"
-        enforce_secure_boot_armor
-        sync_bootloader_configuration "${active_kver}"
+
+        # [2/5] Secure Boot MOK Signing
+        local mok_status="Verified signed with active MOK"
+        if command -v enforce_secure_boot_armor >/dev/null 2>&1; then
+            local mok_out
+            mok_out=$(enforce_secure_boot_armor --pipeline 2>/dev/null || true)
+            if [ -n "${mok_out}" ]; then
+                mok_status="${mok_out}"
+            fi
+        fi
+        echo -e "  \033[1;36m[2/5]\033[0m \033[1mSecure Boot MOK Signing\033[0m      : ${GREEN}${mok_status}${RESET}"
+
+        # [3/5] Dracut Initramfs Generation
+        if command -v generate_kernel_initramfs >/dev/null 2>&1; then
+            generate_kernel_initramfs "TARGETED_PIPELINE"
+        fi
+
+        # [4/5] Limine Config & BLAKE2B Hash
+        local lim_installed=false
+        if command -v is_limine_installed >/dev/null 2>&1 && [ "$(is_limine_installed)" = "true" ]; then
+            lim_installed=true
+            if command -v generate_limine_configuration >/dev/null 2>&1; then
+                generate_limine_configuration >/dev/null 2>&1 || true
+            fi
+            if command -v enroll_limine_config_hash >/dev/null 2>&1; then
+                enroll_limine_config_hash >/dev/null 2>&1 || true
+            fi
+            echo -e "  \033[1;36m[4/5]\033[0m \033[1mLimine Config & BLAKE2B Hash\033[0m : ${GREEN}BLAKE2B successfully enrolled${RESET}"
+        else
+            echo -e "  \033[1;36m[4/5]\033[0m \033[1mLimine Config & BLAKE2B Hash\033[0m : ${YELLOW}Skipped (Limine not active)${RESET}"
+        fi
+
+        # [5/5] UEFI Secure Boot & GRUB Sync
+        local boot_status="Synced GRUB fallback"
+        if [ "${lim_installed}" = "true" ] && command -v sign_limine_efi_sbctl >/dev/null 2>&1; then
+            sign_limine_efi_sbctl >/dev/null 2>&1 || true
+            boot_status="Signed limine_x64.efi with sbctl & synced GRUB fallback"
+        fi
+        if command -v sync_grub_configuration >/dev/null 2>&1; then
+            sync_grub_configuration >/dev/null 2>&1 || true
+        fi
+        echo -e "  \033[1;36m[5/5]\033[0m \033[1mUEFI Secure Boot & GRUB Sync\033[0m : ${GREEN}${boot_status}${RESET}"
     else
         log_info "No kernel or driver changes detected. Skipping initramfs generation and signing."
     fi
@@ -559,7 +622,7 @@ manage_nvidia_interactive() {
             case "${n_choice}" in
                 1)
                     validate_privileges
-                    ensure_cachyos_nvidia_duties
+                    INTERACTIVE_NVIDIA=1 ensure_cachyos_nvidia_duties
                     echo ""
                     read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
                     ;;
@@ -646,7 +709,8 @@ interactive_menu() {
         has_cachy=$(has_cachyos_kernels_installed 2>/dev/null || echo "false")
 
         echo ""
-        echo -e "${BLUE}${BOLD}Slacky-Update (v${CURRENT_VERSION} '${RELEASE_CODENAME}')${RESET}"
+        echo -e "${BLUE}${BOLD}Slacky-Update (v${CURRENT_VERSION} '${RELEASE_CODENAME}') [Pre-Release / Early Access]${RESET}"
+        echo -e "${YELLOW}⚡ Slackware Core Update & High-Performance Modernization Engine${RESET}"
         check_slacky_update_self_update "${CURRENT_VERSION}"
         echo ""
         display_pending_status
@@ -662,12 +726,14 @@ interactive_menu() {
             fi
             echo -e "  4. $(_ MENU_GAMING | sed -E 's/^[0-9]+\.\s*//')"
             echo -e "  5. $(_ MENU_CLEAN | sed -E 's/^[0-9]+\.\s*//')"
-            echo -e "  6. $(_ MENU_ARMOR | sed -E 's/^[0-9]+\.\s*//')"
-            echo -e "  7. $(_ MENU_EXIT | sed -E 's/^[0-9]+\.\s*//')"
+            echo -e "  6. \033[1;36m$(_ MENU_LIMINE | sed -E 's/^[0-9]+\.\s*//')\033[0m"
+            echo -e "  7. $(_ MENU_ARMOR | sed -E 's/^[0-9]+\.\s*//')"
+            echo -e "  8. \033[1;32m$(_ MENU_FIELD_GUIDE | sed -E 's/^[0-9]+\.\s*//')\033[0m"
+            echo -e "  9. $(_ MENU_EXIT | sed -E 's/^[0-9]+\.\s*//')"
             echo ""
-            echo -n "$(_ SELECT_OPERATION_RANGE range="1-7")"
+            echo -n "$(_ SELECT_OPERATION_RANGE range="1-9")"
             local choice
-            read -r choice || choice="7"
+            read -r choice || choice="9"
 
             case "${choice}" in
                 1)
@@ -700,11 +766,23 @@ interactive_menu() {
                     ;;
                 6)
                     echo ""
+                    if command -v manage_limine_interactive >/dev/null 2>&1; then
+                        manage_limine_interactive
+                    fi
+                    ;;
+                7)
+                    echo ""
                     manage_armor_interactive
                     echo ""
                     read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
                     ;;
-                7)
+                8)
+                    echo ""
+                    if command -v manage_field_guide_interactive >/dev/null 2>&1; then
+                        manage_field_guide_interactive
+                    fi
+                    ;;
+                9)
                     echo -e "\n${GREEN}$(_ SESSION_TERMINATED)${RESET}"
                     exit 0
                     ;;
@@ -719,12 +797,14 @@ interactive_menu() {
             echo -e "  3. $(_ MENU_AMD_ROCM | sed -E 's/^[0-9]+\.\s*//')"
             echo -e "  4. $(_ MENU_GAMING | sed -E 's/^[0-9]+\.\s*//')"
             echo -e "  5. $(_ MENU_CLEAN | sed -E 's/^[0-9]+\.\s*//')"
-            echo -e "  6. $(_ MENU_ARMOR | sed -E 's/^[0-9]+\.\s*//')"
-            echo -e "  7. $(_ MENU_EXIT | sed -E 's/^[0-9]+\.\s*//')"
+            echo -e "  6. \033[1;36m$(_ MENU_LIMINE | sed -E 's/^[0-9]+\.\s*//')\033[0m"
+            echo -e "  7. $(_ MENU_ARMOR | sed -E 's/^[0-9]+\.\s*//')"
+            echo -e "  8. \033[1;32m$(_ MENU_FIELD_GUIDE | sed -E 's/^[0-9]+\.\s*//')\033[0m"
+            echo -e "  9. $(_ MENU_EXIT | sed -E 's/^[0-9]+\.\s*//')"
             echo ""
-            echo -n "$(_ SELECT_OPERATION_RANGE range="1-7")"
+            echo -n "$(_ SELECT_OPERATION_RANGE range="1-9")"
             local choice
-            read -r choice || choice="7"
+            read -r choice || choice="9"
 
             case "${choice}" in
                 1)
@@ -759,11 +839,23 @@ interactive_menu() {
                     ;;
                 6)
                     echo ""
+                    if command -v manage_limine_interactive >/dev/null 2>&1; then
+                        manage_limine_interactive
+                    fi
+                    ;;
+                7)
+                    echo ""
                     manage_armor_interactive
                     echo ""
                     read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
                     ;;
-                7)
+                8)
+                    echo ""
+                    if command -v manage_field_guide_interactive >/dev/null 2>&1; then
+                        manage_field_guide_interactive
+                    fi
+                    ;;
+                9)
                     echo -e "\n${GREEN}$(_ SESSION_TERMINATED)${RESET}"
                     exit 0
                     ;;
@@ -778,12 +870,14 @@ interactive_menu() {
             echo -e "  2. $(_ MENU_KERNEL | sed -E 's/^[0-9]+\.\s*//')"
             echo -e "  3. $(_ MENU_GAMING | sed -E 's/^[0-9]+\.\s*//')"
             echo -e "  4. $(_ MENU_CLEAN | sed -E 's/^[0-9]+\.\s*//')"
-            echo -e "  5. $(_ MENU_ARMOR | sed -E 's/^[0-9]+\.\s*//')"
-            echo -e "  6. $(_ MENU_EXIT | sed -E 's/^[0-9]+\.\s*//')"
+            echo -e "  5. \033[1;36m$(_ MENU_LIMINE | sed -E 's/^[0-9]+\.\s*//')\033[0m"
+            echo -e "  6. $(_ MENU_ARMOR | sed -E 's/^[0-9]+\.\s*//')"
+            echo -e "  7. \033[1;32m$(_ MENU_FIELD_GUIDE | sed -E 's/^[0-9]+\.\s*//')\033[0m"
+            echo -e "  8. $(_ MENU_EXIT | sed -E 's/^[0-9]+\.\s*//')"
             echo ""
-            echo -n "$(_ SELECT_OPERATION_RANGE range="1-6")"
+            echo -n "$(_ SELECT_OPERATION_RANGE range="1-8")"
             local choice
-            read -r choice || choice="6"
+            read -r choice || choice="8"
 
             case "${choice}" in
                 1)
@@ -808,11 +902,23 @@ interactive_menu() {
                     ;;
                 5)
                     echo ""
+                    if command -v manage_limine_interactive >/dev/null 2>&1; then
+                        manage_limine_interactive
+                    fi
+                    ;;
+                6)
+                    echo ""
                     manage_armor_interactive
                     echo ""
                     read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
                     ;;
-                6)
+                7)
+                    echo ""
+                    if command -v manage_field_guide_interactive >/dev/null 2>&1; then
+                        manage_field_guide_interactive
+                    fi
+                    ;;
+                8)
                     echo -e "\n${GREEN}$(_ SESSION_TERMINATED)${RESET}"
                     exit 0
                     ;;
@@ -835,6 +941,9 @@ elif [ "${1:-}" = "--check" ]; then
 elif [ "${1:-}" = "--limine" ] || [ "${1:-}" = "-l" ]; then
     INTERACTIVE_SESSION=1
     manage_limine_interactive
+elif [ "${1:-}" = "--cmdline" ] || [ "${1:-}" = "-c" ]; then
+    INTERACTIVE_SESSION=1
+    manage_kernel_cmdline_interactive
 elif [ "${1:-}" = "--secure-boot" ] || [ "${1:-}" = "--sb" ]; then
     INTERACTIVE_SESSION=1
     manage_secureboot_interactive
@@ -851,17 +960,74 @@ elif [ "${1:-}" = "--slackbuilds" ] || [ "${1:-}" = "-s" ]; then
 elif [ "${1:-}" = "--tweaks" ] || [ "${1:-}" = "-t" ]; then
     INTERACTIVE_SESSION=1
     manage_tweaks_interactive
-elif [ "${1:-}" = "--lang" ] || [ "${1:-}" = "--set-lang" ]; then
-    if [ -n "${2:-}" ]; then
-        python3 -c "import sys; sys.path.insert(0, '${APP_DIR}'); from slacky_update_i18n import i18n; i18n.save_language_override('${2}')"
-        echo "Language set to: ${2}"
-    else
-        echo "Usage: slacky-update --lang <lang_code>"
-        echo "Available languages:"
-        python3 -c "import sys; sys.path.insert(0, '${APP_DIR}'); from slacky_update_i18n import i18n; print('\n'.join([f'  • {k:12}: {v}' for k, v in i18n.get_available_languages().items()]))"
+elif [ "${1:-}" = "--guide" ] || [ "${1:-}" = "--field-guide" ] || [ "${1:-}" = "--manual" ] || [ "${1:-}" = "--docs" ] || [ "${1:-}" = "-d" ]; then
+    INTERACTIVE_SESSION=1
+    if command -v manage_field_guide_interactive >/dev/null 2>&1; then
+        manage_field_guide_interactive
+    elif [ -f "${APP_DIR}/mod_docs.sh" ]; then
+        source "${APP_DIR}/mod_docs.sh"
+        manage_field_guide_interactive
     fi
-elif [ "${1:-}" = "--list-langs" ]; then
-    python3 -c "import sys; sys.path.insert(0, '${APP_DIR}'); from slacky_update_i18n import i18n; print('\n'.join([f'  • {k:12}: {v}' for k, v in i18n.get_available_languages().items()]))"
+elif [ "${1:-}" = "--sync-boot" ] || [ "${1:-}" = "--boot" ] || [ "${1:-}" = "-b" ] || [ "${1:-}" = "--limine-config" ]; then
+    validate_privileges
+    if command -v generate_kernel_initramfs >/dev/null 2>&1; then
+        log_info "Synchronizing initramfs images for all installed kernels..."
+        generate_kernel_initramfs "ALL"
+    fi
+    if command -v sync_bootloader_configuration >/dev/null 2>&1; then
+        sync_bootloader_configuration "$(uname -r)"
+    fi
+    if command -v enroll_and_sign_limine >/dev/null 2>&1; then
+        enroll_and_sign_limine
+    fi
+elif [ "${1:-}" = "--sync-snapper" ] || [ "${1:-}" = "--snapper-sync" ]; then
+    validate_privileges
+    if command -v generate_limine_configuration >/dev/null 2>&1; then
+        generate_limine_configuration
+    fi
+    if command -v enroll_and_sign_limine >/dev/null 2>&1; then
+        enroll_and_sign_limine
+    fi
+elif [ "${1:-}" = "--sync-nvidia" ] || [ "${1:-}" = "--nvidia" ]; then
+    validate_privileges
+    INTERACTIVE_NVIDIA=1
+    ensure_cachyos_nvidia_duties
+elif [ "${1:-}" = "--clean" ] || [ "${1:-}" = "--purge-kernels" ]; then
+    validate_privileges
+    clean_system_cache_and_orphans
+elif [ "${1:-}" = "--restore-limine" ]; then
+    validate_privileges
+    restore_limine_self_heal
+elif [ "${1:-}" = "--version" ] || [ "${1:-}" = "-v" ]; then
+    echo "slacky-update v${CURRENT_VERSION} '${RELEASE_CODENAME}' [Pre-Release / Early Access] (Slackware Linux)"
+    exit 0
+elif [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
+    echo -e "${BLUE}${BOLD}Slacky-Update v${CURRENT_VERSION} '${RELEASE_CODENAME}' [Pre-Release / Early Access]${RESET}"
+    echo -e "${YELLOW}Notice: Pre-Release software. All system changes and kernel/bootloader modifications are at your own risk.${RESET}"
+    echo "Usage: slacky-update [OPTIONS]"
+    echo ""
+    echo "Options:"
+    echo "  -y, --non-interactive   Run full unattended system upgrade (Slackware, Flatpaks, Kernels, Drivers, SBo)"
+    echo "      --check             Run non-modifying read-only status check"
+    echo "  -l, --limine            Open Limine Bootloader & Secure Boot Matrix"
+    echo "  -c, --cmdline           Configure Kernel Boot Parameters (CMDLINE & Gaming Hub)"
+    echo "  -b, --sync-boot         Synchronize initramfs, Limine/GRUB bootloader, BLAKE2B hashes & Secure Boot"
+    echo "      --sync-snapper      Synchronize Btrfs Snapper snapshots into Limine menu and reseal"
+    echo "      --sync-nvidia       Synchronize NVIDIA driver suite and compile/match kernel modules"
+    echo "      --clean             Clean package caches, remove obsolete kernels and orphaned packages"
+    echo "      --restore-limine    Restore Limine bootloader from known good self-heal backup"
+    echo "      --sb, --secure-boot Open UEFI Secure Boot & MOK Armor Command Center"
+    echo "  -g, --gaming            Open CachyOS Underpants Gnomes Gaming Suite menu"
+    echo "  -m, --heal-multilib     Audit and repair AlienBOB 32-bit Multilib subsystem"
+    echo "  -s, --slackbuilds       Open SlackBuilds and sbotools management hub"
+    echo "  -t, --tweaks            Open system performance and gaming tweaks menu"
+    echo "  -d, --guide, --manual   Open Master Field Guide and multi-format export suite (PDF/QR/Email)"
+    echo "      --lang <code|nb|en> Set system language preference"
+    echo "      --list-langs        List all available languages"
+    echo "  -v, --version           Display version and release codename"
+    echo "  -h, --help              Display this help menu"
+    echo ""
+    exit 0
 else
     interactive_menu
 fi

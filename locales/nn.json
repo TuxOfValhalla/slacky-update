@@ -3,6 +3,7 @@
   "SYSTEM_DEFAULT_LANG": "Systemstandard (Auto)",
   "CLI_TITLE": "Slacky-Update v{version}",
   "CAT_SLACKWARE": "Slackware-pakkar",
+  "CAT_SLACKPKGPLUS": "Multilib- og Slackpkg+-pakkar",
   "CAT_FLATPAK": "Flatpak-program",
   "CAT_KERNEL": "CachyOS-kjerne",
   "CAT_NVIDIA": "NVIDIA-drivar",
@@ -165,5 +166,19 @@
   "MENU_LIMINE": "Limine Bootloader & Secure Boot-matrise (BLAKE2B-hashing, Snapshots & Self-Heal)",
   "MENU_SBCTL": "UEFI Secure Boot Kontrollsenter (sbctl-nøkkelregistrering & MOK)",
   "PROMPT_INSTALL_LIMINE": "Installere Limine Bootloader i sameksistens-modus? [J/n] ",
-  "LIMINE_INSTALL_SUCCESS": "Limine Bootloader er installert! GRUB fallback forblir intakt."
+  "LIMINE_INSTALL_SUCCESS": "Limine Bootloader er installert! GRUB fallback forblir intakt.",
+  "MENU_FIELD_GUIDE": "Systemhandbok og mobiloverføring (PDF / E-post / QR-kode)",
+  "PIPELINE_HEADER": "Synkroniserer kjernematrise, initramfs, Limine BLAKE2B og Secure Boot...",
+  "PIPELINE_STEP1_NVIDIA": "Matchar CachyOS NVIDIA-drivarmodular i kjernetreet.",
+  "PIPELINE_STEP2_DEPMOD": "Byggjer opp att modulavhengnadstre for kjerne (depmod)...",
+  "PIPELINE_STEP3_DRACUT": "Dracut Initramfs-generering",
+  "PIPELINE_STEP4_LIMINE": "Limine-konfigurasjon og BLAKE2B-sjekksum",
+  "PIPELINE_STEP5_SBCTL": "Secure Boot einskapleg signaturverifisering",
+  "PIPELINE_ALL_UP_TO_DATE": "Alle installerte avtrykk er oppdaterte",
+  "PIPELINE_BLAKE2B_ENROLLED": "BLAKE2B er registrert",
+  "DRACUT_HARDWARE_PARALLEL": "Maskinvaresikring: Høgymeleg fleirkjernesystem oppdaga. Parallell Dracut aktivert.",
+  "DRACUT_HARDWARE_SEQUENTIAL": "Maskinvaresikring: Standard maskinvare oppdaga. Sekvensiell Dracut aktivert for å skåne minnet.",
+  "MENU_CMDLINE": "Konfigurer kjerneparametrar (CMDLINE og gaming-hub)",
+  "CMDLINE_TITLE": "KJERNEN SINE OPPSTARTSPARAMETRAR OG GAMING-HUB",
+  "CMDLINE_SAVED_SUCCESS": "Kjerneparametrar oppdatert, limine.conf generert, BLAKE2B registrert og signert!"
 }

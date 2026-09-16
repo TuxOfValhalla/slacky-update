@@ -3,6 +3,7 @@
   "SYSTEM_DEFAULT_LANG": "Systemstandard (Auto)",
   "CLI_TITLE": "Slacky-Update v{version}",
   "CAT_SLACKWARE": "Slackware パッケージ",
+  "CAT_SLACKPKGPLUS": "Multilib および Slackpkg+ パッケージ",
   "CAT_FLATPAK": "Flatpak アプリケーション",
   "CAT_KERNEL": "CachyOS カーネル",
   "CAT_NVIDIA": "NVIDIA ドライバ",
@@ -165,5 +166,19 @@
   "MENU_LIMINE": "Limine Bootloader & Secure Boot Matrix (BLAKE2B Hashing, Snapshots & Self-Heal)",
   "MENU_SBCTL": "UEFI Secure Boot Control Center (sbctl Key Enrollment & MOK)",
   "PROMPT_INSTALL_LIMINE": "Deploy Limine Bootloader in Coexistence Mode? [Y/n] ",
-  "LIMINE_INSTALL_SUCCESS": "Limine Bootloader successfully installed! GRUB fallback preserved."
+  "LIMINE_INSTALL_SUCCESS": "Limine Bootloader successfully installed! GRUB fallback preserved.",
+  "MENU_FIELD_GUIDE": "システムフィールドガイドとモバイルエクスポート (PDF / メール / QRコード)",
+  "PIPELINE_HEADER": "カーネルマトリックス、initramfs、Limine BLAKE2B、セキュアブートを同期中...",
+  "PIPELINE_STEP1_NVIDIA": "カーネルツリー内で一致する CachyOS NVIDIA ドライバモジュールが有効です。",
+  "PIPELINE_STEP2_DEPMOD": "カーネルシンボル依存関係ツリーを再構築中 (depmod)...",
+  "PIPELINE_STEP3_DRACUT": "Dracut Initramfs 生成",
+  "PIPELINE_STEP4_LIMINE": "Limine 設定 & BLAKE2B ハッシュ",
+  "PIPELINE_STEP5_SBCTL": "セキュアブート統合署名検証",
+  "PIPELINE_ALL_UP_TO_DATE": "インストールされているすべてのイメージは最新です",
+  "PIPELINE_BLAKE2B_ENROLLED": "BLAKE2B が正常に登録されました",
+  "DRACUT_HARDWARE_PARALLEL": "ハードウェアガード: 高性能マルチコアシステムを検出しました。並列 Dracut を有効化。",
+  "DRACUT_HARDWARE_SEQUENTIAL": "ハードウェアガード: 標準ハードウェアを検出しました。メモリ保護のため順次 Dracut を有効化。",
+  "MENU_CMDLINE": "カーネル起動パラメータの設定 (CMDLINE & ゲーミングハブ)",
+  "CMDLINE_TITLE": "カーネル起動パラメータ & ゲーミングハブ",
+  "CMDLINE_SAVED_SUCCESS": "カーネル CMDLINE が更新され、limine.conf が生成され、BLAKE2B が登録および署名されました！"
 }

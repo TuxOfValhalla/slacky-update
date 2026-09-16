@@ -118,10 +118,10 @@ revert_tweak_limits() {
     log_success "File descriptor limits restored to stock Slackware defaults."
 }
 
-# --- [ 2. KERNEL MEMORY & THP (MADVISE) ] ---
+# --- [ 2. KERNEL MEMORY & THP (MADVISE + DEFER) ] ---
 
 deploy_tweak_thp_memory() {
-    log_info "Configuring Transparent Hugepages (madvise) and vm.max_map_count (2,147,483,642)..."
+    log_info "Configuring Transparent Hugepages (madvise + defer) and vm.max_map_count (2,147,483,642)..."
     sudo mkdir -p /etc/sysctl.d /etc/tmpfiles.d
 
     cat << 'EOF_SYSCTL' | sudo tee /etc/sysctl.d/99-slacky-gaming.conf >/dev/null
@@ -138,20 +138,27 @@ vm.dirty_background_ratio = 5
 EOF_SYSCTL
 
     cat << 'EOF_THP' | sudo tee /etc/tmpfiles.d/slacky-thp.conf >/dev/null
-# Slacky - Transparent Hugepages madvise mode
+# Slacky - Transparent Hugepages (madvise + defer meta)
 w /sys/kernel/mm/transparent_hugepage/enabled - - - - madvise
 w /sys/kernel/mm/transparent_hugepage/shmem_enabled - - - - advise
-w /sys/kernel/mm/transparent_hugepage/defrag - - - - defer+madvise
+w /sys/kernel/mm/transparent_hugepage/defrag - - - - defer
+w /sys/kernel/mm/transparent_hugepage/khugepaged/defrag - - - - 1
 EOF_THP
 
     sudo sysctl -p /etc/sysctl.d/99-slacky-gaming.conf >/dev/null 2>&1 || true
     if [ -w /sys/kernel/mm/transparent_hugepage/enabled ]; then
         echo madvise | sudo tee /sys/kernel/mm/transparent_hugepage/enabled >/dev/null 2>&1 || true
     fi
+    if [ -w /sys/kernel/mm/transparent_hugepage/defrag ]; then
+        echo defer | sudo tee /sys/kernel/mm/transparent_hugepage/defrag >/dev/null 2>&1 || true
+    fi
     if [ -w /sys/kernel/mm/transparent_hugepage/shmem_enabled ]; then
         echo advise | sudo tee /sys/kernel/mm/transparent_hugepage/shmem_enabled >/dev/null 2>&1 || true
     fi
-    log_success "THP (madvise) & memory parameters successfully applied!"
+    if [ -w /sys/kernel/mm/transparent_hugepage/khugepaged/defrag ]; then
+        echo 1 | sudo tee /sys/kernel/mm/transparent_hugepage/khugepaged/defrag >/dev/null 2>&1 || true
+    fi
+    log_success "THP (madvise + defer) & memory parameters successfully applied!"
 }
 
 revert_tweak_thp_memory() {
@@ -162,6 +169,9 @@ revert_tweak_thp_memory() {
     sudo sysctl -w vm.vfs_cache_pressure=100 >/dev/null 2>&1 || true
     if [ -w /sys/kernel/mm/transparent_hugepage/enabled ]; then
         echo always | sudo tee /sys/kernel/mm/transparent_hugepage/enabled >/dev/null 2>&1 || true
+    fi
+    if [ -w /sys/kernel/mm/transparent_hugepage/defrag ]; then
+        echo madvise | sudo tee /sys/kernel/mm/transparent_hugepage/defrag >/dev/null 2>&1 || true
     fi
     log_success "Kernel memory parameters restored to stock Slackware defaults."
 }

@@ -3,6 +3,7 @@
   "SYSTEM_DEFAULT_LANG": "Padrão do sistema (Auto)",
   "CLI_TITLE": "Slacky-Update v{version}",
   "CAT_SLACKWARE": "Pacotes Slackware",
+  "CAT_SLACKPKGPLUS": "Pacotes Multilib e Slackpkg+",
   "CAT_FLATPAK": "Aplicações Flatpak",
   "CAT_KERNEL": "Kernel CachyOS",
   "CAT_NVIDIA": "Driver NVIDIA",
@@ -165,5 +166,19 @@
   "MENU_LIMINE": "Limine Bootloader & Secure Boot Matrix (BLAKE2B Hashing, Snapshots & Self-Heal)",
   "MENU_SBCTL": "UEFI Secure Boot Control Center (sbctl Key Enrollment & MOK)",
   "PROMPT_INSTALL_LIMINE": "Deploy Limine Bootloader in Coexistence Mode? [Y/n] ",
-  "LIMINE_INSTALL_SUCCESS": "Limine Bootloader successfully installed! GRUB fallback preserved."
+  "LIMINE_INSTALL_SUCCESS": "Limine Bootloader successfully installed! GRUB fallback preserved.",
+  "MENU_FIELD_GUIDE": "Manual do sistema e exportação móvel (PDF / E-mail / Código QR)",
+  "PIPELINE_HEADER": "Sincronizando matriz de kernels, initramfs, Limine BLAKE2B e Secure Boot...",
+  "PIPELINE_STEP1_NVIDIA": "Módulos de driver NVIDIA CachyOS correspondentes ativos na árvore do kernel.",
+  "PIPELINE_STEP2_DEPMOD": "Reconstruindo a árvore de dependências de símbolos do kernel (depmod)...",
+  "PIPELINE_STEP3_DRACUT": "Geração de Initramfs com Dracut",
+  "PIPELINE_STEP4_LIMINE": "Configuração do Limine e Hash BLAKE2B",
+  "PIPELINE_STEP5_SBCTL": "Verificação unificada de assinaturas do Secure Boot",
+  "PIPELINE_ALL_UP_TO_DATE": "Todas as imagens instaladas estão atualizadas",
+  "PIPELINE_BLAKE2B_ENROLLED": "BLAKE2B registrado com sucesso",
+  "DRACUT_HARDWARE_PARALLEL": "Proteção de hardware: Sistema multinúcleo de alto desempenho detectado. Dracut paralelo ativado.",
+  "DRACUT_HARDWARE_SEQUENTIAL": "Proteção de hardware: Hardware padrão detectado. Dracut sequencial ativado para proteger a memória.",
+  "MENU_CMDLINE": "Configurar parâmetros do kernel (CMDLINE & Gaming Hub)",
+  "CMDLINE_TITLE": "PARÂMETROS DE INICIALIZAÇÃO DO KERNEL & GAMING HUB",
+  "CMDLINE_SAVED_SUCCESS": "CMDLINE do kernel atualizada, limine.conf gerado, BLAKE2B registrado e assinado!"
 }

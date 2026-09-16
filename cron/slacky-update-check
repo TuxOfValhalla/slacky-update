@@ -22,7 +22,7 @@ import json, os
 try:
     with open('${STATUS_FILE}', 'r') as f:
         d = json.load(f)
-    total = len(d.get('slackware_updates', [])) + len(d.get('flatpak_updates', [])) + len(d.get('sbo_updates', [])) + len(d.get('cachyos_kernel_updates', [])) + len(d.get('cachyos_gaming_updates', [])) + len(d.get('nvidia_driver_updates', []))
+    total = len(d.get('slackware_updates', [])) + len(d.get('slackpkgplus_updates', [])) + len(d.get('flatpak_updates', [])) + len(d.get('sbo_updates', [])) + len(d.get('cachyos_kernel_updates', [])) + len(d.get('cachyos_gaming_updates', [])) + len(d.get('nvidia_driver_updates', []))
     print('true' if total > 0 else 'false')
 except Exception:
     print('false')

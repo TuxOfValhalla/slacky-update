@@ -6,8 +6,6 @@ set -euo pipefail
 purge_old_cachyos_kernels() {
     validate_privileges
 
-    log_info "Auditing installed CachyOS kernels for retention policy (keep 2 newest per flavor)..."
-
     local remove_list
     remove_list=$(python3 -c "
 import os, re
@@ -31,9 +29,12 @@ def parse_ver(v_str):
 
 cachy_kernels = set()
 if os.path.exists('/boot'):
-    for f in os.listdir('/boot'):
-        if 'cachyos' in f and f.startswith('vmlinuz-') and not os.path.islink(os.path.join('/boot', f)):
-            cachy_kernels.add(f.replace('vmlinuz-', ''))
+    try:
+        for f in os.listdir('/boot'):
+            if 'cachyos' in f and f.startswith('vmlinuz-') and not os.path.islink(os.path.join('/boot', f)):
+                cachy_kernels.add(f.replace('vmlinuz-', ''))
+    except Exception:
+        pass
 
 for mdir in ('/lib/modules', '/usr/lib/modules'):
     if os.path.exists(mdir):
@@ -63,7 +64,6 @@ for k in to_remove:
 " 2>/dev/null || true)
 
     if [ -z "${remove_list}" ]; then
-        log_info "No obsolete CachyOS kernels to purge. Retaining installed versions."
         return 0
     fi
 
@@ -106,8 +106,6 @@ for k in to_remove:
 purge_old_slackware_kernels() {
     validate_privileges
 
-    log_info "Auditing Slackware stock kernels for retention policy (keep 1 newest)..."
-
     local remove_list
     remove_list=$(python3 -c "
 import os, re
@@ -119,11 +117,14 @@ def parse_ver(v_str):
 
 slack_kernels = set()
 if os.path.exists('/boot'):
-    for f in os.listdir('/boot'):
-        if f.startswith('vmlinuz-') and 'cachyos' not in f and not os.path.islink(os.path.join('/boot', f)):
-            v = f.replace('vmlinuz-', '')
-            if v and v != 'generic' and v != 'huge':
-                slack_kernels.add(v)
+    try:
+        for f in os.listdir('/boot'):
+            if f.startswith('vmlinuz-') and 'cachyos' not in f and not os.path.islink(os.path.join('/boot', f)):
+                v = f.replace('vmlinuz-', '')
+                if v and v != 'generic' and v != 'huge':
+                    slack_kernels.add(v)
+    except Exception:
+        pass
 
 for mdir in ('/lib/modules', '/usr/lib/modules'):
     if os.path.exists(mdir):

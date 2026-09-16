@@ -74,8 +74,9 @@ install_cachyos_rocm_suite() {
 
     local mirror_url="https://mirror.cachyos.org/repo/x86_64/cachyos"
     local arch_mirror_url="https://geo-mirror.pkgbuild.com/extra/os/x86_64"
+    local arch_multilib_url="https://geo-mirror.pkgbuild.com/multilib/os/x86_64"
 
-    log_info "Scanning upstream repository for ROCm & HIP packages..."
+    log_info "Scanning upstream repository for ROCm & HIP 64-bit and 32-bit multilib packages..."
 
     local rocm_pkgs=(
         "rocm-core"
@@ -85,6 +86,8 @@ install_cachyos_rocm_suite() {
         "rocm-opencl-runtime"
         "rocm-hip-runtime"
         "hip-runtime-amd"
+        "lib32-rocm-opencl-runtime"
+        "lib32-opencl-icd-loader"
     )
 
     local dl_dir="$(get_user_staging_dir)/rocm-dl"
@@ -99,6 +102,8 @@ install_cachyos_rocm_suite() {
     m_index=$(curl -sSL -m 10 "${mirror_url}/" 2>/dev/null || echo "")
     local arch_index
     arch_index=$(curl -sSL -m 10 "${arch_mirror_url}/" 2>/dev/null || echo "")
+    local multilib_index
+    multilib_index=$(curl -sSL -m 10 "${arch_multilib_url}/" 2>/dev/null || echo "")
 
     for rpkg in "${rocm_pkgs[@]}"; do
         local pkg_file
@@ -110,6 +115,11 @@ install_cachyos_rocm_suite() {
             base_url="${arch_mirror_url}"
         fi
 
+        if [ -z "${pkg_file}" ]; then
+            pkg_file=$(echo "${multilib_index}" | grep -o -E "${rpkg}-[0-9][^\"'>]+\.pkg\.tar\.zst" | sort -V | tail -n 1 || true)
+            base_url="${arch_multilib_url}"
+        fi
+
         if [ -n "${pkg_file}" ]; then
             rocm_dl_items+=("${base_url}/${pkg_file}|${dl_dir}/${pkg_file}")
             resolved_pkgs+=("${dl_dir}/${pkg_file}")
@@ -119,7 +129,7 @@ install_cachyos_rocm_suite() {
     done
 
     if [ ${#rocm_dl_items[@]} -gt 0 ]; then
-        if ! download_parallel_pacman "AMD ROCm / HIP Creator Suite" "${rocm_dl_items[@]}"; then
+        if ! download_parallel_pacman "AMD ROCm / HIP Creator Suite (64-bit & Multilib)" "${rocm_dl_items[@]}"; then
             log_warn "Some ROCm components failed to download."
         fi
         validate_privileges
@@ -133,11 +143,14 @@ install_cachyos_rocm_suite() {
     # Clean Arch Linux packaging metadata
     sudo rm -f "${staging_root}/.BUILDINFO" "${staging_root}/.INSTALL" "${staging_root}/.MTREE" "${staging_root}/.PKGINFO"
 
-    # Setup OpenCL amdocl64.icd
+    # Setup OpenCL ICDs (64-bit and 32-bit multilib)
     echo "libamdocl64.so" | sudo tee "${staging_root}/etc/OpenCL/vendors/amdocl64.icd" >/dev/null
+    if [ -f "${staging_root}/usr/lib32/libamdocl32.so" ] || [ -f "${staging_root}/opt/rocm/lib/libamdocl32.so" ] || [ -f "${staging_root}/usr/lib32/libOpenCL.so" ]; then
+        echo "libamdocl32.so" | sudo tee "${staging_root}/etc/OpenCL/vendors/amdocl32.icd" >/dev/null
+    fi
 
-    # Setup ldconfig path
-    echo -e "/opt/rocm/lib\n/opt/rocm/lib64\n/usr/lib64/rocm" | sudo tee "${staging_root}/etc/ld.so.conf.d/rocm.conf" >/dev/null
+    # Setup ldconfig paths for both 64-bit and 32-bit multilib ROCm libraries
+    echo -e "/opt/rocm/lib\n/opt/rocm/lib64\n/opt/rocm/lib32\n/usr/lib64/rocm\n/usr/lib/rocm" | sudo tee "${staging_root}/etc/ld.so.conf.d/rocm.conf" >/dev/null
 
     # Setup profile scripts
     cat << 'ROCM_SH_EOF' | sudo tee "${staging_root}/etc/profile.d/rocm.sh" >/dev/null

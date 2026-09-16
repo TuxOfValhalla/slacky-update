@@ -3,6 +3,7 @@
   "SYSTEM_DEFAULT_LANG": "Predeterminado del sistema (Auto)",
   "CLI_TITLE": "Slacky-Update v{version}",
   "CAT_SLACKWARE": "Paquetes Slackware",
+  "CAT_SLACKPKGPLUS": "Paquetes Multilib y Slackpkg+",
   "CAT_FLATPAK": "Aplicaciones Flatpak",
   "CAT_KERNEL": "Núcleo CachyOS",
   "CAT_NVIDIA": "Controlador NVIDIA",
@@ -165,5 +166,19 @@
   "MENU_LIMINE": "Limine Bootloader & Secure Boot Matrix (BLAKE2B Hashing, Snapshots & Self-Heal)",
   "MENU_SBCTL": "UEFI Secure Boot Control Center (sbctl Key Enrollment & MOK)",
   "PROMPT_INSTALL_LIMINE": "Deploy Limine Bootloader in Coexistence Mode? [Y/n] ",
-  "LIMINE_INSTALL_SUCCESS": "Limine Bootloader successfully installed! GRUB fallback preserved."
+  "LIMINE_INSTALL_SUCCESS": "Limine Bootloader successfully installed! GRUB fallback preserved.",
+  "MENU_FIELD_GUIDE": "Guía del sistema y exportación móvil (PDF / Correo / Código QR)",
+  "PIPELINE_HEADER": "Sincronizando matriz de kernels, initramfs, Limine BLAKE2B y Secure Boot...",
+  "PIPELINE_STEP1_NVIDIA": "Módulos de controlador NVIDIA CachyOS coincidentes activos en el árbol del kernel.",
+  "PIPELINE_STEP2_DEPMOD": "Reconstruyendo árbol de dependencias de símbolos del kernel (depmod)...",
+  "PIPELINE_STEP3_DRACUT": "Generación de Initramfs con Dracut",
+  "PIPELINE_STEP4_LIMINE": "Configuración de Limine y Hash BLAKE2B",
+  "PIPELINE_STEP5_SBCTL": "Verificación de firmas unificada de Secure Boot",
+  "PIPELINE_ALL_UP_TO_DATE": "Todas las imágenes instaladas están actualizadas",
+  "PIPELINE_BLAKE2B_ENROLLED": "BLAKE2B registrado con éxito",
+  "DRACUT_HARDWARE_PARALLEL": "Protección de hardware: Sistema multinúcleo de alto rendimiento detectado. Dracut paralelo activado.",
+  "DRACUT_HARDWARE_SEQUENTIAL": "Protección de hardware: Hardware estándar detectado. Dracut secuencial activado para proteger memoria.",
+  "MENU_CMDLINE": "Configurar parámetros del kernel (CMDLINE y Gaming Hub)",
+  "CMDLINE_TITLE": "PARÁMETROS DE ARRANQUE DEL KERNEL Y GAMING HUB",
+  "CMDLINE_SAVED_SUCCESS": "¡CMDLINE del kernel actualizado, limine.conf generado, BLAKE2B registrado y firmado!"
 }

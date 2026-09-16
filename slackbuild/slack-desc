@@ -9,10 +9,10 @@
 slacky-update: slacky-update (Slackware & CachyOS Workstation Suite)
 slacky-update:
 slacky-update: A comprehensive update and management engine for Slackware Linux.
-slacky-update: Integrates CachyOS kernels (BORE, LTS, RC), NVIDIA DKMS and
-slacky-update: CachyOS-Master suite sync, Dracut initramfs, UEFI Secure Boot
-slacky-update: automation (MOK), Underpants Gnomes gaming suite, multilib audit,
-slacky-update: SBo SlackBuilds hub, and automated fail-safe recovery.
+slacky-update: Integrates Limine bootloader, 100% Dracut initramfs, UEFI Secure
+slacky-update: Boot automation (sbctl & MOK), CachyOS kernels (BORE, LTS, RC),
+slacky-update: NVIDIA DKMS & CachyOS-Master sync, Underpants Gnomes gaming suite,
+slacky-update: multilib audit, SBo SlackBuilds hub, and fail-safe recovery.
 slacky-update:
 slacky-update: Homepage: https://codeberg.org/tuxofvalhalla/slacky-update
 slacky-update:

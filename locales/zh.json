@@ -3,6 +3,7 @@
   "SYSTEM_DEFAULT_LANG": "Systemstandard (Auto)",
   "CLI_TITLE": "Slacky-Update v{version}",
   "CAT_SLACKWARE": "Slackware 软件包",
+  "CAT_SLACKPKGPLUS": "Multilib 和 Slackpkg+ 软件包",
   "CAT_FLATPAK": "Flatpak 应用",
   "CAT_KERNEL": "CachyOS 内核",
   "CAT_NVIDIA": "NVIDIA 驱动",
@@ -165,5 +166,19 @@
   "MENU_LIMINE": "Limine Bootloader & Secure Boot Matrix (BLAKE2B Hashing, Snapshots & Self-Heal)",
   "MENU_SBCTL": "UEFI Secure Boot Control Center (sbctl Key Enrollment & MOK)",
   "PROMPT_INSTALL_LIMINE": "Deploy Limine Bootloader in Coexistence Mode? [Y/n] ",
-  "LIMINE_INSTALL_SUCCESS": "Limine Bootloader successfully installed! GRUB fallback preserved."
+  "LIMINE_INSTALL_SUCCESS": "Limine Bootloader successfully installed! GRUB fallback preserved.",
+  "MENU_FIELD_GUIDE": "系统操作指南与移动导出 (PDF / 邮件 / 二维码)",
+  "PIPELINE_HEADER": "同步内核矩阵、initramfs、Limine BLAKE2B 与安全启动...",
+  "PIPELINE_STEP1_NVIDIA": "内核树中匹配的 CachyOS NVIDIA 驱动模块已激活。",
+  "PIPELINE_STEP2_DEPMOD": "重建内核符号依赖树 (depmod)...",
+  "PIPELINE_STEP3_DRACUT": "Dracut Initramfs 生成",
+  "PIPELINE_STEP4_LIMINE": "Limine 配置与 BLAKE2B 哈希",
+  "PIPELINE_STEP5_SBCTL": "安全启动统一签名验证",
+  "PIPELINE_ALL_UP_TO_DATE": "所有已安装的镜像均为最新状态",
+  "PIPELINE_BLAKE2B_ENROLLED": "BLAKE2B 成功注册",
+  "DRACUT_HARDWARE_PARALLEL": "硬件防护：检测到高性能多核系统。已启用并行 Dracut。",
+  "DRACUT_HARDWARE_SEQUENTIAL": "硬件防护：检测到标准硬件。已启用顺序 Dracut 以保护系统内存。",
+  "MENU_CMDLINE": "配置内核启动参数 (CMDLINE 与游戏中心)",
+  "CMDLINE_TITLE": "内核启动参数与游戏中心",
+  "CMDLINE_SAVED_SUCCESS": "内核 CMDLINE 已更新，limine.conf 已生成，BLAKE2B 已注册并签名！"
 }

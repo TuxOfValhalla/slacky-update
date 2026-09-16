@@ -3,6 +3,7 @@
   "SYSTEM_DEFAULT_LANG": "System Default (English (Canada), eh)",
   "CLI_TITLE": "Slacky-Update v{version}: Royal Canadian Edition, Guy!",
   "CAT_SLACKWARE": "Slackware Packages (The Great White North)",
+  "CAT_SLACKPKGPLUS": "Multilib & Slackpkg+ Goodies, Eh",
   "CAT_FLATPAK": "Flatpak Applications, eh",
   "CAT_KERNEL": "CachyOS Moose-Powered Kernel",
   "CAT_NVIDIA": "NVIDIA Kraft Dinner Mojo",
@@ -165,5 +166,19 @@
   "MENU_LIMINE": "Limine Bootloader & Secure Boot Matrix (BLAKE2B Hashing, Snapshots & Self-Heal)",
   "MENU_SBCTL": "UEFI Secure Boot Control Center (sbctl Key Enrollment & MOK)",
   "PROMPT_INSTALL_LIMINE": "Deploy Limine Bootloader in Coexistence Mode? [Y/n] ",
-  "LIMINE_INSTALL_SUCCESS": "Limine Bootloader successfully installed! GRUB fallback preserved."
+  "LIMINE_INSTALL_SUCCESS": "Limine Bootloader successfully installed! GRUB fallback preserved.",
+  "MENU_FIELD_GUIDE": "Master Field Guide & Mobile Export (PDF / Email / Phone QR)",
+  "PIPELINE_HEADER": "Synchronizing system kernel matrix, initramfs, Limine BLAKE2B & Secure Boot, eh...",
+  "PIPELINE_STEP1_NVIDIA": "Matching CachyOS NVIDIA driver modules active in kernel tree, eh.",
+  "PIPELINE_STEP2_DEPMOD": "Rebuilding kernel symbol dependency tree (depmod), buddy...",
+  "PIPELINE_STEP3_DRACUT": "Dracut Initramfs Generation, eh",
+  "PIPELINE_STEP4_LIMINE": "Limine Config & BLAKE2B Hash, buddy",
+  "PIPELINE_STEP5_SBCTL": "Secure Boot Royal Signature Verification, eh",
+  "PIPELINE_ALL_UP_TO_DATE": "All installed images are fresh as morning frost, buddy!",
+  "PIPELINE_BLAKE2B_ENROLLED": "BLAKE2B successfully enrolled, as is tradition!",
+  "DRACUT_HARDWARE_PARALLEL": "Hardware Guard: Beastly multi-core rig detected. Parallel Dracut enabled, eh!",
+  "DRACUT_HARDWARE_SEQUENTIAL": "Hardware Guard: Standard gear detected. Sequential Dracut enabled to keep the igloo cool, buddy.",
+  "MENU_CMDLINE": "Configure Kernel Boot Parameters (CMDLINE & Gaming Hub, eh)",
+  "CMDLINE_TITLE": "ROYAL CANADIAN KERNEL BOOT PARAMETERS & GAMING HUB, EH",
+  "CMDLINE_SAVED_SUCCESS": "Kernel CMDLINE updated, limine.conf generated, BLAKE2B enrolled & signed, as is tradition!"
 }

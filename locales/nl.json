@@ -3,6 +3,7 @@
   "SYSTEM_DEFAULT_LANG": "Systemstandard (Auto)",
   "CLI_TITLE": "Slacky-Update v{version}",
   "CAT_SLACKWARE": "Slackware-pakketten",
+  "CAT_SLACKPKGPLUS": "Multilib- & Slackpkg+-pakketten",
   "CAT_FLATPAK": "Flatpak-toepassingen",
   "CAT_KERNEL": "CachyOS-kernel",
   "CAT_NVIDIA": "NVIDIA-stuurprogramma",
@@ -165,5 +166,19 @@
   "MENU_LIMINE": "Limine Bootloader & Secure Boot Matrix (BLAKE2B Hashing, Snapshots & Self-Heal)",
   "MENU_SBCTL": "UEFI Secure Boot Control Center (sbctl Key Enrollment & MOK)",
   "PROMPT_INSTALL_LIMINE": "Deploy Limine Bootloader in Coexistence Mode? [Y/n] ",
-  "LIMINE_INSTALL_SUCCESS": "Limine Bootloader successfully installed! GRUB fallback preserved."
+  "LIMINE_INSTALL_SUCCESS": "Limine Bootloader successfully installed! GRUB fallback preserved.",
+  "MENU_FIELD_GUIDE": "Systeemhandleiding en mobiele export (PDF / E-mail / QR-code)",
+  "PIPELINE_HEADER": "Kernelmatrix, initramfs, Limine BLAKE2B en Secure Boot synchroniseren...",
+  "PIPELINE_STEP1_NVIDIA": "Overeenkomende CachyOS NVIDIA-stuurprogrammampdules actief in kernelstructuur.",
+  "PIPELINE_STEP2_DEPMOD": "Kernel-symboolafhankelijkheidsstructuur opnieuw opbouwen (depmod)...",
+  "PIPELINE_STEP3_DRACUT": "Dracut Initramfs-generatie",
+  "PIPELINE_STEP4_LIMINE": "Limine-configuratie & BLAKE2B-hash",
+  "PIPELINE_STEP5_SBCTL": "Secure Boot uniforme handtekeningverificatie",
+  "PIPELINE_ALL_UP_TO_DATE": "Alle geïnstalleerde images zijn up-to-date",
+  "PIPELINE_BLAKE2B_ENROLLED": "BLAKE2B succesvol geregistreerd",
+  "DRACUT_HARDWARE_PARALLEL": "Hardwarebewaking: Krachtig multicoresysteem gedetecteerd. Parallelle Dracut ingeschakeld.",
+  "DRACUT_HARDWARE_SEQUENTIAL": "Hardwarebewaking: Standaardhardware gedetecteerd. Sequentiële Dracut ingeschakeld om geheugen te sparen.",
+  "MENU_CMDLINE": "Kernel-opstartparameters configureren (CMDLINE & Gaming Hub)",
+  "CMDLINE_TITLE": "KERNEL-OPSTARTPARAMETERS & GAMING HUB",
+  "CMDLINE_SAVED_SUCCESS": "Kernel-CMDLINE bijgewerkt, limine.conf gegenereerd, BLAKE2B geregistreerd en ondertekend!"
 }

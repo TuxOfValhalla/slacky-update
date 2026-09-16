@@ -3,6 +3,7 @@
   "SYSTEM_DEFAULT_LANG": "افتراضي النظام (العربية)",
   "CLI_TITLE": "Slacky-Update v{version}: مركز إدارة وتحديثات النظام",
   "CAT_SLACKWARE": "حزم نظام سلاكوير (Slackware)",
+  "CAT_SLACKPKGPLUS": "حزم Multilib و Slackpkg+",
   "CAT_FLATPAK": "تطبيقات فلاتباك (Flatpak)",
   "CAT_KERNEL": "نواة CachyOS",
   "CAT_NVIDIA": "برامج تشغيل NVIDIA",
@@ -165,5 +166,19 @@
   "MENU_LIMINE": "Limine Bootloader & Secure Boot Matrix (BLAKE2B Hashing, Snapshots & Self-Heal)",
   "MENU_SBCTL": "UEFI Secure Boot Control Center (sbctl Key Enrollment & MOK)",
   "PROMPT_INSTALL_LIMINE": "Deploy Limine Bootloader in Coexistence Mode? [Y/n] ",
-  "LIMINE_INSTALL_SUCCESS": "Limine Bootloader successfully installed! GRUB fallback preserved."
+  "LIMINE_INSTALL_SUCCESS": "Limine Bootloader successfully installed! GRUB fallback preserved.",
+  "MENU_FIELD_GUIDE": "دليل النظام والتصدير للهاتف (PDF / بريد إلكتروني / رمز QR)",
+  "PIPELINE_HEADER": "مزامنة مصفوفة النواة و initramfs و Limine BLAKE2B والإقلاع الآمن...",
+  "PIPELINE_STEP1_NVIDIA": "مطابقة وحدات تشغيل NVIDIA CachyOS النشطة في شجرة النواة.",
+  "PIPELINE_STEP2_DEPMOD": "إعادة بناء شجرة تبعيات رموز النواة (depmod)...",
+  "PIPELINE_STEP3_DRACUT": "إنشاء Initramfs عبر Dracut",
+  "PIPELINE_STEP4_LIMINE": "إعدادات Limine وتجزئة BLAKE2B",
+  "PIPELINE_STEP5_SBCTL": "التحقق الموحد من توقيعات الإقلاع الآمن",
+  "PIPELINE_ALL_UP_TO_DATE": "جميع الصور المثبتة محدثة",
+  "PIPELINE_BLAKE2B_ENROLLED": "تم تسجيل BLAKE2B بنجاح",
+  "DRACUT_HARDWARE_PARALLEL": "حماية العتاد: تم اكتشاف نظام متعدد الأنوية عالي الأداء. تم تفعيل Dracut المتوازي.",
+  "DRACUT_HARDWARE_SEQUENTIAL": "حماية العتاد: تم اكتشاف عتاد قياسي. تم تفعيل Dracut التسلسلي لحماية الذاكرة.",
+  "MENU_CMDLINE": "إعداد معلمات إقلاع النواة (CMDLINE ومركز الألعاب)",
+  "CMDLINE_TITLE": "معلمات إقلاع النواة ومركز الألعاب",
+  "CMDLINE_SAVED_SUCCESS": "تم تحديث CMDLINE للنواة، وإنشاء limine.conf، وتسجيل BLAKE2B وتوقيعه!"
 }

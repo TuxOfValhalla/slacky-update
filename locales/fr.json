@@ -3,6 +3,7 @@
   "SYSTEM_DEFAULT_LANG": "Par défaut du système (Auto)",
   "CLI_TITLE": "Slacky-Update v{version}",
   "CAT_SLACKWARE": "Paquets Slackware",
+  "CAT_SLACKPKGPLUS": "Paquets Multilib & Slackpkg+",
   "CAT_FLATPAK": "Applications Flatpak",
   "CAT_KERNEL": "Noyau CachyOS",
   "CAT_NVIDIA": "Pilote NVIDIA",
@@ -165,5 +166,19 @@
   "MENU_LIMINE": "Limine Bootloader & Secure Boot Matrix (BLAKE2B Hashing, Snapshots & Self-Heal)",
   "MENU_SBCTL": "UEFI Secure Boot Control Center (sbctl Key Enrollment & MOK)",
   "PROMPT_INSTALL_LIMINE": "Deploy Limine Bootloader in Coexistence Mode? [Y/n] ",
-  "LIMINE_INSTALL_SUCCESS": "Limine Bootloader successfully installed! GRUB fallback preserved."
+  "LIMINE_INSTALL_SUCCESS": "Limine Bootloader successfully installed! GRUB fallback preserved.",
+  "MENU_FIELD_GUIDE": "Guide système et export mobile (PDF / E-mail / Code QR)",
+  "PIPELINE_HEADER": "Synchronisation de la matrice des noyaux, initramfs, Limine BLAKE2B & Secure Boot...",
+  "PIPELINE_STEP1_NVIDIA": "Modules pilotes CachyOS NVIDIA correspondants dans l'arbre du noyau.",
+  "PIPELINE_STEP2_DEPMOD": "Reconstruction de l'arbre de dépendances des symboles du noyau (depmod)...",
+  "PIPELINE_STEP3_DRACUT": "Génération Dracut Initramfs",
+  "PIPELINE_STEP4_LIMINE": "Configuration Limine & Hash BLAKE2B",
+  "PIPELINE_STEP5_SBCTL": "Vérification unifiée des signatures Secure Boot",
+  "PIPELINE_ALL_UP_TO_DATE": "Toutes les images installées sont à jour",
+  "PIPELINE_BLAKE2B_ENROLLED": "BLAKE2B enregistré avec succès",
+  "DRACUT_HARDWARE_PARALLEL": "Protection matérielle : Système multicœur haute performance détecté. Dracut parallèle activé.",
+  "DRACUT_HARDWARE_SEQUENTIAL": "Protection matérielle : Matériel standard détecté. Dracut séquentiel activé pour protéger la mémoire.",
+  "MENU_CMDLINE": "Configurer les paramètres du noyau (CMDLINE & Gaming Hub)",
+  "CMDLINE_TITLE": "PARAMÈTRES DE DÉMARRAGE DU NOYAU & GAMING HUB",
+  "CMDLINE_SAVED_SUCCESS": "CMDLINE du noyau mise à jour, limine.conf généré, BLAKE2B enregistré et signé !"
 }

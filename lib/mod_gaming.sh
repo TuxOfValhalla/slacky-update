@@ -16,6 +16,7 @@ get_gaming_catalog() {
 mangohud|MangoHud (+ 32-bit Multilib & mangoapp)|engine|mangohud-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|lib32-mangohud-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|glfw-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos-extra-v3,arch-extra,arch-multilib,cachyos
 gamemode|Feral GameMode (+ 32-bit Multilib & Governor)|engine|gamemode-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|lib32-gamemode-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||cachyos-extra-v3,arch-extra,arch-multilib,cachyos
 goverlay|GOverlay (MangoHud GUI Configurator)|engine|goverlay-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||qt6pas-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|arch-extra,cachyos
+vram-booster|Dynamic VRAM Booster & Foreground Shield (dmemcg)|engine|dmemcg-booster-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst||plasma-foreground-booster-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|cachyos,chaotic-aur,arch-extra
 scx|Sched-EXT SCX Schedulers, Tools & Manager|engine|scx-manager-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||scx-scheds(?:-git)?-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,scx-tools(?:-git)?-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos,arch-extra
 ananicy|Ananicy-CPP & CachyOS Rules (Auto-Priority & Latency)|engine|ananicy-cpp(?:-git)?-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst||cachyos-ananicy-rules(?:-git)?-[0-9a-zA-Z_\.%:-]*\.pkg\.tar\.zst|cachyos,cachyos-extra-v3
 gamescope|Gamescope (Micro-Compositor & HDR/Upscaling)|engine|gamescope-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|lib32-gamescope-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|libavif-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos,arch-extra
@@ -23,7 +24,7 @@ retroarch|RetroArch (Multi-System Emulator & Shaders)|engine|retroarch-(?:[0-9]+
 heroic|Heroic Games Launcher (Epic, GOG, Amazon)|launcher|heroic-games-launcher-bin-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos,arch-extra
 lutris|Lutris Gaming Platform Manager|launcher|lutris(?:-git)?-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||webkit2gtk-4\.1-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libsoup3-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,python-moddb-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,python-pypresence-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,python-evdev-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,python-distro-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos,arch-extra
 faugus|Faugus Launcher (Fast Proton Launcher)|launcher|faugus-launcher-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||python-vdf-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,icoextract-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,python-pefile-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos
-protonplus|ProtonPlus (Wine/GE & Proton Manager)|launcher|(?:proton-plus|protonplus|protonup-qt)-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos,arch-extra
+protonplus|ProtonPlus (Wine/GE & Proton Manager)|launcher|(?:proton-plus|protonplus)-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos,arch-extra
 steam-devices|Steam Controller & Gamepad Udev Rules|launcher|game-devices-udev-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos,arch-extra
 lact|LACT (AMD/Intel GPU Overclocking & Fans)|hardware|lact-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||arch-extra,cachyos
 openrgb|OpenRGB (Hardware RGB Lighting Control)|hardware|openrgb(?:-git)?-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos,arch-extra
@@ -59,6 +60,38 @@ CATALOG_EOF
 }
 
 # --- [ HELPER FUNCTIONS ] ---
+is_gaming_pkg_whitelisted() {
+    local pkg_id="$1"
+    # Pre-release filter toggle (flip to false to test/view all upstream packages)
+    local filter_untested=true
+    if [ "${filter_untested}" != "true" ]; then
+        return 0
+    fi
+
+    # Always show packages if they are already installed on the system
+    local cur_ver
+    cur_ver=$(get_installed_gaming_pkg_version "${pkg_id}" 2>/dev/null || echo "NONE")
+    if [ "${cur_ver}" != "NONE" ]; then
+        return 0
+    fi
+
+    # Whitelist of 22 tested & verified suites for v0.12 Pre-Release
+    case "${pkg_id}" in
+        mangohud|gamemode|goverlay|vram-booster|scx|ananicy|\
+        heroic|lutris|faugus|protonplus|steam-devices|\
+        lact|openrgb|\
+        easyeffects|pear-desktop|audacity|\
+        inkscape|syncthing|\
+        obs-studio|discord|\
+        google-chrome|microsoft-edge)
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
 is_vram_booster_supported() {
     # AMD and Intel GPUs have in-kernel dmemcg support
     if [ "${HAS_AMD:-false}" = "true" ] || [ "${HAS_INTEL:-false}" = "true" ]; then
@@ -262,12 +295,15 @@ catalog = {}
 for line in raw_catalog_lines:
     if not line.strip():
         continue
-    parts = line.split("|")
-    if len(parts) >= 7:
-        pid, name, cat, main_pat, l32_pat, ext_pat, repos_str = parts[:7]
-        r_list = [r.strip() for r in repos_str.split(",") if r.strip()]
-        href_pat = rf'href=[\'\"]?({main_pat})[\'\"]?' if main_pat else None
-        catalog[pid] = (name, href_pat, r_list)
+    left_parts = line.split("|", 3)
+    if len(left_parts) >= 4:
+        pid, name, cat, remainder = left_parts
+        right_parts = remainder.rsplit("|", 3)
+        if len(right_parts) == 4:
+            main_pat, l32_pat, ext_pat, repos_str = right_parts
+            r_list = [r.strip() for r in repos_str.split(",") if r.strip()]
+            href_pat = rf'href=[\'\"]?({main_pat})[\'\"]?' if main_pat else None
+            catalog[pid] = (name, href_pat, r_list)
 
 def fetch_url_cached(url, cdir, ttl=1800):
     url_hash = hashlib.sha256(url.encode('utf-8')).hexdigest()[:16]
@@ -301,7 +337,8 @@ def clean_pkg_version(pid, raw_v):
     v = re.sub(r'-[0-9]+(?:\.[0-9]+)?$', '', v)
     v = re.sub(r'^[0-9]+(?:%3A|:|_)', '', v)
     if pid:
-        v = re.sub(rf'^(?:cachyos-gnome-)?(?:{re.escape(pid)}|{re.escape(pid.replace("-", ""))})(?:-bin|-git|-manager|-launcher|-rules|-udev)?-', '', v, flags=re.IGNORECASE)
+        pid_clean = pid.replace("-", "")
+        v = re.sub(rf'^(?:cachyos-gnome-)?(?:{re.escape(pid)}|{re.escape(pid_clean)})(?:-bin|-git|-manager|-launcher|-rules|-udev)?-', '', v, flags=re.IGNORECASE)
     v = re.sub(r'^[a-zA-Z0-9_\-+]+?-([0-9])', r'\1', v)
     return v
 
@@ -362,19 +399,27 @@ def check_single_package(pid, cur_ver):
     name, pat, r_list = catalog[pid]
     if not pat or pid == "steam-devices":
         return None
+    all_candidates = []
     for rk in r_list:
         base_u = repos.get(rk, "")
         html = repo_contents.get(base_u, "")
         if not html:
             continue
-        matches = re.findall(pat, html)
+        try:
+            matches = re.findall(pat, html)
+        except Exception:
+            matches = []
         if matches:
-            m = matches[0]
-            ver = m[1] if isinstance(m, tuple) and len(m) > 1 else (m[0] if isinstance(m, tuple) else m)
-            clean_ver = clean_pkg_version(pid, ver)
-            if is_strictly_greater(clean_ver, cur_ver):
-                return f"{name} {clean_ver} (Installed: {cur_ver})"
-            return None
+            for m in matches:
+                raw_pkg = m[0] if isinstance(m, tuple) else m
+                cv = clean_pkg_version(pid, raw_pkg)
+                if cv:
+                    all_candidates.append(cv)
+    if all_candidates:
+        all_candidates.sort(key=parse_version_key)
+        best_ver = all_candidates[-1]
+        if is_strictly_greater(best_ver, cur_ver):
+            return f"{name} {best_ver} (Installed: {cur_ver})"
     return None
 
 updates = []
@@ -504,7 +549,7 @@ repos = {
 
 catalog = {
     "mangohud": (r'href=[\'\"]?(mangohud-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(lib32-mangohud-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(glfw-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["cachyos-extra-v3", "arch-extra", "cachyos"], ["arch-multilib", "cachyos"]),
-    "gamemode": (r'href=[\'\"]?(gamemode-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.%:-]*\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(lib32-gamemode-[0-9][a-zA-Z0-9_\.%:-]*\.pkg\.tar\.zst)[\'\"]?', None, ["cachyos-extra-v3", "arch-extra", "cachyos"], ["arch-multilib", "cachyos"]),
+    "gamemode": (r'href=[\'\"]?(gamemode-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(lib32-gamemode-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, ["cachyos-extra-v3", "arch-extra", "cachyos"], ["arch-multilib", "cachyos"]),
     "goverlay": (r'href=[\'\"]?(goverlay-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(qt6pas-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["arch-extra", "cachyos"], []),
     "scx": (r'href=[\'\"]?(scx-manager-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
         r'href=[\'\"]?(scx-scheds(?:-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
@@ -589,7 +634,7 @@ catalog = {
         r'href=[\'\"]?(icoextract-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(python-pefile-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["cachyos", "arch-extra"], []),
-    "protonplus": (r'href=[\'\"]?((?:proton-plus|protonplus|protonup-qt)-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "arch-extra"], []),
+    "protonplus": (r'href=[\'\"]?((?:proton-plus|protonplus)-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "arch-extra"], []),
     "steam-devices": (None, None, None, [], []),
     "retroarch": (r'href=[\'\"]?(retroarch-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(retroarch-assets-ozone-(?:[0-9]+%3A)?([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["arch-extra", "cachyos"], []),
     "lact": (r'href=[\'\"]?(lact-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
@@ -621,7 +666,12 @@ catalog = {
         r'href=[\'\"]?(libayatana-appindicator-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(miniupnpc-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(numactl-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
-    ], ["cachyos", "arch-extra"], [])
+    ], ["cachyos", "arch-extra"], []),
+    "vram-booster": (r'href=[\'\"]?(dmemcg-booster-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(plasma-foreground-booster-([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["cachyos", "chaotic-aur", "arch-extra"], []),
+    "limine": (r'href=[\'\"]?(limine-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "arch-extra"], []),
+    "limine-entry-tool": (r'href=[\'\"]?(limine-entry-tool-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos"], []),
+    "limine-snapper-sync": (r'href=[\'\"]?(limine-snapper-sync-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos"], []),
+    "sbctl": (r'href=[\'\"]?(sbctl-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], [])
 }
 
 if pkg_id not in catalog:
@@ -655,9 +705,34 @@ def fetch_url_cached(url, cdir, ttl=1800):
     except Exception:
         return ""
 
-def fetch_match(pat, r_list):
+def clean_pkg_version(pid, raw_v):
+    v = urllib.parse.unquote(str(raw_v))
+    v = re.sub(r'\.pkg\.tar\.(?:zst|xz|gz)$', '', v)
+    v = re.sub(r'-(?:x86_64(?:_v[0-9]+)?|noarch|i[3-6]86|any|aarch64)(?:-[0-9a-zA-Z_]+)?$', '', v)
+    v = re.sub(r'-[0-9]+(?:\.[0-9]+)?$', '', v)
+    v = re.sub(r'^[0-9]+(?:%3A|:|_)', '', v)
+    if pid:
+        pid_clean = pid.replace("-", "")
+        v = re.sub(rf'^(?:cachyos-gnome-)?(?:{re.escape(pid)}|{re.escape(pid_clean)})(?:-bin|-git|-manager|-launcher|-rules|-udev)?-', '', v, flags=re.IGNORECASE)
+    v = re.sub(r'^[a-zA-Z0-9_\-+]+?-([0-9])', r'\1', v)
+    return v
+
+def parse_version_key(v_str):
+    clean = clean_pkg_version('', v_str)
+    parts = re.split(r'[-._+~]', clean)
+    res = []
+    for p in parts:
+        if p.isdigit():
+            res.append((0, int(p), ''))
+        else:
+            num = ''.join(c for c in p if c.isdigit())
+            res.append((1, int(num) if num else 0, p))
+    return res
+
+def fetch_match(pat, r_list, pid=''):
     if not pat:
         return None, None
+    candidates = []
     for r_key in r_list:
         base_url = repos.get(r_key, "")
         if not base_url:
@@ -665,19 +740,27 @@ def fetch_match(pat, r_list):
         html = fetch_url_cached(base_url, cache_dir)
         if not html:
             continue
-        matches = re.findall(pat, html)
-        if matches:
-            m = matches[0]
+        try:
+            matches = re.findall(pat, html)
+        except Exception:
+            matches = []
+        for m in matches:
             if isinstance(m, tuple):
                 fn = m[0]
                 ver = m[1] if len(m) > 1 else m[0]
             else:
                 fn = m
                 ver = m
-            return ver, base_url.rstrip("/") + "/" + fn
+            clean_v = clean_pkg_version(pid, ver)
+            url = base_url.rstrip("/") + "/" + fn
+            candidates.append((clean_v, url, ver))
+    if candidates:
+        candidates.sort(key=lambda c: parse_version_key(c[0]))
+        best = candidates[-1]
+        return best[2], best[1]
     return None, None
 
-main_ver, main_url = fetch_match(main_pat, main_repos)
+main_ver, main_url = fetch_match(main_pat, main_repos, pkg_id)
 
 aur_pkg_names = {
     "google-chrome": ("google-chrome", "google-chrome-{ver}-x86_64.pkg.tar.zst"),
@@ -712,7 +795,7 @@ if not main_ver or not main_url:
 
 lib32_url = "NONE"
 if lib32_pat:
-    _, l32_u = fetch_match(lib32_pat, lib32_repos or main_repos)
+    _, l32_u = fetch_match(lib32_pat, lib32_repos or main_repos, pkg_id)
     if l32_u:
         lib32_url = l32_u
 
@@ -741,13 +824,399 @@ if extra_pat:
     if extra_urls:
         extra_url = ",".join(extra_urls)
 
-decoded_ver = urllib.parse.unquote(main_ver)
-clean_ver = decoded_ver
-clean_ver = re.sub(r'-(?:x86_64(?:_v[0-9]+)?|noarch|i[3-6]86|any|aarch64).*$', '', clean_ver)
-clean_ver = re.sub(r'-[0-9]+(?:\.[0-9]+)?$', '', clean_ver)
-clean_ver = re.sub(r'^[0-9]+(?:%3A|:|_)', '', clean_ver)
+clean_ver = clean_pkg_version(pkg_id, main_ver)
 print(f"{clean_ver} {main_url} {lib32_url} {extra_url}")
 PYRESOLVE
+}
+
+resolve_multiple_gaming_upstreams_batch() {
+    local target_pids=("$@")
+    [ ${#target_pids[@]} -gt 0 ] || return 0
+
+    python3 - "${target_pids[@]}" << 'PYBATCHRESOLVE'
+import sys, os, re, time, datetime, json, urllib.request, urllib.parse, hashlib, concurrent.futures
+
+pkg_ids = sys.argv[1:]
+
+def get_cache_dir():
+    for d in ['/var/cache/slacky-update', os.path.expanduser('~/.cache/slacky-update'), '/tmp/slacky-update-cache']:
+        try:
+            os.makedirs(d, exist_ok=True)
+            test_f = os.path.join(d, '.write_test')
+            with open(test_f, 'w') as f: f.write('1')
+            os.remove(test_f)
+            return d
+        except Exception:
+            continue
+    return '/tmp'
+
+cache_dir = get_cache_dir()
+
+def get_chaotic_fastest_mirror(cdir):
+    m_file = os.path.join(cdir, 'chaotic_fastest_mirror.json')
+    now = time.time()
+    today_dt = datetime.datetime.now()
+    is_thursday = (today_dt.weekday() == 3)
+    today_str = today_dt.strftime('%Y-%m-%d')
+
+    if os.path.exists(m_file):
+        try:
+            with open(m_file, 'r', encoding='utf-8') as f:
+                d = json.load(f)
+            cached_m = d.get('mirror')
+            last_ts = d.get('timestamp', 0)
+            last_day = d.get('date', '')
+            if last_day == today_str and cached_m:
+                return cached_m
+            elif not is_thursday and (now - last_ts) < (7 * 86400) and cached_m:
+                return cached_m
+        except Exception:
+            pass
+
+    mirrors = [
+        'https://cdn-mirror.chaotic.cx/chaotic-aur/x86_64/',
+        'https://geo-mirror.chaotic.cx/chaotic-aur/x86_64/',
+        'https://de-1-mirror.chaotic.cx/chaotic-aur/x86_64/',
+        'https://de-2-mirror.chaotic.cx/chaotic-aur/x86_64/',
+        'https://de-4-mirror.chaotic.cx/chaotic-aur/x86_64/',
+        'https://es-mirror.chaotic.cx/chaotic-aur/x86_64/',
+        'https://bg-mirror.chaotic.cx/chaotic-aur/x86_64/',
+        'https://nl-1-mirror.chaotic.cx/chaotic-aur/x86_64/',
+        'https://fr-1-mirror.chaotic.cx/chaotic-aur/x86_64/',
+        'https://ca-mirror.chaotic.cx/chaotic-aur/x86_64/',
+        'https://us-mi-mirror.chaotic.cx/chaotic-aur/x86_64/',
+        'https://us-ut-mirror.chaotic.cx/chaotic-aur/x86_64/'
+    ]
+
+    def ping_m(u):
+        t0 = time.time()
+        try:
+            req = urllib.request.Request(u + 'chaotic-mirrorlist.pkg.tar.zst', headers={'User-Agent': 'Mozilla/5.0', 'Range': 'bytes=0-256'})
+            with urllib.request.urlopen(req, timeout=1.8) as resp:
+                resp.read(256)
+                return ((time.time() - t0) * 1000, u)
+        except Exception:
+            return (999999, u)
+
+    best_url = 'https://cdn-mirror.chaotic.cx/chaotic-aur/x86_64/'
+    best_lat = 999999
+    try:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(mirrors)) as ex:
+            results = list(ex.map(ping_m, mirrors))
+        valid = [r for r in results if r[0] < 90000]
+        if valid:
+            valid.sort(key=lambda x: x[0])
+            best_lat, best_url = valid[0]
+    except Exception:
+        pass
+
+    try:
+        with open(m_file, 'w', encoding='utf-8') as f:
+            json.dump({'mirror': best_url, 'timestamp': now, 'date': today_str, 'latency_ms': best_lat}, f)
+    except Exception:
+        pass
+    return best_url
+
+chaotic_fastest = get_chaotic_fastest_mirror(cache_dir)
+
+repos = {
+    "cachyos": "https://mirror.cachyos.org/repo/x86_64/cachyos/",
+    "cachyos-v3": "https://mirror.cachyos.org/repo/x86_64_v3/cachyos-v3/",
+    "cachyos-extra": "https://mirror.cachyos.org/repo/x86_64/cachyos-extra/",
+    "cachyos-extra-v3": "https://mirror.cachyos.org/repo/x86_64_v3/cachyos-extra-v3/",
+    "chaotic-aur": chaotic_fastest,
+    "chaotic-cdn": "https://cdn-mirror.chaotic.cx/chaotic-aur/x86_64/",
+    "arch-core": "https://geo.mirror.pkgbuild.com/core/os/x86_64/",
+    "arch-extra": "https://geo.mirror.pkgbuild.com/extra/os/x86_64/",
+    "arch-multilib": "https://geo.mirror.pkgbuild.com/multilib/os/x86_64/"
+}
+
+catalog = {
+    "mangohud": (r'href=[\'\"]?(mangohud-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(lib32-mangohud-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(glfw-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["cachyos-extra-v3", "arch-extra", "cachyos"], ["arch-multilib", "cachyos"]),
+    "gamemode": (r'href=[\'\"]?(gamemode-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(lib32-gamemode-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, ["cachyos-extra-v3", "arch-extra", "cachyos"], ["arch-multilib", "cachyos"]),
+    "goverlay": (r'href=[\'\"]?(goverlay-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(qt6pas-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["arch-extra", "cachyos"], []),
+    "scx": (r'href=[\'\"]?(scx-manager-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(scx-scheds(?:-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(scx-tools(?:-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    ], ["cachyos", "arch-extra"], []),
+    "easyeffects": (r'href=[\'\"]?(easyeffects-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(lsp-plugins-lv2-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(calf-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(mda\.lv2-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(zam-plugins-lv2-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(zita-convolver-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(rnnoise-(?:1%3A|1:)?([0-9a-zA-Z_\.:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libbs2b-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(soundtouch-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libebur128-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(webrtc-audio-processing-(?:2|1)-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(lilv-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(serd-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(sord-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(sratom-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(qt6-graphs-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(onetbb-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libmysofa-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(zix-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    ], ["arch-extra", "cachyos", "arch-core"], []),
+    "pear-desktop": (r'href=[\'\"]?(pear-desktop-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(electron42-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libjpeg-turbo-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    ], ["chaotic-aur", "chaotic-cdn", "arch-extra"], []),
+    "yabridge": (r'href=[\'\"]?(yabridge-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(lib32-yabridge-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(yabridgectl-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["arch-extra", "cachyos", "chaotic-aur"], ["arch-multilib", "cachyos"]),
+    "audacity": (r'href=[\'\"]?(audacity-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(suil-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(lilv-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(serd-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(sord-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(sratom-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(zix-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(portsmf-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(portaudio-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(portmidi-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libsbsms-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(vamp-plugin-sdk-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(soundtouch-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(twolame-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libid3tag-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libsoxr-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libmspack-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(wxwidgets-gtk3-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(wxwidgets-common-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libjpeg-turbo-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    ], ["arch-extra", "cachyos-extra-v3", "cachyos", "arch-core"], []),
+    "spotify": (r'href=[\'\"]?(spotify(?:-launcher)?-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos-extra-v3", "chaotic-aur", "cachyos"], []),
+    "inkscape": (r'href=[\'\"]?(inkscape-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(lib2geom-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(double-conversion-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(graphicsmagick-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libcdr-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(poppler-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libvisio-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libwpg-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(librevenge-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    ], ["cachyos-extra-v3", "arch-extra", "cachyos"], []),
+    "darktable": (r'href=[\'\"]?(darktable-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos-extra-v3", "arch-extra", "cachyos"], []),
+    "syncthing": (r'href=[\'\"]?(syncthing-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos-extra-v3", "cachyos"], []),
+    "parabolic": (r'href=[\'\"]?((?:parabolic|tube-converter)-([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos", "arch-extra"], []),
+    "ananicy": (r'href=[\'\"]?(ananicy-cpp(?:-git)?-([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(cachyos-ananicy-rules(?:-git)?-([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libbpf-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    ], ["cachyos", "cachyos-extra-v3", "arch-core"], []),
+    "gamescope": (r'href=[\'\"]?(gamescope-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(lib32-gamescope-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(libavif-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["cachyos", "arch-extra"], ["cachyos", "arch-multilib"]),
+    "heroic": (r'href=[\'\"]?(heroic-games-launcher-bin-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "arch-extra"], []),
+    "lutris": (r'href=[\'\"]?(lutris(?:-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(webkit2gtk-4\.1-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libsoup3-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(python-moddb-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(python-pypresence-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(python-evdev-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(python-distro-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    ], ["arch-extra", "cachyos", "arch-core", "cachyos-extra-v3"], []),
+    "faugus": (r'href=[\'\"]?(faugus-launcher-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(python-vdf-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(icoextract-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(python-pefile-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    ], ["cachyos", "arch-extra"], []),
+    "protonplus": (r'href=[\'\"]?((?:proton-plus|protonplus)-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "arch-extra"], []),
+    "steam-devices": (None, None, None, [], []),
+    "retroarch": (r'href=[\'\"]?(retroarch-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(retroarch-assets-ozone-(?:[0-9]+%3A)?([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["arch-extra", "cachyos"], []),
+    "lact": (r'href=[\'\"]?(lact-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
+    "openrgb": (r'href=[\'\"]?(openrgb(?:-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "arch-extra"], []),
+    "solaar": (r'href=[\'\"]?(solaar-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos-extra-v3", "cachyos"], []),
+    "coolercontrol": (r'href=[\'\"]?(coolercontrol-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(coolercontrold-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["cachyos", "arch-extra"], []),
+    "lian-li-linux": (r'href=[\'\"]?(lian-li-linux(?:-git)?-([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos"], []),
+    "asusctl": (r'href=[\'\"]?(asusctl-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
+    "brave": (r'href=[\'\"]?(brave-bin-(?:1%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "chaotic-aur", "chaotic-cdn"], []),
+    "zen-browser": (r'href=[\'\"]?(zen-browser-bin-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "chaotic-aur", "chaotic-cdn"], []),
+    "vivaldi": (r'href=[\'\"]?(vivaldi-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(vivaldi-ffmpeg-codecs-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["arch-extra", "cachyos", "chaotic-aur"], []),
+    "google-chrome": (r'href=[\'\"]?(google-chrome-([0-9][a-zA-Z0-9_\.:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "chaotic-cdn", "cachyos"], []),
+    "microsoft-edge": (r'href=[\'\"]?(microsoft-edge-(?:stable|beta|dev)-bin-([0-9][a-zA-Z0-9_\.:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "chaotic-cdn", "cachyos"], []),
+    "opera": (r'href=[\'\"]?(opera-([0-9][a-zA-Z0-9_\.-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(opera-ffmpeg-codecs-([0-9][a-zA-Z0-9_\.-]*)\.pkg\.tar\.zst)[\'\"]?', ["chaotic-aur", "cachyos", "arch-extra"], []),
+    "obs-studio": (r'href=[\'\"]?(obs-studio-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(python-(3\.[0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(mbedtls-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(obs-studio-plugin-browser-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(cef-minimal-obs(?:-bin)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libdatachannel-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libjuice-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(librist-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libusrsctp-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    ], ["arch-extra", "arch-core", "cachyos"], []),
+    "discord": (r'href=[\'\"]?(discord-(?:[0-9]+%3A|[0-9]+:)?([0-9][a-zA-Z0-9_\.:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
+    "vesktop": (r'href=[\'\"]?(vesktop(?:-bin)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos"], []),
+    "obs-vkcapture": (r'href=[\'\"]?(obs-vkcapture-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(lib32-obs-vkcapture-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, ["cachyos", "arch-extra"], ["cachyos", "arch-multilib"]),
+    "sunshine": (r'href=[\'\"]?(sunshine-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(libayatana-appindicator-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(miniupnpc-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(numactl-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    ], ["cachyos", "arch-extra"], []),
+    "vram-booster": (r'href=[\'\"]?(dmemcg-booster-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(plasma-foreground-booster-([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["cachyos", "chaotic-aur", "arch-extra"], []),
+    "limine": (r'href=[\'\"]?(limine-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "arch-extra"], []),
+    "limine-entry-tool": (r'href=[\'\"]?(limine-entry-tool-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos"], []),
+    "limine-snapper-sync": (r'href=[\'\"]?(limine-snapper-sync-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos"], []),
+    "sbctl": (r'href=[\'\"]?(sbctl-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], [])
+}
+
+def fetch_url_cached(url, cdir, ttl=1800):
+    url_hash = hashlib.sha256(url.encode('utf-8')).hexdigest()[:16]
+    cache_file = os.path.join(cdir, f'repo_idx_{url_hash}.html')
+    now = time.time()
+    if os.path.exists(cache_file):
+        try:
+            mtime = os.path.getmtime(cache_file)
+            if (now - mtime) < ttl:
+                with open(cache_file, 'r', encoding='utf-8', errors='ignore') as f:
+                    return f.read()
+        except Exception:
+            pass
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64)"})
+        with urllib.request.urlopen(req, timeout=6) as resp:
+            content = resp.read().decode("utf-8", errors="ignore")
+            try:
+                with open(cache_file, 'w', encoding='utf-8', errors='ignore') as f:
+                    f.write(content)
+            except Exception:
+                pass
+            return content
+    except Exception:
+        return ""
+
+def clean_pkg_version(pid, raw_v):
+    v = urllib.parse.unquote(str(raw_v))
+    v = re.sub(r'\.pkg\.tar\.(?:zst|xz|gz)$', '', v)
+    v = re.sub(r'-(?:x86_64(?:_v[0-9]+)?|noarch|i[3-6]86|any|aarch64)(?:-[0-9a-zA-Z_]+)?$', '', v)
+    v = re.sub(r'-[0-9]+(?:\.[0-9]+)?$', '', v)
+    v = re.sub(r'^[0-9]+(?:%3A|:|_)', '', v)
+    if pid:
+        pid_clean = pid.replace("-", "")
+        v = re.sub(rf'^(?:cachyos-gnome-)?(?:{re.escape(pid)}|{re.escape(pid_clean)})(?:-bin|-git|-manager|-launcher|-rules|-udev)?-', '', v, flags=re.IGNORECASE)
+    v = re.sub(r'^[a-zA-Z0-9_\-+]+?-([0-9])', r'\1', v)
+    return v
+
+def parse_version_key(v_str):
+    clean = clean_pkg_version('', v_str)
+    parts = re.split(r'[-._+~]', clean)
+    res = []
+    for p in parts:
+        if p.isdigit():
+            res.append((0, int(p), ''))
+        else:
+            num = ''.join(c for c in p if c.isdigit())
+            res.append((1, int(num) if num else 0, p))
+    return res
+
+def fetch_match(pat, r_list, pid=''):
+    if not pat:
+        return None, None
+    candidates = []
+    for r_key in r_list:
+        base_url = repos.get(r_key, "")
+        if not base_url:
+            continue
+        html = fetch_url_cached(base_url, cache_dir)
+        if not html:
+            continue
+        try:
+            matches = re.findall(pat, html)
+        except Exception:
+            matches = []
+        for m in matches:
+            if isinstance(m, tuple):
+                fn = m[0]
+                ver = m[1] if len(m) > 1 else m[0]
+            else:
+                fn = m
+                ver = m
+            clean_v = clean_pkg_version(pid, ver)
+            url = base_url.rstrip("/") + "/" + fn
+            candidates.append((clean_v, url, ver))
+    if candidates:
+        candidates.sort(key=lambda c: parse_version_key(c[0]))
+        best = candidates[-1]
+        return best[2], best[1]
+    return None, None
+
+aur_pkg_names = {
+    "google-chrome": ("google-chrome", "google-chrome-{ver}-x86_64.pkg.tar.zst"),
+    "microsoft-edge": ("microsoft-edge-stable-bin", "microsoft-edge-stable-bin-{ver}-x86_64.pkg.tar.zst"),
+    "brave": ("brave-bin", "brave-bin-{ver}-x86_64.pkg.tar.zst"),
+    "zen-browser": ("zen-browser-bin", "zen-browser-bin-{ver}-x86_64.pkg.tar.zst"),
+    "opera": ("opera", "opera-{ver}-x86_64.pkg.tar.zst"),
+    "lian-li-linux": ("lianli-linux-git", "lianli-linux-git-{ver}-x86_64.pkg.tar.zst"),
+    "parabolic": ("parabolic", "parabolic-{ver}-x86_64.pkg.tar.zst")
+}
+
+def resolve_single(pid):
+    if pid == "steam-devices":
+        return pid, "1.0.0.61", "BUNDLED", "NONE", "NONE"
+    if pid not in catalog:
+        return pid, "NONE", "NONE", "NONE", "NONE"
+
+    main_pat, lib32_pat, extra_pat, main_repos, lib32_repos = catalog[pid]
+    main_ver, main_url = fetch_match(main_pat, main_repos, pid)
+
+    if (not main_ver or not main_url) and pid in aur_pkg_names:
+        aur_name, filename_tmpl = aur_pkg_names[pid]
+        try:
+            rpc_url = f"https://aur.archlinux.org/rpc/v5/info?arg[]={aur_name}"
+            rpc_raw = fetch_url_cached(rpc_url, cache_dir, ttl=1800)
+            if rpc_raw:
+                data = json.loads(rpc_raw)
+                for r in data.get("results", []):
+                    if r.get("Name") == aur_name:
+                        v = r.get("Version")
+                        main_ver = v
+                        fn = filename_tmpl.format(ver=v)
+                        main_url = f"{chaotic_fastest.rstrip('/')}/{fn}"
+                        break
+        except Exception:
+            pass
+
+    if not main_ver or not main_url:
+        return pid, "NONE", "NONE", "NONE", "NONE"
+
+    lib32_url = "NONE"
+    if lib32_pat:
+        _, l32_u = fetch_match(lib32_pat, lib32_repos or main_repos, pid)
+        if l32_u:
+            lib32_url = l32_u
+
+    extra_url = "NONE"
+    if extra_pat:
+        patterns = extra_pat if isinstance(extra_pat, (list, tuple)) else [extra_pat]
+        extra_repo_list = list(dict.fromkeys(main_repos + ["arch-extra", "arch-core", "cachyos-extra", "cachyos", "chaotic-aur", "chaotic-cdn"]))
+        extra_urls = []
+        for p in patterns:
+            _, ext_u = fetch_match(p, extra_repo_list)
+            if ext_u:
+                extra_urls.append(ext_u)
+            elif "cef-minimal-obs" in p:
+                try:
+                    rpc_url = "https://aur.archlinux.org/rpc/v5/info?arg[]=cef-minimal-obs-bin"
+                    rpc_raw = fetch_url_cached(rpc_url, cache_dir, ttl=1800)
+                    if rpc_raw:
+                        data = json.loads(rpc_raw)
+                        for r in data.get("results", []):
+                            if r.get("Name") == "cef-minimal-obs-bin":
+                                v = r.get("Version")
+                                extra_urls.append(f"{chaotic_fastest.rstrip('/')}/cef-minimal-obs-bin-{v}-x86_64.pkg.tar.zst")
+                                break
+                except Exception:
+                    pass
+        if extra_urls:
+            extra_url = ",".join(extra_urls)
+
+    clean_ver = clean_pkg_version(pid, main_ver)
+    return pid, clean_ver, main_url, lib32_url, extra_url
+
+with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(pkg_ids), 16)) as ex:
+    results = list(ex.map(resolve_single, pkg_ids))
+
+for pid, ver, m_u, l_u, e_u in results:
+    print(f"{pid}|{ver}|{m_u}|{l_u}|{e_u}")
+PYBATCHRESOLVE
 }
 
 # --- [ PACKAGE CLEANUP & RESOLUTION ] ---
@@ -774,7 +1243,7 @@ cleanup_foreign_gaming_pkgs() {
             patterns=("pear-desktop-[0-9]*" "cachyos-gnome-pear-desktop-[0-9]*")
             ;;
         ananicy)
-            patterns=("ananicy-[0-9]*" "ananicy-cpp-[0-9]*" "cachyos-ananicy-rules-[0-9]*")
+            patterns=("ananicy-[0-9]*" "ananicy-cpp-[0-9]*" "cachyos-ananicy-rules-[0-9]*" "cachyos-gnome-ananicy-r[0-9]*")
             ;;
         gamescope)
             patterns=("gamescope-[0-9]*" "lib32-gamescope-[0-9]*")
@@ -784,21 +1253,22 @@ cleanup_foreign_gaming_pkgs() {
             ;;
         lutris)
             patterns=("lutris-[0-9]*")
+            sudo rm -f /usr/share/applications/net.lutris.Lutris1.desktop /usr/share/pixmaps/*lutris* /usr/share/pixmaps/*Lutris* 2>/dev/null || rm -f /usr/share/applications/net.lutris.Lutris1.desktop /usr/share/pixmaps/*lutris* /usr/share/pixmaps/*Lutris* 2>/dev/null || true
             ;;
         faugus)
             patterns=("faugus-[0-9]*" "faugus-launcher-[0-9]*")
             ;;
         protonplus)
-            patterns=("protonplus-[0-9]*" "proton-plus-[0-9]*" "protonup-qt-[0-9]*")
+            patterns=("protonplus-[0-9]*" "proton-plus-[0-9]*")
             ;;
         steam-devices)
             patterns=("game-devices-udev-[0-9]*" "steam-devices-[0-9]*")
             ;;
         lact)
-            patterns=("lact-[0-9]*")
+            patterns=("lact-[0-9]*" "lact-r[0-9]*" "cachyos-gnome-lact-r[0-9]*")
             ;;
         openrgb)
-            patterns=("openrgb-[0-9]*")
+            patterns=("openrgb-[0-9]*" "openrgb-r[0-9]*" "cachyos-gnome-openrgb-r[0-9]*")
             ;;
         brave)
             patterns=("brave-bin-[0-9]*" "brave-browser-[0-9]*" "brave-[0-9]*")
@@ -869,9 +1339,21 @@ cleanup_foreign_gaming_pkgs() {
         parabolic)
             patterns=("parabolic-[0-9]*" "tube-converter-[0-9]*")
             ;;
+        limine)
+            patterns=("limine-[0-9]*")
+            ;;
+        limine-entry-tool)
+            patterns=("limine-entry-tool-[0-9]*")
+            ;;
+        limine-snapper-sync)
+            patterns=("limine-snapper-sync-[0-9]*")
+            ;;
+        sbctl)
+            patterns=("sbctl-[0-9]*")
+            ;;
     esac
 
-    for pat in "${patterns[@]}" "cachyos-gnome-${pkg_id}-*"; do
+    for pat in "${patterns[@]}" "cachyos-gnome-${pkg_id}-[0-9]*"; do
         for p in /var/log/packages/${pat}; do
             [ -f "${p}" ] || continue
             local bname
@@ -886,6 +1368,11 @@ cleanup_foreign_gaming_pkgs() {
 # --- [ TRANSMUTATION & BUILD ENGINE ] ---
 transmute_and_deploy_gaming_pkg() {
     local pkg_id="$1"
+    local pre_cache_dir="${2:-}"
+    local pre_ver="${3:-}"
+    local pre_main_url="${4:-}"
+    local pre_lib32_url="${5:-}"
+    local pre_extra_url="${6:-}"
     
     # Pre-flight readiness checks
     audit_multilib_readiness "${pkg_id}"
@@ -921,9 +1408,15 @@ transmute_and_deploy_gaming_pkg() {
         fi
     fi
 
-    log_info "Resolving upstream package metadata for ${pkg_id}..."
-    local ver main_url lib32_url extra_url
-    read -r ver main_url lib32_url extra_url <<< "$(resolve_cachyos_gaming_upstream_metadata "${pkg_id}" || echo "NONE NONE NONE NONE")"
+    local ver="${pre_ver}"
+    local main_url="${pre_main_url}"
+    local lib32_url="${pre_lib32_url}"
+    local extra_url="${pre_extra_url}"
+
+    if [ -z "${ver}" ] || [ "${ver}" = "NONE" ]; then
+        log_info "Resolving upstream package metadata for ${pkg_id}..."
+        read -r ver main_url lib32_url extra_url <<< "$(resolve_cachyos_gaming_upstream_metadata "${pkg_id}" || echo "NONE NONE NONE NONE")"
+    fi
 
     if [ "${ver}" = "NONE" ] || [ -z "${main_url}" ] || [ "${main_url}" = "NONE" ]; then
         log_error "Failed to resolve CachyOS upstream package for: ${pkg_id}"
@@ -940,6 +1433,10 @@ transmute_and_deploy_gaming_pkg() {
     trap 'rm -rf "${staging_base:-}" 2>/dev/null || true' INT TERM
 
     mkdir -p "${cache_dir}" "${staging_root}" "${tmp_extract}/main" "${tmp_extract}/lib32" "${tmp_extract}/extra"
+
+    if [ -n "${pre_cache_dir}" ] && [ -d "${pre_cache_dir}" ]; then
+        cp -a "${pre_cache_dir}"/* "${cache_dir}/" 2>/dev/null || true
+    fi
 
     if [ "${main_url}" = "BUNDLED" ]; then
         if [ "${pkg_id}" = "steam-devices" ]; then
@@ -961,11 +1458,15 @@ transmute_and_deploy_gaming_pkg() {
     else
         local main_file="${cache_dir}/$(basename "${main_url}")"
         local dl_items=()
-        dl_items+=("${main_url}|${main_file}|${main_url}.sig|${main_file}.sig")
+        if [ ! -f "${main_file}" ] || [ ! -s "${main_file}" ]; then
+            dl_items+=("${main_url}|${main_file}|${main_url}.sig|${main_file}.sig")
+        fi
 
         if [ "${lib32_url}" != "NONE" ] && [ -n "${lib32_url}" ]; then
             local lib32_file="${cache_dir}/$(basename "${lib32_url}")"
-            dl_items+=("${lib32_url}|${lib32_file}|${lib32_url}.sig|${lib32_file}.sig")
+            if [ ! -f "${lib32_file}" ] || [ ! -s "${lib32_file}" ]; then
+                dl_items+=("${lib32_url}|${lib32_file}|${lib32_url}.sig|${lib32_file}.sig")
+            fi
         fi
 
         if [ "${extra_url}" != "NONE" ] && [ -n "${extra_url}" ]; then
@@ -973,14 +1474,18 @@ transmute_and_deploy_gaming_pkg() {
             for single_extra_url in "${EXTRA_URLS[@]}"; do
                 [ -n "${single_extra_url}" ] || continue
                 local extra_file="${cache_dir}/$(basename "${single_extra_url}")"
-                dl_items+=("${single_extra_url}|${extra_file}|${single_extra_url}.sig|${extra_file}.sig")
+                if [ ! -f "${extra_file}" ] || [ ! -s "${extra_file}" ]; then
+                    dl_items+=("${single_extra_url}|${extra_file}|${single_extra_url}.sig|${extra_file}.sig")
+                fi
             done
         fi
 
-        if ! download_parallel_pacman "Underpants Gnomes: ${pkg_id}" "${dl_items[@]}"; then
-            log_error "Failed to download packages for ${pkg_id}."
-            rm -rf "${staging_base}"
-            return 1
+        if [ ${#dl_items[@]} -gt 0 ]; then
+            if ! download_parallel_pacman "Underpants Gnomes: ${pkg_id}" "${dl_items[@]}"; then
+                log_error "Failed to download packages for ${pkg_id}."
+                rm -rf "${staging_base}"
+                return 1
+            fi
         fi
 
         if ! verify_cachyos_gpg_signature "${main_file}" "${main_file}.sig"; then
@@ -1153,27 +1658,96 @@ OBS_MUX_EOF
                 mkdir -p "${staging_root}/usr/share/metainfo"
                 cp -a "${tmp_extract}/main/usr/share/metainfo/." "${staging_root}/usr/share/metainfo/"
             fi
-
-            # Ensure cross-desktop icon compatibility (KDE Plasma, XFCE, GNOME)
-            if [ -d "${staging_root}/usr/share/icons" ]; then
-                find "${staging_root}/usr/share/icons" -type f -name "net.lutris.Lutris.png" | while read -r icon_file; do
-                    icon_dir="$(dirname "${icon_file}")"
-                    ln -sf "net.lutris.Lutris.png" "${icon_dir}/lutris.png" 2>/dev/null || true
-                done
-                find "${staging_root}/usr/share/icons" -type f -name "net.lutris.Lutris.svg" | while read -r icon_file; do
-                    icon_dir="$(dirname "${icon_file}")"
-                    ln -sf "net.lutris.Lutris.svg" "${icon_dir}/lutris.svg" 2>/dev/null || true
-                done
-            fi
-            mkdir -p "${staging_root}/usr/share/pixmaps"
-            if [ -f "${staging_root}/usr/share/icons/hicolor/128x128/apps/net.lutris.Lutris.png" ]; then
-                cp -a "${staging_root}/usr/share/icons/hicolor/128x128/apps/net.lutris.Lutris.png" "${staging_root}/usr/share/pixmaps/lutris.png" 2>/dev/null || true
-                cp -a "${staging_root}/usr/share/icons/hicolor/128x128/apps/net.lutris.Lutris.png" "${staging_root}/usr/share/pixmaps/net.lutris.Lutris.png" 2>/dev/null || true
-            elif [ -f "${staging_root}/usr/share/icons/hicolor/scalable/apps/net.lutris.Lutris.svg" ]; then
-                cp -a "${staging_root}/usr/share/icons/hicolor/scalable/apps/net.lutris.Lutris.svg" "${staging_root}/usr/share/pixmaps/lutris.svg" 2>/dev/null || true
-                cp -a "${staging_root}/usr/share/icons/hicolor/scalable/apps/net.lutris.Lutris.svg" "${staging_root}/usr/share/pixmaps/net.lutris.Lutris.svg" 2>/dev/null || true
-            fi
         fi
+
+        # Universal application icon harvesting for Lutris (hicolor, breeze, breeze-dark, pixmaps)
+        mkdir -p "${staging_root}/usr/share/icons/hicolor/scalable/apps" \
+                 "${staging_root}/usr/share/icons/hicolor/128x128/apps" \
+                 "${staging_root}/usr/share/icons/hicolor/64x64/apps" \
+                 "${staging_root}/usr/share/icons/hicolor/48x48/apps" \
+                 "${staging_root}/usr/share/icons/hicolor/32x32/apps" \
+                 "${staging_root}/usr/share/icons/hicolor/24x24/apps" \
+                 "${staging_root}/usr/share/icons/hicolor/22x22/apps" \
+                 "${staging_root}/usr/share/icons/hicolor/16x16/apps" \
+                 "${staging_root}/usr/share/icons/breeze/apps/48" \
+                 "${staging_root}/usr/share/icons/breeze/apps/32" \
+                 "${staging_root}/usr/share/icons/breeze-dark/apps/48" \
+                 "${staging_root}/usr/share/icons/breeze-dark/apps/32" \
+                 "${staging_root}/usr/share/pixmaps" \
+                 "${staging_root}/usr/share/applications"
+
+        # Copy actual PNG/SVG icon files into standard resolutions
+        for sz in 16x16 22x22 24x24 32x32 48x48 64x64 128x128 256x256 512x512 scalable; do
+            local src_dir="${tmp_extract}/main/usr/share/icons/hicolor/${sz}/apps"
+            if [ -d "${src_dir}" ]; then
+                mkdir -p "${staging_root}/usr/share/icons/hicolor/${sz}/apps"
+                for src_file in "${src_dir}"/*; do
+                    [ -f "${src_file}" ] || continue
+                    local bname
+                    bname=$(basename "${src_file}")
+                    if [[ "${bname}" =~ \.svg$ ]]; then
+                        cp -L "${src_file}" "${staging_root}/usr/share/icons/hicolor/${sz}/apps/net.lutris.Lutris.svg" 2>/dev/null || true
+                        ln -sf "net.lutris.Lutris.svg" "${staging_root}/usr/share/icons/hicolor/${sz}/apps/lutris.svg" 2>/dev/null || true
+                    elif [[ "${bname}" =~ \.png$ ]]; then
+                        cp -L "${src_file}" "${staging_root}/usr/share/icons/hicolor/${sz}/apps/net.lutris.Lutris.png" 2>/dev/null || true
+                        ln -sf "net.lutris.Lutris.png" "${staging_root}/usr/share/icons/hicolor/${sz}/apps/lutris.png" 2>/dev/null || true
+                    fi
+                done
+            fi
+        done
+
+        # Populate /usr/share/pixmaps with real image files (dereferenced with cp -L)
+        rm -f "${staging_root}/usr/share/pixmaps"/*lutris* 2>/dev/null || true
+        if [ -f "${staging_root}/usr/share/icons/hicolor/128x128/apps/net.lutris.Lutris.png" ]; then
+            cp -L "${staging_root}/usr/share/icons/hicolor/128x128/apps/net.lutris.Lutris.png" "${staging_root}/usr/share/pixmaps/net.lutris.Lutris.png" 2>/dev/null || true
+            cp -L "${staging_root}/usr/share/icons/hicolor/128x128/apps/net.lutris.Lutris.png" "${staging_root}/usr/share/pixmaps/lutris.png" 2>/dev/null || true
+            cp -L "${staging_root}/usr/share/icons/hicolor/128x128/apps/net.lutris.Lutris.png" "${staging_root}/usr/share/icons/breeze/apps/48/net.lutris.Lutris.png" 2>/dev/null || true
+            cp -L "${staging_root}/usr/share/icons/hicolor/128x128/apps/net.lutris.Lutris.png" "${staging_root}/usr/share/icons/breeze/apps/48/lutris.png" 2>/dev/null || true
+            cp -L "${staging_root}/usr/share/icons/hicolor/128x128/apps/net.lutris.Lutris.png" "${staging_root}/usr/share/icons/breeze-dark/apps/48/net.lutris.Lutris.png" 2>/dev/null || true
+            cp -L "${staging_root}/usr/share/icons/hicolor/128x128/apps/net.lutris.Lutris.png" "${staging_root}/usr/share/icons/breeze-dark/apps/48/lutris.png" 2>/dev/null || true
+        elif [ -f "${staging_root}/usr/share/icons/hicolor/64x64/apps/net.lutris.Lutris.png" ]; then
+            cp -L "${staging_root}/usr/share/icons/hicolor/64x64/apps/net.lutris.Lutris.png" "${staging_root}/usr/share/pixmaps/net.lutris.Lutris.png" 2>/dev/null || true
+            cp -L "${staging_root}/usr/share/icons/hicolor/64x64/apps/net.lutris.Lutris.png" "${staging_root}/usr/share/pixmaps/lutris.png" 2>/dev/null || true
+        fi
+
+        if [ -f "${staging_root}/usr/share/icons/hicolor/scalable/apps/net.lutris.Lutris.svg" ]; then
+            cp -L "${staging_root}/usr/share/icons/hicolor/scalable/apps/net.lutris.Lutris.svg" "${staging_root}/usr/share/pixmaps/net.lutris.Lutris.svg" 2>/dev/null || true
+            cp -L "${staging_root}/usr/share/icons/hicolor/scalable/apps/net.lutris.Lutris.svg" "${staging_root}/usr/share/pixmaps/lutris.svg" 2>/dev/null || true
+            cp -L "${staging_root}/usr/share/icons/hicolor/scalable/apps/net.lutris.Lutris.svg" "${staging_root}/usr/share/icons/breeze/apps/48/net.lutris.Lutris.svg" 2>/dev/null || true
+            cp -L "${staging_root}/usr/share/icons/hicolor/scalable/apps/net.lutris.Lutris.svg" "${staging_root}/usr/share/icons/breeze/apps/48/lutris.svg" 2>/dev/null || true
+            cp -L "${staging_root}/usr/share/icons/hicolor/scalable/apps/net.lutris.Lutris.svg" "${staging_root}/usr/share/icons/breeze-dark/apps/48/net.lutris.Lutris.svg" 2>/dev/null || true
+            cp -L "${staging_root}/usr/share/icons/hicolor/scalable/apps/net.lutris.Lutris.svg" "${staging_root}/usr/share/icons/breeze-dark/apps/48/lutris.svg" 2>/dev/null || true
+        fi
+
+        # Remove duplicate mime helper desktop file
+        rm -f "${staging_root}/usr/share/applications/net.lutris.Lutris1.desktop" 2>/dev/null || true
+
+        # Write clean desktop entries with absolute icon paths to guarantee instant display
+        cat << 'LUTRIS_DESKTOP_EOF' > "${staging_root}/usr/share/applications/net.lutris.Lutris.desktop"
+[Desktop Entry]
+Name=Lutris
+Comment=Video game preservation platform for Slackware
+Exec=/usr/bin/lutris %U
+Icon=/usr/share/pixmaps/net.lutris.Lutris.png
+Terminal=false
+Type=Application
+StartupWMClass=lutris
+Categories=Game;
+MimeType=x-scheme-handler/lutris;
+LUTRIS_DESKTOP_EOF
+
+        cat << 'LUTRIS_DESKTOP_ALT_EOF' > "${staging_root}/usr/share/applications/lutris.desktop"
+[Desktop Entry]
+Name=Lutris
+Comment=Video game preservation platform for Slackware
+Exec=/usr/bin/lutris %U
+Icon=/usr/share/pixmaps/lutris.png
+Terminal=false
+Type=Application
+StartupWMClass=lutris
+Categories=Game;
+MimeType=x-scheme-handler/lutris;
+LUTRIS_DESKTOP_ALT_EOF
 
         # Copy auxiliary packages (webkit2gtk, libsoup, python-moddb, python-pypresence, python-evdev, python-distro)
         for extra_dir in "${tmp_extract}"/extra*; do
@@ -2146,7 +2720,296 @@ STEAM_UDEV_EOF
     fi
 
     if [ "${pkg_id}" = "vram-booster" ]; then
-        mkdir -p "${staging_root}/etc/rc.d"
+        mkdir -p "${staging_root}/usr/bin" "${staging_root}/etc/rc.d"
+
+        if [ -f "${staging_root}/usr/bin/dmemcg-booster" ]; then
+            mv -f "${staging_root}/usr/bin/dmemcg-booster" "${staging_root}/usr/bin/dmemcg-booster-cachyos" 2>/dev/null || true
+        fi
+
+        cat << 'DMEMCG_BIN_EOF' > "${staging_root}/usr/bin/dmemcg-booster"
+#!/usr/bin/env python3
+"""
+dmemcg-booster - Dynamic Device Memory Cgroups (dmemcg) & Resizable BAR VRAM Optimizer for Slackware Linux
+Part of the Underpants Gnomes Gaming Suite (slacky-update)
+"""
+import sys, os, re, time, subprocess, signal
+
+CGROUP_ROOT = "/sys/fs/cgroup"
+GAMING_SLICE = "/sys/fs/cgroup/dmemcg-gaming"
+PIDFILE = "/run/dmemcg-booster.pid"
+LOGFILE = "/var/log/dmemcg-booster.log"
+
+GAME_PROCESS_NAMES = {
+    "steam", "steamwebhelper", "wine-preloader", "wine64-preloader",
+    "wineserver", "proton", "gamescope", "faugus-launcher", "heroic",
+    "lutris", "retroarch", "vkcube", "yabridge-host", "yabridgectl",
+    "mangohud", "gamemoded", "goverlay", "obs", "obs64"
+}
+
+def log(msg):
+    ts = time.strftime("%Y-%m-%d %H:%M:%S")
+    line = f"[{ts}] [dmemcg-booster] {msg}"
+    print(line)
+    try:
+        with open(LOGFILE, "a") as f:
+            f.write(line + "\n")
+    except Exception:
+        pass
+
+def init_cgroups():
+    if not os.path.exists(CGROUP_ROOT):
+        try:
+            os.makedirs(CGROUP_ROOT, exist_ok=True)
+            subprocess.run(["mount", "-t", "cgroup2", "none", CGROUP_ROOT], check=False)
+        except Exception as e:
+            log(f"Warning mounting cgroup2: {e}")
+
+    subtree = os.path.join(CGROUP_ROOT, "cgroup.subtree_control")
+    if os.path.exists(subtree):
+        try:
+            with open(subtree, "w") as f:
+                f.write("+memory +io\n")
+        except Exception:
+            try:
+                with open(subtree, "w") as f:
+                    f.write("+memory\n")
+            except Exception as e:
+                log(f"Subtree controller setup note: {e}")
+
+    os.makedirs(GAMING_SLICE, exist_ok=True)
+
+    # Configure high priority memory & I/O for gaming slice
+    for conf, val in [("memory.high", "max"), ("memory.low", "2G"), ("memory.min", "1G"), ("io.weight", "1000")]:
+        p = os.path.join(GAMING_SLICE, conf)
+        if os.path.exists(p):
+            try:
+                with open(p, "w") as f:
+                    f.write(f"{val}\n")
+            except Exception:
+                pass
+
+def get_nvidia_info():
+    info = {"detected": False, "driver": "Unknown", "rebar": "Unknown", "vram_total": "Unknown", "vram_free": "Unknown"}
+    try:
+        res = subprocess.run(["nvidia-smi", "-q", "-d", "MEMORY"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=3)
+        if res.returncode == 0 and res.stdout.strip():
+            out = res.stdout
+            info["detected"] = True
+            m_kmd = re.search(r"KMD Version\s*:\s*([0-9\.]+)", out) or re.search(r"Driver Version\s*:\s*([0-9\.]+)", out)
+            if m_kmd:
+                info["driver"] = m_kmd.group(1)
+
+            m_tot = re.search(r"FB Memory Usage.*?\n\s*Total\s*:\s*([0-9]+\s*MiB)", out, re.DOTALL)
+            if m_tot:
+                info["vram_total"] = m_tot.group(1)
+
+            m_free = re.search(r"FB Memory Usage.*?\n\s*Free\s*:\s*([0-9]+\s*MiB)", out, re.DOTALL)
+            if m_free:
+                info["vram_free"] = m_free.group(1)
+
+            m_bar1 = re.search(r"BAR1 Memory Usage.*?\n\s*Total\s*:\s*([0-9]+)\s*MiB", out, re.DOTALL)
+            if m_bar1:
+                bar1_val = int(m_bar1.group(1))
+                if bar1_val >= 1024:
+                    info["rebar"] = f"Active ({bar1_val} MiB / {round(bar1_val/1024, 1)} GiB Full BAR)"
+                elif bar1_val > 256:
+                    info["rebar"] = f"Partial ({bar1_val} MiB)"
+                else:
+                    info["rebar"] = f"Disabled ({bar1_val} MiB)"
+            return info
+    except Exception:
+        pass
+
+    if os.path.exists("/proc/driver/nvidia/version"):
+        info["detected"] = True
+        try:
+            with open("/proc/driver/nvidia/version", "r") as f:
+                content = f.read()
+                m = re.search(r'NVRM version:\s+([0-9\.]+)', content)
+                if m:
+                    info["driver"] = m.group(1)
+        except Exception:
+            pass
+
+    return info
+
+def optimize_gpu_hardware():
+    # NVIDIA persistence mode & auto-boost
+    if os.path.exists("/usr/bin/nvidia-smi"):
+        try:
+            subprocess.run(["nvidia-smi", "-pm", "1"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+            subprocess.run(["nvidia-smi", "--auto-boost-permission=0"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+        except Exception:
+            pass
+
+    # AMD GPU performance level
+    if os.path.exists("/sys/class/drm"):
+        for card in os.listdir("/sys/class/drm"):
+            dpm = f"/sys/class/drm/{card}/device/power_dpm_force_performance_level"
+            if os.path.exists(dpm):
+                try:
+                    with open(dpm, "w") as f:
+                        f.write("auto\n")
+                except Exception:
+                    pass
+
+def get_boosted_pids():
+    procs_file = os.path.join(GAMING_SLICE, "cgroup.procs")
+    if os.path.exists(procs_file):
+        try:
+            with open(procs_file, "r") as f:
+                return set(line.strip() for line in f if line.strip())
+        except Exception:
+            pass
+    return set()
+
+def boost_pid(pid):
+    procs_file = os.path.join(GAMING_SLICE, "cgroup.procs")
+    try:
+        with open(procs_file, "a") as f:
+            f.write(f"{pid}\n")
+        subprocess.run(["renice", "-n", "-5", "-p", str(pid)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+        subprocess.run(["ionice", "-c", "2", "-n", "0", "-p", str(pid)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+        return True
+    except Exception:
+        return False
+
+def get_plasma_foreground_pid():
+    # Detect active window in KDE Plasma Wayland or X11 / Gamescope
+    for cmd in [
+        ["kdotool", "getactivewindow", "getwindowpid"],
+        ["xdotool", "getactivewindow", "getwindowpid"]
+    ]:
+        try:
+            res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, timeout=0.5)
+            if res.returncode == 0 and res.stdout.strip().isdigit():
+                return res.stdout.strip()
+        except Exception:
+            pass
+    return None
+
+def scan_and_boost_games():
+    boosted = get_boosted_pids()
+    count = 0
+
+    # 1. Boost active KDE Plasma / Gamescope foreground window (plasma-foreground-booster)
+    fg_pid = get_plasma_foreground_pid()
+    if fg_pid and fg_pid not in boosted:
+        try:
+            with open(f"/proc/{fg_pid}/comm", "r") as f:
+                fg_comm = f.read().strip()
+            if fg_comm not in ["plasmashell", "kwin_wayland", "systemsettings", "konsole", "zsh", "bash"]:
+                if boost_pid(fg_pid):
+                    log(f"⚡ Foreground GPU Shield: Boosted active window '{fg_comm}' (PID {fg_pid}) into dmemcg-gaming slice")
+                    count += 1
+                    boosted.add(str(fg_pid))
+        except Exception:
+            pass
+
+    # 2. Boost game engines, Proton, Wine, Steam, and GPU compute processes
+    try:
+        pids = [p for p in os.listdir("/proc") if p.isdigit()]
+        for p in pids:
+            if p in boosted:
+                continue
+            comm_path = f"/proc/{p}/comm"
+            cmdline_path = f"/proc/{p}/cmdline"
+            if not os.path.exists(comm_path):
+                continue
+            try:
+                with open(comm_path, "r") as f:
+                    comm = f.read().strip()
+                match = comm in GAME_PROCESS_NAMES or comm.startswith("wine") or comm.startswith("proton")
+                if not match and os.path.exists(cmdline_path):
+                    with open(cmdline_path, "rb") as f:
+                        cmdline = f.read().decode("utf-8", errors="ignore")
+                        if any(g in cmdline for g in ["steamapps", "Proton", "wine64"]):
+                            match = True
+                if match:
+                    if boost_pid(p):
+                        log(f"⚡ Boosted gaming process: {comm} (PID {p}) into dmemcg-gaming slice")
+                        count += 1
+            except Exception:
+                continue
+    except Exception:
+        pass
+    return count
+
+def run_daemon():
+    log("Starting dmemcg-booster VRAM shield & cgroups manager daemon...")
+    init_cgroups()
+    optimize_gpu_hardware()
+    
+    nv = get_nvidia_info()
+    if nv["detected"]:
+        log(f"Detected NVIDIA GPU (Driver: {nv['driver']}, ReBAR: {nv['rebar']}, VRAM: {nv['vram_total']})")
+
+    while True:
+        try:
+            scan_and_boost_games()
+            time.sleep(3)
+        except KeyboardInterrupt:
+            log("Stopping dmemcg-booster daemon.")
+            break
+        except Exception:
+            time.sleep(5)
+
+def print_status():
+    print("=== [ dmemcg-booster Status ] ===")
+    nv = get_nvidia_info()
+    if nv["detected"]:
+        print(f"GPU Driver:     NVIDIA {nv['driver']}")
+        print(f"VRAM Total:     {nv['vram_total']}")
+        print(f"VRAM Free:      {nv['vram_free']}")
+        print(f"Resizable BAR:  {nv['rebar']}")
+    else:
+        print("GPU Driver:     Generic DRM / AMD / Intel")
+    
+    cg_active = os.path.exists(GAMING_SLICE)
+    print(f"Cgroups v2:     {'Active (' + GAMING_SLICE + ')' if cg_active else 'Inactive'}")
+    
+    boosted = get_boosted_pids()
+    print(f"Boosted Procs:  {len(boosted)} active process(es)")
+    if boosted:
+        for pid in list(boosted)[:10]:
+            try:
+                with open(f"/proc/{pid}/comm", "r") as f:
+                    comm = f.read().strip()
+                print(f"  • PID {pid}: {comm}")
+            except Exception:
+                pass
+        if len(boosted) > 10:
+            print(f"  ... and {len(boosted) - 10} more")
+
+if __name__ == "__main__":
+    if len(sys.argv) > 1:
+        arg = sys.argv[1]
+        if arg in ["status", "--status"]:
+            print_status()
+            sys.exit(0)
+        elif arg in ["--use-system-bus", "--daemon", "start", "-d"]:
+            run_daemon()
+            sys.exit(0)
+        elif arg in ["boost", "--boost"] and len(sys.argv) > 2:
+            init_cgroups()
+            target = sys.argv[2]
+            if target.isdigit():
+                if boost_pid(target):
+                    print(f"Successfully boosted PID {target}")
+                else:
+                    print(f"Failed to boost PID {target}")
+            sys.exit(0)
+        elif arg in ["rebar", "--rebar"]:
+            nv = get_nvidia_info()
+            print(f"Resizable BAR Status: {nv.get('rebar', 'Unknown')}")
+            sys.exit(0)
+        elif arg in ["-h", "--help"]:
+            print("Usage: dmemcg-booster [status|boost <PID>|rebar|--use-system-bus|--daemon]")
+            sys.exit(0)
+    run_daemon()
+DMEMCG_BIN_EOF
+        chmod 755 "${staging_root}/usr/bin/dmemcg-booster"
+
         cat << 'RC_DMEMCG_EOF' > "${staging_root}/etc/rc.d/rc.dmemcg-booster"
 #!/bin/sh
 #
@@ -2161,6 +3024,7 @@ dmemcg_mount_cgroup2() {
     mount -t cgroup2 none /sys/fs/cgroup 2>/dev/null || true
   fi
   if [ -f /sys/fs/cgroup/cgroup.subtree_control ]; then
+    echo "+memory +io" > /sys/fs/cgroup/cgroup.subtree_control 2>/dev/null || \
     echo "+memory" > /sys/fs/cgroup/cgroup.subtree_control 2>/dev/null || true
   fi
 }
@@ -2169,7 +3033,7 @@ dmemcg_start() {
   if [ -x "$BIN" ]; then
     echo "Starting dmemcg-booster VRAM daemon: $BIN --use-system-bus"
     dmemcg_mount_cgroup2
-    if ! pgrep -x dmemcg-booster > /dev/null 2>&1; then
+    if ! pgrep -f "$BIN" > /dev/null 2>&1; then
       rm -f "$PIDFILE" 2>/dev/null || true
       $BIN --use-system-bus > /var/log/dmemcg-booster.log 2>&1 &
       echo $! > "$PIDFILE" 2>/dev/null || true
@@ -2179,9 +3043,9 @@ dmemcg_start() {
 
 dmemcg_stop() {
   echo "Stopping dmemcg-booster VRAM daemon..."
-  pkill -TERM -x dmemcg-booster 2>/dev/null || true
+  pkill -TERM -f "$BIN" 2>/dev/null || true
   sleep 0.5
-  pkill -KILL -x dmemcg-booster 2>/dev/null || true
+  pkill -KILL -f "$BIN" 2>/dev/null || true
   rm -f "$PIDFILE" 2>/dev/null || true
 }
 
@@ -2192,8 +3056,11 @@ dmemcg_restart() {
 }
 
 dmemcg_status() {
-  if pgrep -x dmemcg-booster > /dev/null 2>&1; then
+  if pgrep -f "$BIN" > /dev/null 2>&1; then
     echo "dmemcg-booster is running."
+    if [ -x "$BIN" ]; then
+      "$BIN" status
+    fi
   else
     echo "dmemcg-booster is NOT running."
   fi
@@ -2499,6 +3366,8 @@ DOINST_TAIL_EOF
         log_info "[3/4] Rebuilding GTK/KDE icon theme cache & MIME database..."
         if [ -x /usr/bin/gtk-update-icon-cache ]; then
             sudo /usr/bin/gtk-update-icon-cache -f -t /usr/share/icons/hicolor 2>/dev/null || true
+            [ -d /usr/share/icons/breeze ] && sudo /usr/bin/gtk-update-icon-cache -f -t /usr/share/icons/breeze 2>/dev/null || true
+            [ -d /usr/share/icons/breeze-dark ] && sudo /usr/bin/gtk-update-icon-cache -f -t /usr/share/icons/breeze-dark 2>/dev/null || true
         fi
         if [ -x /usr/bin/update-mime-database ]; then
             sudo /usr/bin/update-mime-database /usr/share/mime 2>/dev/null || true
@@ -2574,6 +3443,18 @@ DOINST_TAIL_EOF
                     done
                 done
             done
+        elif [ "${pkg_id}" = "limine" ]; then
+            if command -v is_limine_installed >/dev/null 2>&1 && [ "$(is_limine_installed)" = "true" ]; then
+                log_info "[*] Limine bootloader package updated: syncing EFI payload, configuration & BLAKE2B enrollment..."
+                backup_limine_self_heal 2>/dev/null || true
+                generate_limine_configuration 2>/dev/null || true
+                enroll_and_sign_limine 2>/dev/null || true
+            fi
+        elif [ "${pkg_id}" = "sbctl" ]; then
+            if command -v is_limine_installed >/dev/null 2>&1 && [ "$(is_limine_installed)" = "true" ]; then
+                log_info "[*] sbctl updated: re-signing Limine EFI payload..."
+                sign_limine_efi_sbctl 2>/dev/null || true
+            fi
         fi
 
         log_info "[4/4] Synchronizing system status & background registry..."
@@ -2588,6 +3469,96 @@ DOINST_TAIL_EOF
 
     rm -rf "${staging_base}" 2>/dev/null || true
     trap - INT TERM
+}
+
+deploy_gaming_packages_batch() {
+    local target_pkg_ids=("$@")
+    [ ${#target_pkg_ids[@]} -gt 0 ] || return 0
+
+    log_info "Resolving upstream package metadata for ${#target_pkg_ids[@]} selected packages in parallel..."
+    local metadata_raw
+    metadata_raw=$(resolve_multiple_gaming_upstreams_batch "${target_pkg_ids[@]}")
+    if [ -z "${metadata_raw}" ]; then
+        log_error "Failed to resolve upstream package metadata for batch."
+        return 1
+    fi
+
+    local staging_base
+    staging_base=$(mktemp -d "$(get_user_staging_dir)/gnome-batch.XXXXXX" 2>/dev/null || mktemp -d /tmp/slacky-gnome-batch.XXXXXX)
+    local batch_cache="${staging_base}/downloads"
+    mkdir -p "${batch_cache}"
+    trap 'rm -rf "${staging_base:-}" 2>/dev/null || true' INT TERM
+
+    local dl_items=()
+    local valid_entries=()
+
+    while IFS='|' read -r pid ver main_url lib32_url extra_url; do
+        [ -n "${pid}" ] || continue
+        if [ "${ver}" = "NONE" ] || [ -z "${main_url}" ] || [ "${main_url}" = "NONE" ]; then
+            log_warn "Skipping unresolved package: ${pid}"
+            continue
+        fi
+        valid_entries+=("${pid}|${ver}|${main_url}|${lib32_url}|${extra_url}")
+
+        if [ "${main_url}" != "BUNDLED" ]; then
+            local mf="${batch_cache}/$(basename "${main_url}")"
+            dl_items+=("${main_url}|${mf}|${main_url}.sig|${mf}.sig")
+
+            if [ "${lib32_url}" != "NONE" ] && [ -n "${lib32_url}" ]; then
+                local lf="${batch_cache}/$(basename "${lib32_url}")"
+                dl_items+=("${lib32_url}|${lf}|${lib32_url}.sig|${lf}.sig")
+            fi
+
+            if [ "${extra_url}" != "NONE" ] && [ -n "${extra_url}" ]; then
+                IFS=',' read -ra EXTRA_URLS <<< "${extra_url}"
+                for single_extra_url in "${EXTRA_URLS[@]}"; do
+                    [ -n "${single_extra_url}" ] || continue
+                    local ef="${batch_cache}/$(basename "${single_extra_url}")"
+                    dl_items+=("${single_extra_url}|${ef}|${single_extra_url}.sig|${ef}.sig")
+                done
+            fi
+        fi
+    done <<< "${metadata_raw}"
+
+    local total_pkgs=${#valid_entries[@]}
+    if [ "${total_pkgs}" -eq 0 ]; then
+        log_warn "No valid packages to install."
+        rm -rf "${staging_base}"
+        return 0
+    fi
+
+    if [ ${#dl_items[@]} -gt 0 ]; then
+        echo ""
+        log_info "⚡ Starting Unified Parallel Batch Download (${total_pkgs} packages • ${#dl_items[@]} files)..."
+        if ! download_parallel_pacman "Underpants Gnomes Batch (${total_pkgs} packages)" "${dl_items[@]}"; then
+            log_error "Failed to complete parallel download batch."
+            rm -rf "${staging_base}"
+            return 1
+        fi
+    fi
+
+    # Phase 2: Decoupled Sequential Transmutation & Installation
+    validate_privileges
+    local current_idx=1
+    local success_count=0
+
+    for entry in "${valid_entries[@]}"; do
+        IFS='|' read -r pid ver main_url lib32_url extra_url <<< "${entry}"
+        echo ""
+        echo -e "${CYAN}${BOLD}================================================================================${RESET}"
+        echo -e "${YELLOW}${BOLD} 🧙 [${current_idx}/${total_pkgs}] Transmuting & Deploying: ${pid} (v${ver}) ${RESET}"
+        echo -e "${CYAN}${BOLD}================================================================================${RESET}"
+        if transmute_and_deploy_gaming_pkg "${pid}" "${batch_cache}" "${ver}" "${main_url}" "${lib32_url}" "${extra_url}"; then
+            success_count=$((success_count + 1))
+        else
+            log_error "Failed to deploy ${pid}. Continuing with remaining batch..."
+        fi
+        current_idx=$((current_idx + 1))
+    done
+
+    rm -rf "${staging_base}" 2>/dev/null || true
+    echo ""
+    log_success "🎉 Batch deployment complete! ${success_count}/${total_pkgs} packages successfully installed!"
 }
 
 uninstall_cachyos_gaming_pkg() {
@@ -2640,14 +3611,14 @@ uninstall_cachyos_gaming_pkg() {
             sudo sed -i "/rc\.gamemode/d" /etc/rc.d/rc.local_shutdown 2>/dev/null || true
         fi
 
-        sudo "${PKG_REMOVE_CMD}" "${bname}" 2>/dev/null || true
+        sudo "${PKG_REMOVE_CMD}" "${bname}"
         found=1
     done
 
     if [ "${found}" -eq 1 ]; then
         log_info "[1/3] Updating dynamic linker cache (ldconfig)..."
         sudo /sbin/ldconfig 2>/dev/null || true
-        log_info "[2/3] Updating desktop application entries & GSettings..."
+        log_info "[2/3] Registering desktop application entries & GSettings..."
         if [ -x /usr/bin/update-desktop-database ]; then
             sudo /usr/bin/update-desktop-database /usr/share/applications 2>/dev/null || true
         fi
@@ -2671,7 +3642,7 @@ uninstall_cachyos_gaming_pkg() {
 
 sync_all_installed_cachyos_gaming_packages() {
     log_info "Auditing installed Underpants Gnomes Gaming packages for upstream updates..."
-    local updated_count=0
+    local outdated_pids=()
     
     while IFS='|' read -r pkg_id name cat main_pat l32_pat ext_pat repos; do
         [ -n "${pkg_id}" ] || continue
@@ -2687,17 +3658,14 @@ sync_all_installed_cachyos_gaming_packages() {
             is_newer=$(compare_versions_strictly_greater "${latest_ver}" "${cur_ver}" 2>/dev/null || echo "false")
             if [ "${is_newer}" = "true" ]; then
                 log_info "Upgrade available for ${name}: v${cur_ver} -> v${latest_ver}"
-                if transmute_and_deploy_gaming_pkg "${pkg_id}"; then
-                    updated_count=$((updated_count + 1))
-                else
-                    log_error "Failed to upgrade ${name}. Continuing with remaining packages..."
-                fi
+                outdated_pids+=("${pkg_id}")
             fi
         fi
     done <<< "$(get_gaming_catalog)"
 
-    if [ "${updated_count}" -gt 0 ]; then
-        log_success "Underpants Gnomes Gaming Suite update complete (${updated_count} packages upgraded)."
+    if [ ${#outdated_pids[@]} -gt 0 ]; then
+        log_info "Deploying unified batch upgrade for ${#outdated_pids[@]} packages..."
+        deploy_gaming_packages_batch "${outdated_pids[@]}"
     else
         log_info "All installed Underpants Gnomes Gaming packages are up to date."
     fi
@@ -2725,28 +3693,29 @@ interactive_cachyos_gaming_menu() {
         render_gaming_cat() {
             local cat_filter="$1"
             local cat_title="$2"
-            local printed_header=0
+            echo -e "\n${YELLOW}${BOLD}--- [ ${cat_title} ] ---${RESET}"
 
             while IFS='|' read -r pkg_id name cat main_pat l32_pat ext_pat repos; do
                 [ "${cat}" = "${cat_filter}" ] || continue
+                if ! is_gaming_pkg_whitelisted "${pkg_id}"; then
+                    continue
+                fi
                 if [ "${pkg_id}" = "vram-booster" ] && ! is_vram_booster_supported; then
                     continue
                 fi
                 local cur_ver
                 cur_ver=$(get_installed_gaming_pkg_version "${pkg_id}")
+                local st_color="${RED}"
+                local st_text="[Not Installed]"
                 if [ "${cur_ver}" != "NONE" ]; then
-                    if [ "${printed_header}" -eq 0 ]; then
-                        echo -e "\n${YELLOW}${BOLD}--- [ ${cat_title} ] ---${RESET}"
-                        printed_header=1
-                    fi
-                    local st_color="${GREEN}"
-                    local st_text="[Installed: v${cur_ver} ✓]"
-                    printf "  ${BOLD}%2d.${RESET} %-45s ${st_color}%s${RESET}\n" "${index}" "${name}" "${st_text}"
-                    item_ids+=("${pkg_id}")
-                    item_names+=("${name}")
-                    item_statuses+=("${cur_ver}")
-                    index=$((index + 1))
+                    st_color="${GREEN}"
+                    st_text="[Installed: v${cur_ver} ✓]"
                 fi
+                printf "  ${BOLD}%2d.${RESET} %-45s ${st_color}%s${RESET}\n" "${index}" "${name}" "${st_text}"
+                item_ids+=("${pkg_id}")
+                item_names+=("${name}")
+                item_statuses+=("${cur_ver}")
+                index=$((index + 1))
             done <<< "$(get_gaming_catalog)"
         }
 
@@ -2761,18 +3730,27 @@ interactive_cachyos_gaming_menu() {
 
         echo -e "\n${BLUE}================================================================================"
         echo -e " ${BOLD}Actions:${RESET}"
+        echo -e "  ${GREEN}${BOLD}A.${RESET} ⚡ 1-Click Total Gaming Rig (Deploy All Components in Unified Parallel Batch)"
         echo -e "  ${CYAN}${BOLD}U.${RESET} 🔄 Synchronize & Upgrade All Installed Gaming Packages"
         echo -e "  ${YELLOW}${BOLD}D.${RESET} 🗑️  Uninstall a Component"
         echo -e "  ${BOLD}Q.${RESET} 🚪 Catch You on the Flip Side (Return to Main Menu)"
         echo -e "${BLUE}================================================================================${RESET}"
         echo ""
-        read -r -p "Pick your play [1-${#item_ids[@]}, U, D, Q]: " user_choice
+        read -r -p "Pick your play [1-${#item_ids[@]} (multi-select e.g. 1 3 5 or 1-4), A, U, D, Q]: " user_choice
         user_choice=$(echo "${user_choice}" | tr '[:lower:]' '[:upper:]' | xargs)
 
         case "${user_choice}" in
             Q|"")
                 trigger_silent_background_refresh 2>/dev/null || true
                 break
+                ;;
+            A)
+                echo ""
+                log_info "Starting 1-Click Total Gaming Rig Deployment (${#item_ids[@]} packages in unified batch)..."
+                validate_privileges
+                deploy_gaming_packages_batch "${item_ids[@]}"
+                echo ""
+                read -r -p "Press Enter to continue..."
                 ;;
             U)
                 echo ""
@@ -2795,24 +3773,56 @@ interactive_cachyos_gaming_menu() {
                 read -r -p "Press Enter to continue..."
                 ;;
             *)
-                # Parse single or comma-separated numbers (e.g. 1, 3, 5)
-                IFS=',' read -r -a selected_nums <<< "${user_choice}"
-                local valid_found=0
-                for num_item in "${selected_nums[@]}"; do
-                    local n
-                    n=$(echo "${num_item}" | xargs)
-                    if [[ "${n}" =~ ^[0-9]+$ ]] && [ "${n}" -ge 1 ] && [ "${n}" -le "${#item_ids[@]}" ]; then
-                        local sel_idx=$((n - 1))
-                        local sel_id="${item_ids[${sel_idx}]}"
-                        valid_found=1
-                        echo ""
-                        transmute_and_deploy_gaming_pkg "${sel_id}" || log_error "Failed to deploy ${sel_id}"
+                # Parse single, comma-separated, space-separated or range numbers (e.g. 1, 3, 5 or 1 3 5 or 1-4)
+                local clean_input
+                clean_input=$(echo "${user_choice}" | tr ',' ' ')
+                local selected_pids=()
+                
+                for token in ${clean_input}; do
+                    if [[ "${token}" =~ ^([0-9]+)-([0-9]+)$ ]]; then
+                        local start_n="${BASH_REMATCH[1]}"
+                        local end_n="${BASH_REMATCH[2]}"
+                        for ((n=start_n; n<=end_n; n++)); do
+                            if [ "$n" -ge 1 ] && [ "$n" -le "${#item_ids[@]}" ]; then
+                                selected_pids+=("${item_ids[$((n - 1))]}")
+                            fi
+                        done
+                    elif [[ "${token}" =~ ^[0-9]+$ ]]; then
+                        if [ "${token}" -ge 1 ] && [ "${token}" -le "${#item_ids[@]}" ]; then
+                            selected_pids+=("${item_ids[$((token - 1))]}")
+                        fi
                     fi
                 done
-                if [ "${valid_found}" -eq 1 ]; then
-                    log_success "Selected package operations complete!"
+
+                # Deduplicate selected_pids
+                local unique_pids=()
+                for p in "${selected_pids[@]}"; do
+                    local already=0
+                    for u in "${unique_pids[@]}"; do
+                        if [ "${u}" = "${p}" ]; then
+                            already=1
+                            break
+                        fi
+                    done
+                    if [ "${already}" -eq 0 ]; then
+                        unique_pids+=("${p}")
+                    fi
+                done
+
+                if [ ${#unique_pids[@]} -gt 0 ]; then
+                    echo ""
+                    if [ ${#unique_pids[@]} -eq 1 ]; then
+                        log_info "Deploying single package: ${unique_pids[0]}..."
+                        transmute_and_deploy_gaming_pkg "${unique_pids[0]}" || log_error "Failed to deploy ${unique_pids[0]}"
+                    else
+                        log_info "Deploying ${#unique_pids[@]} selected packages in unified batch..."
+                        deploy_gaming_packages_batch "${unique_pids[@]}"
+                    fi
                     echo ""
                     read -r -p "Press Enter to continue..."
+                else
+                    log_warn "Invalid selection."
+                    sleep 1
                 fi
                 ;;
         esac

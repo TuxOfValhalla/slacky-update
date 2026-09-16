@@ -1,0 +1,132 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# slacky-snapper-limine-sync: Hourly Btrfs Snapper Snapshot Limine Boot Sync
+# ==============================================================================
+# Silent, opt-in background engine to synchronize Btrfs Snapper snapshots
+# into Limine bootloader with BLAKE2B cryptographic enrollment and Secure Boot resealing.
+
+set -euo pipefail
+
+# --- [ 1. OPT-IN GUARDRAIL (Default: Disabled / Strictly Opt-In) ] ---
+CFG_FILE="/etc/default/limine"
+ENABLE_AUTO="no"
+if [ -f "${CFG_FILE}" ]; then
+    ENABLE_AUTO=$(grep -E '^[[:space:]]*ENABLE_AUTO_SNAPPER_SYNC=' "${CFG_FILE}" 2>/dev/null | tail -n1 | cut -d'=' -f2 | tr -d '"'\'' ' || echo "no")
+fi
+
+if [ "${ENABLE_AUTO}" != "yes" ] && [ "${ENABLE_AUTO}" != "true" ] && [ "${ENABLE_AUTO}" != "1" ]; then
+    # Strictly Opt-In: Dormant exit 0 without any actions
+    exit 0
+fi
+
+# --- [ 2. SYSTEM ELIGIBILITY GUARDRAILS ] ---
+# Must run as root
+if [ "$(id -u)" -ne 0 ]; then
+    exit 0
+fi
+
+# Root filesystem must be Btrfs
+ROOT_FS=$(findmnt -n -o FSTYPE / 2>/dev/null || true)
+if [ "${ROOT_FS}" != "btrfs" ]; then
+    exit 0
+fi
+
+# Locate Snapper snapshots root directory
+SNAP_DIR=""
+for cand in "/.snapshots" "/@snapshots" "/mnt/@snapshots"; do
+    if [ -d "${cand}" ]; then
+        SNAP_DIR="${cand}"
+        break
+    fi
+done
+
+if [ -z "${SNAP_DIR}" ]; then
+    exit 0
+fi
+
+# Locate Limine ESP mount point
+ESP_PATH=""
+if [ -f "${CFG_FILE}" ]; then
+    ESP_PATH=$(grep -E '^[[:space:]]*ESP_PATH=' "${CFG_FILE}" 2>/dev/null | tail -n1 | cut -d'=' -f2 | tr -d '"'\'' ' || true)
+fi
+
+if [ -z "${ESP_PATH}" ] || [ ! -d "${ESP_PATH}" ]; then
+    for candidate in /boot /boot/efi /boot/EFI /efi /limine; do
+        if [ -d "${candidate}" ]; then
+            cand_fs=$(findmnt -n -o FSTYPE "${candidate}" 2>/dev/null || true)
+            if [ "${cand_fs}" = "vfat" ]; then
+                ESP_PATH="${candidate}"
+                break
+            fi
+        fi
+    done
+fi
+
+if [ -z "${ESP_PATH}" ] || [ ! -d "${ESP_PATH}" ] || [ ! -f "${ESP_PATH}/limine.conf" ]; then
+    exit 0
+fi
+
+# --- [ 3. COLLISION MUTEX LOCK ] ---
+LOCK_FILE="/run/lock/boot-partition.lock"
+SLACKY_LOCK="/tmp/slacky-update-running.lock"
+
+# If an interactive slacky-update session is running, defer silently
+if [ -f "${SLACKY_LOCK}" ]; then
+    exit 0
+fi
+
+mkdir -p /run/lock 2>/dev/null || true
+exec 200>"${LOCK_FILE}"
+if ! flock -n 200; then
+    # Partition or upgrade lock held by another process; exit silently and wait for next cron run
+    exit 0
+fi
+
+# --- [ 4. SMART DELTA FINGERPRINT (Zero ESP Flash Wear) ] ---
+CACHE_DIR="/var/cache/slacky-update"
+mkdir -p "${CACHE_DIR}" 2>/dev/null || true
+FINGERPRINT_FILE="${CACHE_DIR}/snapper_limine_fingerprint"
+
+CURRENT_FP=$(find "${SNAP_DIR}" -maxdepth 2 -name "info.xml" -printf '%P %T@\n' 2>/dev/null | sort | md5sum 2>/dev/null | awk '{print $1}')
+if [ -z "${CURRENT_FP}" ]; then
+    CURRENT_FP=$(find "${SNAP_DIR}" -maxdepth 1 -mindepth 1 -type d -name "[0-9]*" -printf '%f %T@\n' 2>/dev/null | sort | md5sum 2>/dev/null | awk '{print $1}')
+fi
+
+if [ -f "${FINGERPRINT_FILE}" ]; then
+    PREV_FP=$(cat "${FINGERPRINT_FILE}" 2>/dev/null || true)
+    if [ "${CURRENT_FP}" = "${PREV_FP}" ] && [ -n "${CURRENT_FP}" ]; then
+        # Snapshots have not changed. Exit in 0ms with zero disk writes to ESP!
+        exit 0
+    fi
+fi
+
+# --- [ 5. EXECUTE SYNCHRONOUS SNAPPER SYNC & CRYPTOGRAPHIC RESEAL ] ---
+SLACKY_BIN=""
+for b in "/usr/bin/slacky-update" "/usr/local/bin/slacky-update"; do
+    if [ -x "${b}" ]; then
+        SLACKY_BIN="${b}"
+        break
+    fi
+done
+
+if [ -n "${SLACKY_BIN}" ]; then
+    "${SLACKY_BIN}" --sync-snapper >/dev/null 2>&1 || true
+else
+    # Fallback to direct library sourcing if binary path is customized
+    APP_DIR="/usr/share/slacky-update/lib"
+    [ ! -d "${APP_DIR}" ] && APP_DIR="/usr/local/lib/slacky-update"
+    if [ -f "${APP_DIR}/common.sh" ] && [ -f "${APP_DIR}/mod_limine.sh" ]; then
+        # shellcheck source=/dev/null
+        source "${APP_DIR}/common.sh"
+        # shellcheck source=/dev/null
+        source "${APP_DIR}/mod_limine.sh"
+        generate_limine_configuration >/dev/null 2>&1 || true
+        enroll_and_sign_limine >/dev/null 2>&1 || true
+    fi
+fi
+
+# Flush filesystem buffers and save updated delta fingerprint
+echo "${CURRENT_FP}" > "${FINGERPRINT_FILE}" 2>/dev/null || true
+sync -f "${FINGERPRINT_FILE}" 2>/dev/null || sync 2>/dev/null || true
+
+exit 0

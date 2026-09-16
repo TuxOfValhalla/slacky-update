@@ -19,7 +19,7 @@ parallel_prefetch_packages() {
     [ -f "/var/lib/slackpkg/pkglist" ] || return 0
 
     sudo mkdir -p /var/cache/packages 2>/dev/null || true
-    sudo chmod 777 /var/cache/packages 2>/dev/null || true
+    sudo chmod -R a+rwX /var/cache/packages 2>/dev/null || true
 
     local candidates=()
     while IFS= read -r line; do
@@ -27,6 +27,7 @@ parallel_prefetch_packages() {
     done < <(python3 - "${active_mirror}" << 'PYPREFETCH'
 import os
 import sys
+import re
 import shutil
 
 active_mirror = sys.argv[1].rstrip('/')
@@ -39,6 +40,52 @@ try:
         sys.exit(0)
 except Exception:
     pass
+
+cache_base = '/var/cache/packages'
+if not os.path.exists(cache_base) or not os.access(cache_base, os.W_OK):
+    stage_base = os.path.expanduser('~/.cache/slacky-update/pkgcache')
+    try:
+        os.makedirs(stage_base, exist_ok=True)
+        if os.access(stage_base, os.W_OK):
+            cache_base = stage_base
+    except Exception:
+        pass
+
+def parse_pkg_details(filename):
+    clean = re.sub(r'\.(t[xg]z|tlz|tbz)$', '', filename)
+    parts = clean.split('-')
+    if len(parts) >= 4:
+        base_name = "-".join(parts[:-3])
+        version = parts[-3]
+        arch = parts[-2]
+        build = parts[-1]
+        return base_name, version, arch, build, clean
+    return clean, "0", "0", "0", clean
+
+def split_numeric(s):
+    tokens = re.split(r'(\d+)', str(s))
+    res = []
+    for t in tokens:
+        if not t:
+            continue
+        if t.isdigit():
+            res.append(int(t))
+        else:
+            res.append(t)
+    return res
+
+def is_strictly_newer(installed_full, upstream_full):
+    if installed_full == upstream_full:
+        return False
+    _, i_ver, _, i_bld, _ = parse_pkg_details(installed_full)
+    _, u_ver, _, u_bld, _ = parse_pkg_details(upstream_full)
+    i_v = split_numeric(i_ver)
+    u_v = split_numeric(u_ver)
+    if u_v != i_v:
+        return u_v > i_v
+    i_b = split_numeric(i_bld)
+    u_b = split_numeric(u_bld)
+    return u_b > i_b
 
 installed = {}
 if os.path.exists('/var/log/packages'):
@@ -72,38 +119,65 @@ if os.path.exists(changelog_file):
 
 mirror_map = {}
 allowed_repos = {'slackware64', 'slackware', 'patches'}
-if os.path.exists('/etc/slackpkg/slackpkgplus.conf'):
-    with open('/etc/slackpkg/slackpkgplus.conf', 'r', encoding='utf-8', errors='ignore') as f:
-        for line in f:
-            sline = line.strip()
-            if sline.startswith('REPOPLUS=('):
-                inside = sline.split('(', 1)[1].split(')', 1)[0]
-                for r in inside.split():
+conf_path = '/etc/slackpkg/slackpkgplus.conf'
+if os.path.exists(conf_path):
+    try:
+        with open(conf_path, 'r', encoding='utf-8', errors='ignore') as f:
+            content = f.read()
+            for line in content.splitlines():
+                sline = line.strip()
+                if sline.startswith('MIRRORPLUS[') and '=' in sline:
+                    repo_key = sline.split('[', 1)[1].split(']', 1)[0].strip('\'"')
+                    repo_url = sline.split('=', 1)[1].strip().strip('\'"').rstrip('/')
+                    if repo_key and repo_url:
+                        mirror_map[repo_key] = repo_url
+                        allowed_repos.add(repo_key)
+            match = re.search(r'REPOPLUS=\(\s*([^)]+)\s*\)', content, re.DOTALL)
+            if match:
+                for r in match.group(1).split():
                     allowed_repos.add(r.strip())
-            elif sline.startswith('MIRRORPLUS[') and '=' in sline:
-                repo_key = sline.split('[', 1)[1].split(']', 1)[0].strip('\'"')
-                repo_url = sline.split('=', 1)[1].strip().strip('\'"').rstrip('/')
-                if repo_key and repo_url:
-                    mirror_map[repo_key] = repo_url
+    except Exception:
+        pass
 
 if os.path.exists('/var/lib/slackpkg/pkglist'):
     with open('/var/lib/slackpkg/pkglist', 'r', encoding='utf-8', errors='ignore') as f:
         for line in f:
             parts = line.strip().split()
-            if len(parts) >= 8:
-                repo, name, ver, arch, build, fullname, relpath, ext = parts[0], parts[1], parts[2], parts[3], parts[4], parts[5], parts[6], parts[7]
-                if repo in allowed_repos:
-                    is_upgrade = (name in installed and installed[name] != fullname)
+            if len(parts) >= 7:
+                ext = parts[-1]
+                relpath = parts[-2]
+                fullname = parts[-3]
+                build = parts[-4]
+                arch = parts[-5]
+                ver = parts[-6]
+                name = parts[-7]
+                raw_repo = parts[0] if len(parts) >= 8 else 'slackware64'
+                clean_repo = raw_repo.replace('SLACKPKGPLUS_', '')
+                
+                is_allowed = (clean_repo in allowed_repos or raw_repo in allowed_repos or raw_repo.startswith('slackware') or (raw_repo.startswith('SLACKPKGPLUS_') and not raw_repo.startswith('slackware')))
+                if is_allowed:
+                    is_upgrade = (name in installed and is_strictly_newer(installed[name], fullname))
                     is_new_add = (name not in installed and name in added_pkgs)
                     if is_upgrade or is_new_add:
                         clean_rel = relpath.lstrip('./')
+                        url_rel = clean_rel
+                        if url_rel.startswith(f'SLACKPKGPLUS_{clean_repo}/'):
+                            url_rel = url_rel[len(f'SLACKPKGPLUS_{clean_repo}/'):]
+                        elif url_rel.startswith(f'{clean_repo}/') and clean_repo in mirror_map:
+                            url_rel = url_rel[len(f'{clean_repo}/'):]
+                        
                         pkg_file = f"{fullname}.{ext}"
-                        base_url = mirror_map.get(repo, active_mirror)
-                        url = f"{base_url}/{clean_rel}/{pkg_file}" if clean_rel else f"{base_url}/{pkg_file}"
+                        base_url = mirror_map.get(clean_repo, mirror_map.get(raw_repo, active_mirror))
+                        url = f"{base_url}/{url_rel}/{pkg_file}" if url_rel else f"{base_url}/{pkg_file}"
                         asc_url = f"{url}.asc"
-                        dest_dir = f"/var/cache/packages/{clean_rel}" if clean_rel else f"/var/cache/packages/{repo}"
+                        dest_dir = f"{cache_base}/{clean_rel}" if clean_rel else f"{cache_base}/{clean_repo}"
                         dest_file = f"{dest_dir}/{pkg_file}"
                         asc_dest = f"{dest_file}.asc"
+                        
+                        std_dest = f"/var/cache/packages/{clean_rel}/{pkg_file}" if clean_rel else f"/var/cache/packages/{clean_repo}/{pkg_file}"
+                        std_asc = f"{std_dest}.asc"
+                        if os.path.exists(std_dest) and os.path.getsize(std_dest) > 0 and os.path.exists(std_asc) and os.path.getsize(std_asc) > 0:
+                            continue
                         if os.path.exists(dest_file) and os.path.getsize(dest_file) > 0 and os.path.exists(asc_dest) and os.path.getsize(asc_dest) > 0:
                             continue
                         print(f"{url}|{dest_file}|{asc_url}|{asc_dest}")
@@ -111,7 +185,42 @@ PYPREFETCH
 )
 
     if [ ${#candidates[@]} -gt 0 ]; then
-        download_parallel_pacman "Slackware System Packages" "${candidates[@]}" || true
+        download_parallel_pacman "Slackware System & Multilib Packages" "${candidates[@]}" || true
+    fi
+
+    local stage_dir="${HOME:-/root}/.cache/slacky-update/pkgcache"
+    if [ -d "${stage_dir}" ] && [ -n "$(ls -A "${stage_dir}" 2>/dev/null)" ]; then
+        if [ "$(id -u)" -eq 0 ]; then
+            if cp -rn "${stage_dir}"/* /var/cache/packages/ 2>/dev/null; then
+                chmod -R a+rwX /var/cache/packages 2>/dev/null || true
+                rm -rf "${stage_dir}" 2>/dev/null || true
+            fi
+        elif sudo -n cp -rn "${stage_dir}"/* /var/cache/packages/ 2>/dev/null; then
+            sudo -n chmod -R a+rwX /var/cache/packages 2>/dev/null || true
+            rm -rf "${stage_dir}" 2>/dev/null || true
+        elif sudo cp -rn "${stage_dir}"/* /var/cache/packages/ 2>/dev/null; then
+            sudo chmod -R a+rwX /var/cache/packages 2>/dev/null || true
+            rm -rf "${stage_dir}" 2>/dev/null || true
+        fi
+    fi
+}
+
+clear_stale_slackpkg_locks() {
+    if ls /var/lock/slackpkg.* >/dev/null 2>&1; then
+        for lfile in /var/lock/slackpkg.*; do
+            [ -f "${lfile}" ] || continue
+            local lpid="${lfile##*.}"
+            if [ -n "${lpid}" ] && [[ "${lpid}" =~ ^[0-9]+$ ]]; then
+                if ! kill -0 "${lpid}" 2>/dev/null; then
+                    log_warn "Clearing stale slackpkg lock file from dead process (PID: ${lpid})..."
+                    if [ "$(id -u)" -eq 0 ]; then
+                        rm -f "${lfile}" 2>/dev/null || true
+                    else
+                        sudo rm -f "${lfile}" 2>/dev/null || true
+                    fi
+                fi
+            fi
+        done
     fi
 }
 
@@ -126,6 +235,8 @@ update_slackware_core() {
         return 1
     fi
 
+    clear_stale_slackpkg_locks
+
     if command -v check_and_shield_mirror_freshness >/dev/null 2>&1; then
         check_and_shield_mirror_freshness
     fi
@@ -137,6 +248,8 @@ update_slackware_core() {
 
     # Engage Turbo Parallel Pre-fetch before install-new and upgrade-all
     parallel_prefetch_packages
+
+    clear_stale_slackpkg_locks
 
     log_info "Installing newly added distribution packages (install-new)..."
     sudo "${slackpkg_bin}" -postinst=off install-new || {

@@ -20,12 +20,14 @@ TMP_DIR=$(mktemp -d /tmp/slacky-update-check.XXXXXX)
 trap 'rm -rf "${TMP_DIR}"' EXIT
 
 touch "${TMP_DIR}/slackware_updates"
+touch "${TMP_DIR}/slackpkgplus_updates"
 touch "${TMP_DIR}/flatpak_updates"
 touch "${TMP_DIR}/sbo_updates"
 touch "${TMP_DIR}/cachy_updates"
 touch "${TMP_DIR}/gaming_updates"
 touch "${TMP_DIR}/nvidia_updates"
 touch "${TMP_DIR}/slackware_status"
+touch "${TMP_DIR}/slackpkgplus_status"
 touch "${TMP_DIR}/flatpak_status"
 touch "${TMP_DIR}/sbo_status"
 touch "${TMP_DIR}/cachy_status"
@@ -80,19 +82,44 @@ pkg_log_dir = "/var/log/packages"
 installed_pkgs = set(os.listdir(pkg_log_dir)) if os.path.exists(pkg_log_dir) else set()
 
 def parse_pkg_details(filename):
-    clean = re.sub(r'\.(t[xg]z|tlz)$', '', filename)
+    clean = re.sub(r'\.(t[xg]z|tlz|tbz)$', '', filename)
     parts = clean.split('-')
     if len(parts) >= 4:
         base_name = "-".join(parts[:-3])
         version = parts[-3]
         arch = parts[-2]
         build = parts[-1]
-        return base_name, version, build, clean
-    return clean, "0", "0", clean
+        return base_name, version, arch, build, clean
+    return clean, "0", "0", "0", clean
+
+def split_numeric(s):
+    tokens = re.split(r'(\d+)', str(s))
+    res = []
+    for t in tokens:
+        if not t:
+            continue
+        if t.isdigit():
+            res.append(int(t))
+        else:
+            res.append(t)
+    return res
+
+def is_strictly_newer(installed_full, upstream_full):
+    if installed_full == upstream_full:
+        return False
+    _, i_ver, _, i_bld, _ = parse_pkg_details(installed_full)
+    _, u_ver, _, u_bld, _ = parse_pkg_details(upstream_full)
+    i_v = split_numeric(i_ver)
+    u_v = split_numeric(u_ver)
+    if u_v != i_v:
+        return u_v > i_v
+    i_b = split_numeric(i_bld)
+    u_b = split_numeric(u_bld)
+    return u_b > i_b
 
 installed_map = {}
 for p in installed_pkgs:
-    bname, ver, bld, full = parse_pkg_details(p)
+    bname, ver, arch, bld, full = parse_pkg_details(p)
     installed_map[bname] = {"version": ver, "build": bld, "full": full}
 
 latest_changelog_pkgs = {}
@@ -119,7 +146,7 @@ if os.path.exists(changelog_path):
             if full_entry.startswith(("testing/", "pasture/", "source/", "extra/")):
                 continue
             pkg_file = os.path.basename(full_entry)
-            bname, ver, bld, full = parse_pkg_details(pkg_file)
+            bname, ver, arch, bld, full = parse_pkg_details(pkg_file)
             
             if bname not in latest_changelog_pkgs:
                 latest_changelog_pkgs[bname] = {
@@ -133,7 +160,7 @@ pending_updates = []
 for bname, target in latest_changelog_pkgs.items():
     if bname in installed_map:
         current = installed_map[bname]
-        if current["full"] != target["full"]:
+        if is_strictly_newer(current["full"], target["full"]):
             pending_updates.append(target["full_entry"])
 
 for item in sorted(pending_updates):
@@ -143,6 +170,103 @@ PYSLACK
     else
         echo "FAILED" > "${TMP_DIR}/slackware_status"
     fi
+) &
+
+# --- [ 1.5. SLACKPKGPLUS & MULTILIB REPOSITORY INSPECTION (UNPRIVILEGED) ] ---
+(
+    python3 > "${TMP_DIR}/slackpkgplus_updates" << 'PYPLUS'
+import os, sys, re
+
+pkg_log_dir = "/var/log/packages"
+installed = {}
+if os.path.exists(pkg_log_dir):
+    for f in os.listdir(pkg_log_dir):
+        parts = f.rsplit('-', 3)
+        if len(parts) == 4:
+            installed[parts[0]] = f
+
+def parse_pkg_details(filename):
+    clean = re.sub(r'\.(t[xg]z|tlz|tbz)$', '', filename)
+    parts = clean.split('-')
+    if len(parts) >= 4:
+        base_name = "-".join(parts[:-3])
+        version = parts[-3]
+        arch = parts[-2]
+        build = parts[-1]
+        return base_name, version, arch, build, clean
+    return clean, "0", "0", "0", clean
+
+def split_numeric(s):
+    tokens = re.split(r'(\d+)', str(s))
+    res = []
+    for t in tokens:
+        if not t:
+            continue
+        if t.isdigit():
+            res.append(int(t))
+        else:
+            res.append(t)
+    return res
+
+def is_strictly_newer(installed_full, upstream_full):
+    if installed_full == upstream_full:
+        return False
+    _, i_ver, _, i_bld, _ = parse_pkg_details(installed_full)
+    _, u_ver, _, u_bld, _ = parse_pkg_details(upstream_full)
+    i_v = split_numeric(i_ver)
+    u_v = split_numeric(u_ver)
+    if u_v != i_v:
+        return u_v > i_v
+    i_b = split_numeric(i_bld)
+    u_b = split_numeric(u_bld)
+    return u_b > i_b
+
+allowed_repos = set()
+mirror_map = {}
+conf_path = "/etc/slackpkg/slackpkgplus.conf"
+if os.path.exists(conf_path):
+    try:
+        with open(conf_path, "r", encoding="utf-8", errors="ignore") as f:
+            content = f.read()
+            for line in content.splitlines():
+                sline = line.strip()
+                if sline.startswith("MIRRORPLUS[") and "=" in sline:
+                    repo_key = sline.split("[", 1)[1].split("]", 1)[0].strip("'\"")
+                    repo_url = sline.split("=", 1)[1].strip().strip("'\"").rstrip("/")
+                    if repo_key and repo_url:
+                        mirror_map[repo_key] = repo_url
+                        allowed_repos.add(repo_key)
+            match = re.search(r'REPOPLUS=\(\s*([^)]+)\s*\)', content, re.DOTALL)
+            if match:
+                for r in match.group(1).split():
+                    allowed_repos.add(r.strip())
+    except Exception:
+        pass
+
+updates = []
+pkglist_path = "/var/lib/slackpkg/pkglist"
+if os.path.exists(pkglist_path):
+    try:
+        with open(pkglist_path, "r", encoding="utf-8", errors="ignore") as f:
+            for line in f:
+                parts = line.strip().split()
+                if len(parts) >= 7:
+                    ext = parts[-1]
+                    relpath = parts[-2]
+                    fullname = parts[-3]
+                    name = parts[-7]
+                    raw_repo = parts[0] if len(parts) >= 8 else ""
+                    clean_repo = raw_repo.replace("SLACKPKGPLUS_", "")
+                    if clean_repo in allowed_repos or raw_repo in allowed_repos or (raw_repo.startswith("SLACKPKGPLUS_") and not raw_repo.startswith("slackware")):
+                        if name in installed and is_strictly_newer(installed[name], fullname):
+                            updates.append(f"{fullname}.{ext}")
+    except Exception:
+        pass
+
+for u in sorted(updates):
+    print(u)
+PYPLUS
+    echo "SUCCESS" > "${TMP_DIR}/slackpkgplus_status"
 ) &
 
 # --- [ 2. FLATPAK REPOSITORY INSPECTION ] ---
@@ -474,6 +598,7 @@ def read_file_content(filename, default=""):
     return default
 
 slackware_updates = get_persisted_list("slackware_updates", "slackware_status", "slackware_updates")
+slackpkgplus_updates = get_persisted_list("slackpkgplus_updates", "slackpkgplus_status", "slackpkgplus_updates")
 flatpak_updates = get_persisted_list("flatpak_updates", "flatpak_status", "flatpak_updates")
 sbo_updates = get_persisted_list("sbo_updates", "sbo_status", "sbo_updates")
 cachy_updates = get_persisted_list("cachy_updates", "cachy_status", "cachyos_kernel_updates")
@@ -486,6 +611,7 @@ now_dt = datetime.now(timezone.utc)
 
 data = {
     "slackware_updates": slackware_updates,
+    "slackpkgplus_updates": slackpkgplus_updates,
     "flatpak_updates": flatpak_updates,
     "sbo_updates": sbo_updates,
     "cachyos_kernel_updates": cachy_updates,

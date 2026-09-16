@@ -3,6 +3,7 @@
   "SYSTEM_DEFAULT_LANG": "Vuogádatstandard (Auto)",
   "CLI_TITLE": "Slacky-Update v{version}",
   "CAT_SLACKWARE": "Slackware-páhkat",
+  "CAT_SLACKPKGPLUS": "Multilib ja Slackpkg+ páhkat",
   "CAT_FLATPAK": "Flatpak-prográmmat",
   "CAT_KERNEL": "CachyOS-kjerne",
   "CAT_NVIDIA": "NVIDIA-vuoddit",
@@ -165,5 +166,19 @@
   "MENU_LIMINE": "Limine Bootloader & Secure Boot-matrise (BLAKE2B-hashing, Snapshots & Self-Heal)",
   "MENU_SBCTL": "UEFI Secure Boot Kontrollsenter (sbctl-nøkkelregistrering & MOK)",
   "PROMPT_INSTALL_LIMINE": "Installere Limine Bootloader i sameksistens-modus? [J/n] ",
-  "LIMINE_INSTALL_SUCCESS": "Limine Bootloader er installert! GRUB fallback forblir intakt."
+  "LIMINE_INSTALL_SUCCESS": "Limine Bootloader er installert! GRUB fallback forblir intakt.",
+  "MENU_FIELD_GUIDE": "Vuogádatgihppaga ja mobiilafievrrideapmi (PDF / E-poasta / QR-koda)",
+  "PIPELINE_HEADER": "Heivehahttá váimmusmatriissa, initramfsa, Limine BLAKE2B ja Sihkkaris Vuolggáheami...",
+  "PIPELINE_STEP1_NVIDIA": "Vástideaddji CachyOS NVIDIA-vuodjinmoduvllat doaimmas váimmusmuoras.",
+  "PIPELINE_STEP2_DEPMOD": "Ođđasis hukse váimmosymbolaid sorjavašvuođamuora (depmod)...",
+  "PIPELINE_STEP3_DRACUT": "Dracut Initramfs ráhkadeapmi",
+  "PIPELINE_STEP4_LIMINE": "Limine-heivehus ja BLAKE2B-dárkkistanárvu",
+  "PIPELINE_STEP5_SBCTL": "Sihkkaris Vuolggáheami oktasaš vuolláičállinvuostáváldin",
+  "PIPELINE_ALL_UP_TO_DATE": "Buot sajáiduhttojuvvon govat leat ođasmahttojuvvon",
+  "PIPELINE_BLAKE2B_ENROLLED": "BLAKE2B lea lihkostuvvan registrerejuvvot",
+  "DRACUT_HARDWARE_PARALLEL": "Reaidovárjjus: Alla doaimma máŋggaváimmusvuogádat gávdnon. Parallella Dracut biddjojuvvon doibmii.",
+  "DRACUT_HARDWARE_SEQUENTIAL": "Reaidovárjjus: Dábálaš reaidu gávdnon. Vuorrolágás Dracut biddjojuvvon doibmii seastit muitu.",
+  "MENU_CMDLINE": "Heivet váimmusa vuolggahanparametteriid (CMDLINE ja speallanguovddáš)",
+  "CMDLINE_TITLE": "VÁIMMUSA VUOLGGAHANPARAMETTERAT JA SPEALLANGUOVODDAT",
+  "CMDLINE_SAVED_SUCCESS": "Váimmusa CMDLINE ođasmahttojuvvon, limine.conf ráhkaduvvon, BLAKE2B registrerejuvvon ja vuolláičállojuvvon!"
 }

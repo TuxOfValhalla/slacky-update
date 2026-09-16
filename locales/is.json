@@ -3,6 +3,7 @@
   "SYSTEM_DEFAULT_LANG": "Systemstandard (Auto)",
   "CLI_TITLE": "Slacky-Update v{version}",
   "CAT_SLACKWARE": "Slackware-pakkar",
+  "CAT_SLACKPKGPLUS": "Multilib og Slackpkg+ pakkar",
   "CAT_FLATPAK": "Flatpak-forrit",
   "CAT_KERNEL": "CachyOS-kjarni",
   "CAT_NVIDIA": "NVIDIA-rekill",
@@ -165,5 +166,19 @@
   "MENU_LIMINE": "Limine Bootloader & Secure Boot Matrix (BLAKE2B Hashing, Snapshots & Self-Heal)",
   "MENU_SBCTL": "UEFI Secure Boot Control Center (sbctl Key Enrollment & MOK)",
   "PROMPT_INSTALL_LIMINE": "Deploy Limine Bootloader in Coexistence Mode? [Y/n] ",
-  "LIMINE_INSTALL_SUCCESS": "Limine Bootloader successfully installed! GRUB fallback preserved."
+  "LIMINE_INSTALL_SUCCESS": "Limine Bootloader successfully installed! GRUB fallback preserved.",
+  "MENU_FIELD_GUIDE": "Kerfishandbók og farsímaútflutningur (PDF / Tölvupóstur / QR-kóði)",
+  "PIPELINE_HEADER": "Samstillir kjarnafylki, initramfs, Limine BLAKE2B og Secure Boot...",
+  "PIPELINE_STEP1_NVIDIA": "Samsvarandi CachyOS NVIDIA rekilseiningar virkar í kjarnatrénu.",
+  "PIPELINE_STEP2_DEPMOD": "Endurbyggir táknatré kjarnans (depmod)...",
+  "PIPELINE_STEP3_DRACUT": "Dracut Initramfs gerð",
+  "PIPELINE_STEP4_LIMINE": "Limine stillingar og BLAKE2B tætivörn",
+  "PIPELINE_STEP5_SBCTL": "Sameinuð undirskriftastaðfesting fyrir Secure Boot",
+  "PIPELINE_ALL_UP_TO_DATE": "Öll uppsett kerfisröl eru uppfærð",
+  "PIPELINE_BLAKE2B_ENROLLED": "BLAKE2B hefur verið skráð",
+  "DRACUT_HARDWARE_PARALLEL": "Vélbúnaðarvörður: Afkastamikið fjölkjarna kerfi fannst. Samhliða Dracut virkjað.",
+  "DRACUT_HARDWARE_SEQUENTIAL": "Vélbúnaðarvörður: Staðlaður vélbúnaður fannst. Raðbundið Dracut virkjað til að verja vinnsluminni.",
+  "MENU_CMDLINE": "Stilla kjarnabreytur (CMDLINE og leikjamiðstöð)",
+  "CMDLINE_TITLE": "KJARNARÆSIBRIYTUR OG LEIKJAMIÐSTÖÐ",
+  "CMDLINE_SAVED_SUCCESS": "CMDLINE kjarna uppfært, limine.conf útbúið, BLAKE2B skráð og undirritað!"
 }

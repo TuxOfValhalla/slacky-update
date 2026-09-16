@@ -36,8 +36,8 @@ HAS_NVIDIA=false
 HAS_AMD=false
 HAS_INTEL=false
 
-CURRENT_VERSION="0.11"
-RELEASE_CODENAME="Underpants Gnomes hotfix"
+CURRENT_VERSION="0.12.0"
+RELEASE_CODENAME="....and all that I can see, is just another Limine tree...."
 
 CURL_CONNECT_TIMEOUT=15
 CURL_MAX_TIME=60
@@ -96,6 +96,54 @@ get_user_staging_dir() {
     mkdir -p "${staging_dir}" 2>/dev/null || staging_dir="/tmp/slacky-staging-${UID:-0}"
     mkdir -p "${staging_dir}" 2>/dev/null || true
     echo "${staging_dir}"
+}
+
+get_active_locale() {
+    python3 -c "
+import os, json, locale, pwd
+
+cfg_paths = []
+cfg_paths.append(os.path.expanduser('~/.config/slacky-update/config.json'))
+sudo_u = os.environ.get('SUDO_USER')
+if sudo_u:
+    try:
+        pw = pwd.getpwnam(sudo_u)
+        cfg_paths.append(os.path.join(pw.pw_dir, '.config', 'slacky-update', 'config.json'))
+    except Exception:
+        pass
+
+for cp in cfg_paths:
+    if os.path.exists(cp):
+        try:
+            with open(cp, 'r', encoding='utf-8') as f:
+                c = json.load(f)
+                ov = c.get('language_override')
+                if ov and ov != 'system':
+                    print(ov)
+                    exit(0)
+        except Exception:
+            pass
+
+for ev in ('LC_ALL', 'LC_MESSAGES', 'LANG', 'LANGUAGE'):
+    val = os.environ.get(ev)
+    if val:
+        tag = val.split('.')[0].split(':')[0].replace('_', '-').lower()
+        if tag and tag not in ('c', 'posix'):
+            print(tag)
+            exit(0)
+
+try:
+    sys_lang = locale.getdefaultlocale()[0]
+    if sys_lang:
+        tag = sys_lang.replace('_', '-').lower()
+        if tag and tag not in ('c', 'posix'):
+            print(tag)
+            exit(0)
+except Exception:
+    pass
+
+print('en')
+" 2>/dev/null || echo "en"
 }
 
 get_status_json_path() {
@@ -688,35 +736,94 @@ def render_pacman_bar(pct, width=16, chomp_state=0):
 size_map = {}
 def probe_size(item):
     url, dest, sig_url, sig_dest = item
+    fn = os.path.basename(dest).lower()
+
+    # 1. Smart HTTP HEAD/GET header probe with curl
     try:
-        res = subprocess.run(["curl", "-sI", "-L", "-m", "5", url], capture_output=True, text=True)
-        if res.returncode == 0:
-            for line in res.stdout.splitlines():
-                if line.lower().startswith("content-length:"):
-                    sz = int(line.split(":", 1)[1].strip())
-                    size_map[url] = sz
-                    return
+        res = subprocess.run(["curl", "-sIL", "-A", "Mozilla/5.0 (X11; Linux x86_64)", "-m", "3", url], capture_output=True, text=True)
+        if res.returncode == 0 and res.stdout:
+            for line in reversed(res.stdout.splitlines()):
+                line_clean = line.strip().lower()
+                if line_clean.startswith("content-length:"):
+                    try:
+                        sz = int(line.split(":", 1)[1].strip())
+                        if sz > 1024:
+                            size_map[url] = sz
+                            return
+                    except Exception:
+                        pass
+                elif line_clean.startswith("content-range:"):
+                    try:
+                        sz = int(line.split("/", 1)[1].strip())
+                        if sz > 1024:
+                            size_map[url] = sz
+                            return
+                    except Exception:
+                        pass
     except Exception:
         pass
-    size_map[url] = 10 * 1024 * 1024
 
-with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(needed), 16)) as probe_exec:
+    # 2. Smart HTTP Range probe (bytes=0-0) if HEAD didn't yield size
+    try:
+        res = subprocess.run(["curl", "-sSL", "-r", "0-0", "-D", "-", "-o", "/dev/null", "-A", "Mozilla/5.0 (X11; Linux x86_64)", "-m", "3", url], capture_output=True, text=True)
+        if res.returncode == 0 and res.stdout:
+            for line in reversed(res.stdout.splitlines()):
+                line_clean = line.strip().lower()
+                if line_clean.startswith("content-range:"):
+                    try:
+                        sz = int(line.split("/", 1)[1].strip())
+                        if sz > 1024:
+                            size_map[url] = sz
+                            return
+                    except Exception:
+                        pass
+                elif line_clean.startswith("content-length:"):
+                    try:
+                        sz = int(line.split(":", 1)[1].strip())
+                        if sz > 1024:
+                            size_map[url] = sz
+                            return
+                    except Exception:
+                        pass
+    except Exception:
+        pass
+
+    # 3. Known package heuristics based on filename
+    if any(k in fn for k in ["edge", "chrome", "brave", "opera", "vivaldi", "zen-browser"]):
+        size_map[url] = 160 * 1024 * 1024
+    elif any(k in fn for k in ["obs-studio", "electron", "pear-desktop", "vesktop", "discord"]):
+        size_map[url] = 110 * 1024 * 1024
+    elif any(k in fn for k in ["inkscape", "darktable", "audacity", "lutris", "retroarch"]):
+        size_map[url] = 70 * 1024 * 1024
+    elif any(k in fn for k in ["mangohud", "gamemode", "gamescope", "yabridge", "easyeffects", "scx"]):
+        size_map[url] = 25 * 1024 * 1024
+    elif any(k in fn for k in ["kernel", "vmlinuz", "modules"]):
+        size_map[url] = 120 * 1024 * 1024
+    elif any(k in fn for k in ["nvidia"]):
+        size_map[url] = 90 * 1024 * 1024
+    else:
+        size_map[url] = 15 * 1024 * 1024
+
+with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(needed), 32)) as probe_exec:
     list(probe_exec.map(probe_size, needed))
 
-total_bytes_expected = sum(size_map.get(u, 10 * 1024 * 1024) for u, _, _, _ in needed)
+total_bytes_expected = sum(size_map.get(u, 15 * 1024 * 1024) for u, _, _, _ in needed)
 
 is_tty = sys.stdout.isatty()
 try:
     term_width = os.get_terminal_size().columns
+    term_height = os.get_terminal_size().lines
 except Exception:
     term_width = 80
+    term_height = 24
 
-max_display_slots = min(num_workers, total_items, 10)
+max_allowed_slots = max(4, min(16, term_height - 6))
+max_display_slots = min(num_workers, total_items, max_allowed_slots)
 slot_bar_width = 14 if term_width < 100 else 18
 total_bar_width = 18 if term_width < 100 else 24
 
 tot_sz_str = format_size(total_bytes_expected)
-print(f"\033[1;36m🚀 Turbo Parallel Pre-fetch: {label} [{total_items} files • {tot_sz_str}]\033[0m")
+print(f"\033[1;36m🚀 Turbo Parallel Pre-fetch: {label} [{total_items} files • ~{tot_sz_str}]\033[0m")
 sys.stdout.flush()
 
 state_lock = threading.Lock()
@@ -733,7 +840,7 @@ first_render = True
 num_lines_rendered = 0
 
 def monitor_thread():
-    global first_render, num_lines_rendered
+    global first_render, num_lines_rendered, total_bytes_expected
     chomp_step = 0
     last_reported_pct = -1
 
@@ -747,9 +854,21 @@ def monitor_thread():
             cur_parts = list(active_part_files.keys())
             c_count = success_count + fail_count
             slots_snapshot = []
+            
+            # Check for active slots needing dynamic size expansion
             for s_id in range(max_display_slots):
                 if s_id in slot_data:
                     d = dict(slot_data[s_id])
+                    p_file = d['part_file']
+                    try:
+                        if os.path.exists(p_file):
+                            cur_p_sz = os.path.getsize(p_file)
+                            if cur_p_sz > d['exp_sz']:
+                                diff = cur_p_sz - d['exp_sz'] + (15 * 1024 * 1024)
+                                slot_data[s_id]['exp_sz'] += diff
+                                d['exp_sz'] += diff
+                    except Exception:
+                        pass
                     slots_snapshot.append((s_id, d))
                 else:
                     slots_snapshot.append((s_id, None))
@@ -763,6 +882,23 @@ def monitor_thread():
                 pass
 
         total_dl = cur_completed + part_bytes
+
+        # Dynamically ensure total_bytes_expected accommodates actual downloaded bytes
+        with state_lock:
+            dyn_expected = 0
+            for u, _, _, _ in needed:
+                found = False
+                for _, s_d in slots_snapshot:
+                    if s_d and s_d.get('url') == u:
+                        dyn_expected += s_d.get('exp_sz', 15 * 1024 * 1024)
+                        found = True
+                        break
+                if not found:
+                    dyn_expected += size_map.get(u, 15 * 1024 * 1024)
+            if total_dl >= total_bytes_expected and c_count < total_items:
+                total_bytes_expected = max(total_bytes_expected, dyn_expected, total_dl + (10 * 1024 * 1024))
+            else:
+                total_bytes_expected = max(total_bytes_expected, dyn_expected, total_dl)
 
         rate_history.append((now, total_dl))
         while rate_history and (now - rate_history[0][0] > 1.5):
@@ -778,7 +914,10 @@ def monitor_thread():
         speed_mb = speed_bps / (1024 * 1024)
 
         if total_bytes_expected > 0:
-            pct = min(100.0, (total_dl / total_bytes_expected) * 100.0)
+            if c_count < total_items:
+                pct = min(99.0, (total_dl / total_bytes_expected) * 100.0)
+            else:
+                pct = 100.0
         else:
             pct = min(100.0, (c_count / total_items) * 100.0)
 
@@ -803,7 +942,7 @@ def monitor_thread():
                     except Exception:
                         pass
                     
-                    s_pct = min(100.0, (cur_sz / exp_sz * 100.0)) if exp_sz > 0 else 50.0
+                    s_pct = min(99.0, (cur_sz / exp_sz * 100.0)) if exp_sz > 0 else 50.0
                     
                     s_hist = s_info.get('history', [])
                     s_hist.append((now, cur_sz))
@@ -831,8 +970,9 @@ def monitor_thread():
 
             tot_bar = render_pacman_bar(pct, width=total_bar_width, chomp_state=chomp_step)
             cur_sz_str = format_size(total_dl)
+            tot_sz_str = format_size(total_bytes_expected)
             eta_str = format_eta(eta_sec)
-            lines.append(f"  [\033[1;36m⚡ Total: {c_count:2d}/{total_items:<2d}\033[0m] [\033[1;37m{cur_sz_str:>8s} / {tot_sz_str}\033[0m] {tot_bar} \033[1;33m{int(pct):3d}%\033[0m • \033[1;32m{speed_mb:4.1f} MB/s\033[0m • ETA: \033[1;35m{eta_str}\033[0m")
+            lines.append(f"  [\033[1;36m⚡ Total: {c_count:2d}/{total_items:<2d}\033[0m] [\033[1;37m{cur_sz_str:>8s} / ~{tot_sz_str}\033[0m] {tot_bar} \033[1;33m{int(pct):3d}%\033[0m • \033[1;32m{speed_mb:4.1f} MB/s\033[0m • ETA: \033[1;35m{eta_str}\033[0m")
 
             out_block = "\n".join(f"\r\033[2K{l}" for l in lines)
             if first_render:
@@ -846,7 +986,8 @@ def monitor_thread():
             int_pct = int(pct)
             if int_pct >= last_reported_pct + 25:
                 last_reported_pct = (int_pct // 25) * 25
-                print(f"  [⚡ {c_count:3d}/{total_items} files] {format_size(total_dl)} / {tot_sz_str} ({int_pct}%) • {speed_mb:.1f} MB/s")
+                tot_sz_str = format_size(total_bytes_expected)
+                print(f"  [⚡ {c_count:3d}/{total_items} files] {format_size(total_dl)} / ~{tot_sz_str} ({int_pct}%) • {speed_mb:.1f} MB/s")
                 sys.stdout.flush()
 
 def download_item_wrapper(args):
@@ -857,7 +998,7 @@ def download_item_wrapper(args):
         os.makedirs(dest_dir, exist_ok=True)
     part_file = f"{dest}.part"
     part_sig = f"{sig_dest}.part" if sig_dest else ""
-    exp_sz = size_map.get(url, 10 * 1024 * 1024)
+    exp_sz = size_map.get(url, 15 * 1024 * 1024)
     fn = os.path.basename(dest)
 
     slot_id = -1
@@ -867,6 +1008,7 @@ def download_item_wrapper(args):
                 slot_id = available_slots.pop(0)
                 slot_data[slot_id] = {
                     'item_idx': idx + 1,
+                    'url': url,
                     'filename': fn,
                     'exp_sz': exp_sz,
                     'part_file': part_file,
@@ -878,10 +1020,19 @@ def download_item_wrapper(args):
 
     global completed_bytes, success_count, fail_count
     try:
-        res = subprocess.run(["curl", "-sSL", "-f", "-C", "-", "-m", "180", "-o", part_file, url], capture_output=True)
+        res = subprocess.run(["curl", "-sSL", "-f", "-C", "-", "-m", "300", "-o", part_file, url], capture_output=True)
+        if res.returncode != 0:
+            if os.path.exists(part_file):
+                try: os.remove(part_file)
+                except Exception: pass
+            res = subprocess.run(["curl", "-sSL", "-f", "-m", "300", "-o", part_file, url], capture_output=True)
         if res.returncode == 0 and os.path.exists(part_file) and os.path.getsize(part_file) > 0:
             if sig_url and sig_dest:
-                res_sig = subprocess.run(["curl", "-sSL", "-f", "-m", "45", "-o", part_sig, sig_url], capture_output=True)
+                res_sig = subprocess.run(["curl", "-sSL", "-f", "-m", "60", "-o", part_sig, sig_url], capture_output=True)
+                if res_sig.returncode != 0 and os.path.exists(part_sig):
+                    try: os.remove(part_sig)
+                    except Exception: pass
+                    res_sig = subprocess.run(["curl", "-sSL", "-f", "-m", "60", "-o", part_sig, sig_url], capture_output=True)
                 if res_sig.returncode == 0 and os.path.exists(part_sig) and os.path.getsize(part_sig) > 0:
                     os.replace(part_sig, sig_dest)
                 else:
