@@ -264,22 +264,35 @@ sign_kernel_images() {
         return 0
     fi
 
-    for kernel in /boot/vmlinuz-*; do
-        [ -f "${kernel}" ] || continue
-        [ -L "${kernel}" ] && continue
+    local kern_list=()
+    mapfile -t kern_list < <(sudo python3 -c "
+import os
+if os.path.exists('/boot'):
+    for f in sorted(os.listdir('/boot')):
+        if f.startswith('vmlinuz-') and not os.path.islink(os.path.join('/boot', f)):
+            print(os.path.join('/boot', f))
+" 2>/dev/null || true)
+
+    for kernel in "${kern_list[@]}"; do
+        [ -n "${kernel}" ] || continue
 
         local k_base
         k_base=$(basename "${kernel}")
 
         local needs_sign=1
-        if [ -x "${sbverify_bin}" ]; then
-            if "${sbverify_bin}" --cert "${MOK_CRT}" "${kernel}" >/dev/null 2>&1; then
+        if command -v sbctl >/dev/null 2>&1; then
+            if sudo sbctl verify "${kernel}" 2>/dev/null | grep -qi "is signed"; then
+                needs_sign=0
+            fi
+        fi
+        if [ "${needs_sign}" -eq 1 ] && [ -x "${sbverify_bin}" ]; then
+            if sudo "${sbverify_bin}" --list "${kernel}" 2>/dev/null | grep -qi "signature"; then
                 needs_sign=0
             fi
         fi
 
         if [ "${needs_sign}" -eq 1 ]; then
-            log_info "Signing kernel image: ${k_base}..."
+            log_info "Signing kernel image with MOK: ${k_base}..."
             local signed_tmp="${kernel}.signed"
             if sudo "${sbsign_bin}" --key "${MOK_KEY}" --cert "${MOK_CRT}" "${kernel}" --output "${signed_tmp}" 2>/dev/null; then
                 sudo mv -f "${signed_tmp}" "${kernel}"
@@ -320,7 +333,7 @@ enforce_secure_boot_armor() {
     ARMOR_NEWLY_SIGNED=0
     local ARMOR_SIGNED_LIST=()
 
-    # 1. Sign kernel binaries in /boot
+    # 1. Sign kernel binaries in /boot (only if unsigned)
     sign_kernel_images
 
     # 2. Sign kernel modules in /lib/modules
@@ -347,7 +360,12 @@ enforce_secure_boot_armor() {
         fi
     fi
 
-    # 3. Silent Self-Heal Guard: Verify EFI bootloader integrity
+    # 3. Synchronize bootloader if kernel binaries were newly signed
+    if [ "${ARMOR_NEWLY_SIGNED}" -eq 1 ] && command -v sync_bootloader_configuration >/dev/null 2>&1; then
+        sync_bootloader_configuration "$(uname -r)"
+    fi
+
+    # 4. Silent Self-Heal Guard: Verify EFI bootloader integrity
     self_heal_secure_boot_guard
 }
 
@@ -374,13 +392,20 @@ verify_secure_boot_status_interactive() {
     fi
 
     echo -e "\n${BOLD}Kernel Signature Audit (/boot):${RESET}"
-    for k in /boot/vmlinuz-*; do
-        [ -f "$k" ] || continue
-        [ -L "$k" ] && continue
-        local k_base
-        k_base=$(basename "$k")
+    local k_files=()
+    mapfile -t k_files < <(sudo python3 -c "
+import os
+if os.path.exists('/boot'):
+    for f in sorted(os.listdir('/boot')):
+        if f.startswith('vmlinuz-') and not os.path.islink(os.path.join('/boot', f)):
+            print(f)
+" 2>/dev/null || true)
+
+    for k_base in "${k_files[@]}"; do
+        [ -n "$k_base" ] || continue
+        local k="/boot/${k_base}"
         if [ -x "${sbverify_bin}" ] && [ -n "${MOK_CRT}" ]; then
-            if "${sbverify_bin}" --cert "${MOK_CRT}" "$k" >/dev/null 2>&1; then
+            if sudo "${sbverify_bin}" --cert "${MOK_CRT}" "$k" >/dev/null 2>&1; then
                 printf "  • %-35s : ${GREEN}[SIGNED & VERIFIED]${RESET}\n" "${k_base}"
             else
                 printf "  • %-35s : ${YELLOW}[UNSIGNED / FOREIGN KEY]${RESET}\n" "${k_base}"

@@ -1,6 +1,6 @@
 # 🚨 Slacky-Update Disaster Recovery & Troubleshooting Guide
 ### *The Symptom-Based Field Catalog for Emergency Recovery, Kernel Glitches, NVRAM Resets & Secure Boot Armor*
-#### `v0.12.0` — *"....and all that I can see, is just another Limine tree...."* (Pre-Release / Early Access)
+#### `v0.12.2` — *"....and all that I can see, is just another Limine tree...."* (Pre-Release / Early Access)
 
 ---
 

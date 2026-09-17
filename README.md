@@ -2,10 +2,10 @@
 
 # ⚡ Slacky-Update
 ### *Enterprise-Grade System Maintenance, Kernel Lifecycle, Driver Orchestrator & Workstation Suite for Slackware Linux*
-#### `v0.12.0` — *"....and all that I can see, is just another Limine tree...."* (Pre-Release / Early Access)
+#### `v0.12.2` — *"....and all that I can see, is just another Limine tree...."* (Pre-Release / Early Access)
 
 [![Slackware -current](https://img.shields.io/badge/Slackware--current-15.0%2B-blue?style=for-the-badge&logo=slackware&logoColor=white)](http://www.slackware.com/)
-[![Release](https://img.shields.io/badge/Release-v0.12.0--pre--release-purple?style=for-the-badge)](https://codeberg.org/TuxOfValhalla/slacky-update/releases)
+[![Release](https://img.shields.io/badge/Release-v0.12.2--pre--release-purple?style=for-the-badge)](https://codeberg.org/TuxOfValhalla/slacky-update/releases)
 [![Canonical: Codeberg](https://img.shields.io/badge/Canonical-Codeberg-2185d0?style=for-the-badge&logo=codeberg&logoColor=white)](https://codeberg.org/TuxOfValhalla/slacky-update)
 [![Mirror: GitHub](https://img.shields.io/badge/Mirror-GitHub-grey?style=for-the-badge&logo=github&logoColor=white)](https://github.com/TuxOfValhalla/slacky-update)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-green.svg?style=for-the-badge)](LICENSE)
@@ -157,10 +157,10 @@ sudo upgradepkg --install-new --reinstall /tmp/slacky-update-*-noarch-1_slacky.t
 You can also download and install the pre-built Slackware `.txz` package directly from GitHub Releases:
 ```bash
 # Download latest release package
-curl -sLO https://github.com/TuxOfValhalla/slacky-update/releases/latest/download/slacky-update-0.12.0-noarch-1_slacky.txz
+curl -sLO https://github.com/TuxOfValhalla/slacky-update/releases/latest/download/slacky-update-0.12.2-noarch-1_slacky.txz
 
 # Install or upgrade
-sudo upgradepkg --install-new --reinstall slacky-update-0.12.0-noarch-1_slacky.txz
+sudo upgradepkg --install-new --reinstall slacky-update-0.12.2-noarch-1_slacky.txz
 ```
 
 #### Quick 1-Line Installer (Codeberg)

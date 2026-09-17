@@ -36,7 +36,7 @@ HAS_NVIDIA=false
 HAS_AMD=false
 HAS_INTEL=false
 
-CURRENT_VERSION="0.12.0"
+CURRENT_VERSION="0.12.2"
 RELEASE_CODENAME="....and all that I can see, is just another Limine tree...."
 
 CURL_CONNECT_TIMEOUT=15

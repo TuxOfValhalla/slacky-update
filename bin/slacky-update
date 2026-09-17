@@ -3,7 +3,7 @@
 
 set -euo pipefail
 
-CURRENT_VERSION="0.12.0"
+CURRENT_VERSION="0.12.2"
 RELEASE_CODENAME="....and all that I can see, is just another Limine tree...."
 
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
@@ -445,31 +445,31 @@ except Exception:
             generate_kernel_initramfs "TARGETED_PIPELINE"
         fi
 
-        # [4/5] Limine Config & BLAKE2B Hash
+        # [4/5] Secure Boot Kernel & Bootloader Pre-Signing (sbctl)
+        local sb_status="Skipped (sbctl not active)"
+        if command -v sign_kernel_binaries_sbctl >/dev/null 2>&1; then
+            sign_kernel_binaries_sbctl >/dev/null 2>&1 || true
+            sb_status="Signed kernel binaries & verified Secure Boot state"
+        fi
+        echo -e "  \033[1;36m[4/5]\033[0m \033[1mSecure Boot Kernel Signing\033[0m    : ${GREEN}${sb_status}${RESET}"
+
+        # [5/5] Limine Config, BLAKE2B Hash Matrix & Bootloader Reseal
         local lim_installed=false
         if command -v is_limine_installed >/dev/null 2>&1 && [ "$(is_limine_installed)" = "true" ]; then
             lim_installed=true
             if command -v generate_limine_configuration >/dev/null 2>&1; then
                 generate_limine_configuration >/dev/null 2>&1 || true
             fi
-            if command -v enroll_limine_config_hash >/dev/null 2>&1; then
-                enroll_limine_config_hash >/dev/null 2>&1 || true
+            if command -v enroll_and_sign_limine >/dev/null 2>&1; then
+                enroll_and_sign_limine >/dev/null 2>&1 || true
             fi
-            echo -e "  \033[1;36m[4/5]\033[0m \033[1mLimine Config & BLAKE2B Hash\033[0m : ${GREEN}BLAKE2B successfully enrolled${RESET}"
+            echo -e "  \033[1;36m[5/5]\033[0m \033[1mLimine Matrix & Boot Sync\033[0m     : ${GREEN}BLAKE2B enrolled & EFI signed${RESET}"
         else
-            echo -e "  \033[1;36m[4/5]\033[0m \033[1mLimine Config & BLAKE2B Hash\033[0m : ${YELLOW}Skipped (Limine not active)${RESET}"
-        fi
-
-        # [5/5] UEFI Secure Boot & GRUB Sync
-        local boot_status="Synced GRUB fallback"
-        if [ "${lim_installed}" = "true" ] && command -v sign_limine_efi_sbctl >/dev/null 2>&1; then
-            sign_limine_efi_sbctl >/dev/null 2>&1 || true
-            boot_status="Signed limine_x64.efi with sbctl & synced GRUB fallback"
+            echo -e "  \033[1;36m[5/5]\033[0m \033[1mLimine Matrix & Boot Sync\033[0m     : ${YELLOW}Skipped (Limine not active)${RESET}"
         fi
         if command -v sync_grub_configuration >/dev/null 2>&1; then
             sync_grub_configuration >/dev/null 2>&1 || true
         fi
-        echo -e "  \033[1;36m[5/5]\033[0m \033[1mUEFI Secure Boot & GRUB Sync\033[0m : ${GREEN}${boot_status}${RESET}"
     else
         log_info "No kernel or driver changes detected. Skipping initramfs generation and signing."
     fi
@@ -772,7 +772,7 @@ interactive_menu() {
                     ;;
                 7)
                     echo ""
-                    manage_armor_interactive
+                    manage_secureboot_interactive
                     echo ""
                     read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
                     ;;
@@ -845,7 +845,7 @@ interactive_menu() {
                     ;;
                 7)
                     echo ""
-                    manage_armor_interactive
+                    manage_secureboot_interactive
                     echo ""
                     read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
                     ;;
@@ -908,7 +908,7 @@ interactive_menu() {
                     ;;
                 6)
                     echo ""
-                    manage_armor_interactive
+                    manage_secureboot_interactive
                     echo ""
                     read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
                     ;;

@@ -53,16 +53,16 @@ else:
 " 2>/dev/null || "${sbctl_bin}" status || true
 
     echo ""
-    echo -e "${BOLD}Signed EFI Binaries (/boot/EFI & /boot/efi/EFI):${RESET}"
+    echo -e "${BOLD}Signed EFI Binaries & Bootloader Payloads:${RESET}"
     local esp_path
-    esp_path=$(detect_limine_esp_path 2>/dev/null || echo "/boot/efi")
+    esp_path=$(detect_limine_esp_path 2>/dev/null || echo "/boot")
     local found_efi=0
-    for efi in "${esp_path}/EFI/limine/limine_x64.efi" "${esp_path}/EFI/BOOT/BOOTX64.EFI" "${esp_path}/EFI/Slackware/grubx64.efi"; do
-        if [ -f "${efi}" ]; then
+    for efi in "${esp_path}/EFI/limine/limine_x64.efi" "${esp_path}/EFI/BOOT/BOOTX64.EFI"; do
+        if sudo test -f "${efi}"; then
             found_efi=1
             local sign_status="${YELLOW}[UNSIGNED]${RESET}"
-            if command -v sbctl >/dev/null 2>&1; then
-                if sbctl verify "${efi}" 2>/dev/null | grep -qi "signed"; then
+            if [ -x "${sbctl_bin}" ]; then
+                if sudo "${sbctl_bin}" verify "${efi}" 2>/dev/null | grep -qi "is signed"; then
                     sign_status="${GREEN}[SIGNED & VERIFIED]${RESET}"
                 fi
             fi
@@ -71,6 +71,31 @@ else:
     done
     if [ "${found_efi}" -eq 0 ]; then
         echo -e "  • No EFI binaries found under ${esp_path}/EFI."
+    fi
+
+    echo ""
+    echo -e "${BOLD}Signed Linux Kernel Binaries (/boot/vmlinuz-*):${RESET}"
+    local kern_list=()
+    mapfile -t kern_list < <(sudo python3 -c "
+import os
+if os.path.exists('/boot'):
+    for f in sorted(os.listdir('/boot')):
+        if f.startswith('vmlinuz-') and not os.path.islink(os.path.join('/boot', f)):
+            print(f)
+" 2>/dev/null || true)
+
+    if [ "${#kern_list[@]}" -gt 0 ]; then
+        for kfile in "${kern_list[@]}"; do
+            local k_sign_status="${YELLOW}[UNSIGNED]${RESET}"
+            if [ -x "${sbctl_bin}" ]; then
+                if sudo "${sbctl_bin}" verify "/boot/${kfile}" 2>/dev/null | grep -qi "is signed"; then
+                    k_sign_status="${GREEN}[SIGNED & VERIFIED]${RESET}"
+                fi
+            fi
+            printf "  • %-45s : %b\n" "${kfile}" "${k_sign_status}"
+        done
+    else
+        echo -e "  • No kernel binaries found under /boot."
     fi
     echo ""
 }
@@ -144,10 +169,10 @@ setup_sbctl_keys_interactive() {
         sudo "${sbctl_bin}" enroll-keys --microsoft || true
     fi
 
-    # Sign Limine and GRUB EFI binaries
+    # Sign Limine EFI binaries
     local esp_path
     esp_path=$(detect_limine_esp_path 2>/dev/null || echo "/boot/efi")
-    for efi in "${esp_path}/EFI/limine/limine_x64.efi" "${esp_path}/EFI/BOOT/BOOTX64.EFI" "${esp_path}/EFI/Slackware/grubx64.efi"; do
+    for efi in "${esp_path}/EFI/limine/limine_x64.efi" "${esp_path}/EFI/BOOT/BOOTX64.EFI"; do
         if [ -f "${efi}" ]; then
             log_info "Signing EFI executable: ${efi}..."
             sudo "${sbctl_bin}" sign -s "${efi}" 2>/dev/null || true
@@ -179,7 +204,7 @@ manage_secureboot_interactive() {
         echo -e "${CYAN}============================================================${RESET}"
         echo -e "  \033[1;33m1.\033[0m Audit Secure Boot & Cryptographic Status"
         echo -e "  \033[1;33m2.\033[0m Run 1-Click sbctl Secure Boot Key Enrollment Wizard"
-        echo -e "  \033[1;33m3.\033[0m Sign All EFI Bootloaders in /boot/EFI"
+        echo -e "  \033[1;33m3.\033[0m Sign All Bootloaders & Linux Kernels with sbctl"
         echo -e "  \033[1;33m4.\033[0m Manage Classic MOK (Kernel Module Signatures)"
         echo -e "  \033[1;33m5.\033[0m Return to Main Menu"
         echo ""
@@ -197,15 +222,46 @@ manage_secureboot_interactive() {
                 ;;
             3)
                 validate_privileges
-                local sbctl_bin
-                sbctl_bin=$(command -v sbctl 2>/dev/null || echo "/usr/bin/sbctl")
-                local esp_path
-                esp_path=$(detect_limine_esp_path 2>/dev/null || echo "/boot/efi")
-                for efi in $(find "${esp_path}/EFI" -name "*.efi" 2>/dev/null || true); do
-                    log_info "Signing ${efi}..."
-                    sudo "${sbctl_bin}" sign -s "${efi}" 2>/dev/null || true
-                done
-                log_success "All EFI binaries in ${esp_path}/EFI signed."
+                echo ""
+                # Step 1: MOK Enforcement
+                if [ -f "/etc/mok/MOK.priv" ] && { [ -f "/etc/mok/MOK.crt" ] || [ -f "/etc/mok/MOK.der" ]; }; then
+                    log_info "[1/4] Enforcing MOK signatures on kernels & NVIDIA modules (for Shim/GRUB)..."
+                    if command -v enforce_secure_boot_armor >/dev/null 2>&1; then
+                        enforce_secure_boot_armor --pipeline || true
+                    fi
+                else
+                    log_info "[1/4] MOK keys not configured (/etc/mok). Skipping MOK signing."
+                fi
+
+                echo ""
+                # Step 2: sbctl Direct UEFI Signing
+                if command -v is_sbctl_keys_configured >/dev/null 2>&1 && is_sbctl_keys_configured; then
+                    log_info "[2/4] Registering and signing Linux kernels with sbctl..."
+                    sign_kernel_binaries_sbctl
+                else
+                    log_info "[2/4] sbctl keys not enrolled in UEFI NVRAM. Skipping sbctl direct signing."
+                fi
+
+                echo ""
+                # Step 3 & 4: Limine Matrix & Sealing (or GRUB/ELILO fallback)
+                if command -v is_limine_installed >/dev/null 2>&1 && is_limine_installed; then
+                    log_info "[3/4] Generating Limine bootloader matrix with BLAKE2B integrity hashes..."
+                    generate_limine_configuration
+                    echo ""
+                    log_info "[4/4] Enrolling Limine config hash & verifying EFI signatures..."
+                    enroll_and_sign_limine
+                else
+                    log_info "[3/4] Limine not installed. Updating standard GRUB/ELILO configuration..."
+                    if command -v sync_bootloader_configuration >/dev/null 2>&1; then
+                        sync_bootloader_configuration "$(uname -r)"
+                    fi
+                    echo ""
+                    log_info "[4/4] Bootloader sync complete."
+                fi
+
+                echo ""
+                log_success "Bootloader, integrity hashes, and Secure Boot synchronization completed!"
+                echo ""
                 read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
                 ;;
             4)

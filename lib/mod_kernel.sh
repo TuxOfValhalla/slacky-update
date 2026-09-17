@@ -461,30 +461,36 @@ remove_stock_slackware_kernels() {
 
     # HARD BOOT-VALIDATION GUARDRAIL:
     # Ensure at least one verified, bootable CachyOS vmlinuz (>5MB) and matching initramfs/initrd (>5MB) exist before removing stock kernels
+    local validation_res
+    validation_res=$(sudo python3 -c "
+import os
+
+found_kernel = ''
+valid = False
+try:
+    for fname in os.listdir('/boot'):
+        if 'cachyos' in fname and fname.startswith('vmlinuz-') and not os.path.islink(os.path.join('/boot', fname)):
+            kpath = os.path.join('/boot', fname)
+            if os.path.getsize(kpath) > 5000000:
+                ksuffix = fname.replace('vmlinuz-', '')
+                for icand in [f'/boot/initramfs-{ksuffix}.img', f'/boot/initrd-{ksuffix}.img', f'/boot/initramfs-{ksuffix}', f'/boot/initrd.gz']:
+                    if os.path.exists(icand) and os.path.getsize(icand) > 5000000:
+                        valid = True
+                        found_kernel = fname
+                        break
+                if valid:
+                    break
+except Exception:
+    pass
+
+print(f'{1 if valid else 0}|{found_kernel}')
+" 2>/dev/null || echo "0|")
+
     local valid_cachy_boot=0
     local found_cachy_kernel=""
-    for vk in /boot/vmlinuz-*cachyos*; do
-        [ -f "${vk}" ] && [ ! -L "${vk}" ] || continue
-        local ksz
-        ksz=$(stat -c%s "${vk}" 2>/dev/null || stat -f%z "${vk}" 2>/dev/null || echo 0)
-        if [ "${ksz}" -gt 5000000 ]; then
-            local ksuffix
-            ksuffix=$(basename "${vk}" | sed 's/^vmlinuz-//')
-            for initrd_cand in "/boot/initramfs-${ksuffix}.img" "/boot/initrd-${ksuffix}.img" "/boot/initramfs-${ksuffix}" "/boot/initrd.gz"; do
-                if [ -f "${initrd_cand}" ]; then
-                    local isz
-                    isz=$(stat -c%s "${initrd_cand}" 2>/dev/null || stat -f%z "${initrd_cand}" 2>/dev/null || echo 0)
-                    if [ "${isz}" -gt 5000000 ]; then
-                        valid_cachy_boot=1
-                        found_cachy_kernel="$(basename "${vk}")"
-                        break 2
-                    fi
-                fi
-            done
-        fi
-    done
+    IFS='|' read -r valid_cachy_boot found_cachy_kernel <<< "${validation_res}"
 
-    if [ "${valid_cachy_boot}" -eq 0 ]; then
+    if [ "${valid_cachy_boot:-0}" -ne 1 ]; then
         log_error "Safety Guardrail: No verified, bootable CachyOS kernel + initramfs (>5MB) found in /boot!"
         log_error "Stock Slackware kernels must be retained to prevent an unbootable system."
         return 1
@@ -621,7 +627,7 @@ manage_kernel_removal_interactive() {
 
     while true; do
         local kernels_raw
-        kernels_raw=$(python3 -c "
+        kernels_raw=$(sudo python3 -c "
 import os
 
 def get_dir_size(path):
@@ -1025,7 +1031,7 @@ ensure_grub_smart_kernel_sorting() {
         return 0
     fi
 
-    python3 - << 'PYGRUB_SORT'
+    sudo python3 - << 'PYGRUB_SORT'
 import os, sys
 
 script = '/etc/grub.d/10_linux'
@@ -1093,7 +1099,7 @@ PYGRUB_SORT
 
 set_grub_smart_default_priority() {
     local top_dog
-    top_dog=$(python3 -c "
+    top_dog=$(sudo python3 -c "
 import os, re
 
 def rank_kernel(k):
@@ -1115,13 +1121,16 @@ def rank_kernel(k):
     nums = [int(x) for x in re.findall(r'\d+', k)]
     return (tier, nums)
 
-kernels = [f for f in os.listdir('/boot') if f.startswith('vmlinuz') and not os.path.islink(os.path.join('/boot', f))]
-ranked = sorted(kernels, key=rank_kernel, reverse=True)
-if ranked:
-    print('/boot/' + ranked[0])
+try:
+    kernels = [f for f in os.listdir('/boot') if f.startswith('vmlinuz-') and not os.path.islink(os.path.join('/boot', f))]
+    ranked = sorted(kernels, key=rank_kernel, reverse=True)
+    if ranked:
+        print('/boot/' + ranked[0])
+except Exception:
+    pass
 " 2>/dev/null || echo "")
 
-    if [ -n "${top_dog}" ] && [ -f "${top_dog}" ]; then
+    if [ -n "${top_dog}" ]; then
         local grub_default_file="/etc/default/grub"
         if [ -f "${grub_default_file}" ]; then
             if grep -q "^GRUB_TOP_LEVEL=" "${grub_default_file}"; then
@@ -1238,6 +1247,11 @@ try:
 except Exception:
     pass
 PYGRUB
+    fi
+
+    # 0. Pre-sign kernel binaries with sbctl strictly BEFORE calculating BLAKE2B hashes or generating configs
+    if command -v sign_kernel_binaries_sbctl >/dev/null 2>&1; then
+        sign_kernel_binaries_sbctl >/dev/null 2>&1 || true
     fi
 
     if sync_grub_configuration; then

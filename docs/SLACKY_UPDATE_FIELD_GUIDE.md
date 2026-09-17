@@ -1,6 +1,6 @@
 # 📖 Slacky-Update Survival Guide & System Manual
 ### *Slackware Linux 15.0 & -current — Complete Architecture, Deployment & Operational Manual*
-#### `v0.12.0` — *"....and all that I can see, is just another Limine tree...."* (Pre-Release / Early Access)
+#### `v0.12.2` — *"....and all that I can see, is just another Limine tree...."* (Pre-Release / Early Access)
 
 ---
 

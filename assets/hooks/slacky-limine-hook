@@ -43,15 +43,20 @@ if command -v dracut >/dev/null 2>&1; then
     fi
 fi
 
-# 3. Synchronize Limine Bootloader if installed
+# 3. Secure Boot Kernel Pre-Signing (strictly before Limine BLAKE2B hashing)
+if command -v sign_kernel_binaries_sbctl >/dev/null 2>&1; then
+    sign_kernel_binaries_sbctl || true
+fi
+
+# 4. Synchronize Limine Bootloader if installed
 if command -v is_limine_installed >/dev/null 2>&1 && [ "$(is_limine_installed)" = "true" ]; then
     generate_limine_configuration || true
     enroll_and_sign_limine || true
 fi
 
-# 4. Synchronize GRUB Menu (Fallback Safety)
-if command -v sync_bootloader_configuration >/dev/null 2>&1; then
-    sync_bootloader_configuration "${KVER}" || true
+# 5. Synchronize GRUB Menu (Fallback Safety)
+if command -v sync_grub_configuration >/dev/null 2>&1; then
+    sync_grub_configuration || true
 elif command -v grub-mkconfig >/dev/null 2>&1 && [ -f "/boot/grub/grub.cfg" ]; then
     grub-mkconfig -o /boot/grub/grub.cfg >/dev/null 2>&1 || true
 fi

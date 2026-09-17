@@ -451,26 +451,9 @@ install_unified_limine_suite() {
     if [ -x "/usr/bin/limine-reset-enroll" ] && [ ! -e "/etc/boot/hooks/pre.d/10-limine-reset-enroll" ]; then
         sudo ln -sf /usr/bin/limine-reset-enroll /etc/boot/hooks/pre.d/10-limine-reset-enroll 2>/dev/null || true
     fi
-    cat << 'HOOK_EOF' | sudo tee /etc/boot/hooks/post.d/90-limine-enroll-config >/dev/null
-#!/bin/sh
-# Hardened Slacky-Update Limine Post-Config Hook: Enroll BLAKE2B hashes and re-sign with sbctl
-if [ -x /usr/bin/limine-enroll-config ]; then
-    /usr/bin/limine-enroll-config "$@"
-fi
-if command -v sbctl >/dev/null 2>&1; then
-    for cand in /boot/efi/EFI/limine/limine_x64.efi /boot/EFI/limine/limine_x64.efi /efi/EFI/limine/limine_x64.efi /boot/efi/EFI/BOOT/BOOTX64.EFI /boot/EFI/BOOT/BOOTX64.EFI /boot/efi/EFI/Slackware/grubx64.efi /boot/EFI/Slackware/grubx64.efi /boot/efi/EFI/Slackware/shimx64.efi /boot/EFI/Slackware/shimx64.efi; do
-        if [ -f "$cand" ]; then
-            sbctl sign -s "$cand" >/dev/null 2>&1 || true
-        fi
-    done
-    for kern in /boot/vmlinuz-*; do
-        if [ -f "$kern" ] && [ ! -L "$kern" ]; then
-            sbctl sign -s "$kern" >/dev/null 2>&1 || true
-        fi
-    done
-fi
-HOOK_EOF
-    sudo chmod 755 /etc/boot/hooks/post.d/90-limine-enroll-config 2>/dev/null || true
+    if [ -x "/usr/bin/limine-enroll-config" ] && [ ! -e "/etc/boot/hooks/post.d/90-limine-enroll-config" ]; then
+        sudo ln -sf /usr/bin/limine-enroll-config /etc/boot/hooks/post.d/90-limine-enroll-config 2>/dev/null || true
+    fi
 
     # Ensure /etc/default/limine exists with clean defaults
     if [ ! -f "/etc/default/limine" ]; then
@@ -957,11 +940,14 @@ flavor_seen = {}
 primary = []
 fallback = []
 slackware_kver = None
+lts_kver = None
 
 for k in sorted_kernels:
     flv, label, tier = get_flavor_and_label(k)
     if flv == 'slackware' and slackware_kver is None:
         slackware_kver = k
+    if flv == 'cachyos-lts' and lts_kver is None:
+        lts_kver = k
     if flv not in flavor_seen:
         flavor_seen[flv] = k
         primary.append({'kver': k, 'label': label})
@@ -974,17 +960,21 @@ print(json.dumps({
     'primary': primary,
     'fallback': fallback,
     'top_primary': top_primary,
-    'slackware': slackware_kver
+    'slackware': slackware_kver,
+    'lts': lts_kver
 }))
-" 2>/dev/null || echo '{"primary":[],"fallback":[],"top_primary":null,"slackware":null}')
+" 2>/dev/null || echo '{"primary":[],"fallback":[],"top_primary":null,"slackware":null,"lts":null}')
 
     local primary_entries=""
     local top_kver="" top_label=""
     local top_vname="" top_khash="" top_iname="" top_ihash=""
     local slack_kver="" slack_label="Slackware Linux"
     local slack_vname="" slack_khash="" slack_iname="" slack_ihash=""
+    local lts_kver="" lts_label="Linux Cachyos LTS"
+    local lts_vname="" lts_khash="" lts_iname="" lts_ihash=""
 
     slack_kver=$(echo "${kernel_class_json}" | python3 -c "import sys, json; print(json.load(sys.stdin).get('slackware') or '')" 2>/dev/null || true)
+    lts_kver=$(echo "${kernel_class_json}" | python3 -c "import sys, json; print(json.load(sys.stdin).get('lts') or '')" 2>/dev/null || true)
 
     # 1. Primary Entries (Main Menu - Clean title without version numbers)
     while IFS=$'\t' read -r p_kver p_label; do
@@ -1063,12 +1053,19 @@ print(json.dumps({
         fallback_entries+="    cmdline: ${standard_cmdline}\n"
     done < <(echo "${kernel_class_json}" | python3 -c "import sys, json; data=json.load(sys.stdin); [print(f\"{x['kver']}\t{x['label']}\") for x in data.get('fallback', [])]" 2>/dev/null || true)
 
-    # Ensure Slackware kernel assets are resolved if not already captured
+    # Ensure Slackware and LTS kernel assets are resolved if not already captured
     if [ -n "${slack_kver}" ] && [ -z "${slack_vname}" ]; then
         local s_info
         s_info=$(resolve_and_hash_boot_assets "${slack_kver}" "${esp_path}" || true)
         if [ -n "${s_info}" ]; then
             IFS='|' read -r slack_vname slack_khash slack_iname slack_ihash <<< "${s_info}"
+        fi
+    fi
+    if [ -n "${lts_kver}" ] && [ -z "${lts_vname}" ]; then
+        local l_info
+        l_info=$(resolve_and_hash_boot_assets "${lts_kver}" "${esp_path}" || true)
+        if [ -n "${l_info}" ]; then
+            IFS='|' read -r lts_vname lts_khash lts_iname lts_ihash <<< "${l_info}"
         fi
     fi
 
@@ -1091,7 +1088,22 @@ print(json.dumps({
         recovery_entries+="    module_path: boot():/${top_iname}#${top_ihash}\n"
         recovery_entries+="    cmdline: ${recovery_cmdline}\n"
 
-        if [ -n "${slack_kver}" ] && [ -n "${slack_vname}" ] && [ "${slack_kver}" != "${top_kver}" ]; then
+        if [ -n "${lts_kver}" ] && [ -n "${lts_vname}" ] && [ "${lts_kver}" != "${top_kver}" ]; then
+            local lts_rec_ucode_line=""
+            if [ -n "${ucode_name}" ] && [ -n "${ucode_hash}" ] && [[ "${lts_iname}" =~ ^initrd.*\.gz$|^initrd.*generic.*|^initrd.*huge.* ]]; then
+                lts_rec_ucode_line="    module_path: boot():/${ucode_name}#${ucode_hash}\n"
+            fi
+            recovery_entries+="    ///Linux Cachyos LTS (Recovery Mode)\n"
+            recovery_entries+="    protocol: linux\n"
+            recovery_entries+="    path: boot():/${lts_vname}#${lts_khash}\n"
+            if [ -n "${lts_rec_ucode_line}" ]; then
+                recovery_entries+="${lts_rec_ucode_line}"
+            fi
+            recovery_entries+="    module_path: boot():/${lts_iname}#${lts_ihash}\n"
+            recovery_entries+="    cmdline: ${recovery_cmdline}\n"
+        fi
+
+        if [ -n "${slack_kver}" ] && [ -n "${slack_vname}" ] && [ "${slack_kver}" != "${top_kver}" ] && [ "${slack_kver}" != "${lts_kver}" ]; then
             local slack_rec_ucode_line=""
             if [ -n "${ucode_name}" ] && [ -n "${ucode_hash}" ] && [[ "${slack_iname}" =~ ^initrd.*\.gz$|^initrd.*generic.*|^initrd.*huge.* ]]; then
                 slack_rec_ucode_line="    module_path: boot():/${ucode_name}#${ucode_hash}\n"
@@ -1164,8 +1176,17 @@ print(json.dumps({
                     snapshot_entries+="     module_path: boot():/${top_iname}#${top_ihash}\n"
                     snapshot_entries+="     cmdline: ${s_cmdline}\n"
 
+                    # CachyOS LTS fallback kernel snapshot entry
+                    if [ -n "${lts_kver}" ] && [ -n "${lts_vname}" ] && [ "${lts_kver}" != "${top_kver}" ]; then
+                        snapshot_entries+="     ////Linux Cachyos LTS\n"
+                        snapshot_entries+="     protocol: linux\n"
+                        snapshot_entries+="     path: boot():/${lts_vname}#${lts_khash}\n"
+                        snapshot_entries+="     module_path: boot():/${lts_iname}#${lts_ihash}\n"
+                        snapshot_entries+="     cmdline: ${s_cmdline}\n"
+                    fi
+
                     # Slackware fallback kernel snapshot entry
-                    if [ -n "${slack_kver}" ] && [ -n "${slack_vname}" ] && [ "${slack_kver}" != "${top_kver}" ]; then
+                    if [ -n "${slack_kver}" ] && [ -n "${slack_vname}" ] && [ "${slack_kver}" != "${top_kver}" ] && [ "${slack_kver}" != "${lts_kver}" ]; then
                         snapshot_entries+="     ////Slackware Linux\n"
                         snapshot_entries+="     protocol: linux\n"
                         snapshot_entries+="     path: boot():/${slack_vname}#${slack_khash}\n"
@@ -1264,6 +1285,9 @@ enroll_limine_config_hash() {
         clean_bak_tmp=$(mktemp -d /tmp/limine-bak.XXXXXX)
         cp -f "${limine_clean_src}" "${clean_bak_tmp}/limine_x64.efi"
         sudo cp -f "${limine_clean_src}" "${target_efi}"
+        if sudo test -f "${esp_path}/EFI/BOOT/BOOTX64.EFI"; then
+            sudo cp -f "${limine_clean_src}" "${esp_path}/EFI/BOOT/BOOTX64.EFI"
+        fi
         sudo tar --owner=0 --group=0 -cf "${esp_path}/EFI/limine/limine_x64.bak" -C "${clean_bak_tmp}" "limine_x64.efi" 2>/dev/null || true
         rm -rf "${clean_bak_tmp}" 2>/dev/null || true
     elif sudo test -f "${esp_path}/EFI/limine/limine_x64.bak"; then
@@ -1287,6 +1311,79 @@ enroll_limine_config_hash() {
     return 0
 }
 
+# --- [ SBCTL KEYS DETECTION HELPER ] ---
+is_sbctl_keys_configured() {
+    local sbctl_bin
+    sbctl_bin=$(command -v sbctl 2>/dev/null || echo "/usr/bin/sbctl")
+    [ -x "${sbctl_bin}" ] || return 1
+
+    if sudo "${sbctl_bin}" status 2>/dev/null | grep -qi "Installed:.*✓\|installed.*true"; then
+        return 0
+    fi
+    for kdir in "/var/lib/sbctl/keys/db" "/usr/share/secureboot/keys/db"; do
+        if sudo test -f "${kdir}/db.key" && { sudo test -f "${kdir}/db.pem" || sudo test -f "${kdir}/db.crt"; }; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+sign_kernel_binaries_sbctl() {
+    validate_privileges
+    local sbctl_bin
+    sbctl_bin=$(command -v sbctl 2>/dev/null || echo "/usr/bin/sbctl")
+    if [ ! -x "${sbctl_bin}" ] || ! is_sbctl_keys_configured; then
+        log_info "sbctl keys not configured or not installed. Direct UEFI signing skipped."
+        return 0
+    fi
+
+    # Strict whitelist pruning of sbctl database (/var/lib/sbctl/files.json)
+    # Retain ONLY active /boot/vmlinuz-* kernels and Limine EFI bootloader
+    if [ -f "/var/lib/sbctl/files.json" ]; then
+        sudo python3 -c "
+import json, os
+
+fpath = '/var/lib/sbctl/files.json'
+try:
+    with open(fpath, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    cleaned = {}
+    for p, info in data.items():
+        if not os.path.exists(p) or os.path.islink(p):
+            continue
+        fname = os.path.basename(p)
+        is_valid_kernel = fname.startswith('vmlinuz-') and os.path.dirname(os.path.abspath(p)) == '/boot'
+        is_limine_efi = p.endswith('/EFI/limine/limine_x64.efi') or p.endswith('/EFI/BOOT/BOOTX64.EFI')
+        if is_valid_kernel or is_limine_efi:
+            cleaned[p] = info
+    with open(fpath, 'w', encoding='utf-8') as f:
+        json.dump(cleaned, f, indent=2)
+except Exception:
+    pass
+" 2>/dev/null || true
+    fi
+
+    local kern_files=()
+    mapfile -t kern_files < <(sudo python3 -c "
+import os
+if os.path.exists('/boot'):
+    for f in sorted(os.listdir('/boot')):
+        if f.startswith('vmlinuz-') and not os.path.islink(os.path.join('/boot', f)):
+            print(os.path.join('/boot', f))
+" 2>/dev/null || true)
+
+    for kern in "${kern_files[@]}"; do
+        [ -n "${kern}" ] || continue
+        log_info "Signing kernel binary with sbctl: $(basename "${kern}")..."
+        sudo "${sbctl_bin}" sign -s "${kern}" >/dev/null 2>&1 || true
+    done
+
+    # Resign all registered entries with sbctl
+    sudo "${sbctl_bin}" sign-all >/dev/null 2>&1 || true
+
+    return 0
+}
+
 sign_limine_efi_sbctl() {
     validate_privileges
     local esp_path
@@ -1295,25 +1392,15 @@ sign_limine_efi_sbctl() {
 
     local sbctl_bin
     sbctl_bin=$(command -v sbctl 2>/dev/null || echo "/usr/bin/sbctl")
-    if [ -x "${sbctl_bin}" ]; then
-        if sudo "${sbctl_bin}" status 2>/dev/null | grep -qi "Installed:.*✓\|installed.*true" || sudo test -f "/var/lib/sbctl/files.json"; then
-            if ! sudo "${sbctl_bin}" sign -s "${target_efi}" >/dev/null 2>&1; then
-                log_warn "sbctl failed to sign ${target_efi}"
-            fi
-            if sudo test -f "${esp_path}/EFI/BOOT/BOOTX64.EFI"; then
+    if [ -x "${sbctl_bin}" ] && is_sbctl_keys_configured; then
+        if sudo test -f "${target_efi}"; then
+            log_info "Signing Limine EFI bootloader with sbctl: ${target_efi}..."
+            sudo "${sbctl_bin}" sign -s "${target_efi}" >/dev/null 2>&1 || true
+        fi
+        if sudo test -f "${esp_path}/EFI/BOOT/BOOTX64.EFI"; then
+            if strings "${esp_path}/EFI/BOOT/BOOTX64.EFI" 2>/dev/null | grep -qi "Limine"; then
                 sudo "${sbctl_bin}" sign -s "${esp_path}/EFI/BOOT/BOOTX64.EFI" >/dev/null 2>&1 || true
             fi
-            if sudo test -f "${esp_path}/EFI/Slackware/grubx64.efi"; then
-                sudo "${sbctl_bin}" sign -s "${esp_path}/EFI/Slackware/grubx64.efi" >/dev/null 2>&1 || true
-            fi
-            if sudo test -f "${esp_path}/EFI/Slackware/shimx64.efi"; then
-                sudo "${sbctl_bin}" sign -s "${esp_path}/EFI/Slackware/shimx64.efi" >/dev/null 2>&1 || true
-            fi
-            for kern in /boot/vmlinuz-*; do
-                [ -f "${kern}" ] || continue
-                [ -L "${kern}" ] && continue
-                sudo "${sbctl_bin}" sign -s "${kern}" >/dev/null 2>&1 || true
-            done
         fi
     fi
 
@@ -1325,7 +1412,11 @@ sign_limine_efi_sbctl() {
 
 enroll_and_sign_limine() {
     enroll_limine_config_hash || return 1
-    sign_limine_efi_sbctl || return 1
+    if is_sbctl_keys_configured; then
+        sign_limine_efi_sbctl || return 1
+    else
+        log_info "sbctl keys not enrolled. Limine EFI bootloader enrolled without sbctl signature."
+    fi
     return 0
 }
 
@@ -1464,6 +1555,9 @@ install_limine_bootloader() {
         fi
     fi
 
+    if command -v sign_kernel_binaries_sbctl >/dev/null 2>&1; then
+        sign_kernel_binaries_sbctl >/dev/null 2>&1 || true
+    fi
     generate_limine_configuration
     enroll_and_sign_limine
 
