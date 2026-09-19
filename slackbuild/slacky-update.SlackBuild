@@ -4,7 +4,7 @@
 set -euo pipefail
 
 PRGNAM="slacky-update"
-VERSION="0.12.2"
+VERSION="0.13.0"
 ARCH="noarch"
 BUILD="1_slacky"
 
@@ -58,14 +58,6 @@ install -m 0644 "${SRC_DIR}"/locales/*.json "${PKG_DIR}/usr/share/slacky-update/
 if [ -d "${SRC_DIR}/docs" ]; then
     install -m 0644 "${SRC_DIR}"/docs/*.md "${PKG_DIR}/usr/share/slacky-update/docs/" 2>/dev/null || true
     install -m 0644 "${SRC_DIR}"/docs/*.md "${PKG_DIR}/usr/local/lib/slacky-update/docs/" 2>/dev/null || true
-fi
-if [ -f "${SRC_DIR}/SURVIVAL_GUIDE.md" ]; then
-    install -m 0644 "${SRC_DIR}/SURVIVAL_GUIDE.md" "${PKG_DIR}/usr/share/slacky-update/docs/" 2>/dev/null || true
-    install -m 0644 "${SRC_DIR}/SURVIVAL_GUIDE.md" "${PKG_DIR}/usr/local/lib/slacky-update/docs/" 2>/dev/null || true
-fi
-if [ -f "${SRC_DIR}/TECHNICAL_COMPANION_GUIDE.md" ]; then
-    install -m 0644 "${SRC_DIR}/TECHNICAL_COMPANION_GUIDE.md" "${PKG_DIR}/usr/share/slacky-update/docs/" 2>/dev/null || true
-    install -m 0644 "${SRC_DIR}/TECHNICAL_COMPANION_GUIDE.md" "${PKG_DIR}/usr/local/lib/slacky-update/docs/" 2>/dev/null || true
 fi
 
 install -m 0644 "${SRC_DIR}/desktop/slacky-update.desktop" "${PKG_DIR}/usr/share/applications/"
@@ -157,9 +149,16 @@ if [ -x /usr/bin/gtk-update-icon-cache ]; then
 fi
 
 ACTIVE_GUI_USER=$(who | awk '{if ($2 ~ /:[0-9]/ || $5 ~ /:[0-9]/) print $1}' | head -n1 || true)
-if [ -n "${ACTIVE_GUI_USER}" ] && [ -x /usr/local/bin/slacky-update-tray ]; then
-    if ! pgrep -u "${ACTIVE_GUI_USER}" -f "slacky-update-tray" >/dev/null 2>&1; then
-        su - "${ACTIVE_GUI_USER}" -c "nohup /usr/local/bin/slacky-update-tray >/dev/null 2>&1 &" 2>/dev/null || true
+if [ -n "${ACTIVE_GUI_USER}" ]; then
+    TRAY_BIN=""
+    for cand in /usr/bin/slacky-update-tray /usr/local/bin/slacky-update-tray; do
+        if [ -x "${cand}" ]; then
+            TRAY_BIN="${cand}"
+            break
+        fi
+    done
+    if [ -n "${TRAY_BIN}" ] && ! pgrep -u "${ACTIVE_GUI_USER}" -f "slacky-update-tray" >/dev/null 2>&1; then
+        su - "${ACTIVE_GUI_USER}" -c "nohup ${TRAY_BIN} >/dev/null 2>&1 &" 2>/dev/null || true
     fi
 fi
 
@@ -177,3 +176,4 @@ cp -f "${OUTPUT_DIR}/${PKG_NAME}" "/tmp/${PRGNAM}.txz" 2>/dev/null || true
 
 rm -rf "${BUILD_DIR}" "${PKG_DIR}"
 echo "==> Package build completed: ${OUTPUT_DIR}/${PKG_NAME}"
+echo "==> Install or upgrade with: sudo upgradepkg --reinstall ${OUTPUT_DIR}/${PKG_NAME}"

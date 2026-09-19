@@ -14,6 +14,6 @@ slacky-update: Boot automation (sbctl & MOK), CachyOS kernels (BORE, LTS, RC),
 slacky-update: NVIDIA DKMS & CachyOS-Master sync, Underpants Gnomes gaming suite,
 slacky-update: multilib audit, SBo SlackBuilds hub, and fail-safe recovery.
 slacky-update:
-slacky-update: Homepage: https://codeberg.org/tuxofvalhalla/slacky-update
+slacky-update: Homepage: https://github.com/TuxOfValhalla/slacky-update
 slacky-update:
 slacky-update:

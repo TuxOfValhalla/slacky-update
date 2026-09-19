@@ -31,6 +31,8 @@ if [ -n "${APP_DIR}" ]; then
     # shellcheck source=/dev/null
     [ -f "${APP_DIR}/mod_limine.sh" ] && source "${APP_DIR}/mod_limine.sh"
     # shellcheck source=/dev/null
+    [ -f "${APP_DIR}/mod_nvidia.sh" ] && source "${APP_DIR}/mod_nvidia.sh"
+    # shellcheck source=/dev/null
     [ -f "${APP_DIR}/mod_armor.sh" ] && source "${APP_DIR}/mod_armor.sh"
 fi
 

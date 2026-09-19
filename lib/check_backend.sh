@@ -4,13 +4,16 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
-if [ -f "${SCRIPT_DIR}/common.sh" ]; then
-    # shellcheck source=/dev/null
-    source "${SCRIPT_DIR}/common.sh"
-elif [ -f "/usr/share/slacky-update/lib/common.sh" ]; then
-    # shellcheck source=/dev/null
-    source "/usr/share/slacky-update/lib/common.sh"
-fi
+for cand in "${SCRIPT_DIR}/common.sh" \
+            "/usr/share/slacky-update/lib/common.sh" \
+            "/usr/local/share/slacky-update/lib/common.sh" \
+            "/usr/local/lib/slacky-update/common.sh"; do
+    if [ -f "${cand}" ]; then
+        # shellcheck source=/dev/null
+        source "${cand}"
+        break
+    fi
+done
 
 USER_CACHE_DIR="${XDG_CACHE_HOME:-${HOME:-/tmp}/.cache}/slacky-update"
 mkdir -p "${USER_CACHE_DIR}" 2>/dev/null || true

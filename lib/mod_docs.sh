@@ -9,15 +9,14 @@ get_master_field_guide_md_path() {
         "${SCRIPT_DIR:-}/../SURVIVAL_GUIDE.md"
         "${APP_DIR:-}/../SURVIVAL_GUIDE.md"
         "${APP_DIR:-}/SURVIVAL_GUIDE.md"
-        "/usr/share/slacky-update/docs/SURVIVAL_GUIDE.md"
-        "/usr/local/lib/slacky-update/docs/SURVIVAL_GUIDE.md"
-        "/home/tux/development/slacky-update/SURVIVAL_GUIDE.md"
         "${SCRIPT_DIR:-}/../docs/SLACKY_UPDATE_FIELD_GUIDE.md"
         "${APP_DIR:-}/../docs/SLACKY_UPDATE_FIELD_GUIDE.md"
         "${APP_DIR:-}/docs/SLACKY_UPDATE_FIELD_GUIDE.md"
+        "/usr/share/slacky-update/docs/SURVIVAL_GUIDE.md"
         "/usr/share/slacky-update/docs/SLACKY_UPDATE_FIELD_GUIDE.md"
+        "/usr/local/share/slacky-update/docs/SURVIVAL_GUIDE.md"
+        "/usr/local/lib/slacky-update/docs/SURVIVAL_GUIDE.md"
         "/usr/local/lib/slacky-update/docs/SLACKY_UPDATE_FIELD_GUIDE.md"
-        "/home/tux/development/slacky-update/docs/SLACKY_UPDATE_FIELD_GUIDE.md"
         "${SCRIPT_DIR:-}/../docs/LIMINE_SECUREBOOT_FIELD_GUIDE.md"
         "${APP_DIR:-}/../docs/LIMINE_SECUREBOOT_FIELD_GUIDE.md"
         "/usr/share/slacky-update/docs/LIMINE_SECUREBOOT_FIELD_GUIDE.md"
@@ -36,12 +35,12 @@ get_technical_companion_guide_md_path() {
         "${SCRIPT_DIR:-}/../TECHNICAL_COMPANION_GUIDE.md"
         "${APP_DIR:-}/../TECHNICAL_COMPANION_GUIDE.md"
         "${APP_DIR:-}/TECHNICAL_COMPANION_GUIDE.md"
-        "/usr/share/slacky-update/docs/TECHNICAL_COMPANION_GUIDE.md"
-        "/usr/local/lib/slacky-update/docs/TECHNICAL_COMPANION_GUIDE.md"
-        "/home/tux/development/slacky-update/TECHNICAL_COMPANION_GUIDE.md"
         "${SCRIPT_DIR:-}/../docs/TECHNICAL_COMPANION_GUIDE.md"
         "${APP_DIR:-}/../docs/TECHNICAL_COMPANION_GUIDE.md"
         "${APP_DIR:-}/docs/TECHNICAL_COMPANION_GUIDE.md"
+        "/usr/share/slacky-update/docs/TECHNICAL_COMPANION_GUIDE.md"
+        "/usr/local/share/slacky-update/docs/TECHNICAL_COMPANION_GUIDE.md"
+        "/usr/local/lib/slacky-update/docs/TECHNICAL_COMPANION_GUIDE.md"
     )
     for c in "${candidates[@]}"; do
         if [ -f "${c}" ]; then
@@ -58,8 +57,8 @@ get_limine_field_guide_md_path() {
         "${APP_DIR:-}/../docs/LIMINE_SECUREBOOT_FIELD_GUIDE.md"
         "${APP_DIR:-}/docs/LIMINE_SECUREBOOT_FIELD_GUIDE.md"
         "/usr/share/slacky-update/docs/LIMINE_SECUREBOOT_FIELD_GUIDE.md"
+        "/usr/local/share/slacky-update/docs/LIMINE_SECUREBOOT_FIELD_GUIDE.md"
         "/usr/local/lib/slacky-update/docs/LIMINE_SECUREBOOT_FIELD_GUIDE.md"
-        "/home/tux/development/slacky-update/docs/LIMINE_SECUREBOOT_FIELD_GUIDE.md"
     )
     for c in "${candidates[@]}"; do
         if [ -f "${c}" ]; then
@@ -76,8 +75,8 @@ get_troubleshooting_guide_md_path() {
         "${APP_DIR:-}/../docs/TROUBLESHOOTING_GUIDE.md"
         "${APP_DIR:-}/docs/TROUBLESHOOTING_GUIDE.md"
         "/usr/share/slacky-update/docs/TROUBLESHOOTING_GUIDE.md"
+        "/usr/local/share/slacky-update/docs/TROUBLESHOOTING_GUIDE.md"
         "/usr/local/lib/slacky-update/docs/TROUBLESHOOTING_GUIDE.md"
-        "/home/tux/development/slacky-update/docs/TROUBLESHOOTING_GUIDE.md"
     )
     for c in "${candidates[@]}"; do
         if [ -f "${c}" ]; then
@@ -98,6 +97,11 @@ generate_field_guide_pdf() {
 
     if [ -z "${md_path}" ] || [ ! -f "${md_path}" ]; then
         log_error "Field Guide markdown file not found."
+        return 1
+    fi
+
+    if ! command -v groff >/dev/null 2>&1 || ! command -v ps2pdf >/dev/null 2>&1; then
+        log_error "PDF generation requires 'groff' and 'ps2pdf' (ghostscript). Please install standard Slackware packages (d/groff, ap/ghostscript)."
         return 1
     fi
 

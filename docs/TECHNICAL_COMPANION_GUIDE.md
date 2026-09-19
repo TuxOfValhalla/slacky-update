@@ -1,6 +1,6 @@
 # 🛠️ Slacky-Update Technical Companion Guide: Under the Hood & Engine Architecture
 ### *A Deep-Dive Architectural Whitepaper & Technical Reference for Slackware Linux 15.0 & -current*
-#### `v0.12.2` — *"....and all that I can see, is just another Limine tree...."* (Pre-Release / Early Access)
+#### `v0.13.0` — *"It's My Party, And I'll Cry If I Want To..."* (Release Edition)
 
 ---
 
@@ -277,5 +277,5 @@ For disk partitioning and ESP setup:
 <div align="center">
 <b>Slacky-Update Technical Companion Guide</b><br>
 <i>Engineered for Transparency, Purity, and Performance on Slackware Linux</i><br>
-<i>Canonical Source: <a href="https://codeberg.org/TuxOfValhalla/slacky-update">Codeberg</a> | Secondary Mirror: <a href="https://github.com/TuxOfValhalla/slacky-update">GitHub</a> (pending review)</i>
+<i>Canonical Source: <a href="https://github.com/TuxOfValhalla/slacky-update">GitHub</a> | Secondary Mirror: <a href="https://codeberg.org/TuxOfValhalla/slacky-update">Codeberg</a></i>
 </div>

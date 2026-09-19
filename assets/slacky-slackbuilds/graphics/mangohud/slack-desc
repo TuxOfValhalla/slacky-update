@@ -5,7 +5,7 @@
 # You must make exactly 11 lines for the formatting to be correct.  It's also
 # customary to leave one space after the ':' except on otherwise blank lines.
 
-        |-----handy-ruler------------------------------------------------------|
+     |-----handy-ruler------------------------------------------------------|
 mangohud: mangohud (Vulkan and OpenGL overlay for monitoring FPS and hardware)
 mangohud:
 mangohud: MangoHud is a Vulkan and OpenGL overlay for monitoring FPS,
@@ -16,3 +16,5 @@ mangohud: with full 64-bit and 32-bit multilib support for Wine and Proton.
 mangohud:
 mangohud: Homepage: https://github.com/flightlessmango/MangoHud
 mangohud:
+mangohud:
+

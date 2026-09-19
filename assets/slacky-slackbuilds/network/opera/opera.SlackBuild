@@ -1,0 +1,156 @@
+#!/usr/bin/env bash
+#
+# Slackware build script for Opera Web Browser
+# Maintained by TuxOfValhalla <agnar1984@gmail.com>
+#
+
+set -e
+
+PRGNAM=opera
+SRCNAM=opera-stable
+VERSION=${VERSION:-136.0.6008.22}
+BUILD=${BUILD:-1}
+TAG=${TAG:-_slacky}
+PKGTYPE=${PKGTYPE:-txz}
+
+case "$(uname -m)" in
+  x86_64) ARCH=x86_64 ; DEBARCH=amd64 ; LIBDIRSUFFIX="64" ;;
+  *) echo "Unsupported architecture $(uname -m). Opera is 64-bit only." ; exit 1 ;;
+esac
+
+CWD=$(pwd)
+TMP=${TMP:-/tmp/SBo}
+PKG=$TMP/package-$PRGNAM
+OUTPUT=${OUTPUT:-/tmp}
+
+set -euo pipefail
+
+rm -rf "$PKG"
+mkdir -p "$TMP" "$PKG" "$OUTPUT"
+cd "$TMP"
+rm -rf "$PRGNAM-$VERSION"
+mkdir -p "$PRGNAM-$VERSION"
+cd "$PRGNAM-$VERSION"
+
+# Search for existing debian archive in CWD, TMP or Downloads
+DEBFILE=""
+for cand in "$CWD/${SRCNAM}_${VERSION}_${DEBARCH}.deb" \
+            "$CWD/${SRCNAM}_*.deb" \
+            "$TMP/${SRCNAM}_${VERSION}_${DEBARCH}.deb" \
+            "$HOME/Downloads/${SRCNAM}_${VERSION}_${DEBARCH}.deb" \
+            "$HOME/Downloads/${SRCNAM}_*.deb" \
+            "/tmp/opera-test/${SRCNAM}_${VERSION}_${DEBARCH}.deb"; do
+  if ls $cand 1>/dev/null 2>&1; then
+    DEBFILE=$(ls $cand | head -n 1)
+    break
+  fi
+done
+
+if [ -z "$DEBFILE" ] || [ ! -f "$DEBFILE" ]; then
+  DEBFILE="$CWD/${SRCNAM}_${VERSION}_${DEBARCH}.deb"
+  PRIMARY_URL="https://deb.opera.com/opera-stable/pool/non-free/o/opera-stable/${SRCNAM}_${VERSION}_${DEBARCH}.deb"
+  echo "Downloading $PRIMARY_URL..."
+  curl -sSL -A "Mozilla/5.0 (X11; Linux x86_64; rv:130.0) Gecko/20100101 Firefox/130.0" -o "$DEBFILE" "$PRIMARY_URL" || {
+    FALLBACK_URL="https://download3.operacdn.com/pub/opera/desktop/${VERSION}/linux/${SRCNAM}_${VERSION}_${DEBARCH}.deb"
+    echo "Trying fallback CDN $FALLBACK_URL..."
+    curl -sSL -A "Mozilla/5.0 (X11; Linux x86_64; rv:130.0) Gecko/20100101 Firefox/130.0" -o "$DEBFILE" "$FALLBACK_URL" || true
+  }
+fi
+
+if [ ! -f "$DEBFILE" ] || [ ! -s "$DEBFILE" ]; then
+  echo "ERROR: Unable to locate or download Opera deb package: ${DEBFILE}"
+  echo "Please place ${SRCNAM}_${VERSION}_${DEBARCH}.deb into ${CWD} and re-run."
+  exit 1
+fi
+
+echo "Extracting $(basename "$DEBFILE")..."
+mkdir -p extract_payload
+cd extract_payload
+ar p "$DEBFILE" data.tar.xz 2>/dev/null | tar -xJf - 2>/dev/null || \
+ar p "$DEBFILE" data.tar.zst 2>/dev/null | tar --zstd -xf - 2>/dev/null || \
+ar p "$DEBFILE" data.tar.gz 2>/dev/null | tar -xzf - 2>/dev/null || {
+  echo "ERROR: Failed to extract data archive from deb package."
+  exit 1
+}
+
+# Copy payload into package root
+mkdir -p "$PKG/usr"
+if [ -d usr ]; then
+  cp -a usr/* "$PKG/usr/"
+fi
+cd ..
+
+# Ensure Slackware 64-bit directory structure
+if [ -d "$PKG/usr/lib/x86_64-linux-gnu/opera-stable" ]; then
+  mkdir -p "$PKG/usr/lib64"
+  mv "$PKG/usr/lib/x86_64-linux-gnu/opera-stable" "$PKG/usr/lib64/"
+  rm -rf "$PKG/usr/lib"
+elif [ -d "$PKG/usr/lib/opera-stable" ]; then
+  mkdir -p "$PKG/usr/lib64"
+  mv "$PKG/usr/lib/opera-stable" "$PKG/usr/lib64/"
+  rm -rf "$PKG/usr/lib"
+elif [ -d "$PKG/usr/lib/opera" ]; then
+  mkdir -p "$PKG/usr/lib64/opera-stable"
+  mv "$PKG/usr/lib/opera"/* "$PKG/usr/lib64/opera-stable/"
+  rm -rf "$PKG/usr/lib"
+fi
+
+# Fix /usr/bin launcher scripts
+mkdir -p "$PKG/usr/bin"
+rm -f "$PKG/usr/bin/opera" "$PKG/usr/bin/opera-stable"
+cat << 'EOF' > "$PKG/usr/bin/opera"
+#!/bin/sh
+exec /usr/lib64/opera-stable/opera "$@"
+EOF
+chmod 755 "$PKG/usr/bin/opera"
+
+cat << 'EOF' > "$PKG/usr/bin/opera-stable"
+#!/bin/sh
+exec /usr/lib64/opera-stable/opera "$@"
+EOF
+chmod 755 "$PKG/usr/bin/opera-stable"
+
+# Fix executable permissions on opera sandbox and shared objects
+if [ -f "$PKG/usr/lib64/opera-stable/opera_sandbox" ]; then
+  chmod 4755 "$PKG/usr/lib64/opera-stable/opera_sandbox"
+fi
+
+# Fix desktop file
+if [ -f "$PKG/usr/share/applications/opera.desktop" ]; then
+  sed -i '/^TargetEnvironment/d; s|^TryExec=.*|TryExec=opera|g; s|^Exec=opera|Exec=/usr/bin/opera|g' "$PKG/usr/share/applications/opera.desktop"
+fi
+
+# Permissions sanity
+cd "$PKG"
+chown -R root:root . 2>/dev/null || true
+find -L . \
+  \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 -o -perm 511 \) \
+  -exec chmod 755 {} \; -o \
+  \( -perm 666 -o -perm 664 -o -perm 640 -o -perm 600 -o -perm 444 -o -perm 440 -o -perm 400 \) \
+  -exec chmod 644 {} \;
+
+# Preserve suid on sandbox
+[ -f "$PKG/usr/lib64/opera-stable/opera_sandbox" ] && chmod 4755 "$PKG/usr/lib64/opera-stable/opera_sandbox"
+
+# Strip binaries
+find "$PKG/usr" -type f -exec file {} + 2>/dev/null \
+  | grep -E "ELF.*(executable|shared object)" \
+  | cut -d: -f1 \
+  | xargs strip --strip-unneeded 2>/dev/null || true
+
+# Documentation
+mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION"
+[ -f "$CWD/slack-desc" ] && cp -a "$CWD/slack-desc" "$PKG/usr/doc/$PRGNAM-$VERSION/slack-desc"
+[ -f "$CWD/opera.info" ] && cp -a "$CWD/opera.info" "$PKG/usr/doc/$PRGNAM-$VERSION/opera.info"
+
+# Install Script
+mkdir -p "$PKG/install"
+[ -f "$CWD/slack-desc" ] && cp -a "$CWD/slack-desc" "$PKG/install/slack-desc"
+[ -f "$CWD/doinst.sh" ] && cp -a "$CWD/doinst.sh" "$PKG/install/doinst.sh"
+
+# Create Slackware package
+cd "$PKG"
+/sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"
+
+echo "Package created successfully: $OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"
+

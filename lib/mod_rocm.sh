@@ -201,7 +201,16 @@ if [ -x /sbin/ldconfig ]; then
 fi
 DOINST_EOF
 
-    local target_pkg="/tmp/cachyos-rocm-opencl-7.2.4-x86_64-1_slacky.txz"
+    local rocm_ver="7.2.4"
+    local rocm_core_file
+    rocm_core_file=$(find "${dl_dir}" -name "rocm-core-*.pkg.tar.zst" 2>/dev/null | head -n1 || true)
+    if [ -n "${rocm_core_file}" ]; then
+        local extracted_ver
+        extracted_ver=$(basename "${rocm_core_file}" | sed -E 's/^rocm-core-([0-9]+\.[0-9]+(\.[0-9]+)?).*$/\1/' || true)
+        [ -n "${extracted_ver}" ] && rocm_ver="${extracted_ver}"
+    fi
+
+    local target_pkg="/tmp/cachyos-rocm-opencl-${rocm_ver}-x86_64-1_slacky.txz"
     log_info "Assembling Slackware txz package: ${target_pkg}..."
     (
         cd "${staging_root}"

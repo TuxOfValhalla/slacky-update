@@ -134,6 +134,26 @@ _ = i18n.get
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
+        cmd = sys.argv[1]
+        if cmd == "--list-langs":
+            langs = i18n.get_available_languages()
+            cur = i18n.current_lang
+            print("\033[1;36mAvailable Languages for Slacky-Update:\033[0m")
+            for code, name in sorted(langs.items()):
+                mark = " \033[1;32m[Active]\033[0m" if code == cur else ""
+                print(f"  \033[1;33m•\033[0m \033[1m{code:14}\033[0m {name}{mark}")
+            sys.exit(0)
+        elif cmd == "--set-lang" and len(sys.argv) > 2:
+            target_lang = sys.argv[2].lower()
+            langs = i18n.get_available_languages()
+            if target_lang != "system" and target_lang not in langs:
+                print(f"\033[1;31mError:\033[0m Unknown language code '{target_lang}'. Run --list-langs to see available codes.")
+                sys.exit(1)
+            i18n.save_language_override(target_lang)
+            lang_name = langs.get(target_lang, target_lang) if target_lang != "system" else "System Default"
+            print(f"\033[1;32m✓\033[0m Language successfully set to: \033[1m{lang_name}\033[0m ({target_lang})")
+            sys.exit(0)
+
         key = sys.argv[1]
         kwargs = {}
         for arg in sys.argv[2:]:

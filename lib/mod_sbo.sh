@@ -469,7 +469,7 @@ get_pkg_badge() {
 is_curated_sbo_whitelisted() {
     local prg="$1"
     # Pre-release filter toggle (flip to false to test/view all SlackBuilds)
-    local filter_untested=true
+    local filter_untested=false
     if [ "${filter_untested}" != "true" ]; then
         return 0
     fi
@@ -611,6 +611,12 @@ menu_category_office() {
         "freeoffice2024" "office/freeoffice2024" "Microsoft Office Compatible Suite"
 }
 
+menu_category_network() {
+    local suite_dir="$1"
+    render_curated_category_menu "🌐 Network & Browsers 🌐" "${suite_dir}" \
+        "opera" "network/opera" "Fast, Secure Web Browser with Built-in AI & Adblocker"
+}
+
 menu_category_libraries() {
     local suite_dir="$1"
     render_curated_category_menu "📚 Libraries & Drivers 📚" "${suite_dir}" \
@@ -641,9 +647,9 @@ manage_curated_suite_interactive() {
         echo -e "  \033[1;33m1.\033[0m 🎮 Games & Launchers"
         echo -e "  \033[1;33m2.\033[0m 🎨 Graphics & Design"
         echo -e "  \033[1;33m3.\033[0m 🎬 Multimedia & Video"
-        echo -e "  \033[1;33m4.\033[0m 🛠️ Development & Engines"
-        echo -e "  \033[1;33m5.\033[0m ⚙️ System, Wine & Tuning"
-        echo -e "  \033[1;33m6.\033[0m 🏢 Office & Productivity"
+        echo -e "  \033[1;33m4.\033[0m ⚙️ System, Wine & Tuning"
+        echo -e "  \033[1;33m5.\033[0m 🏢 Office & Productivity"
+        echo -e "  \033[1;33m6.\033[0m 🌐 Network & Browsers"
         echo -e "  \033[1;33m7.\033[0m 📚 Libraries & Drivers"
         echo -e "  \033[1;33m8.\033[0m $(_ SBO_BACK_OPTION)"
         echo ""
@@ -655,9 +661,9 @@ manage_curated_suite_interactive() {
             1) menu_category_games "${suite_dir}" ;;
             2) menu_category_graphics "${suite_dir}" ;;
             3) menu_category_multimedia "${suite_dir}" ;;
-            4) menu_category_development "${suite_dir}" ;;
-            5) menu_category_system "${suite_dir}" ;;
-            6) menu_category_office "${suite_dir}" ;;
+            4) menu_category_system "${suite_dir}" ;;
+            5) menu_category_office "${suite_dir}" ;;
+            6) menu_category_network "${suite_dir}" ;;
             7) menu_category_libraries "${suite_dir}" ;;
             8) return 0 ;;
             *) log_warn "Invalid selection." ;;

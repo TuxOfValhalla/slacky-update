@@ -435,20 +435,10 @@ class SlackyUpdateTray(QSystemTrayIcon):
             for title, pkgs in pipeline:
                 if pkgs:
                     self.pending_menu.addSection(f"{title} ({len(pkgs)})")
-                    if len(pkgs) <= 25:
-                        for pkg in pkgs:
-                            action = QAction(f"  {pkg}", self.pending_menu)
-                            action.setEnabled(False)
-                            self.pending_menu.addAction(action)
-                    else:
-                        for pkg in pkgs[:20]:
-                            action = QAction(f"  {pkg}", self.pending_menu)
-                            action.setEnabled(False)
-                            self.pending_menu.addAction(action)
-                        rem_count = len(pkgs) - 20
-                        more_act = QAction(f"  ... and {rem_count} more", self.pending_menu)
-                        more_act.setEnabled(False)
-                        self.pending_menu.addAction(more_act)
+                    for pkg in pkgs:
+                        action = QAction(f"  {pkg}", self.pending_menu)
+                        action.setEnabled(False)
+                        self.pending_menu.addAction(action)
         else:
             no_up = QAction(_("ALL_PACKAGES_UP_TO_DATE"), self.pending_menu)
             no_up.setEnabled(False)
@@ -499,14 +489,17 @@ class SlackyUpdateTray(QSystemTrayIcon):
         self.is_checking = False
         self.update_status()
 
+    def _get_slacky_bin(self):
+        return shutil.which("slacky-update") or "/usr/bin/slacky-update" or "/usr/local/bin/slacky-update"
+
     def launch_upgrade(self):
-        self.launch_in_terminal(["/usr/local/bin/slacky-update"], "slacky-update v0.10")
+        self.launch_in_terminal([self._get_slacky_bin()], "Slacky-Update")
 
     def launch_gaming(self):
-        self.launch_in_terminal(["/usr/local/bin/slacky-update", "--gaming"], "slacky-update v0.10")
+        self.launch_in_terminal([self._get_slacky_bin(), "--gaming"], "Slacky-Update Gaming Suite")
 
     def launch_slackbuilds(self):
-        self.launch_in_terminal(["/usr/local/bin/slacky-update", "--slackbuilds"], "slacky-update v0.10")
+        self.launch_in_terminal([self._get_slacky_bin(), "--slackbuilds"], "Slacky-Update SlackBuilds")
 
     def launch_in_terminal(self, cmd, title):
         term = os.environ.get("TERMINAL")

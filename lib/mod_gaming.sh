@@ -28,18 +28,17 @@ protonplus|ProtonPlus (Wine/GE & Proton Manager)|launcher|(?:proton-plus|protonp
 steam-devices|Steam Controller & Gamepad Udev Rules|launcher|game-devices-udev-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos,arch-extra
 lact|LACT (AMD/Intel GPU Overclocking & Fans)|hardware|lact-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||arch-extra,cachyos
 openrgb|OpenRGB (Hardware RGB Lighting Control)|hardware|openrgb(?:-git)?-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos,arch-extra
-solaar|Solaar (Logitech Wireless Device Manager)|hardware|solaar-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||arch-extra,cachyos-extra-v3,cachyos
+solaar|Solaar (Logitech Wireless Device Manager)|hardware|solaar-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||python-pyudev-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,python-typing_extensions-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,python-xlib-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|arch-extra,cachyos-extra-v3,cachyos
 coolercontrol|CoolerControl (All-in-One Liquid & Fan Control)|hardware|coolercontrol-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||coolercontrold-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos,arch-extra
-lian-li-linux|Lian Li Uni Fan & Controller Daemon|hardware|lian-li-linux(?:-git)?-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|||chaotic-aur,cachyos
-asusctl|ASUS ROG Laptop Control Daemon & CLI|hardware|asusctl-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||arch-extra,cachyos
+# lian-li-linux|Lian Li Uni Fan & Controller Daemon|hardware|lian-li-linux(?:-git)?-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|||chaotic-aur,cachyos (dormant)
+# asusctl|ASUS ROG Laptop Control Daemon & CLI|hardware|asusctl-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||arch-extra,cachyos (dormant)
 easyeffects|EasyEffects Studio Audio DSP & JackHack96 Presets|audio|easyeffects-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||lsp-plugins-lv2-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,calf-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,mda\.lv2-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,zam-plugins-lv2-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,zita-convolver-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,rnnoise-[0-9a-zA-Z_\.:-]*\.pkg\.tar\.zst,libbs2b-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,soundtouch-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libebur128-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,webrtc-audio-processing-(?:2|1)-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,lilv-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,serd-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,sord-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,sratom-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,qt6-graphs-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,onetbb-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libmysofa-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,zix-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|arch-extra,cachyos
 pear-desktop|Pear Desktop (YouTube Music with Custom Plugins)|audio|pear-desktop-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||electron42-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libjpeg-turbo-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|chaotic-aur,chaotic-cdn,arch-extra
 audacity|Audacity (Digital Audio Editor & Recording Studio)|audio|audacity-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||suil-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,lilv-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,serd-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,sord-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,sratom-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,zix-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,portsmf-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,portaudio-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,portmidi-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libsbsms-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,vamp-plugin-sdk-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,soundtouch-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,twolame-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libid3tag-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libsoxr-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libmspack-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,wxwidgets-gtk3-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,wxwidgets-common-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libjpeg-turbo-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|arch-extra,cachyos-extra-v3,cachyos
 yabridge|Yabridge (+ yabridgectl VST2/VST3 Plugin Bridge)|audio|yabridge-(?:bin-)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||yabridgectl-(?:bin-)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos,arch-extra,chaotic-aur
-spotify|Spotify Launcher (Official Native Client Bootstrap)|audio|spotify-launcher-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||arch-extra,cachyos
+spotify|Spotify Launcher (Official Native Client Bootstrap)|audio|spotify-launcher-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||sequoia-sqv-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libayatana-appindicator-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libayatana-indicator-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,ayatana-ido-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libcurl-gnutls-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|arch-extra,cachyos,arch-core
 inkscape|Inkscape (Professional Vector Graphics Editor)|creative|inkscape-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||lib2geom-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,double-conversion-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,graphicsmagick-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libcdr-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,poppler-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libvisio-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libwpg-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,librevenge-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos-extra-v3,arch-extra,cachyos
-darktable|Darktable (Advanced RAW Photo Workflow & Editor)|creative|darktable-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos-extra-v3,arch-extra,cachyos
-parabolic|Parabolic (Video & Audio Media Downloader)|creative|(?:parabolic|tube-converter)-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|||chaotic-aur,cachyos,arch-extra
+darktable|Darktable (Advanced RAW Photo Workflow & Editor)|creative|darktable-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||libavif-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libheif-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libde265-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libyuv-(?:r)?[0-9a-zA-Z_\.\+-]*\.pkg\.tar\.zst,rav1e-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,svt-av1-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,openh264-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,pugixml-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,colord-gtk-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,osm-gps-map-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,gmic-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,flickcurl-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos-extra-v3,arch-extra,cachyos
 syncthing|Syncthing (Continuous P2P File Synchronization)|tools|syncthing-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||arch-extra,cachyos-extra-v3,cachyos
 obs-studio|OBS Studio (Isolated App-Bundle & Python 3.14)|community|obs-studio-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst||python-3\.[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,mbedtls-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,obs-studio-plugin-browser-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,cef-minimal-obs(?:-bin)?-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,libdatachannel-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,libjuice-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,librist-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,libusrsctp-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|arch-extra,arch-core,cachyos
 obs-vkcapture|OBS VKCapture (+ 32-bit Multilib Vulkan/GL)|community|obs-vkcapture-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|lib32-obs-vkcapture-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||cachyos,arch-extra
@@ -49,12 +48,7 @@ sunshine|Sunshine (Self-Hosted Game Stream Host)|community|sunshine-[0-9][a-zA-Z
 google-chrome|Google Chrome (Official Web Browser)|browser|google-chrome-[0-9a-zA-Z_\.:-]*\.pkg\.tar\.zst|||chaotic-aur,chaotic-cdn,cachyos
 microsoft-edge|Microsoft Edge (Official Web Browser)|browser|microsoft-edge-(?:stable|beta|dev)-bin-[0-9a-zA-Z_\.:-]*\.pkg\.tar\.zst|||chaotic-aur,chaotic-cdn,cachyos
 brave|Brave Browser (Privacy Browser with AdBlock)|browser|brave-bin-(?:1%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos,chaotic-aur,chaotic-cdn
-zen-browser|Zen Browser (Gecko-Based Ergonomic Browser)|browser|zen-browser-bin-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos,chaotic-aur,chaotic-cdn
-vivaldi|Vivaldi (Power-User Feature-Rich Browser)|browser|vivaldi-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||vivaldi-ffmpeg-codecs-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|arch-extra,cachyos,chaotic-aur
-opera|Opera Browser (Web Browser with Built-in VPN)|browser|opera-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||opera-ffmpeg-codecs-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|chaotic-aur,cachyos,arch-extra
-limine|Limine Bootloader (>= 12.x EFI & Tools)|bootloader|limine-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos
-limine-entry-tool|Limine Entry Tool (Config & Enrollment Generator)|bootloader|limine-entry-tool-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos
-limine-snapper-sync|Limine Snapper Sync (Btrfs Snapshot Integrator)|bootloader|limine-snapper-sync-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos
+zen-browser|Zen Browser (High-Performance Gecko Browser)|browser|zen-browser-bin-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos,chaotic-aur,chaotic-cdn
 sbctl|sbctl (Secure Boot Key Manager & Signer)|bootloader|sbctl-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||arch-extra,cachyos
 CATALOG_EOF
 }
@@ -62,7 +56,7 @@ CATALOG_EOF
 # --- [ HELPER FUNCTIONS ] ---
 is_gaming_pkg_whitelisted() {
     local pkg_id="$1"
-    # Pre-release filter toggle (flip to false to test/view all upstream packages)
+    # Pre-release filter toggle (strictly filter unverified/dormant packages)
     local filter_untested=true
     if [ "${filter_untested}" != "true" ]; then
         return 0
@@ -75,15 +69,15 @@ is_gaming_pkg_whitelisted() {
         return 0
     fi
 
-    # Whitelist of 22 tested & verified suites for v0.12 Pre-Release
+    # Whitelist of 34 tested & verified suites for v0.13
     case "${pkg_id}" in
-        mangohud|gamemode|goverlay|vram-booster|scx|ananicy|\
+        mangohud|gamemode|goverlay|vram-booster|scx|ananicy|gamescope|retroarch|\
         heroic|lutris|faugus|protonplus|steam-devices|\
-        lact|openrgb|\
-        easyeffects|pear-desktop|audacity|\
-        inkscape|syncthing|\
-        obs-studio|discord|\
-        google-chrome|microsoft-edge)
+        lact|openrgb|solaar|coolercontrol|\
+        easyeffects|pear-desktop|audacity|spotify|yabridge|\
+        inkscape|darktable|syncthing|\
+        obs-studio|obs-vkcapture|discord|vesktop|sunshine|\
+        google-chrome|microsoft-edge|brave|zen-browser)
             return 0
             ;;
         *)
@@ -293,7 +287,7 @@ repos = {
 
 catalog = {}
 for line in raw_catalog_lines:
-    if not line.strip():
+    if not line.strip() or line.strip().startswith('#'):
         continue
     left_parts = line.split("|", 3)
     if len(left_parts) >= 4:
@@ -601,7 +595,13 @@ catalog = {
         r'href=[\'\"]?(wxwidgets-common-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(libjpeg-turbo-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["arch-extra", "cachyos-extra-v3", "cachyos", "arch-core"], []),
-    "spotify": (r'href=[\'\"]?(spotify(?:-launcher)?-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos-extra-v3", "chaotic-aur", "cachyos"], []),
+    "spotify": (r'href=[\'\"]?(spotify(?:-launcher)?-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(sequoia-sqv-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libayatana-appindicator-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libayatana-indicator-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(ayatana-ido-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libcurl-gnutls-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    ], ["arch-extra", "cachyos-extra-v3", "cachyos", "arch-core"], []),
     "inkscape": (r'href=[\'\"]?(inkscape-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
         r'href=[\'\"]?(lib2geom-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(double-conversion-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
@@ -612,9 +612,21 @@ catalog = {
         r'href=[\'\"]?(libwpg-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(librevenge-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["cachyos-extra-v3", "arch-extra", "cachyos"], []),
-    "darktable": (r'href=[\'\"]?(darktable-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos-extra-v3", "arch-extra", "cachyos"], []),
+    "darktable": (r'href=[\'\"]?(darktable-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(libavif-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libheif-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libde265-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libyuv-((?:r[0-9]+|[0-9])[a-zA-Z0-9_\.\+%-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(rav1e-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(svt-av1-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(openh264-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(pugixml-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(colord-gtk-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(osm-gps-map-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(gmic-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(flickcurl-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    ], ["cachyos-extra-v3", "arch-extra", "cachyos"], []),
     "syncthing": (r'href=[\'\"]?(syncthing-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos-extra-v3", "cachyos"], []),
-    "parabolic": (r'href=[\'\"]?((?:parabolic|tube-converter)-([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos", "arch-extra"], []),
     "ananicy": (r'href=[\'\"]?(ananicy-cpp(?:-git)?-([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
         r'href=[\'\"]?(cachyos-ananicy-rules(?:-git)?-([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(libbpf-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
@@ -639,16 +651,18 @@ catalog = {
     "retroarch": (r'href=[\'\"]?(retroarch-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(retroarch-assets-ozone-(?:[0-9]+%3A)?([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["arch-extra", "cachyos"], []),
     "lact": (r'href=[\'\"]?(lact-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
     "openrgb": (r'href=[\'\"]?(openrgb(?:-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "arch-extra"], []),
-    "solaar": (r'href=[\'\"]?(solaar-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos-extra-v3", "cachyos"], []),
+    "solaar": (r'href=[\'\"]?(solaar-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(python-pyudev-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(python-typing_extensions-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(python-xlib-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    ], ["arch-extra", "cachyos-extra-v3", "cachyos"], []),
     "coolercontrol": (r'href=[\'\"]?(coolercontrol-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(coolercontrold-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["cachyos", "arch-extra"], []),
     "lian-li-linux": (r'href=[\'\"]?(lian-li-linux(?:-git)?-([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos"], []),
     "asusctl": (r'href=[\'\"]?(asusctl-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
     "brave": (r'href=[\'\"]?(brave-bin-(?:1%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "chaotic-aur", "chaotic-cdn"], []),
     "zen-browser": (r'href=[\'\"]?(zen-browser-bin-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "chaotic-aur", "chaotic-cdn"], []),
-    "vivaldi": (r'href=[\'\"]?(vivaldi-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(vivaldi-ffmpeg-codecs-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["arch-extra", "cachyos", "chaotic-aur"], []),
     "google-chrome": (r'href=[\'\"]?(google-chrome-([0-9][a-zA-Z0-9_\.:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "chaotic-cdn", "cachyos"], []),
     "microsoft-edge": (r'href=[\'\"]?(microsoft-edge-(?:stable|beta|dev)-bin-([0-9][a-zA-Z0-9_\.:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "chaotic-cdn", "cachyos"], []),
-    "opera": (r'href=[\'\"]?(opera-([0-9][a-zA-Z0-9_\.-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(opera-ffmpeg-codecs-([0-9][a-zA-Z0-9_\.-]*)\.pkg\.tar\.zst)[\'\"]?', ["chaotic-aur", "cachyos", "arch-extra"], []),
     "obs-studio": (r'href=[\'\"]?(obs-studio-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
         r'href=[\'\"]?(python-(3\.[0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(mbedtls-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
@@ -767,9 +781,7 @@ aur_pkg_names = {
     "microsoft-edge": ("microsoft-edge-stable-bin", "microsoft-edge-stable-bin-{ver}-x86_64.pkg.tar.zst"),
     "brave": ("brave-bin", "brave-bin-{ver}-x86_64.pkg.tar.zst"),
     "zen-browser": ("zen-browser-bin", "zen-browser-bin-{ver}-x86_64.pkg.tar.zst"),
-    "opera": ("opera", "opera-{ver}-x86_64.pkg.tar.zst"),
-    "lian-li-linux": ("lianli-linux-git", "lianli-linux-git-{ver}-x86_64.pkg.tar.zst"),
-    "parabolic": ("parabolic", "parabolic-{ver}-x86_64.pkg.tar.zst")
+    "lian-li-linux": ("lianli-linux-git", "lianli-linux-git-{ver}-x86_64.pkg.tar.zst")
 }
 
 if (not main_ver or not main_url) and pkg_id in aur_pkg_names:
@@ -985,7 +997,13 @@ catalog = {
         r'href=[\'\"]?(wxwidgets-common-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(libjpeg-turbo-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["arch-extra", "cachyos-extra-v3", "cachyos", "arch-core"], []),
-    "spotify": (r'href=[\'\"]?(spotify(?:-launcher)?-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos-extra-v3", "chaotic-aur", "cachyos"], []),
+    "spotify": (r'href=[\'\"]?(spotify(?:-launcher)?-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(sequoia-sqv-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libayatana-appindicator-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libayatana-indicator-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(ayatana-ido-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libcurl-gnutls-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    ], ["arch-extra", "cachyos-extra-v3", "cachyos", "arch-core"], []),
     "inkscape": (r'href=[\'\"]?(inkscape-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
         r'href=[\'\"]?(lib2geom-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(double-conversion-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
@@ -996,9 +1014,21 @@ catalog = {
         r'href=[\'\"]?(libwpg-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(librevenge-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["cachyos-extra-v3", "arch-extra", "cachyos"], []),
-    "darktable": (r'href=[\'\"]?(darktable-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos-extra-v3", "arch-extra", "cachyos"], []),
+    "darktable": (r'href=[\'\"]?(darktable-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(libavif-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libheif-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libde265-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libyuv-((?:r[0-9]+|[0-9])[a-zA-Z0-9_\.\+%-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(rav1e-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(svt-av1-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(openh264-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(pugixml-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(colord-gtk-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(osm-gps-map-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(gmic-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(flickcurl-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    ], ["cachyos-extra-v3", "arch-extra", "cachyos"], []),
     "syncthing": (r'href=[\'\"]?(syncthing-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos-extra-v3", "cachyos"], []),
-    "parabolic": (r'href=[\'\"]?((?:parabolic|tube-converter)-([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos", "arch-extra"], []),
     "ananicy": (r'href=[\'\"]?(ananicy-cpp(?:-git)?-([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
         r'href=[\'\"]?(cachyos-ananicy-rules(?:-git)?-([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(libbpf-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
@@ -1023,16 +1053,18 @@ catalog = {
     "retroarch": (r'href=[\'\"]?(retroarch-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(retroarch-assets-ozone-(?:[0-9]+%3A)?([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["arch-extra", "cachyos"], []),
     "lact": (r'href=[\'\"]?(lact-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
     "openrgb": (r'href=[\'\"]?(openrgb(?:-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "arch-extra"], []),
-    "solaar": (r'href=[\'\"]?(solaar-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos-extra-v3", "cachyos"], []),
+    "solaar": (r'href=[\'\"]?(solaar-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(python-pyudev-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(python-typing_extensions-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(python-xlib-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    ], ["arch-extra", "cachyos-extra-v3", "cachyos"], []),
     "coolercontrol": (r'href=[\'\"]?(coolercontrol-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(coolercontrold-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["cachyos", "arch-extra"], []),
     "lian-li-linux": (r'href=[\'\"]?(lian-li-linux(?:-git)?-([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos"], []),
     "asusctl": (r'href=[\'\"]?(asusctl-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
     "brave": (r'href=[\'\"]?(brave-bin-(?:1%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "chaotic-aur", "chaotic-cdn"], []),
     "zen-browser": (r'href=[\'\"]?(zen-browser-bin-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "chaotic-aur", "chaotic-cdn"], []),
-    "vivaldi": (r'href=[\'\"]?(vivaldi-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(vivaldi-ffmpeg-codecs-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["arch-extra", "cachyos", "chaotic-aur"], []),
     "google-chrome": (r'href=[\'\"]?(google-chrome-([0-9][a-zA-Z0-9_\.:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "chaotic-cdn", "cachyos"], []),
     "microsoft-edge": (r'href=[\'\"]?(microsoft-edge-(?:stable|beta|dev)-bin-([0-9][a-zA-Z0-9_\.:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "chaotic-cdn", "cachyos"], []),
-    "opera": (r'href=[\'\"]?(opera-([0-9][a-zA-Z0-9_\.-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(opera-ffmpeg-codecs-([0-9][a-zA-Z0-9_\.-]*)\.pkg\.tar\.zst)[\'\"]?', ["chaotic-aur", "cachyos", "arch-extra"], []),
     "obs-studio": (r'href=[\'\"]?(obs-studio-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
         r'href=[\'\"]?(python-(3\.[0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(mbedtls-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
@@ -1143,9 +1175,7 @@ aur_pkg_names = {
     "microsoft-edge": ("microsoft-edge-stable-bin", "microsoft-edge-stable-bin-{ver}-x86_64.pkg.tar.zst"),
     "brave": ("brave-bin", "brave-bin-{ver}-x86_64.pkg.tar.zst"),
     "zen-browser": ("zen-browser-bin", "zen-browser-bin-{ver}-x86_64.pkg.tar.zst"),
-    "opera": ("opera", "opera-{ver}-x86_64.pkg.tar.zst"),
-    "lian-li-linux": ("lianli-linux-git", "lianli-linux-git-{ver}-x86_64.pkg.tar.zst"),
-    "parabolic": ("parabolic", "parabolic-{ver}-x86_64.pkg.tar.zst")
+    "lian-li-linux": ("lianli-linux-git", "lianli-linux-git-{ver}-x86_64.pkg.tar.zst")
 }
 
 def resolve_single(pid):
@@ -1336,9 +1366,6 @@ cleanup_foreign_gaming_pkgs() {
         syncthing)
             patterns=("syncthing-[0-9]*")
             ;;
-        parabolic)
-            patterns=("parabolic-[0-9]*" "tube-converter-[0-9]*")
-            ;;
         limine)
             patterns=("limine-[0-9]*")
             ;;
@@ -1376,7 +1403,7 @@ transmute_and_deploy_gaming_pkg() {
     
     # Pre-flight readiness checks
     audit_multilib_readiness "${pkg_id}"
-    if [ "${pkg_id}" = "solaar" ] || [ "${pkg_id}" = "lian-li-linux" ] || [ "${pkg_id}" = "steam-devices" ] || [ "${pkg_id}" = "openrgb" ] || [ "${pkg_id}" = "coolercontrol" ]; then
+    if [ "${pkg_id}" = "solaar" ] || [ "${pkg_id}" = "lian-li-linux" ] || [ "${pkg_id}" = "steam-devices" ] || [ "${pkg_id}" = "openrgb" ] || [ "${pkg_id}" = "coolercontrol" ] || [ "${pkg_id}" = "sunshine" ]; then
         audit_user_hardware_groups
     fi
 
@@ -1600,6 +1627,24 @@ transmute_and_deploy_gaming_pkg() {
 # OBS Studio Isolated App-Bundle Launcher for Slackware
 export OBS_PATH="/opt/obs-studio"
 export LD_LIBRARY_PATH="/opt/obs-studio/lib:/opt/obs-studio/lib/obs-plugins:/opt/obs-studio/lib/cef:${LD_LIBRARY_PATH:-}"
+
+# Auto-bridge external system plugins into user profile if not directly inside bundle
+if [ -d /usr/lib64/obs-plugins ]; then
+  for ext_so in /usr/lib64/obs-plugins/*.so; do
+    [ -f "${ext_so}" ] || continue
+    bname=$(basename "${ext_so}")
+    pname="${bname%.so}"
+    if [ ! -f "/opt/obs-studio/lib/obs-plugins/${bname}" ]; then
+      mkdir -p "${HOME}/.config/obs-studio/plugins/${pname}/bin/64bit" 2>/dev/null || true
+      ln -sf "${ext_so}" "${HOME}/.config/obs-studio/plugins/${pname}/bin/64bit/${bname}" 2>/dev/null || true
+      if [ -d "/usr/share/obs/obs-plugins/${pname}" ]; then
+        mkdir -p "${HOME}/.config/obs-studio/plugins/${pname}" 2>/dev/null || true
+        ln -sfn "/usr/share/obs/obs-plugins/${pname}" "${HOME}/.config/obs-studio/plugins/${pname}/data" 2>/dev/null || true
+      fi
+    fi
+  done
+fi
+
 for pyd in /opt/obs-studio/lib/python3.*; do
   if [ -d "$pyd" ]; then
     export PYTHONHOME="$pyd"
@@ -2061,16 +2106,8 @@ PEAR_WRAPPER_EOF
         [ -f "${staging_root}/usr/bin/microsoft-edge" ] && [ ! -e "${staging_root}/usr/bin/edge" ] && ln -sf microsoft-edge "${staging_root}/usr/bin/edge"
         [ -f "${staging_root}/opt/microsoft/msedge/microsoft-edge" ] && [ ! -e "${staging_root}/usr/bin/microsoft-edge" ] && ln -sf /opt/microsoft/msedge/microsoft-edge "${staging_root}/usr/bin/microsoft-edge"
     fi
-    if [ "${pkg_id}" = "vivaldi" ]; then
-        [ -f "${staging_root}/usr/bin/vivaldi-stable" ] && [ ! -e "${staging_root}/usr/bin/vivaldi" ] && ln -sf vivaldi-stable "${staging_root}/usr/bin/vivaldi"
-        [ -f "${staging_root}/opt/vivaldi/vivaldi" ] && [ ! -e "${staging_root}/usr/bin/vivaldi" ] && ln -sf /opt/vivaldi/vivaldi "${staging_root}/usr/bin/vivaldi"
-    fi
-    if [ "${pkg_id}" = "opera" ]; then
-        if [ -d "${staging_root}/usr/lib/opera" ] && [ -f "${staging_root}/usr/lib64/libffmpeg.so" ]; then
-            mv -f "${staging_root}/usr/lib64/libffmpeg.so" "${staging_root}/usr/lib/opera/" 2>/dev/null || true
-        fi
-        [ -f "${staging_root}/usr/lib/opera/opera" ] && [ ! -e "${staging_root}/usr/bin/opera" ] && ln -sf /usr/lib/opera/opera "${staging_root}/usr/bin/opera"
-        [ -f "${staging_root}/opt/opera/opera" ] && [ ! -e "${staging_root}/usr/bin/opera" ] && ln -sf /opt/opera/opera "${staging_root}/usr/bin/opera"
+    if [ "${pkg_id}" = "vesktop" ]; then
+        [ -f "${staging_root}/opt/vesktop/vesktop" ] && [ ! -e "${staging_root}/usr/bin/vesktop" ] && ln -sf /opt/vesktop/vesktop "${staging_root}/usr/bin/vesktop"
     fi
 
     # Universal Vulkan Layer Manifest Remapping for Slackware 64-bit & Multilib:
@@ -2085,7 +2122,7 @@ PEAR_WRAPPER_EOF
             bjf=$(basename "${jf}")
             if [[ "${bjf}" == *"x86_64"* ]] || [[ "${bjf}" == *"64"* ]] || [ "${bjf}" = "MangoHud.json" ] || [ "${bjf}" = "MangoApp.json" ] || [ "${bjf}" = "obs_vkcapture.json" ]; then
                 # 64-bit manifest: rewrite /usr/lib/ to /usr/lib64/
-                sed -i 's|/usr/lib/mangohud/|/usr/lib64/mangohud/|g; s|/usr/lib/libMango|/usr/lib64/libMango|g; s|/usr/lib/libmango|/usr/lib64/libmango|g; s|/usr/lib/libobs|/usr/lib64/libobs|g' "${jf}"
+                sed -i 's|/usr/lib/mangohud/|/usr/lib64/mangohud/|g; s|/usr/lib/libMango|/usr/lib64/libMango|g; s|/usr/lib/libmango|/usr/lib64/libmango|g; s|/usr/lib/libobs|/usr/lib64/libobs|g; s|/usr/lib/libVkLayer|/usr/lib64/libVkLayer|g' "${jf}"
             elif [[ "${bjf}" == *"x86"* ]] || [[ "${bjf}" == *"i686"* ]] || [[ "${bjf}" == *"32"* ]] || [[ "${bjf}" == *"lib32"* ]]; then
                 # 32-bit manifest: rewrite /usr/lib32/ to /usr/lib/
                 sed -i 's|/usr/lib32/|/usr/lib/|g' "${jf}"
@@ -2100,6 +2137,9 @@ PEAR_WRAPPER_EOF
         fi
         if [ -f "${layer_dir}/obs_vkcapture_x86_64.json" ] && [ ! -e "${layer_dir}/obs_vkcapture.json" ]; then
             ln -sf obs_vkcapture_x86_64.json "${layer_dir}/obs_vkcapture.json"
+        fi
+        if [ -f "${layer_dir}/obs_vkcapture_64.json" ] && [ ! -e "${layer_dir}/obs_vkcapture.json" ]; then
+            ln -sf obs_vkcapture_64.json "${layer_dir}/obs_vkcapture.json"
         fi
     done
 
@@ -2185,6 +2225,61 @@ PEAR_WRAPPER_EOF
         if [ -f "${staging_root}/usr/bin/pascube" ]; then
             ln -sf /usr/bin/pascube "${staging_root}/usr/lib64/pascube"
             ln -sf /usr/bin/pascube "${staging_root}/usr/lib/pascube"
+        fi
+    fi
+
+    if [ "${pkg_id}" = "obs-vkcapture" ]; then
+        # Bridge plugin and plugin data into isolated OBS Studio bundle in /opt/obs-studio
+        mkdir -p "${staging_root}/opt/obs-studio/lib/obs-plugins" \
+                 "${staging_root}/opt/obs-studio/share/obs/obs-plugins"
+        if [ -f "${staging_root}/usr/lib64/obs-plugins/linux-vkcapture.so" ]; then
+            ln -sf /usr/lib64/obs-plugins/linux-vkcapture.so "${staging_root}/opt/obs-studio/lib/obs-plugins/linux-vkcapture.so"
+        fi
+        if [ -d "${staging_root}/usr/share/obs/obs-plugins/linux-vkcapture" ]; then
+            ln -sf /usr/share/obs/obs-plugins/linux-vkcapture "${staging_root}/opt/obs-studio/share/obs/obs-plugins/linux-vkcapture"
+        fi
+
+        # Multilib 32-bit Vulkan layer manifest for 32-bit games
+        local vklayer_dir="${staging_root}/usr/share/vulkan/implicit_layer.d"
+        if [ -f "${staging_root}/usr/lib/libVkLayer_obs_vkcapture.so" ] && [ ! -f "${vklayer_dir}/obs_vkcapture_32.json" ]; then
+            mkdir -p "${vklayer_dir}"
+            cat << 'VK32_EOF' > "${vklayer_dir}/obs_vkcapture_32.json"
+{
+    "file_format_version": "1.1.2",
+    "layer": {
+        "name": "VK_LAYER_OBS_vkcapture_32",
+        "type": "GLOBAL",
+        "library_path": "/usr/lib/libVkLayer_obs_vkcapture.so",
+        "api_version": "1.4.350",
+        "implementation_version": "1",
+        "description": "OBS Linux game capture (32-bit multilib)",
+        "functions": {
+            "vkNegotiateLoaderLayerInterfaceVersion": "OBS_Negotiate"
+        },
+        "enable_environment": {
+            "OBS_VKCAPTURE": "1"
+        },
+        "disable_environment": {
+            "DISABLE_OBS_VKCAPTURE": "1"
+        }
+    }
+}
+VK32_EOF
+        fi
+    fi
+
+    if [ "${pkg_id}" = "darktable" ]; then
+        # Darktable binary RUNPATH points to $ORIGIN/../lib/darktable
+        # Ensure /usr/lib/darktable symlinks to /usr/lib64/darktable on Slackware 64-bit
+        mkdir -p "${staging_root}/usr/lib" "${staging_root}/usr/lib64/darktable" "${staging_root}/etc/ld.so.conf.d"
+        rm -rf "${staging_root}/usr/lib/darktable" 2>/dev/null || true
+        ln -sf /usr/lib64/darktable "${staging_root}/usr/lib/darktable"
+        echo "/usr/lib64/darktable" > "${staging_root}/etc/ld.so.conf.d/darktable.conf"
+
+        # Lua 5.4 binary compatibility symlinks on Slackware
+        if [ -f "/usr/lib64/liblua.so.5.4" ] || [ -f "${staging_root}/usr/lib64/liblua.so.5.4" ]; then
+            [ ! -e "${staging_root}/usr/lib64/liblua5.4.so.5.4" ] && ln -sf liblua.so.5.4 "${staging_root}/usr/lib64/liblua5.4.so.5.4"
+            [ ! -e "${staging_root}/usr/lib64/liblua5.4.so" ] && ln -sf liblua.so.5.4 "${staging_root}/usr/lib64/liblua5.4.so"
         fi
     fi
 
@@ -2534,6 +2629,24 @@ COOLER_RC_EOF
 SUBSYSTEM=="hidraw", ATTRS{idVendor}=="046d", MODE="0666", TAG+="uaccess"
 SUBSYSTEM=="usb", ATTRS{idVendor}=="046d", MODE="0666", TAG+="uaccess"
 SOLAAR_UDEV_EOF
+
+        # Ensure Solaar gracefully handles missing/optional evdev module on Slackware
+        for div_py in $(find "${staging_root}" -name "diversion.py" -type f 2>/dev/null); do
+            python3 -c "
+import sys
+p = sys.argv[1]
+with open(p, 'r', encoding='utf-8') as f:
+    c = f.read()
+target = 'if platform.system() in (\"Darwin\", \"Windows\"):\n    evdev = None\nelse:\n    import evdev'
+replacement = 'try:\n    import evdev\nexcept Exception:\n    evdev = None'
+if target in c:
+    c = c.replace(target, replacement)
+    with open(p, 'w', encoding='utf-8') as f:
+        f.write(c)
+" "${div_py}" 2>/dev/null || true
+        done
+        # Clean out any partial/broken CPython 3.14 evdev module tree if present
+        rm -rf "${staging_root}/usr/lib64/python"*/site-packages/evdev 2>/dev/null || true
     fi
 
     if [ "${pkg_id}" = "lian-li-linux" ]; then
@@ -2623,12 +2736,37 @@ SYNCTHING_RC_EOF
     fi
 
     if [ "${pkg_id}" = "yabridge" ]; then
-        mkdir -p "${staging_root}/usr/bin"
+        mkdir -p "${staging_root}/usr/bin" "${staging_root}/usr/lib64" "${staging_root}/usr/lib"
         [ -f "${staging_root}/usr/bin/yabridgectl" ] && chmod 755 "${staging_root}/usr/bin/yabridgectl"
+        # Mirror libraries to /usr/lib so yabridgectl and DAWs auto-discover yabridge on Slackware 64-bit
+        for yso in "${staging_root}/usr/lib64"/libyabridge*.so; do
+            if [ -f "${yso}" ]; then
+                local ysoname
+                ysoname=$(basename "${yso}")
+                [ -e "${staging_root}/usr/lib/${ysoname}" ] || ln -sf "../lib64/${ysoname}" "${staging_root}/usr/lib/${ysoname}"
+            fi
+        done
     fi
 
     if [ "${pkg_id}" = "spotify" ]; then
         [ -f "${staging_root}/usr/bin/spotify-launcher" ] && [ ! -e "${staging_root}/usr/bin/spotify" ] && ln -sf spotify-launcher "${staging_root}/usr/bin/spotify"
+        mkdir -p "${staging_root}/usr/lib64"
+        if [ ! -e "${staging_root}/usr/lib64/libayatana-appindicator3.so.1" ]; then
+            ln -sf libappindicator3.so.1 "${staging_root}/usr/lib64/libayatana-appindicator3.so.1"
+            ln -sf libappindicator3.so.1 "${staging_root}/usr/lib64/libayatana-appindicator3.so"
+            ln -sf libappindicator.so.1 "${staging_root}/usr/lib64/libayatana-appindicator.so.1"
+            ln -sf libappindicator.so.1 "${staging_root}/usr/lib64/libayatana-appindicator.so"
+        fi
+        if [ ! -e "${staging_root}/usr/lib64/libayatana-indicator3.so.7" ]; then
+            ln -sf libindicator3.so.7 "${staging_root}/usr/lib64/libayatana-indicator3.so.7"
+            ln -sf libindicator3.so.7 "${staging_root}/usr/lib64/libayatana-indicator3.so"
+            ln -sf libindicator.so.7 "${staging_root}/usr/lib64/libayatana-indicator.so.7"
+            ln -sf libindicator.so.7 "${staging_root}/usr/lib64/libayatana-indicator.so"
+        fi
+        if [ ! -e "${staging_root}/usr/lib64/libcurl-gnutls.so.4" ]; then
+            ln -sf libcurl.so.4 "${staging_root}/usr/lib64/libcurl-gnutls.so.4"
+            ln -sf libcurl.so.4 "${staging_root}/usr/lib64/libcurl-gnutls.so"
+        fi
     fi
 
     if [ "${pkg_id}" = "audacity" ]; then
@@ -2717,6 +2855,15 @@ KERNEL=="hidraw*", ATTRS{idVendor}=="057e", MODE="0666", TAG+="uaccess"
 # Xbox Wireless
 KERNEL=="hidraw*", ATTRS{idVendor}=="045e", MODE="0666", TAG+="uaccess"
 STEAM_UDEV_EOF
+    fi
+
+    if [ "${pkg_id}" = "sunshine" ]; then
+        mkdir -p "${staging_root}/lib/udev/rules.d"
+        cat << 'SUNSHINE_UDEV_EOF' > "${staging_root}/lib/udev/rules.d/60-sunshine.rules"
+# Sunshine Game Stream Host - virtual input and controller udev rules for Slackware
+KERNEL=="uinput", SUBSYSTEM=="misc", OPTIONS+="static_node=uinput", TAG+="uaccess", MODE="0660", GROUP="input"
+KERNEL=="uhid", GROUP="input", MODE="0660", TAG+="uaccess"
+SUNSHINE_UDEV_EOF
     fi
 
     if [ "${pkg_id}" = "vram-booster" ]; then
@@ -3156,6 +3303,51 @@ fi
 if [ -f /usr/share/vulkan/implicit_layer.d/MangoApp.x86_64.json ] && [ ! -e /usr/share/vulkan/implicit_layer.d/MangoApp.json ]; then
   ln -sf MangoApp.x86_64.json /usr/share/vulkan/implicit_layer.d/MangoApp.json 2>/dev/null || true
 fi
+if [ -f /usr/share/vulkan/implicit_layer.d/obs_vkcapture_64.json ] && [ ! -e /usr/share/vulkan/implicit_layer.d/obs_vkcapture.json ]; then
+  ln -sf obs_vkcapture_64.json /usr/share/vulkan/implicit_layer.d/obs_vkcapture.json 2>/dev/null || true
+fi
+if [ -d /opt/obs-studio ]; then
+  mkdir -p /opt/obs-studio/lib/obs-plugins /opt/obs-studio/share/obs/obs-plugins 2>/dev/null || true
+  if [ -f /usr/lib64/obs-plugins/linux-vkcapture.so ]; then
+    ( cd /opt/obs-studio/lib/obs-plugins && rm -f linux-vkcapture.so && ln -sf /usr/lib64/obs-plugins/linux-vkcapture.so linux-vkcapture.so 2>/dev/null || true )
+  fi
+  if [ -d /usr/share/obs/obs-plugins/linux-vkcapture ]; then
+    ( cd /opt/obs-studio/share/obs/obs-plugins && rm -rf linux-vkcapture && ln -sf /usr/share/obs/obs-plugins/linux-vkcapture linux-vkcapture 2>/dev/null || true )
+  fi
+fi
+if [ -d /usr/lib64/darktable ] && [ ! -e /usr/lib/darktable ]; then
+  mkdir -p /usr/lib
+  ln -sf /usr/lib64/darktable /usr/lib/darktable 2>/dev/null || true
+fi
+if [ -f /usr/lib64/liblua.so.5.4 ] && [ ! -e /usr/lib64/liblua5.4.so.5.4 ]; then
+  ln -sf liblua.so.5.4 /usr/lib64/liblua5.4.so.5.4 2>/dev/null || true
+  ln -sf liblua.so.5.4 /usr/lib64/liblua5.4.so 2>/dev/null || true
+fi
+if [ -f /usr/lib64/libappindicator3.so.1 ] && [ ! -e /usr/lib64/libayatana-appindicator3.so.1 ]; then
+  ln -sf libappindicator3.so.1 /usr/lib64/libayatana-appindicator3.so.1 2>/dev/null || true
+  ln -sf libappindicator3.so.1 /usr/lib64/libayatana-appindicator3.so 2>/dev/null || true
+  ln -sf libappindicator.so.1 /usr/lib64/libayatana-appindicator.so.1 2>/dev/null || true
+  ln -sf libappindicator.so.1 /usr/lib64/libayatana-appindicator.so 2>/dev/null || true
+fi
+if [ -f /usr/lib64/libindicator3.so.7 ] && [ ! -e /usr/lib64/libayatana-indicator3.so.7 ]; then
+  ln -sf libindicator3.so.7 /usr/lib64/libayatana-indicator3.so.7 2>/dev/null || true
+  ln -sf libindicator3.so.7 /usr/lib64/libayatana-indicator3.so 2>/dev/null || true
+  ln -sf libindicator.so.7 /usr/lib64/libayatana-indicator.so.7 2>/dev/null || true
+  ln -sf libindicator.so.7 /usr/lib64/libayatana-indicator.so 2>/dev/null || true
+fi
+if [ -f /usr/lib64/libcurl.so.4 ] && [ ! -e /usr/lib64/libcurl-gnutls.so.4 ]; then
+  ln -sf libcurl.so.4 /usr/lib64/libcurl-gnutls.so.4 2>/dev/null || true
+  ln -sf libcurl.so.4 /usr/lib64/libcurl-gnutls.so 2>/dev/null || true
+fi
+if [ -f /usr/lib64/libyabridge-vst2.so ] || [ -f /usr/lib64/libyabridge-chainloader-vst2.so ]; then
+  mkdir -p /usr/lib
+  for yso in /usr/lib64/libyabridge*.so; do
+    if [ -f "${yso}" ]; then
+      ysoname=$(basename "${yso}")
+      [ -e "/usr/lib/${ysoname}" ] || ln -sf "../lib64/${ysoname}" "/usr/lib/${ysoname}" 2>/dev/null || true
+    fi
+  done
+fi
 
 # Slackware rc.local integration for daemons:
 if [ -f /etc/rc.d/rc.ananicy-cpp ]; then
@@ -3589,6 +3781,8 @@ uninstall_cachyos_gaming_pkg() {
             sudo /etc/rc.d/rc.dmemcg-booster stop 2>/dev/null || true
         elif [ "${pkg_id}" = "gamemode" ] && [ -x /etc/rc.d/rc.gamemode ]; then
             sudo /etc/rc.d/rc.gamemode stop 2>/dev/null || true
+        elif [ "${pkg_id}" = "sunshine" ]; then
+            pkill -x sunshine 2>/dev/null || true
         fi
 
         # Remove rc.local persistence entries
@@ -3645,7 +3839,7 @@ sync_all_installed_cachyos_gaming_packages() {
     local outdated_pids=()
     
     while IFS='|' read -r pkg_id name cat main_pat l32_pat ext_pat repos; do
-        [ -n "${pkg_id}" ] || continue
+        [[ -z "${pkg_id}" || "${pkg_id}" =~ ^# ]] && continue
         local cur_ver
         cur_ver=$(get_installed_gaming_pkg_version "${pkg_id}")
         [ "${cur_ver}" != "NONE" ] || continue
@@ -3696,6 +3890,7 @@ interactive_cachyos_gaming_menu() {
             echo -e "\n${YELLOW}${BOLD}--- [ ${cat_title} ] ---${RESET}"
 
             while IFS='|' read -r pkg_id name cat main_pat l32_pat ext_pat repos; do
+                [[ -z "${pkg_id}" || "${pkg_id}" =~ ^# ]] && continue
                 [ "${cat}" = "${cat_filter}" ] || continue
                 if ! is_gaming_pkg_whitelisted "${pkg_id}"; then
                     continue

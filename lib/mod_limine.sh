@@ -316,12 +316,12 @@ validate_or_migrate_boot_topology() {
             # SCENARIO A: Existing /boot/efi is large enough (>= 3.5 GB)
             echo ""
             echo -e "${CYAN}============================================================${RESET}"
-            echo -e "${YELLOW}${BOLD}⚡ LIMINE BOOT TOPOLOGY MIGRATION (SCENARIO A) ⚡${RESET}"
+            echo -e "${YELLOW}${BOLD}⚡ $(_ TOPOLOGY_SCENARIO_A_TITLE) ⚡${RESET}"
             echo -e "${CYAN}============================================================${RESET}"
             echo -e "  • ${BOLD}Current State:${RESET} /boot is on system root (${boot_fs:-posix}), and /boot/efi is ${efi_size_mb} MB FAT32."
             echo -e "  • ${BOLD}Recommendation:${RESET} Migrate /boot/efi directly to /boot for optimal Limine & Snapper sync."
             echo ""
-            echo -n "Proceed with automated /boot migration? [Y/n]: "
+            echo -n "$(_ TOPOLOGY_SCENARIO_A_PROMPT)"
             local ans
             read -r ans || ans="y"
             if [[ ! "${ans}" =~ ^[Nn] ]]; then
@@ -337,12 +337,12 @@ validate_or_migrate_boot_topology() {
     # SCENARIO C: ESP is missing or too small (< 3.5 GB). Offer partition adoption wizard.
     echo ""
     echo -e "${CYAN}============================================================${RESET}"
-    echo -e "${YELLOW}${BOLD}⚡ LIMINE DEDICATED ESP ADOPTION WIZARD (SCENARIO C) ⚡${RESET}"
+    echo -e "${YELLOW}${BOLD}⚡ $(_ TOPOLOGY_SCENARIO_C_TITLE) ⚡${RESET}"
     echo -e "${CYAN}============================================================${RESET}"
     echo -e "${YELLOW}Limine multi-kernel staging with Snapper boot sync requires a dedicated FAT32 ESP of at least ${MIN_BOOT_PARTITION_MB} MB (4 GB) on /boot.${RESET}"
     echo -e "Your current ESP is either too small or /boot is on a non-FAT32 filesystem."
     echo ""
-    echo -n "Would you like to scan and select a partition (>= 3.5 GB) to configure as /boot? [Y/n]: "
+    echo -n "$(_ TOPOLOGY_SCENARIO_C_PROMPT)"
     local opt_ans
     read -r opt_ans || opt_ans="y"
     if [[ "${opt_ans}" =~ ^[Nn] ]]; then
@@ -354,7 +354,7 @@ validate_or_migrate_boot_topology() {
     mapfile -t raw_cands < <(list_esp_partition_candidates)
     if [ ${#raw_cands[@]} -eq 0 ]; then
         echo ""
-        log_error "No eligible partitions (>= ${MIN_BOOT_PARTITION_MB} MB) found outside active root/home/swap."
+        log_error "$(_ TOPOLOGY_NO_CANDIDATES min="${MIN_BOOT_PARTITION_MB}")"
         echo -e "${CYAN}Tip: Use GParted or cfdisk to create or shrink a partition to at least 4 GB, then re-run this tool.${RESET}"
         return 1
     fi
@@ -371,7 +371,7 @@ validate_or_migrate_boot_topology() {
     done
     echo -e "  \033[1;33m${idx}.\033[0m Cancel / Abort"
     echo ""
-    echo -n "Select partition to configure as /boot [1-${idx}]: "
+    echo -n "$(_ TOPOLOGY_SELECT_PARTITION count="${idx}")"
     local p_choice
     read -r p_choice || p_choice="${idx}"
 
@@ -1427,10 +1427,14 @@ backup_limine_self_heal() {
     sudo test -d "${esp_path}/EFI/limine" || return 0
 
     local current_user="${SUDO_USER:-${USER:-}}"
-    local user_backup_dir="/home/${current_user}/.limine_backup"
-    local system_backup_dir="/var/cache/slacky-update/limine_backup"
-
-    if [ -n "${current_user}" ] && [ -d "/home/${current_user}" ]; then
+    local user_home=""
+    if [ -n "${current_user}" ]; then
+        user_home=$(getent passwd "${current_user}" 2>/dev/null | cut -d: -f6 || true)
+        [ -n "${user_home}" ] || user_home=$(eval echo "~${current_user}" 2>/dev/null || true)
+    fi
+    local user_backup_dir=""
+    if [ -n "${user_home}" ] && [ -d "${user_home}" ]; then
+        user_backup_dir="${user_home}/.limine_backup"
         mkdir -p "${user_backup_dir}" 2>/dev/null || true
         sudo rsync -a --delete "${esp_path}/EFI/limine/" "${user_backup_dir}/" 2>/dev/null || true
         sudo chown -R "${current_user}:" "${user_backup_dir}" 2>/dev/null || true
@@ -1441,6 +1445,7 @@ backup_limine_self_heal() {
     fi
 
     validate_privileges
+    local system_backup_dir="/var/cache/slacky-update/limine_backup"
     sudo mkdir -p "${system_backup_dir}" 2>/dev/null || true
     sudo rsync -a --delete "${esp_path}/EFI/limine/" "${system_backup_dir}/" 2>/dev/null || true
     if sudo test -f "${esp_path}/limine.conf"; then
@@ -1453,13 +1458,19 @@ restore_limine_self_heal() {
     local esp_path
     esp_path=$(detect_limine_esp_path)
     local current_user="${SUDO_USER:-${USER:-}}"
-    local user_backup_dir="/home/${current_user}/.limine_backup"
+    local user_home=""
+    if [ -n "${current_user}" ]; then
+        user_home=$(getent passwd "${current_user}" 2>/dev/null | cut -d: -f6 || true)
+        [ -n "${user_home}" ] || user_home=$(eval echo "~${current_user}" 2>/dev/null || true)
+    fi
+    local user_backup_dir=""
+    [ -n "${user_home}" ] && [ -d "${user_home}" ] && user_backup_dir="${user_home}/.limine_backup"
     local system_backup_dir="/var/cache/slacky-update/limine_backup"
 
     local src_dir=""
     if [ -d "${system_backup_dir}" ] && [ -f "${system_backup_dir}/limine_x64.efi" ]; then
         src_dir="${system_backup_dir}"
-    elif [ -n "${current_user}" ] && [ -d "${user_backup_dir}" ] && [ -f "${user_backup_dir}/limine_x64.efi" ]; then
+    elif [ -n "${user_backup_dir}" ] && [ -d "${user_backup_dir}" ] && [ -f "${user_backup_dir}/limine_x64.efi" ]; then
         src_dir="${user_backup_dir}"
     fi
 
@@ -2120,21 +2131,21 @@ manage_snapper_sync_interactive() {
         fi
 
         echo -e "${CYAN}============================================================${RESET}"
-        echo -e "${YELLOW}${BOLD}🌲 BTRFS SNAPPER BOOT SYNCHRONIZATION HUB 🌲${RESET}"
+        echo -e "${YELLOW}${BOLD}🌲 $(_ SNAPPER_HUB_TITLE) 🌲${RESET}"
         echo -e "${CYAN}============================================================${RESET}"
-        echo -e "  • ${BOLD}Automatic Background Sync:${RESET}  ${auto_status}"
-        echo -e "  • ${BOLD}Snapshot Selection Policy:${RESET}  ${policy_label}"
-        echo -e "  • ${BOLD}Max Snapshots in Boot Menu:${RESET} ${GREEN}${depth} entries${RESET}"
-        echo -e "  • ${BOLD}Snapper Directory:${RESET}          ${found_snap_dir:-None (Non-Btrfs)}"
-        echo -e "  • ${BOLD}Total Available Snapshots:${RESET}  ${total_snaps}"
+        echo -e "  • ${BOLD}$(_ SNAPPER_STATUS_AUTO_SYNC):${RESET}  ${auto_status}"
+        echo -e "  • ${BOLD}$(_ SNAPPER_STATUS_POLICY):${RESET}  ${policy_label}"
+        echo -e "  • ${BOLD}$(_ SNAPPER_STATUS_DEPTH):${RESET} ${GREEN}${depth} entries${RESET}"
+        echo -e "  • ${BOLD}$(_ SNAPPER_STATUS_ROOT):${RESET}          ${found_snap_dir:-None (Non-Btrfs)}"
+        echo -e "  • ${BOLD}$(_ SNAPPER_STATUS_TOTAL):${RESET}  ${total_snaps}"
         echo ""
-        echo -e "  \033[1;33m1.\033[0m Toggle Automatic Background Sync (Enable / Disable)"
-        echo -e "  \033[1;33m2.\033[0m Change Snapshot Selection Policy (Daily Spread / Recent / Important)"
-        echo -e "  \033[1;33m3.\033[0m Set Number of Snapshots in Menu (3, 5, 7, 10 entries)"
-        echo -e "  \033[1;33m4.\033[0m Synchronize Boot Menu Now (Regenerate limine.conf & enroll BLAKE2B)"
-        echo -e "  \033[1;33m5.\033[0m Return to Limine Menu"
+        echo -e "  \033[1;33m$(_ SNAPPER_OPT_TOGGLE_AUTO)\033[0m"
+        echo -e "  \033[1;33m$(_ SNAPPER_OPT_CHANGE_POLICY)\033[0m"
+        echo -e "  \033[1;33m$(_ SNAPPER_OPT_CHANGE_DEPTH)\033[0m"
+        echo -e "  \033[1;33m$(_ SNAPPER_OPT_SYNC_NOW)\033[0m"
+        echo -e "  \033[1;33m$(_ SNAPPER_OPT_RETURN)\033[0m"
         echo ""
-        echo -n "Select operation [1-5]: "
+        echo -n "$(_ SELECT_OPERATION_RANGE range="1-5") "
         local snap_choice
         read -r snap_choice || snap_choice="5"
 
@@ -2162,9 +2173,18 @@ manage_snapper_sync_interactive() {
                 local pol_c
                 read -r pol_c || pol_c="1"
                 case "${pol_c}" in
-                    1) set_snapper_sync_config "SNAPPER_BOOT_POLICY" "daily_spread" ;;
-                    2) set_snapper_sync_config "SNAPPER_BOOT_POLICY" "recent" ;;
-                    3) set_snapper_sync_config "SNAPPER_BOOT_POLICY" "important" ;;
+                    1)
+                        set_snapper_sync_config "SNAPPER_BOOT_POLICY" "daily_spread"
+                        log_info "$(_ SNAPPER_POLICY_SET policy="daily_spread")"
+                        ;;
+                    2)
+                        set_snapper_sync_config "SNAPPER_BOOT_POLICY" "recent"
+                        log_info "$(_ SNAPPER_POLICY_SET policy="recent")"
+                        ;;
+                    3)
+                        set_snapper_sync_config "SNAPPER_BOOT_POLICY" "important"
+                        log_info "$(_ SNAPPER_POLICY_SET policy="important")"
+                        ;;
                     *) log_warn "Invalid selection. Keeping existing policy." ;;
                 esac
                 echo ""
@@ -2182,10 +2202,22 @@ manage_snapper_sync_interactive() {
                 local dep_c
                 read -r dep_c || dep_c="2"
                 case "${dep_c}" in
-                    1) set_snapper_sync_config "SNAPPER_BOOT_DEPTH" "3" ;;
-                    2) set_snapper_sync_config "SNAPPER_BOOT_DEPTH" "5" ;;
-                    3) set_snapper_sync_config "SNAPPER_BOOT_DEPTH" "7" ;;
-                    4) set_snapper_sync_config "SNAPPER_BOOT_DEPTH" "10" ;;
+                    1)
+                        set_snapper_sync_config "SNAPPER_BOOT_DEPTH" "3"
+                        log_info "$(_ SNAPPER_DEPTH_SET depth="3")"
+                        ;;
+                    2)
+                        set_snapper_sync_config "SNAPPER_BOOT_DEPTH" "5"
+                        log_info "$(_ SNAPPER_DEPTH_SET depth="5")"
+                        ;;
+                    3)
+                        set_snapper_sync_config "SNAPPER_BOOT_DEPTH" "7"
+                        log_info "$(_ SNAPPER_DEPTH_SET depth="7")"
+                        ;;
+                    4)
+                        set_snapper_sync_config "SNAPPER_BOOT_DEPTH" "10"
+                        log_info "$(_ SNAPPER_DEPTH_SET depth="10")"
+                        ;;
                     *) log_warn "Invalid selection. Keeping existing depth." ;;
                 esac
                 echo ""
@@ -2211,6 +2243,219 @@ manage_snapper_sync_interactive() {
     done
 }
 
+# --- [ DYNAMIC KERNEL & LIMINE BLAKE2B HASH VERIFIER ] ---
+check_kernel_boot_hashes() {
+    validate_privileges
+    local esp_path
+    esp_path=$(detect_limine_esp_path 2>/dev/null || echo "/boot")
+
+    sudo python3 -c "
+import os, sys, re, subprocess, shutil
+
+CYAN = '\033[1;36m'
+BLUE = '\033[1;34m'
+GREEN = '\033[1;32m'
+YELLOW = '\033[1;33m'
+RED = '\033[1;31m'
+MAGENTA = '\033[1;35m'
+BOLD = '\033[1m'
+DIM = '\033[2m'
+RESET = '\033[0m'
+
+esp_path = '${esp_path}'
+cfg_candidates = [
+    os.path.join(esp_path, 'limine.conf'),
+    '/boot/limine.conf',
+    '/boot/efi/limine.conf',
+    '/boot/EFI/limine/limine.conf',
+    '/boot/efi/EFI/limine/limine.conf',
+    '/boot/limine/limine.conf',
+    '/boot/efi/limine/limine.conf',
+    '/efi/limine.conf',
+    '/efi/EFI/limine/limine.conf',
+    '/efi/limine/limine.conf',
+    os.path.join(esp_path, 'EFI/limine/limine.conf'),
+    os.path.join(esp_path, 'limine/limine.conf')
+]
+
+cfg_file = None
+for c in cfg_candidates:
+    if os.path.exists(c) and os.path.isfile(c):
+        cfg_file = c
+        break
+
+print()
+print(f'{BOLD}{CYAN}========================================================================================{RESET}')
+print(f'{BOLD}{CYAN}            ⚡ SLACKY-UPDATE DYNAMIC KERNEL & LIMINE HASH VERIFIER ⚡{RESET}')
+print(f'{BOLD}{CYAN}========================================================================================{RESET}')
+
+running_kver = os.uname().release
+print(f' {BOLD}Running Kernel:{RESET}   {MAGENTA}{running_kver}{RESET}')
+print(f' {BOLD}Active ESP Path:{RESET}  {BLUE}{esp_path}{RESET}')
+if cfg_file:
+    print(f' {BOLD}Limine Config:{RESET}    {BLUE}{cfg_file}{RESET}')
+else:
+    print(f' {BOLD}Limine Config:{RESET}    {RED}NOT FOUND in candidate paths!{RESET}')
+
+sb_status = 'Unknown'
+if shutil.which('sbctl'):
+    try:
+        r = subprocess.run(['sbctl', 'status'], capture_output=True, text=True, timeout=3)
+        out_low = r.stdout.lower()
+        if 'secure boot: enabled' in out_low or 'secure boot: ✓' in out_low:
+            sb_status = f'{GREEN}Enabled (Armed & Enforcing){RESET}'
+        elif 'secure boot: disabled' in out_low or 'secure boot: ✗' in out_low:
+            sb_status = f'{YELLOW}Disabled (Permissive){RESET}'
+        else:
+            sb_status = f'{BLUE}Installed{RESET}'
+    except Exception:
+        pass
+print(f' {BOLD}UEFI Secure Boot:{RESET} {sb_status}')
+print(f'{BOLD}{CYAN}----------------------------------------------------------------------------------------{RESET}')
+
+if not cfg_file:
+    print(f'{RED}✗ Error: Cannot verify hashes because limine.conf could not be found.{RESET}')
+    print(f'Run {BOLD}sudo slacky-update --sync-boot{RESET} to generate and register Limine boot configuration.')
+    print()
+    sys.exit(1)
+
+limine_hashes = {}
+
+try:
+    with open(cfg_file, 'r', encoding='utf-8', errors='ignore') as f:
+        content = f.read()
+except Exception as e:
+    print(f'{RED}✗ Error reading {cfg_file}: {e}{RESET}')
+    sys.exit(1)
+
+wp_match = re.search(r'^[ \t]*wallpaper:[ \t]*(?:boot\(\):)?/([^\s#\n\r]+)(?:#([a-fA-F0-9]+))?', content, re.M)
+if wp_match:
+    wp_name = os.path.basename(wp_match.group(1).lstrip('/'))
+    wp_hash = (wp_match.group(2) or '').lower().strip()
+    limine_hashes[wp_name] = wp_hash
+
+for m in re.finditer(r'^[ \t]*(?:path|kernel_path|module_path|image_path):[ \t]*(?:boot\(\):)?/([^\s#\n\r]+)(?:#([a-fA-F0-9]+))?', content, re.M):
+    fname = os.path.basename(m.group(1).lstrip('/'))
+    fhash = (m.group(2) or '').lower().strip()
+    limine_hashes[fname] = fhash
+
+scan_dirs = ['/boot']
+if esp_path != '/boot' and os.path.exists(esp_path):
+    scan_dirs.append(esp_path)
+
+found_files = {}
+
+for sdir in scan_dirs:
+    if not os.path.exists(sdir):
+        continue
+    try:
+        entries = os.listdir(sdir)
+    except Exception:
+        continue
+    for fname in entries:
+        fpath = os.path.join(sdir, fname)
+        if not os.path.isfile(fpath):
+            continue
+        if (fname.startswith('vmlinuz') or fname.startswith('initramfs-') or 
+            fname.startswith('initrd-') or fname == 'initrd.gz' or 
+            fname == 'initrd' or fname in limine_hashes):
+            if fname not in found_files or sdir == esp_path:
+                found_files[fname] = fpath
+
+def compute_b2(path):
+    try:
+        r = subprocess.run(['b2sum', path], capture_output=True, text=True, timeout=10)
+        if r.returncode == 0:
+            return r.stdout.strip().split()[0].lower()
+    except Exception:
+        pass
+    return ''
+
+def short_h(h):
+    if not h:
+        return f'{DIM}None{RESET}'
+    if len(h) > 20:
+        return f'{h[:10]}...{h[-8:]}'
+    return h
+
+print(f' {BOLD}{\"COMPONENT / FILE\":<34} {\"TYPE\":<10} {\"REGISTERED (LIMINE)\":<22} {\"ON-DISK (B2SUM)\":<22} {\"STATUS\"}{RESET}')
+print(f'{DIM} ' + '-'*86 + f'{RESET}')
+
+all_ok = True
+mismatches = 0
+untracked = 0
+total_checked = 0
+
+def sort_key(name):
+    if running_kver in name and name.startswith('vmlinuz'):
+        return (0, name)
+    elif running_kver in name:
+        return (1, name)
+    elif name.startswith('vmlinuz'):
+        return (2, name)
+    elif name.startswith('init'):
+        return (3, name)
+    return (4, name)
+
+sorted_names = sorted(found_files.keys(), key=sort_key)
+
+for fname in sorted_names:
+    fpath = found_files[fname]
+    actual_hash = compute_b2(fpath)
+    reg_hash = limine_hashes.get(fname, '')
+    
+    ftype = 'Other'
+    if fname.startswith('vmlinuz'):
+        ftype = 'Kernel'
+    elif fname.startswith('init'):
+        ftype = 'Initramfs'
+    elif fname.endswith('.png') or fname.endswith('.jpg'):
+        ftype = 'Splash'
+
+    status_str = ''
+    if not reg_hash:
+        status_str = f'{YELLOW}⚠️ UNTRACKED{RESET}'
+        untracked += 1
+    elif actual_hash == reg_hash:
+        status_str = f'{GREEN}✓ MATCH{RESET}'
+        total_checked += 1
+    else:
+        status_str = f'{RED}✗ MISMATCH{RESET}'
+        all_ok = False
+        mismatches += 1
+        total_checked += 1
+
+    fname_disp = f'{MAGENTA}★ {fname}{RESET}' if running_kver in fname else f'  {fname}'
+    reg_disp = short_h(reg_hash)
+    act_disp = short_h(actual_hash)
+    
+    raw_fname = ('★ ' if running_kver in fname else '  ') + fname
+    padding = max(0, 34 - len(raw_fname))
+    
+    print(f' {fname_disp}{\" \"*padding} {ftype:<10} {reg_disp:<30} {act_disp:<30} {status_str}')
+
+print(f'{BOLD}{CYAN}========================================================================================{RESET}')
+if all_ok and mismatches == 0 and total_checked > 0:
+    print(f' {GREEN}{BOLD}✓ PERFECT INTEGRITY:{RESET} All {total_checked} registered boot assets match their Limine BLAKE2B hashes 1:1.')
+    print(f' {DIM}Your bootloader security and kernel sealing are 100% synchronized and stable.{RESET}')
+    print(f'{BOLD}{CYAN}========================================================================================{RESET}')
+    print()
+    sys.exit(0)
+elif mismatches > 0:
+    print(f' {RED}{BOLD}✗ INTEGRITY ALERT:{RESET} {mismatches} hash mismatch(es) detected between on-disk files and limine.conf!')
+    print(f' {YELLOW}Recommendation:{RESET} Run {BOLD}sudo slacky-update --sync-boot{RESET} to recalculate hashes and reseal.')
+    print(f'{BOLD}{CYAN}========================================================================================{RESET}')
+    print()
+    sys.exit(1)
+else:
+    print(f' {YELLOW}{BOLD}⚠️ NOTICE:{RESET} Boot files found, but none are currently registered with hashes in limine.conf.')
+    print(f' Run {BOLD}sudo slacky-update --sync-boot{RESET} to enable BLAKE2B boot sealing.')
+    print(f'{BOLD}{CYAN}========================================================================================{RESET}')
+    print()
+    sys.exit(0)
+"
+}
+
 # --- [ INTERACTIVE LIMINE MANAGEMENT MENU ] ---
 manage_limine_interactive() {
     validate_privileges
@@ -2232,15 +2477,16 @@ manage_limine_interactive() {
         echo ""
         echo -e "  \033[1;33m1.\033[0m Install / Re-deploy Limine Bootloader (Coexistence Mode)"
         echo -e "  \033[1;33m2.\033[0m Regenerate limine.conf & Re-enroll BLAKE2B Checksums"
-        echo -e "  \033[1;33m3.\033[0m ⚙️  Configure Kernel Boot Parameters (CMDLINE & Gaming Hub)"
-        echo -e "  \033[1;33m4.\033[0m 🌲 Btrfs Snapper Snapshot Sync & Boot Hub (Daily Spread & Retention)"
-        echo -e "  \033[1;33m5.\033[0m 1-Click Self-Heal: Restore Limine from Backup"
-        echo -e "  \033[1;33m6.\033[0m View / Export Field Guide (PDF / Email / Phone QR)"
-        echo -e "  \033[1;33m7.\033[0m Return to Main Menu"
+        echo -e "  \033[1;33m3.\033[0m 🔍 Verify Kernel BLAKE2B Hashes vs Limine Registry"
+        echo -e "  \033[1;33m4.\033[0m ⚙️  Configure Kernel Boot Parameters (CMDLINE & Gaming Hub)"
+        echo -e "  \033[1;33m5.\033[0m 🌲 $(_ MENU_SNAPPER_HUB)"
+        echo -e "  \033[1;33m6.\033[0m 1-Click Self-Heal: Restore Limine from Backup"
+        echo -e "  \033[1;33m7.\033[0m View / Export Field Guide (PDF / Email / Phone QR)"
+        echo -e "  \033[1;33m8.\033[0m Return to Main Menu"
         echo ""
-        echo -n "Select operation [1-7]: "
+        echo -n "Select operation [1-8]: "
         local lim_choice
-        read -r lim_choice || lim_choice="7"
+        read -r lim_choice || lim_choice="8"
 
         case "${lim_choice}" in
             1)
@@ -2257,18 +2503,24 @@ manage_limine_interactive() {
                 read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
                 ;;
             3)
-                manage_kernel_cmdline_interactive
+                echo ""
+                check_kernel_boot_hashes
+                echo ""
+                read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
                 ;;
             4)
-                manage_snapper_sync_interactive
+                manage_kernel_cmdline_interactive
                 ;;
             5)
+                manage_snapper_sync_interactive
+                ;;
+            6)
                 echo ""
                 restore_limine_self_heal
                 echo ""
                 read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
                 ;;
-            6)
+            7)
                 echo ""
                 if command -v manage_field_guide_interactive >/dev/null 2>&1; then
                     manage_field_guide_interactive
@@ -2276,7 +2528,7 @@ manage_limine_interactive() {
                     log_warn "Field guide module not available."
                 fi
                 ;;
-            7)
+            8)
                 return 0
                 ;;
             *)

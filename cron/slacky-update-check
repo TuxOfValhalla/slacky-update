@@ -4,10 +4,18 @@ set -euo pipefail
 # ------------------------------------------------------------------------------
 # SLACKWARE BACKGROUND STATUS VERIFIER
 # ------------------------------------------------------------------------------
-CHECK_BIN="/usr/share/slacky-update/lib/check_backend.sh"
+CHECK_BIN=""
+for cand in "/usr/share/slacky-update/lib/check_backend.sh" \
+            "/usr/local/share/slacky-update/lib/check_backend.sh" \
+            "/usr/local/lib/slacky-update/check_backend.sh"; do
+    if [ -x "${cand}" ]; then
+        CHECK_BIN="${cand}"
+        break
+    fi
+done
 STATUS_FILE="/var/cache/slacky-update/status.json"
 
-if [ -x "${CHECK_BIN}" ]; then
+if [ -n "${CHECK_BIN}" ]; then
     "${CHECK_BIN}" >/dev/null 2>&1 || true
 fi
 
@@ -29,10 +37,18 @@ except Exception:
 " 2>/dev/null || echo "false")
 
         if [ "${HAS_UPDATES}" = "true" ]; then
+            icon_arg="--icon=slacky-update-pending"
+            for icand in "/usr/share/icons/hicolor/128x128/apps/slacky-update-pending.png" \
+                         "/usr/local/share/icons/hicolor/128x128/apps/slacky-update-pending.png"; do
+                if [ -f "${icand}" ]; then
+                    icon_arg="--icon=${icand}"
+                    break
+                fi
+            done
             sudo -u "${ACTIVE_USER}" DBUS_SESSION_BUS_ADDRESS="${DBUS_SESSION_BUS_ADDRESS}" \
                 notify-send "Slacky Update" \
                 "Pending system updates are ready for installation." \
-                --icon="/usr/share/icons/hicolor/128x128/apps/slacky-update-pending.png" 2>/dev/null || true
+                "${icon_arg}" 2>/dev/null || true
         fi
     fi
 fi

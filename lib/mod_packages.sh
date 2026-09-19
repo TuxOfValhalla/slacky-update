@@ -224,6 +224,28 @@ clear_stale_slackpkg_locks() {
     fi
 }
 
+auto_reconcile_slackpkg_conf() {
+    if [ -f "/etc/slackpkg/slackpkg.conf.new" ]; then
+        log_info "Reconciling slackpkg configuration (/etc/slackpkg/slackpkg.conf.new)..."
+        local new_ver
+        new_ver=$(grep -E '^[[:space:]]*VERSION=' /etc/slackpkg/slackpkg.conf.new 2>/dev/null | tail -n1 | cut -d= -f2 | tr -d '"'\'' ' || true)
+
+        if [ -f "/etc/slackpkg/slackpkg.conf" ]; then
+            sudo cp -a /etc/slackpkg/slackpkg.conf /etc/slackpkg/slackpkg.conf.bak 2>/dev/null || true
+            if [ -n "${new_ver}" ] && grep -q '^[[:space:]]*VERSION=' /etc/slackpkg/slackpkg.conf 2>/dev/null; then
+                sudo sed -i -E "s|^[[:space:]]*VERSION=.*|VERSION=${new_ver}|" /etc/slackpkg/slackpkg.conf 2>/dev/null || true
+            else
+                sudo cp -a /etc/slackpkg/slackpkg.conf.new /etc/slackpkg/slackpkg.conf 2>/dev/null || true
+            fi
+        else
+            sudo cp -a /etc/slackpkg/slackpkg.conf.new /etc/slackpkg/slackpkg.conf 2>/dev/null || true
+        fi
+
+        sudo rm -f /etc/slackpkg/slackpkg.conf.new 2>/dev/null || true
+        log_success "Updated slackpkg.conf to match the newly installed slackpkg version (${new_ver:-updated}) while preserving user custom settings."
+    fi
+}
+
 update_slackware_core() {
     validate_privileges
 
@@ -236,6 +258,7 @@ update_slackware_core() {
     fi
 
     clear_stale_slackpkg_locks
+    auto_reconcile_slackpkg_conf
 
     if command -v check_and_shield_mirror_freshness >/dev/null 2>&1; then
         check_and_shield_mirror_freshness
@@ -280,13 +303,15 @@ update_slackware_core() {
                 current_pass=$((current_pass + 1))
                 log_info "Resuming full system upgrade with newly upgraded package tools (Pass ${current_pass})..."
                 # CRITICAL MULTI-PASS RESUME CHAIN:
-                # 1. Refresh repository indexes so slackpkg+ re-initializes
+                # 1. Auto-reconcile slackpkg.conf.new so slackpkg does not abort on version check
+                auto_reconcile_slackpkg_conf
+                # 2. Refresh repository indexes so slackpkg+ re-initializes
                 log_info "Refreshing package indexes to initialize updated package tools..."
                 sudo "${slackpkg_bin}" update || true
-                # 2. Re-check for any newly added distribution packages
+                # 3. Re-check for any newly added distribution packages
                 log_info "Checking for newly added packages (install-new)..."
                 sudo "${slackpkg_bin}" -postinst=off install-new || true
-                # 3. Pre-fetch remaining packages for the next pass
+                # 4. Pre-fetch remaining packages for the next pass
                 parallel_prefetch_packages
                 continue
             else

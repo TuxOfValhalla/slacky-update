@@ -15,9 +15,16 @@ REPO_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
 DEST_DIR = os.path.join(REPO_ROOT, "assets")
 os.makedirs(DEST_DIR, exist_ok=True)
 
-SRC_ICON = os.path.join(DEST_DIR, "slackware_icon_HD.png")
+SRC_ICON = sys.argv[1] if len(sys.argv) > 1 else os.path.join(DEST_DIR, "slackware_icon_HD.png")
 if not os.path.exists(SRC_ICON):
-    SRC_ICON = "/home/tux/Pictures/icons/slackware_icon_HD.png"
+    for cand in [
+        os.path.join(DEST_DIR, "icons", "slackware_icon_HD.png"),
+        os.path.join(REPO_ROOT, "desktop", "slacky-update.png"),
+        "/usr/share/icons/hicolor/128x128/apps/slacky-update.png",
+    ]:
+        if os.path.exists(cand):
+            SRC_ICON = cand
+            break
 
 img = QImage(SRC_ICON)
 if not img.isNull():

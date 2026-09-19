@@ -463,5 +463,5 @@ For detailed symptom recovery scenarios and emergency Live-USB chroot procedures
 
 <div align="center">
 <b>Slacky-Update Limine Bootloader & Secure Boot Field Guide</b><br>
-<i>Canonical Source: <a href="https://codeberg.org/TuxOfValhalla/slacky-update">Codeberg</a> | Secondary Mirror: <a href="https://github.com/TuxOfValhalla/slacky-update">GitHub</a> (pending review)</i>
+<i>Canonical Source: <a href="https://github.com/TuxOfValhalla/slacky-update">GitHub</a> | Secondary Mirror: <a href="https://codeberg.org/TuxOfValhalla/slacky-update">Codeberg</a></i>
 </div>

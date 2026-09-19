@@ -27,6 +27,28 @@ RESET="\033[0m"
 CACHE_DIR="/var/cache/slacky-update"
 LOG_FILE="/var/log/slacky-update.log"
 
+if [ -z "${I18N_PY:-}" ]; then
+    for cand in "${SCRIPT_DIR:-}/../lib/slacky_update_i18n.py" \
+                "${APP_DIR:-}/slacky_update_i18n.py" \
+                "/usr/share/slacky-update/lib/slacky_update_i18n.py" \
+                "/usr/local/lib/slacky-update/slacky_update_i18n.py"; do
+        if [ -f "${cand}" ]; then
+            I18N_PY="${cand}"
+            break
+        fi
+    done
+fi
+
+if ! type _ >/dev/null 2>&1; then
+    _() {
+        if [ -n "${I18N_PY:-}" ] && [ -f "${I18N_PY}" ]; then
+            python3 "${I18N_PY}" "$@"
+        else
+            echo "$1"
+        fi
+    }
+fi
+
 MOK_CERT=""
 MOK_CRT=""
 MOK_DER=""
@@ -36,8 +58,8 @@ HAS_NVIDIA=false
 HAS_AMD=false
 HAS_INTEL=false
 
-CURRENT_VERSION="0.12.2"
-RELEASE_CODENAME="....and all that I can see, is just another Limine tree...."
+CURRENT_VERSION="0.13.0"
+RELEASE_CODENAME="Birthday Clown Demolition"
 
 CURL_CONNECT_TIMEOUT=15
 CURL_MAX_TIME=60
@@ -355,11 +377,11 @@ log_error() {
 check_slacky_update_self_update() {
     local current_ver="${1:-${CURRENT_VERSION:-0.10}}"
     local rel_json=""
-    # 1. Try Codeberg API first (official mirror)
-    rel_json=$(curl -sSL -m 3 -H "User-Agent: slacky-update" "https://codeberg.org/api/v1/repos/TuxOfValhalla/slacky-update/releases/latest" 2>/dev/null || true)
-    # 2. Fallback to GitHub API if Codeberg is unavailable or returns invalid payload
+    # 1. Try GitHub API first (canonical source)
+    rel_json=$(curl -sSL -m 3 -H "User-Agent: slacky-update" "https://api.github.com/repos/TuxOfValhalla/slacky-update/releases/latest" 2>/dev/null || true)
+    # 2. Fallback to Codeberg API if GitHub is unavailable or rate-limited
     if [ -z "${rel_json}" ] || ! echo "${rel_json}" | grep -q '"tag_name"'; then
-        rel_json=$(curl -sSL -m 3 -H "User-Agent: slacky-update" "https://api.github.com/repos/TuxOfValhalla/slacky-update/releases/latest" 2>/dev/null || true)
+        rel_json=$(curl -sSL -m 3 -H "User-Agent: slacky-update" "https://codeberg.org/api/v1/repos/TuxOfValhalla/slacky-update/releases/latest" 2>/dev/null || true)
     fi
 
     local update_info
@@ -789,7 +811,7 @@ def probe_size(item):
         pass
 
     # 3. Known package heuristics based on filename
-    if any(k in fn for k in ["edge", "chrome", "brave", "opera", "vivaldi", "zen-browser"]):
+    if any(k in fn for k in ["edge", "chrome", "brave", "zen-browser"]):
         size_map[url] = 160 * 1024 * 1024
     elif any(k in fn for k in ["obs-studio", "electron", "pear-desktop", "vesktop", "discord"]):
         size_map[url] = 110 * 1024 * 1024

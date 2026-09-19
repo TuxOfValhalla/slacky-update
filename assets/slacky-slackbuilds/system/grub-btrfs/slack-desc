@@ -16,3 +16,5 @@ grub-btrfs: for inotify-based automated GRUB regeneration upon snapshot events.
 grub-btrfs:
 grub-btrfs: Homepage: https://github.com/Antynea/grub-btrfs
 grub-btrfs:
+grub-btrfs:
+

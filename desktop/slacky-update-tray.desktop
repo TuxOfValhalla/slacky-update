@@ -2,7 +2,7 @@
 Type=Application
 Name=Slacky Update Tray
 Comment=System tray monitor for Slackware and Flatpak updates
-Exec=/usr/local/bin/slacky-update-tray
+Exec=slacky-update-tray
 Icon=slacky-update-pending
 Terminal=false
 Categories=System;TrayIcon;

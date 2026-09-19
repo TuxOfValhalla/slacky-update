@@ -1,6 +1,6 @@
 # 📖 Slacky-Update Survival Guide & System Manual
 ### *Slackware Linux 15.0 & -current — Complete Architecture, Deployment & Operational Manual*
-#### `v0.12.2` — *"....and all that I can see, is just another Limine tree...."* (Pre-Release / Early Access)
+#### `v0.13.0` — *"It's My Party, And I'll Cry If I Want To..."* (Release Edition)
 
 ---
 
@@ -113,8 +113,8 @@ Before executing your first full system upgrade or modifying kernels and bootloa
 Slacky-Update is built natively using the standard Slackware build methodology:
 
 ```bash
-# 1. Clone the repository (Codeberg Canonical)
-git clone https://codeberg.org/TuxOfValhalla/slacky-update.git
+# 1. Clone the repository (GitHub Canonical)
+git clone https://github.com/TuxOfValhalla/slacky-update.git
 cd slacky-update
 
 # 2. Build the package via SlackBuild
@@ -380,5 +380,5 @@ For comprehensive step-by-step procedures covering the 8 most critical failure s
 
 <div align="center">
 <b>Slacky-Update — Engineered for Slackware Linux</b><br>
-<i>Canonical Source: <a href="https://codeberg.org/TuxOfValhalla/slacky-update">Codeberg</a> | Secondary Mirror: <a href="https://github.com/TuxOfValhalla/slacky-update">GitHub</a> (pending review)</i>
+<i>Canonical Source: <a href="https://github.com/TuxOfValhalla/slacky-update">GitHub</a> | Secondary Mirror: <a href="https://codeberg.org/TuxOfValhalla/slacky-update">Codeberg</a></i>
 </div>
