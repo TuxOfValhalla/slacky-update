@@ -197,9 +197,9 @@ class SlackyUpdateTray(QSystemTrayIcon):
         self.upgrade_action.triggered.connect(self.launch_upgrade)
         self.menu.addAction(self.upgrade_action)
 
-        self.gaming_action = QAction("", self.menu)
-        self.gaming_action.triggered.connect(self.launch_gaming)
-        self.menu.addAction(self.gaming_action)
+        self.gnomes_action = QAction("", self.menu)
+        self.gnomes_action.triggered.connect(self.launch_gaming_tui)
+        self.menu.addAction(self.gnomes_action)
 
         self.slackbuilds_action = QAction("", self.menu)
         self.slackbuilds_action.triggered.connect(self.launch_slackbuilds)
@@ -452,7 +452,7 @@ class SlackyUpdateTray(QSystemTrayIcon):
 
         self.check_action.setText(_("CHECK_FOR_UPDATES"))
         self.upgrade_action.setText(_("UPDATE_NOW"))
-        self.gaming_action.setText(_("MENU_GAMING_TRAY"))
+        self.gnomes_action.setText(_("MENU_UNDERPANTS_GNOMES_TRAY"))
         self.slackbuilds_action.setText(_("MENU_SLACKBUILDS_TRAY"))
         self.lang_menu.setTitle(_("LANGUAGE_SELECTION"))
 
@@ -495,8 +495,8 @@ class SlackyUpdateTray(QSystemTrayIcon):
     def launch_upgrade(self):
         self.launch_in_terminal([self._get_slacky_bin()], "Slacky-Update")
 
-    def launch_gaming(self):
-        self.launch_in_terminal([self._get_slacky_bin(), "--gaming"], "Slacky-Update Gaming Suite")
+    def launch_gaming_tui(self):
+        self.launch_in_terminal([self._get_slacky_bin(), "--gnomes"], "Underpants Gnomes Console")
 
     def launch_slackbuilds(self):
         self.launch_in_terminal([self._get_slacky_bin(), "--slackbuilds"], "Slacky-Update SlackBuilds")

@@ -17,11 +17,16 @@ SLACKPKG_CMD=$(command -v slackpkg 2>/dev/null || echo "/usr/sbin/slackpkg")
 DRACUT_CMD=$(command -v dracut 2>/dev/null || echo "/usr/bin/dracut")
 
 BOLD="\033[1m"
+DIM="\033[2m"
 RED="\033[1;31m"
 GREEN="\033[1;32m"
 YELLOW="\033[1;33m"
 BLUE="\033[1;34m"
+MAGENTA="\033[1;35m"
 CYAN="\033[1;36m"
+WHITE="\033[1;37m"
+DARK_GRAY="\033[1;30m"
+GRAY="\033[0;37m"
 RESET="\033[0m"
 
 CACHE_DIR="/var/cache/slacky-update"
@@ -58,8 +63,8 @@ HAS_NVIDIA=false
 HAS_AMD=false
 HAS_INTEL=false
 
-CURRENT_VERSION="0.13.0"
-RELEASE_CODENAME="Birthday Clown Demolition"
+CURRENT_VERSION="0.14.0"
+RELEASE_CODENAME="Coco Jambo"
 
 CURL_CONNECT_TIMEOUT=15
 CURL_MAX_TIME=60
@@ -694,11 +699,15 @@ if not raw_items:
 
 # Parse items: url|dest_file[|sig_url|sig_dest]
 items = []
+seen_dests = set()
 for entry in raw_items:
     parts = entry.strip().split('|')
     if len(parts) >= 2:
         url = parts[0].strip()
         dest = parts[1].strip()
+        if dest in seen_dests:
+            continue
+        seen_dests.add(dest)
         sig_url = parts[2].strip() if len(parts) >= 4 else (f"{url}.sig" if len(parts) == 3 else "")
         sig_dest = parts[3].strip() if len(parts) >= 4 else (f"{dest}.sig" if len(parts) == 3 else "")
         items.append((url, dest, sig_url, sig_dest))
@@ -745,15 +754,13 @@ def render_pacman_bar(pct, width=16, chomp_state=0):
     pct = max(0.0, min(100.0, pct))
     pos = int((pct / 100.0) * width)
     pos = min(width - 1, pos)
-    mouth = "C" if (chomp_state % 2 == 0) else "c"
+    gnome_state = "🧙" if (chomp_state % 2 == 0) else "🧙‍♂️"
     eaten = "\033[1;32m" + "━" * pos + "\033[0m"
-    pacman = f"\033[1;33m{mouth}\033[0m"
     rem = width - pos - 1
-    pellets = "".join("o" if (i % 2 == 0) else " " for i in range(rem))
-    uneaten = "\033[1;37m" + pellets + "\033[0m"
+    trail = "".join("🩲" if (i % 2 == 0) else "·" for i in range(rem))
     if pct >= 100.0:
-        return "\033[1;32m[" + "━" * width + "]\033[0m"
-    return f"[{eaten}{pacman}{uneaten}]"
+        return "\033[1;32m[" + "━" * width + " 🧙 💰 PROFIT!]\033[0m"
+    return f"[{eaten}\033[1;33m{gnome_state}\033[0m \033[1;36m{trail}\033[0m]"
 
 size_map = {}
 def probe_size(item):
@@ -831,7 +838,7 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(needed), 32)) as 
 
 total_bytes_expected = sum(size_map.get(u, 15 * 1024 * 1024) for u, _, _, _ in needed)
 
-is_tty = sys.stdout.isatty()
+is_tty = sys.stdout.isatty() or os.isatty(1) or (os.environ.get("TERM", "") not in ("", "dumb"))
 try:
     term_width = os.get_terminal_size().columns
     term_height = os.get_terminal_size().lines
@@ -868,8 +875,8 @@ def monitor_thread():
 
     while not stop_monitor.is_set():
         time.sleep(0.08)
-        chomp_step += 1
         now = time.time()
+        chomp_step = int(now / 0.35)
 
         with state_lock:
             cur_completed = completed_bytes
@@ -929,7 +936,7 @@ def monitor_thread():
         if len(rate_history) >= 2:
             dt = rate_history[-1][0] - rate_history[0][0]
             db = rate_history[-1][1] - rate_history[0][1]
-            speed_bps = db / dt if dt > 0.05 else 0.0
+            speed_bps = max(0.0, db / dt) if dt > 0.05 else 0.0
         else:
             speed_bps = 0.0
 
@@ -974,7 +981,7 @@ def monitor_thread():
                     if len(s_hist) >= 2:
                         s_dt = s_hist[-1][0] - s_hist[0][0]
                         s_db = s_hist[-1][1] - s_hist[0][1]
-                        s_spd = (s_db / s_dt) / (1024 * 1024) if s_dt > 0.05 else 0.0
+                        s_spd = max(0.0, (s_db / s_dt) / (1024 * 1024)) if s_dt > 0.05 else 0.0
                     else:
                         s_spd = 0.0
 
@@ -1018,8 +1025,8 @@ def download_item_wrapper(args):
     dest_dir = os.path.dirname(dest)
     if dest_dir:
         os.makedirs(dest_dir, exist_ok=True)
-    part_file = f"{dest}.part"
-    part_sig = f"{sig_dest}.part" if sig_dest else ""
+    part_file = f"{dest}.part.{idx}"
+    part_sig = f"{sig_dest}.part.{idx}" if sig_dest else ""
     exp_sz = size_map.get(url, 15 * 1024 * 1024)
     fn = os.path.basename(dest)
 

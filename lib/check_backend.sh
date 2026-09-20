@@ -346,9 +346,9 @@ check_cachyos_background() {
 
         if [ -n "${installed_flavors}" ]; then
             for flv in ${installed_flavors}; do
-                local cur_flv_ver latest_flv_ver k_url h_url nv_url
+                local cur_flv_ver latest_flv_ver k_url h_url nv_url r8125_url
                 cur_flv_ver=$(get_installed_cachyos_flavor_version "${flv}" 2>/dev/null || echo "NONE")
-                read -r latest_flv_ver k_url h_url nv_url <<< "$(check_cachyos_upstream_flavor "${flv}" || echo "NONE NONE NONE NONE")"
+                read -r latest_flv_ver k_url h_url nv_url r8125_url <<< "$(check_cachyos_upstream_flavor "${flv}" || echo "NONE NONE NONE NONE NONE")"
 
                 if [ "${latest_flv_ver}" != "NONE" ] && [ -n "${latest_flv_ver}" ] && [ "${cur_flv_ver}" != "NONE" ]; then
                     local is_flv_newer
@@ -372,6 +372,10 @@ check_cachyos_background() {
                             local flv_name="linux-cachyos"
                             [ "${flv}" = "bore" ] && flv_name="linux-cachyos-bore"
                             [ "${flv}" = "lto" ] && flv_name="linux-cachyos-bore-lto"
+                            [ "${flv}" = "eevdf" ] && flv_name="linux-cachyos-eevdf"
+                            [ "${flv}" = "bmq" ] && flv_name="linux-cachyos-bmq"
+                            [ "${flv}" = "deckify" ] && flv_name="linux-cachyos-deckify"
+                            [ "${flv}" = "rt-bore" ] && flv_name="linux-cachyos-rt-bore"
                             [ "${flv}" = "rc" ] && flv_name="linux-cachyos-rc"
                             [ "${flv}" = "lts" ] && flv_name="linux-cachyos-lts"
                             CACHY_UPDATES+=("${flv_name}-${latest_flv_ver} (Installed: ${cur_flv_ver})")

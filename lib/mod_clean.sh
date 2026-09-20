@@ -14,8 +14,16 @@ from collections import defaultdict
 def get_flavor(k_str):
     if '-cachyos-bore-lto' in k_str or '-cachyos-lto' in k_str:
         return 'lto'
+    elif '-cachyos-rt-bore' in k_str or '-cachyos-rt' in k_str:
+        return 'rt-bore'
     elif '-cachyos-bore' in k_str:
         return 'bore'
+    elif '-cachyos-eevdf' in k_str:
+        return 'eevdf'
+    elif '-cachyos-bmq' in k_str:
+        return 'bmq'
+    elif '-cachyos-deckify' in k_str:
+        return 'deckify'
     elif '-cachyos-rc' in k_str:
         return 'rc'
     elif '-cachyos-lts' in k_str:

@@ -995,8 +995,16 @@ sync_all_cachyos_kernels_nvidia() {
                     local pref="linux-cachyos"
                     if [[ "${kver}" =~ -bore-lto ]]; then
                         pref="linux-cachyos-bore-lto"
+                    elif [[ "${kver}" =~ -rt-bore ]]; then
+                        pref="linux-cachyos-rt-bore"
                     elif [[ "${kver}" =~ -bore ]]; then
                         pref="linux-cachyos-bore"
+                    elif [[ "${kver}" =~ -eevdf ]]; then
+                        pref="linux-cachyos-eevdf"
+                    elif [[ "${kver}" =~ -bmq ]]; then
+                        pref="linux-cachyos-bmq"
+                    elif [[ "${kver}" =~ -deckify ]]; then
+                        pref="linux-cachyos-deckify"
                     elif [[ "${kver}" =~ -rc ]]; then
                         pref="linux-cachyos-rc"
                     elif [[ "${kver}" =~ -lts ]]; then

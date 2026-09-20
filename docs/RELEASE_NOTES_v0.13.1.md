@@ -1,15 +1,15 @@
 # It's My Party, And I'll Cry If I Want To...
-### ⚡ Slacky-Update v0.13.0 — "Birthday Clown Demolition" (Release Edition)
+### ⚡ Slacky-Update v0.13.1 — "Birthday Clown Demolition" (Release Edition)
 
 ---
 
 > [!CAUTION]
 > **SYSTEM MODIFICATION & RECOVERY DISCLAIMER — USE AT YOUR OWN RISK**  
-> Slacky-Update v0.13.0 is a comprehensive system orchestrator and workstation modernizer for **Slackware Linux (-current / 15.0+)**. It interacts with low-level kernel infrastructure, proprietary GPU drivers, Dracut initramfs images, Btrfs subvolumes, and UEFI bootloader topologies (Limine/GRUB). Always maintain verified backups of `/home` and boot partitions and keep a Slackware Live-USB accessible.
+> Slacky-Update v0.13.1 is a comprehensive system orchestrator and workstation modernizer for **Slackware Linux (-current / 15.0+)**. It interacts with low-level kernel infrastructure, proprietary GPU drivers, Dracut initramfs images, Btrfs subvolumes, and UEFI bootloader topologies (Limine/GRUB). Always maintain verified backups of `/home` and boot partitions and keep a Slackware Live-USB accessible.
 
 ---
 
-## 🌟 Major Highlights of Patch v0.13.0
+## 🌟 Major Highlights of Patch v0.13.1
 
 ### 🔍 1. Dynamic Kernel & Limine BLAKE2B Hash Verifier (`hash-check`)
 * **Instant Sealing Audit (`slacky-update --hash-check` / `-H` / `hash-check`):** Dynamically scans all installed kernels (`/boot/vmlinuz-*`) and initramfs images (`/boot/initramfs-*.img`, `initrd*`) and calculates live `b2sum` cryptographic hashes.
@@ -57,7 +57,7 @@ All 36 workstation, creative, audio, and gaming packages are active and whitelis
 
 ## 📦 Package Details
 
-* **Filename:** `slacky-update-0.13.0-noarch-1_slacky.txz`
+* **Filename:** `slacky-update-0.13.1-noarch-1_slacky.txz`
 * **Architecture:** `noarch` (Slackware Linux 15.0 & -current)
 * **License:** `GPLv3`
 * **Canonical Repository:** `https://github.com/TuxOfValhalla/slacky-update`

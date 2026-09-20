@@ -204,5 +204,12 @@
   "TOPOLOGY_SCENARIO_A_TITLE": "МИГРАЦИЯ ТОПОЛОГИИ ЗАГРУЗКИ LIMINE (СЦЕНАРИЙ A)",
   "TOPOLOGY_SCENARIO_C_PROMPT": "Хотите просканировать и выбрать раздел (>= 3.5 ГБ) для настройки в качестве /boot? [Y/n]: ",
   "TOPOLOGY_SCENARIO_C_TITLE": "МАСТЕР ВЫБОРА ВЫДЕЛЕННОГО ESP РАЗДЕЛА LIMINE (СЦЕНАРИЙ C)",
-  "TOPOLOGY_SELECT_PARTITION": "Выберите раздел для настройки в качестве /boot [1-{count}]: "
+  "TOPOLOGY_SELECT_PARTITION": "Выберите раздел для настройки в качестве /boot [1-{count}]: ",
+  "CACHY_FLAVOR_EEVDF": "(Earliest Eligible Virtual Deadline First scheduler for responsive multi-tasking)",
+  "CACHY_FLAVOR_BMQ": "(Project C BitMap Queue scheduler for low latency & gaming)",
+  "CACHY_FLAVOR_DECKIFY": "(Steam Deck, ROG Ally & handheld gaming device optimized kernel)",
+  "CACHY_FLAVOR_RT_BORE": "(Real-Time PREEMPT_RT + BORE scheduler for ultra-low latency & pro audio/streaming)",
+  "MENU_UNDERPANTS_GNOMES_TRAY": "🧙 Underpants Gnomes 📦",
+  "MENU_GNOMES_TUI": "🖥️ Terminal Console (TUI)",
+  "MENU_GNOMES_GUI": "🎨 Desktop Software Suite (GUI)"
 }

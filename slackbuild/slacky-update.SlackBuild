@@ -4,7 +4,7 @@
 set -euo pipefail
 
 PRGNAM="slacky-update"
-VERSION="0.13.0"
+VERSION="0.14.0"
 ARCH="noarch"
 BUILD="1_slacky"
 
@@ -45,8 +45,10 @@ chmod 0755 "${PKG_DIR}/var/cache/slacky-update"
 # --- [ FILE INSTALLATION ] ---
 install -m 0755 "${SRC_DIR}/bin/slacky-update" "${PKG_DIR}/usr/bin/"
 install -m 0755 "${SRC_DIR}/bin/slacky-update-tray" "${PKG_DIR}/usr/bin/"
+
 install -m 0755 "${SRC_DIR}/bin/slacky-update" "${PKG_DIR}/usr/local/bin/"
 install -m 0755 "${SRC_DIR}/bin/slacky-update-tray" "${PKG_DIR}/usr/local/bin/"
+
 install -m 0755 "${SRC_DIR}"/lib/*.sh "${PKG_DIR}/usr/local/lib/slacky-update/"
 install -m 0755 "${SRC_DIR}"/lib/*.sh "${PKG_DIR}/usr/share/slacky-update/lib/"
 install -m 0755 "${SRC_DIR}/lib/slacky-update-tray" "${PKG_DIR}/usr/share/slacky-update/lib/" 2>/dev/null || true
@@ -93,6 +95,10 @@ if [ -d "${SRC_DIR}/assets" ]; then
         cp -a "${SRC_DIR}/assets/hooks" "${PKG_DIR}/usr/share/slacky-update/assets/"
         mkdir -p "${PKG_DIR}/usr/local/lib/slacky-update/assets"
         cp -a "${SRC_DIR}/assets/hooks" "${PKG_DIR}/usr/local/lib/slacky-update/assets/"
+    fi
+    if [ -d "${SRC_DIR}/assets/polkit" ]; then
+        mkdir -p "${PKG_DIR}/usr/share/polkit-1/actions"
+        install -m 0644 "${SRC_DIR}"/assets/polkit/*.policy "${PKG_DIR}/usr/share/polkit-1/actions/" 2>/dev/null || true
     fi
 fi
 

@@ -1,12 +1,12 @@
 # 🛠️ Slacky-Update Technical Companion Guide: Under the Hood & Engine Architecture
 ### *A Deep-Dive Architectural Whitepaper & Technical Reference for Slackware Linux 15.0 & -current*
-#### `v0.13.0` — *"It's My Party, And I'll Cry If I Want To..."* (Release Edition)
+#### `v0.14.0` — *"Coco Jambo"* (Release Edition)
 
 ---
 
 > [!CAUTION]
 > **PRE-RELEASE / EARLY ACCESS DISCLAIMER & LIABILITY NOTICE — USE AT YOUR OWN RISK**  
-> Slacky-Update v0.12 is an active *Pre-Release / Early Access* edition. The software executes low-level system modifications, including Linux kernel deployments, proprietary NVIDIA drivers, Dracut initramfs generation, Btrfs subvolumes, and bootloader topologies (Limine/GRUB).  
+> Slacky-Update v0.14.0 is an active *Pre-Release / Early Access* edition. The software executes low-level system modifications, including Linux kernel deployments, proprietary NVIDIA drivers, Dracut initramfs generation, Btrfs subvolumes, and bootloader topologies (Limine/GRUB).  
 > **All usage, upgrades, and system configurations are executed strictly at your own discretion and risk.** The developers and maintainers assume no liability or warranty for system malfunction, unbootable states, or data loss.  
 > **Pre-requisites:** Always maintain tested, current backups (`/home`, essential configuration files, and boot partitions) and keep a bootable Slackware Live-USB accessible before performing upgrades or modifying bootloader setups.
 
@@ -133,27 +133,27 @@ Slacky-Update was engineered with a strict guiding principle: **augment Slackwar
 
 ---
 
-### Engine 3: Sandboxed Transmutation & App-Bundle Engine
-* **Source File**: `lib/mod_gaming.sh`
-* **Role**: Transmutes upstream `.pkg.tar.zst` packages into native `.txz` archives with GPG signature validation and `/opt/<app>/` directory isolation.
+#### Engine 3: Sandboxed Transmutation & App-Bundle Engine (Underpants Gnomes)
+* **Source Files**: `lib/mod_gaming.sh`
+* **Role**: Transmutes 51 upstream workstation packages, 9 OBS streamer plugins, and 6 DKMS hardware drivers into native `.txz` archives with GPG validation, `/opt/<app>/` directory isolation, interactive 2-column TUI workstation manager, and timestamp-paced animated Gnome download progress bar.
 
 ---
 
 ### Engine 4: CachyOS Kernel Lifecycle & CPU Microarchitecture
-* **Source File**: `lib/mod_kernel.sh`
-* **Role**: Inspects host CPU features (x86_64_v4, v3, v2) and deploys optimized BORE/LTS kernels with a deterministic 2-kernel retention policy.
+* **Source Files**: `lib/mod_kernel.sh`, `lib/mod_limine.sh`
+* **Role**: Inspects host CPU features (x86_64_v4, v3, v2) and deploys optimized CachyOS kernels across 9 scheduler flavors (`standard`, `bore`, `lto`, `eevdf`, `bmq`, `deckify`, `rt-bore`, `rc`, `lts`) with a universal multi-kernel DKMS compilation engine, smart Realtek 2.5GbE (`r8125`) detection, and deterministic 2-kernel retention policy.
 
 ---
 
 ### Engine 5: NVIDIA Driver & DKMS Pipeline
 * **Source File**: `lib/mod_nvidia.sh`
-* **Role**: Deploys pre-compiled modules for CachyOS kernels, DKMS for standard Slackware kernels, purges stale modules, and aligns 32-bit multilib drivers.
+* **Role**: Deploys pre-compiled modules for CachyOS kernels, DKMS for standard Slackware kernels, purges stale modules, and aligns 32-bit multilib drivers with strict DKMS collision shielding.
 
 ---
 
 ### Engine 6: System Performance, Memory Architecture & 1M Resource Limits
 * **Source File**: `lib/mod_tweaks.sh`
-* **Role**: Applies 1 million file descriptor limits, PipeWire realtime priority (`rtprio 95`), Transparent HugePages (`madvise + defer`), and TCP BBR.
+* **Role**: Applies 1 million file descriptor limits, PipeWire realtime priority (`rtprio 95`), Transparent HugePages (`madvise + defer`), TCP BBR, and KDE Plasma Wayland Dynamic VRAM Leak Guard & Memory Compaction.
 
 ---
 
@@ -171,19 +171,19 @@ Slacky-Update was engineered with a strict guiding principle: **augment Slackwar
 
 ### Engine 9: SBo SlackBuilds & `sbotools` Integration Engine
 * **Source File**: `lib/mod_sbo.sh`
-* **Role**: Auto-routes recipes to Ponce's git repository on `-current` or standard SBo on `15.0`, enforces `JOBS=$(nproc)`, and provides 25 curated recipes.
+* **Role**: Auto-routes recipes to Ponce's git repository on `-current` or standard SBo on `15.0`, enforces `JOBS=$(nproc)`, and provides 26 curated recipes (including Plasticity 3D CAD).
 
 ---
 
 ### Engine 10: Real-Time System Tray Telemetry & Notifications
-* **Source Files**: `bin/slacky-update-tray`, `lib/check_backend.sh`
-* **Role**: Lightweight PyQt5 background monitor (~18 MB RAM) polling weekly or on-demand, triggering D-Bus desktop notifications.
+* **Source Files**: `bin/slacky-update-tray`, `lib/slacky-update-tray`, `lib/check_backend.sh`
+* **Role**: Lightweight PyQt6 background monitor polling on-demand and on schedule, featuring cascading submenus for Underpants Gnomes (TUI/GUI) and triggering D-Bus desktop notifications.
 
 ---
 
 ### Engine 11: Internationalization & Fallback Engine (i18n)
 * **Source Files**: `lib/slacky_update_i18n.py`, `locales/*.json`
-* **Role**: Zero-dependency Python localization across 24 languages with 100% key parity, fallbacks, and 90s Radical editions.
+* **Role**: High-performance multi-language translation engine providing 100% key parity across 24 global languages (213 keys each) with 90s pop-culture Radical Editions.
 
 ---
 

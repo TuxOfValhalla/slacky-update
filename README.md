@@ -2,10 +2,10 @@
 
 # ⚡ Slacky-Update
 ### *Enterprise-Grade System Maintenance, Kernel Lifecycle, Driver Orchestrator & Workstation Suite for Slackware Linux*
-#### `v0.13.0` — *"Birthday Clown Demolition"* (Release Edition)
+#### `v0.14.0` — *"Coco Jambo"* (Release Edition)
 
 [![Slackware -current](https://img.shields.io/badge/Slackware--current-15.0%2B-blue?style=for-the-badge&logo=slackware&logoColor=white)](http://www.slackware.com/)
-[![Release](https://img.shields.io/badge/Release-v0.13.0-purple?style=for-the-badge)](https://github.com/TuxOfValhalla/slacky-update/releases)
+[![Release](https://img.shields.io/badge/Release-v0.14.0-purple?style=for-the-badge)](https://github.com/TuxOfValhalla/slacky-update/releases)
 [![Canonical: GitHub](https://img.shields.io/badge/Canonical-GitHub-black?style=for-the-badge&logo=github&logoColor=white)](https://github.com/TuxOfValhalla/slacky-update)
 [![Mirror: Codeberg](https://img.shields.io/badge/Mirror-Codeberg-2185d0?style=for-the-badge&logo=codeberg&logoColor=white)](https://codeberg.org/TuxOfValhalla/slacky-update)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-green.svg?style=for-the-badge)](LICENSE)
@@ -22,7 +22,7 @@
 
 > [!CAUTION]
 > **SYSTEM MODIFICATION & RECOVERY DISCLAIMER — USE AT YOUR OWN RISK**  
-> Slacky-Update v0.13.0 is a comprehensive system orchestrator and workstation modernization suite. The software performs low-level system modifications to core components, including Linux kernel deployments, proprietary NVIDIA drivers, Dracut initramfs generation, Btrfs subvolumes, and bootloader topologies (Limine/GRUB).  
+> Slacky-Update v0.14.0 is a comprehensive system orchestrator and workstation modernization suite. The software performs low-level system modifications to core components, including Linux kernel deployments, proprietary NVIDIA drivers, Dracut initramfs generation, Btrfs subvolumes, and bootloader topologies (Limine/GRUB).  
 > **All usage and modifications are strictly at your own risk.** The authors and contributors assume no liability or warranty for system anomalies, unbootable states, or data loss.  
 > **Pre-requisites:** Always ensure you maintain current, tested backups (`/home`, essential configuration files, and boot partitions) and keep a bootable Slackware Live-USB accessible before executing upgrades or altering bootloader topologies.
 
@@ -67,14 +67,14 @@ Slacky-Update is designed around a non-destructive, modular layered architecture
                       ⚡ SLACKY-UPDATE CONTROL CENTER ⚡
 =============================================================================
  [1] Total System Synchronization --> Slackware + Flatpaks + SBo + Kernels
- [2] CachyOS Kernel Time Machine  --> CPU Tier Detect, Deploy, Manage & Purge
+ [2] CachyOS Kernel Time Machine  --> 9 Kernel Schedulers, Deploy & Purge
  [3] NVIDIA & ROCm Graphics Hub   --> CachyOS Master, DKMS, OpenCL / HIP
- [4] Underpants Gnomes Suite      --> 34 Native Transmuted Workstation Apps
+ [4] Underpants Gnomes Suite      --> 51 Native Workstation Apps, Plugins & Drivers
  [5] System Cleanup & Retention   --> Dual Kernel Retention & Artifact Purge
  [6] Limine & Secure Boot Armor   --> Two-Zone Config, CMDLINE Hub, sbctl Signing
  [7] System Performance Tweaks    --> NVIDIA 615+ VRAM Booster, TCP BBR, NTSYNC
  [8] Master Field Guide & Manual  --> Open Documentation & Mobile Export
- [9] Multi-Lingual Engine (i18n)  --> 24 Locales with 100% Key Parity
+ [9] Multi-Lingual Engine (i18n)  --> 24 Locales with 100% Key Parity (213 keys)
 =============================================================================
 ```
 
@@ -93,9 +93,11 @@ Slacky-Update is designed around a non-destructive, modular layered architecture
 * **Btrfs Snapper Snapshot Rollbacks**: Automatically creates boot entries for the 5 newest read-only Btrfs snapshots, reusing base kernel hashes with 0 extra disk overhead.
 * **Coexistence Mode**: Safely maintains dual bootloader configurations (Limine and GRUB/ELILO) with background self-healing hooks.
 
-### 3. 🏎️ CachyOS High-Performance Kernels
+### 3. 🏎️ CachyOS High-Performance Kernels (Fleet of 9 Schedulers)
 * **CPU Microarchitecture Auto-Detection**: Inspects host CPU features and targets optimized builds (*x86_64_v4 / znver4 for Zen 4/5 & Intel 12th–15th+ Gen Core; x86_64_v3; x86_64_v2*).
-* **Advanced Schedulers**: Deploys upstream CachyOS kernels with BORE (Burst-Oriented Response Enhancer), BORE-LTO, `sched-ext` (`scx`), and LTS branches.
+* **Advanced Schedulers**: Deploys upstream CachyOS kernels across 9 specialized flavors: `standard` (`linux-cachyos`), `bore` (Burst-Oriented Response Enhancer), `lto` (`bore-lto` Clang LTO optimized), `eevdf` (Earliest Eligible Virtual Deadline First), `bmq` (Project C BitMap Queue), `deckify` (Steam Deck & handheld gaming profile), `rt-bore` (PREEMPT_RT Real-Time low-latency), `rc` (Release Candidate), and `lts` (Long-Term Support fallback).
+* **Smart Realtek 2.5GbE (`r8125`) Hardware Integration**: Automatically detects RTL8125 / Killer E3100X PCI NICs (`10ec:8125` / `10ec:3000`) and seamlessly deploys matching precompiled CachyOS `r8125` kernel module packages directly from official mirrors with zero friction.
+* **Universal Multi-Kernel DKMS Engine**: Builds out-of-tree hardware drivers (`zenpower3`, `v4l2loopback`, Wi-Fi/Ethernet) across all installed kernels with strict NVIDIA DKMS safety shielding.
 * **Granular Retention Safeguards**: Automatically retains the 2 newest standard/BORE kernels and 1 newest RC kernel, while strictly protecting the active running kernel and preserving stock fallback kernels.
 
 ### 4. 🎮 NVIDIA & ROCm Graphics Hub
@@ -108,18 +110,25 @@ Slacky-Update is designed around a non-destructive, modular layered architecture
 * **Video Memory Allocation Retention**: Deploys `NVreg_PreserveVideoMemoryAllocations=1` and `NVreg_TemporaryFilePath=/var/tmp` to eliminate VRAM fragmentation, power-state data drops, and Out-of-Memory crashes under Direct3D 12 (VKD3D-Proton).
 * **Direct DRM Modesetting**: Configures `nvidia_drm.modeset=1` and `nvidia_drm.fbdev=1` for tear-free, low-latency Wayland and X11 composition.
 * **Virtual Memory Tuning**: Configures `vm.max_map_count=2147483642`, Transparent HugePages to `madvise`, `vm.swappiness=10`, and `vm.vfs_cache_pressure=50`.
+* **KDE Plasma Dynamic VRAM Leak Guard & Memory Compaction**: Dedicated protection against KWin Wayland compositor and GPU memory leakage via Underpants Gnomes:
+  * **`underpants-kwin-dynamic-vram-fix`** (KWin Wayland Dynamic VRAM Leak Guard & Buffer Manager): Actively monitors and manages unevicted compositor video memory buffers on KDE Plasma Wayland sessions, preventing runaway VRAM leakage and releasing stale surface allocations.
+  * **`underpants-vram-booster`** (Dynamic VRAM Booster & Memory Compaction Daemon): Actively monitors GPU utilization and system buffer caches, triggering proactive memory defragmentation before Out-of-Memory (OOM) limits are reached—dramatically stabilizing 1% low FPS, eliminating micro-stutters, and boosting Direct3D 12 (VKD3D-Proton) / heavy creative workstation performance.
 
-### 6. 🩲 The Underpants Gnomes Workstation Suite (34 Native Packages)
-* **Isolated `/opt/<app>` App-Bundles**: Applications with complex runtimes (`obs-studio`, `lutris`, `pear-desktop`, web browsers) reside in self-contained directories with `/usr/bin/` wrappers—never polluting host system Python or library paths.
+### 6. 🩲 Underpants Gnomes Software Suite (TUI & Workstation Manager — 51 Components)
+* **Interactive Workstation Station (`slacky-update --gnomes`)**: Unified high-performance terminal console featuring a clean 2-column layout, compact version tracking, animated Gnome transmutation progress bar, and real-time deployment of 51 apps, streaming tools, and kernel modules.
+* **Valve Steam & Storefront Fleet**: Native Valve Steam client (`underpants-steam`) with bundled controller udev rules (`60-steam-input.rules`), automatic multilib 32-bit validation, Heroic Games Launcher, Lutris, Faugus Launcher, and ProtonPlus.
+* **OBS Creator & Streamer Power-Pack**: 9 vetted streaming components (`obs-studio`, `obs-vkcapture`, `obs-move-transition`, `obs-source-record`, `obs-pipewire-audio-capture`, `obs-advanced-scene-switcher`, `obs-multi-rtmp`, `obs-composite-blur`, `obs-teleport`) with automatic dual-mode bridging into native Slackware and isolated `/opt/obs-studio`.
+* **Out-of-Tree DKMS Drivers**: `zenpower3`, `v4l2loopback`, `rtl8821cu`, `rtl88x2bu`, `rtl8812au`, `broadcom-wl`, `r8125`.
+* **Isolated `/opt/<app>` App-Bundles**: Applications with complex runtimes reside in self-contained directories with `/usr/bin/` wrappers—never polluting host system Python or library paths.
 * **Cryptographic GPG Validation**: Upstream archives (`.pkg.tar.zst`) and signatures (`.sig`) are strictly verified against Arch and CachyOS public keys prior to packaging.
-* **Native Slackware SysVinit Daemons**: Generates and manages init scripts in `/etc/rc.d/` (`rc.coolercontrol`, `rc.syncthing`, `rc.lact`, `rc.scx`, `rc.ananicy-cpp`, `rc.gamemode`).
+* **Native Slackware SysVinit Daemons**: Generates and manages init scripts in `/etc/rc.d/` (`rc.coolercontrol`, `rc.asusd`, `rc.syncthing`, `rc.lact`, `rc.scx`, `rc.ananicy-cpp`, `rc.gamemode`).
 
 ### 7. 🧰 Curated SBo SlackBuilds Hub & `sbotools`
 * **Version Auto-Tuning**: Automatically routes build recipes to Ponce's git repository on Slackware `-current` or standard SBo on `15.0`.
-* **24 Curated Recipes**: Wonder Unit Storyboarder, Serif Affinity Suite, Blender, FreeCAD, SoftMaker FreeOffice 2024, Opera, LACT, OpenRGB, and SpaceMouse utilities.
+* **26 Curated Recipes**: Plasticity 3D CAD, Wonder Unit Storyboarder, Serif Affinity Suite, Blender, FreeCAD, Unreal Engine 5, SoftMaker FreeOffice 2024, Opera, LACT, OpenRGB, and SpaceMouse utilities.
 
 ### 8. 🌍 Multi-Lingual Engine (24 Locales) & Dynamic Live Tickers
-* Full internationalization across 24 languages with 100% key parity (182 keys).
+* Full internationalization across 24 languages with 100% key parity (213 keys each).
 * Standard sober English (`en`), Norwegian (`nb`), and 22 global languages by default with clockwise rotating hourglass (`⏳`/`⌛`).
 * **Radical Editions** (`en-radical`, `nb-radical`): 90s pop-culture (*Bill & Ted*, *TMNT*, *Wayne's World*) with high-voltage pulsing lightning bolt (`⚡`/`✨`).
 
@@ -157,15 +166,20 @@ sudo upgradepkg --install-new --reinstall /tmp/slacky-update-*-noarch-1_slacky.t
 You can also download and install the pre-built Slackware `.txz` package directly from GitHub Releases:
 ```bash
 # Download latest release package
-curl -sLO https://github.com/TuxOfValhalla/slacky-update/releases/latest/download/slacky-update-0.13.0-noarch-1_slacky.txz
+curl -sLO https://github.com/TuxOfValhalla/slacky-update/releases/latest/download/slacky-update-0.14.0-noarch-1_slacky.txz
 
 # Install or upgrade
-sudo upgradepkg --install-new --reinstall slacky-update-0.13.0-noarch-1_slacky.txz
+sudo upgradepkg --install-new --reinstall slacky-update-0.14.0-noarch-1_slacky.txz
 ```
 
 #### Quick 1-Line Installer (GitHub)
 ```bash
 git clone https://github.com/TuxOfValhalla/slacky-update.git && cd slacky-update && sudo bash slackbuild/slacky-update.SlackBuild && sudo upgradepkg --install-new --reinstall /tmp/slacky-update-*-noarch-1_slacky.txz && slacky-update-tray &
+```
+
+#### Quick 1-Line Installer (Codeberg Mirror)
+```bash
+git clone https://codeberg.org/TuxOfValhalla/slacky-update.git && cd slacky-update && sudo bash slackbuild/slacky-update.SlackBuild && sudo upgradepkg --install-new --reinstall /tmp/slacky-update-*-noarch-1_slacky.txz && slacky-update-tray &
 ```
 
 ---

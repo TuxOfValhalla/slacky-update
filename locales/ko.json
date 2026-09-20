@@ -204,5 +204,12 @@
   "TOPOLOGY_SCENARIO_A_TITLE": "LIMINE 부팅 토폴로지 마이그레이션 (시나리오 A)",
   "TOPOLOGY_SCENARIO_C_PROMPT": "파티션(>= 3.5 GB)을 검색하고 /boot로 구성하시겠습니까? [Y/n]: ",
   "TOPOLOGY_SCENARIO_C_TITLE": "LIMINE 전용 ESP 할당 마법사 (시나리오 C)",
-  "TOPOLOGY_SELECT_PARTITION": "/boot로 구성할 파티션 선택 [1-{count}]: "
+  "TOPOLOGY_SELECT_PARTITION": "/boot로 구성할 파티션 선택 [1-{count}]: ",
+  "CACHY_FLAVOR_EEVDF": "(Earliest Eligible Virtual Deadline First scheduler for responsive multi-tasking)",
+  "CACHY_FLAVOR_BMQ": "(Project C BitMap Queue scheduler for low latency & gaming)",
+  "CACHY_FLAVOR_DECKIFY": "(Steam Deck, ROG Ally & handheld gaming device optimized kernel)",
+  "CACHY_FLAVOR_RT_BORE": "(Real-Time PREEMPT_RT + BORE scheduler for ultra-low latency & pro audio/streaming)",
+  "MENU_UNDERPANTS_GNOMES_TRAY": "🧙 Underpants Gnomes 📦",
+  "MENU_GNOMES_TUI": "🖥️ Terminal Console (TUI)",
+  "MENU_GNOMES_GUI": "🎨 Desktop Software Suite (GUI)"
 }

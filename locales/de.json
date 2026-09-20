@@ -204,5 +204,12 @@
   "TOPOLOGY_SCENARIO_A_TITLE": "LIMINE BOOT-TOPOLOGIE-MIGRATION (SZENARIO A)",
   "TOPOLOGY_SCENARIO_C_PROMPT": "Möchten Sie eine Partition (>= 3.5 GB) scannen und als /boot konfigurieren? [Y/n]: ",
   "TOPOLOGY_SCENARIO_C_TITLE": "LIMINE ASSISTENT FÜR DEDIZIERTE ESP (SZENARIO C)",
-  "TOPOLOGY_SELECT_PARTITION": "Partition zur Konfiguration als /boot auswählen [1-{count}]: "
+  "TOPOLOGY_SELECT_PARTITION": "Partition zur Konfiguration als /boot auswählen [1-{count}]: ",
+  "CACHY_FLAVOR_EEVDF": "(EEVDF-Scheduler für reaktionsschnelles Multitasking)",
+  "CACHY_FLAVOR_BMQ": "(Project C BitMap Queue Scheduler für geringe Latenz und Gaming)",
+  "CACHY_FLAVOR_DECKIFY": "(Optimiert für Steam Deck, ROG Ally und Handheld-Gaming)",
+  "CACHY_FLAVOR_RT_BORE": "(Echtzeit PREEMPT_RT + BORE für extrem niedrige Latenz und Pro-Audio)",
+  "MENU_UNDERPANTS_GNOMES_TRAY": "🧙 Underpants Gnomes 📦",
+  "MENU_GNOMES_TUI": "🖥️ Terminal-Konsole (TUI)",
+  "MENU_GNOMES_GUI": "🎨 Desktop-Software-Suite (GUI)"
 }

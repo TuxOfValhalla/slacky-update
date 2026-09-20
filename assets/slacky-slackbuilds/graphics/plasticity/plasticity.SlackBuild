@@ -1,0 +1,190 @@
+#!/usr/bin/env bash
+#
+# Slackware build script for Plasticity 3D CAD
+# Maintained by TuxOfValhalla <agnar1984@gmail.com>
+#
+
+set -e
+
+PRGNAM=plasticity
+VERSION=${VERSION:-2025.1.0}
+BUILD=${BUILD:-1}
+TAG=${TAG:-_slacky}
+PKGTYPE=${PKGTYPE:-txz}
+
+case "$(uname -m)" in
+  x86_64) ARCH=x86_64 ; DEBARCH=amd64 ; LIBDIRSUFFIX="64" ;;
+  *) echo "Unsupported architecture $(uname -m). Plasticity is 64-bit only." ; exit 1 ;;
+esac
+
+CWD=$(pwd)
+TMP=${TMP:-/tmp/SBo}
+PKG=$TMP/package-$PRGNAM
+OUTPUT=${OUTPUT:-/tmp}
+
+set -euo pipefail
+
+rm -rf "$PKG"
+mkdir -p "$TMP" "$PKG" "$OUTPUT"
+cd "$TMP"
+rm -rf "$PRGNAM-$VERSION"
+mkdir -p "$PRGNAM-$VERSION"
+cd "$PRGNAM-$VERSION"
+
+# Search for existing debian archive in CWD, TMP or Downloads
+DEBFILE=""
+for cand in "$CWD/Plasticity-${VERSION}-build-${DEBARCH}.deb" \
+            "$CWD/plasticity_${VERSION}_${DEBARCH}.deb" \
+            "$CWD/Plasticity-*.deb" \
+            "$CWD/plasticity_*.deb" \
+            "$TMP/Plasticity-${VERSION}-build-${DEBARCH}.deb" \
+            "$TMP/plasticity_${VERSION}_${DEBARCH}.deb" \
+            "$HOME/Downloads/Plasticity-${VERSION}-build-${DEBARCH}.deb" \
+            "$HOME/Downloads/Plasticity-*.deb" \
+            "$HOME/Downloads/plasticity_*.deb"; do
+  if ls $cand 1>/dev/null 2>&1; then
+    DEBFILE=$(ls $cand 2>/dev/null | head -n 1 || true)
+    [ -n "$DEBFILE" ] && [ -f "$DEBFILE" ] && break
+  fi
+done
+
+if [ -z "$DEBFILE" ] || [ ! -f "$DEBFILE" ]; then
+  DEBFILE="$CWD/Plasticity-${VERSION}-build-${DEBARCH}.deb"
+  PRIMARY_URL="https://github.com/nkallen/plasticity/releases/download/v${VERSION}/Plasticity-${VERSION}-build-${DEBARCH}.deb"
+  echo "Downloading $PRIMARY_URL..."
+  curl -sSL -L -A "Mozilla/5.0 (X11; Linux x86_64)" -o "$DEBFILE" "$PRIMARY_URL" || {
+    FALLBACK_URL="https://github.com/nkallen/plasticity/releases/download/v${VERSION}/plasticity_${VERSION}_${DEBARCH}.deb"
+    echo "Trying fallback URL $FALLBACK_URL..."
+    curl -sSL -L -A "Mozilla/5.0 (X11; Linux x86_64)" -o "$DEBFILE" "$FALLBACK_URL" || true
+  }
+fi
+
+if [ ! -f "$DEBFILE" ] || [ ! -s "$DEBFILE" ]; then
+  echo "ERROR: Unable to locate or download Plasticity deb package: ${DEBFILE}"
+  echo "Please place Plasticity-${VERSION}-build-${DEBARCH}.deb into ${CWD} and re-run."
+  exit 1
+fi
+
+echo "Extracting $(basename "$DEBFILE")..."
+mkdir -p extract_payload
+cd extract_payload
+ar p "$DEBFILE" data.tar.xz 2>/dev/null | tar -xJf - 2>/dev/null || \
+ar p "$DEBFILE" data.tar.zst 2>/dev/null | tar --zstd -xf - 2>/dev/null || \
+ar p "$DEBFILE" data.tar.gz 2>/dev/null | tar -xzf - 2>/dev/null || {
+  echo "ERROR: Failed to extract data archive from deb package."
+  exit 1
+}
+
+# Copy payload into package root
+mkdir -p "$PKG/opt/plasticity" "$PKG/usr/share"
+if [ -d opt/Plasticity ]; then
+  cp -a opt/Plasticity/* "$PKG/opt/plasticity/"
+elif [ -d opt/plasticity ]; then
+  cp -a opt/plasticity/* "$PKG/opt/plasticity/"
+elif [ -d usr/lib/plasticity ]; then
+  cp -a usr/lib/plasticity/* "$PKG/opt/plasticity/"
+elif [ -d usr/share/plasticity ]; then
+  cp -a usr/share/plasticity/* "$PKG/opt/plasticity/"
+fi
+
+if [ -d usr/share/applications ]; then
+  mkdir -p "$PKG/usr/share/applications"
+  cp -a usr/share/applications/* "$PKG/usr/share/applications/" 2>/dev/null || true
+fi
+
+if [ -d usr/share/icons ]; then
+  mkdir -p "$PKG/usr/share/icons"
+  cp -a usr/share/icons/* "$PKG/usr/share/icons/" 2>/dev/null || true
+fi
+
+if [ -d usr/share/pixmaps ]; then
+  mkdir -p "$PKG/usr/share/pixmaps"
+  cp -a usr/share/pixmaps/* "$PKG/usr/share/pixmaps/" 2>/dev/null || true
+fi
+
+cd ..
+
+# Fix /usr/bin launcher script
+mkdir -p "$PKG/usr/bin"
+cat << 'EOF' > "$PKG/usr/bin/plasticity"
+#!/usr/bin/env bash
+# Plasticity 3D CAD Launcher with GPU/Dawn Acceleration Shield
+set -euo pipefail
+
+PLASTICITY_PATH="/opt/plasticity/plasticity"
+[ -x "${PLASTICITY_PATH}" ] || PLASTICITY_PATH="/opt/plasticity/Plasticity"
+
+FLAGS=()
+# If running under Wayland, enable native Wayland ozone platform
+if [ -n "${WAYLAND_DISPLAY:-}" ]; then
+  FLAGS+=(--ozone-platform=wayland --enable-features=WaylandWindowDecorations,Vulkan,UseSkiaRenderer)
+fi
+
+exec "${PLASTICITY_PATH}" "${FLAGS[@]}" "$@"
+EOF
+chmod 755 "$PKG/usr/bin/plasticity"
+
+# Fix chrome-sandbox permissions
+if [ -f "$PKG/opt/plasticity/chrome-sandbox" ]; then
+  chmod 4755 "$PKG/opt/plasticity/chrome-sandbox"
+fi
+
+# Fix desktop entry
+if [ -f "$PKG/usr/share/applications/plasticity.desktop" ]; then
+  sed -i 's|^Exec=.*|Exec=/usr/bin/plasticity %U|g' "$PKG/usr/share/applications/plasticity.desktop"
+  sed -i 's|^TryExec=.*|TryExec=plasticity|g' "$PKG/usr/share/applications/plasticity.desktop"
+elif [ -f "$PKG/usr/share/applications/Plasticity.desktop" ]; then
+  mv "$PKG/usr/share/applications/Plasticity.desktop" "$PKG/usr/share/applications/plasticity.desktop"
+  sed -i 's|^Exec=.*|Exec=/usr/bin/plasticity %U|g' "$PKG/usr/share/applications/plasticity.desktop"
+  sed -i 's|^TryExec=.*|TryExec=plasticity|g' "$PKG/usr/share/applications/plasticity.desktop"
+else
+  mkdir -p "$PKG/usr/share/applications"
+  cat << 'DESK_EOF' > "$PKG/usr/share/applications/plasticity.desktop"
+[Desktop Entry]
+Name=Plasticity
+Comment=3D CAD for Concept Artists
+Exec=/usr/bin/plasticity %U
+Icon=plasticity
+Terminal=false
+Type=Application
+Categories=Graphics;3DGraphics;Engineering;
+MimeType=model/step;model/iges;application/x-plasticity;
+DESK_EOF
+fi
+
+# Permissions sanity
+cd "$PKG"
+chown -R root:root . 2>/dev/null || true
+find -L . \
+  \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 -o -perm 511 \) \
+  -exec chmod 755 {} \; -o \
+  \( -perm 666 -o -perm 664 -o -perm 640 -o -perm 600 -o -perm 444 -o -perm 440 -o -perm 400 \) \
+  -exec chmod 644 {} \;
+
+# Preserve suid on sandbox
+[ -f "$PKG/opt/plasticity/chrome-sandbox" ] && chmod 4755 "$PKG/opt/plasticity/chrome-sandbox"
+[ -f "$PKG/opt/plasticity/plasticity" ] && chmod 755 "$PKG/opt/plasticity/plasticity"
+[ -f "$PKG/opt/plasticity/Plasticity" ] && chmod 755 "$PKG/opt/plasticity/Plasticity"
+
+# Strip binaries (skip electron asar and packed resources)
+find "$PKG/opt/plasticity" -type f -maxdepth 2 -exec file {} + 2>/dev/null \
+  | grep -E "ELF.*(executable|shared object)" \
+  | cut -d: -f1 \
+  | xargs strip --strip-unneeded 2>/dev/null || true
+
+# Documentation
+mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION"
+[ -f "$CWD/slack-desc" ] && cp -a "$CWD/slack-desc" "$PKG/usr/doc/$PRGNAM-$VERSION/slack-desc"
+[ -f "$CWD/plasticity.info" ] && cp -a "$CWD/plasticity.info" "$PKG/usr/doc/$PRGNAM-$VERSION/plasticity.info"
+[ -f "$CWD/README" ] && cp -a "$CWD/README" "$PKG/usr/doc/$PRGNAM-$VERSION/README"
+
+# Install Script
+mkdir -p "$PKG/install"
+[ -f "$CWD/slack-desc" ] && cp -a "$CWD/slack-desc" "$PKG/install/slack-desc"
+[ -f "$CWD/doinst.sh" ] && cp -a "$CWD/doinst.sh" "$PKG/install/doinst.sh"
+
+# Create Slackware package
+cd "$PKG"
+/sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"
+
+echo "Package created successfully: $OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"

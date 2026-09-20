@@ -36,6 +36,80 @@ is_laptop_chassis() {
     return 1
 }
 
+has_realtek_2_5gbe_hardware() {
+    if [ -d "/sys/bus/pci/devices" ]; then
+        for dev in /sys/bus/pci/devices/*; do
+            [ -f "${dev}/vendor" ] && [ -f "${dev}/device" ] || continue
+            local vendor devid
+            vendor=$(cat "${dev}/vendor" 2>/dev/null || echo "")
+            devid=$(cat "${dev}/device" 2>/dev/null || echo "")
+            if [ "${vendor,,}" = "0x10ec" ]; then
+                case "${devid,,}" in
+                    "0x8125"|"0x3000")
+                        return 0
+                        ;;
+                esac
+            fi
+        done
+    fi
+    if command -v lspci >/dev/null 2>&1; then
+        if lspci -n 2>/dev/null | grep -qiE "10ec:(8125|3000)"; then
+            return 0
+        fi
+        if lspci 2>/dev/null | grep -qiE "RTL8125|Realtek.*2\.5G|Killer.*E3100"; then
+            return 0
+        fi
+    fi
+    return 1
+}
+
+is_r8125_enabled() {
+    if [ -f "/etc/slacky-update/r8125.enabled" ] || [ -f "/var/cache/slacky-update/r8125.enabled" ]; then
+        return 0
+    fi
+    if ls /var/log/packages/*r8125* >/dev/null 2>&1; then
+        return 0
+    fi
+    if find /lib/modules /usr/lib/modules -name "r8125.ko*" 2>/dev/null | grep -q "r8125"; then
+        return 0
+    fi
+    return 1
+}
+
+is_r8125_wanted() {
+    local kver="${1:-}"
+    if ! has_realtek_2_5gbe_hardware; then
+        return 1
+    fi
+    if [ -f "/etc/slacky-update/r8125.disabled" ]; then
+        return 1
+    fi
+    if is_r8125_enabled; then
+        return 0
+    fi
+
+    # First-time interactive prompt
+    if [ -t 0 ] || [ -n "${PS1:-}" ] || [ "${INTERACTIVE:-0}" = "1" ]; then
+        echo ""
+        log_info "$(_ HARDWARE_REALTEK_2_5GBE_DETECTED 2>/dev/null || echo "⚡ Realtek 2.5GbE Ethernet NIC detected (RTL8125).")"
+        echo -n "$(_ PROMPT_INSTALL_R8125_MODULE version="${kver:-latest}" 2>/dev/null || echo "Would you like to auto-install the high-performance CachyOS r8125 module? [Y/n]: ")"
+        local reply_r8125
+        read -r reply_r8125 || reply_r8125="Y"
+        reply_r8125=${reply_r8125:-Y}
+        if [[ "${reply_r8125}" =~ ^[YyJjSsOo]$ ]]; then
+            sudo mkdir -p /etc/slacky-update /var/cache/slacky-update 2>/dev/null || true
+            sudo touch /etc/slacky-update/r8125.enabled 2>/dev/null || touch /var/cache/slacky-update/r8125.enabled 2>/dev/null || true
+            log_success "Realtek r8125 module auto-sync enabled for CachyOS kernels."
+            return 0
+        else
+            sudo mkdir -p /etc/slacky-update /var/cache/slacky-update 2>/dev/null || true
+            sudo touch /etc/slacky-update/r8125.disabled 2>/dev/null || true
+            return 1
+        fi
+    fi
+    return 1
+}
+
 get_cachyos_repo_url() {
     local tier="$1"
     case "${tier}" in
@@ -73,8 +147,16 @@ import os, re
 def get_flavor(k_str):
     if '-cachyos-bore-lto' in k_str or '-cachyos-lto' in k_str:
         return 'lto'
+    elif '-cachyos-rt-bore' in k_str or '-cachyos-rt' in k_str:
+        return 'rt-bore'
     elif '-cachyos-bore' in k_str:
         return 'bore'
+    elif '-cachyos-eevdf' in k_str:
+        return 'eevdf'
+    elif '-cachyos-bmq' in k_str:
+        return 'bmq'
+    elif '-cachyos-deckify' in k_str:
+        return 'deckify'
     elif '-cachyos-rc' in k_str:
         return 'rc'
     elif '-cachyos-lts' in k_str:
@@ -129,8 +211,16 @@ import os, re
 def get_flavor(k_str):
     if '-cachyos-bore-lto' in k_str or '-cachyos-lto' in k_str:
         return 'lto'
+    elif '-cachyos-rt-bore' in k_str or '-cachyos-rt' in k_str:
+        return 'rt-bore'
     elif '-cachyos-bore' in k_str:
         return 'bore'
+    elif '-cachyos-eevdf' in k_str:
+        return 'eevdf'
+    elif '-cachyos-bmq' in k_str:
+        return 'bmq'
+    elif '-cachyos-deckify' in k_str:
+        return 'deckify'
     elif '-cachyos-rc' in k_str:
         return 'rc'
     elif '-cachyos-lts' in k_str:
@@ -246,6 +336,18 @@ check_cachyos_upstream_flavor() {
     elif [ "${flavor}" = "lto" ]; then
         k_prefix="linux-cachyos-bore-lto"
         h_prefix="linux-cachyos-bore-lto-headers"
+    elif [ "${flavor}" = "eevdf" ]; then
+        k_prefix="linux-cachyos-eevdf"
+        h_prefix="linux-cachyos-eevdf-headers"
+    elif [ "${flavor}" = "bmq" ]; then
+        k_prefix="linux-cachyos-bmq"
+        h_prefix="linux-cachyos-bmq-headers"
+    elif [ "${flavor}" = "deckify" ]; then
+        k_prefix="linux-cachyos-deckify"
+        h_prefix="linux-cachyos-deckify-headers"
+    elif [ "${flavor}" = "rt-bore" ]; then
+        k_prefix="linux-cachyos-rt-bore"
+        h_prefix="linux-cachyos-rt-bore-headers"
     elif [ "${flavor}" = "rc" ]; then
         k_prefix="linux-cachyos-rc"
         h_prefix="linux-cachyos-rc-headers"
@@ -263,6 +365,7 @@ repo_url = sys.argv[1]
 k_pref = sys.argv[2]
 h_pref = sys.argv[3]
 nv_pref = k_pref + '-nvidia-open'
+r8125_pref = k_pref + '-r8125'
 
 def get_cache_dir():
     for d in ['/var/cache/slacky-update', os.path.expanduser('~/.cache/slacky-update'), '/tmp/slacky-update-cache']:
@@ -305,15 +408,16 @@ def fetch_url_cached(url, cdir, ttl=1800):
 
 html = fetch_url_cached(repo_url, cache_dir)
 if not html:
-    print('NONE NONE NONE NONE')
+    print('NONE NONE NONE NONE NONE')
     sys.exit(0)
 
 k_matches = re.findall(r'href=[\'\"]?(' + re.escape(k_pref) + r'-([0-9]+\.[0-9]+[a-zA-Z0-9\._]*-[0-9]+)[^\'\">]*\.pkg\.tar\.zst)', html)
 h_matches = re.findall(r'href=[\'\"]?(' + re.escape(h_pref) + r'-([0-9]+\.[0-9]+[a-zA-Z0-9\._]*-[0-9]+)[^\'\">]*\.pkg\.tar\.zst)', html)
 nv_matches = re.findall(r'href=[\'\"]?(' + re.escape(nv_pref) + r'-([0-9]+\.[0-9]+[a-zA-Z0-9\._]*-[0-9]+)[^\'\">]*\.pkg\.tar\.zst)', html)
+r8125_matches = re.findall(r'href=[\'\"]?(' + re.escape(r8125_pref) + r'-([0-9]+\.[0-9]+[a-zA-Z0-9\._]*-[0-9]+)[^\'\">]*\.pkg\.tar\.zst)', html)
 
 if not k_matches or not h_matches:
-    print('NONE NONE NONE NONE')
+    print('NONE NONE NONE NONE NONE')
     sys.exit(0)
 
 def parse_ver_key(v_str):
@@ -333,17 +437,25 @@ if nv_matches:
     except StopIteration:
         pass
 
-print(f'{latest_ver} {repo_url}{k_pkg} {repo_url}{h_pkg} {nv_url}')
+r8125_url = 'NONE'
+if r8125_matches:
+    try:
+        r8125_pkg = next(m[0] for m in r8125_matches if m[1] == latest_ver)
+        r8125_url = f'{repo_url}{r8125_pkg}'
+    except StopIteration:
+        pass
+
+print(f'{latest_ver} {repo_url}{k_pkg} {repo_url}{h_pkg} {nv_url} {r8125_url}')
 PYKERNELFETCH
 )
 
-        if [ "${result}" != "NONE NONE NONE NONE" ] && [ -n "${result}" ]; then
+        if [ "${result}" != "NONE NONE NONE NONE NONE" ] && [ -n "${result}" ]; then
             echo "${result}"
             return 0
         fi
     done
 
-    echo "NONE NONE NONE NONE"
+    echo "NONE NONE NONE NONE NONE"
 }
 
 check_latest_cachyos_upstream() {
@@ -356,8 +468,8 @@ deploy_cachyos_kernel_flavor() {
     probe_gpu_hardware
 
     log_info "Fetching latest ${flavor} CachyOS kernel metadata from upstream..."
-    local latest_ver k_url h_url nv_url
-    read -r latest_ver k_url h_url nv_url <<< "$(check_cachyos_upstream_flavor "${flavor}" || echo "NONE NONE NONE NONE")"
+    local latest_ver k_url h_url nv_url r8125_url
+    read -r latest_ver k_url h_url nv_url r8125_url <<< "$(check_cachyos_upstream_flavor "${flavor}" || echo "NONE NONE NONE NONE NONE")"
 
     if [ "${latest_ver}" = "NONE" ] || [ -z "${k_url}" ]; then
         log_error "Could not resolve CachyOS ${flavor} kernel from mirrors."
@@ -379,8 +491,15 @@ deploy_cachyos_kernel_flavor() {
         fi
     fi
 
+    local target_r8125="NONE"
+    if [ "${r8125_url}" != "NONE" ] && [ -n "${r8125_url}" ]; then
+        if is_r8125_wanted "${latest_ver}"; then
+            target_r8125="${r8125_url}"
+        fi
+    fi
+
     log_info "Deploying CachyOS ${flavor} kernel (v${latest_ver})..."
-    deploy_cachyos_kernel_packages "${latest_ver}" "${k_url}" "${h_url}" "${flavor}" "${nv_url}"
+    deploy_cachyos_kernel_packages "${latest_ver}" "${k_url}" "${h_url}" "${flavor}" "${nv_url}" "${target_r8125}"
     if command -v purge_old_cachyos_kernels >/dev/null 2>&1; then
         purge_old_cachyos_kernels
     fi
@@ -402,9 +521,9 @@ update_cachyos_kernels() {
     local flavors_to_update=()
 
     for flv in ${installed_flavors}; do
-        local cur_ver latest_ver k_url h_url nv_url
+        local cur_ver latest_ver k_url h_url nv_url r8125_url
         cur_ver=$(get_installed_cachyos_flavor_version "${flv}" 2>/dev/null || echo "NONE")
-        read -r latest_ver k_url h_url nv_url <<< "$(check_cachyos_upstream_flavor "${flv}" || echo "NONE NONE NONE NONE")"
+        read -r latest_ver k_url h_url nv_url r8125_url <<< "$(check_cachyos_upstream_flavor "${flv}" || echo "NONE NONE NONE NONE NONE")"
         if [ "${latest_ver}" != "NONE" ] && [ -n "${latest_ver}" ] && [ "${cur_ver}" != "NONE" ]; then
             if [ "$(compare_versions_strictly_greater "${latest_ver}" "${cur_ver}")" = "true" ]; then
                 echo -e "\n${GREEN}${BOLD}Upgrade available for ${flv}: v${cur_ver} -> v${latest_ver}${RESET}"
@@ -420,15 +539,15 @@ update_cachyos_kernels() {
         return 0
     fi
 
-    # Pre-fetch all kernel, headers and module packages for all target flavors in a single parallel batch
+    # Pre-fetch all kernel, headers, nvidia and r8125 module packages for all target flavors in a single parallel batch
     local staging_dir
     staging_dir=$(get_user_staging_dir)
     mkdir -p "${staging_dir}"
 
     local dl_items=()
     for flv in "${flavors_to_update[@]}"; do
-        local latest_ver k_url h_url nv_url
-        read -r latest_ver k_url h_url nv_url <<< "$(check_cachyos_upstream_flavor "${flv}" || echo "NONE NONE NONE NONE")"
+        local latest_ver k_url h_url nv_url r8125_url
+        read -r latest_ver k_url h_url nv_url r8125_url <<< "$(check_cachyos_upstream_flavor "${flv}" || echo "NONE NONE NONE NONE NONE")"
         if [ "${k_url}" != "NONE" ] && [ -n "${k_url}" ]; then
             local kf="${staging_dir}/$(basename "${k_url}")"
             dl_items+=("${k_url}|${kf}|${k_url}.sig|${kf}.sig")
@@ -440,6 +559,12 @@ update_cachyos_kernels() {
         if [ "${nv_url}" != "NONE" ] && [ -n "${nv_url}" ]; then
             local nvf="${staging_dir}/$(basename "${nv_url}")"
             dl_items+=("${nv_url}|${nvf}|${nv_url}.sig|${nvf}.sig")
+        fi
+        if [ "${r8125_url}" != "NONE" ] && [ -n "${r8125_url}" ]; then
+            if is_r8125_wanted "${latest_ver}"; then
+                local rf="${staging_dir}/$(basename "${r8125_url}")"
+                dl_items+=("${r8125_url}|${rf}|${r8125_url}.sig|${rf}.sig")
+            fi
         fi
     done
 
@@ -854,10 +979,14 @@ for k, data in sorted(kernels.items()):
 
 cachyos_kernel_picker_interactive() {
     while true; do
-        local st_ver bo_ver lto_ver rc_ver lts_ver
+        local st_ver bo_ver lto_ver eevdf_ver bmq_ver deck_ver rtbore_ver rc_ver lts_ver
         st_ver=$(get_installed_cachyos_flavor_version "standard")
         bo_ver=$(get_installed_cachyos_flavor_version "bore")
         lto_ver=$(get_installed_cachyos_flavor_version "lto")
+        eevdf_ver=$(get_installed_cachyos_flavor_version "eevdf")
+        bmq_ver=$(get_installed_cachyos_flavor_version "bmq")
+        deck_ver=$(get_installed_cachyos_flavor_version "deckify")
+        rtbore_ver=$(get_installed_cachyos_flavor_version "rt-bore")
         rc_ver=$(get_installed_cachyos_flavor_version "rc")
         lts_ver=$(get_installed_cachyos_flavor_version "lts")
 
@@ -870,11 +999,19 @@ cachyos_kernel_picker_interactive() {
         local st_tag="[NOT INSTALLED]"
         local bo_tag="[NOT INSTALLED]"
         local lto_tag="[NOT INSTALLED]"
+        local eevdf_tag="[NOT INSTALLED]"
+        local bmq_tag="[NOT INSTALLED]"
+        local deck_tag="[NOT INSTALLED]"
+        local rtbore_tag="[NOT INSTALLED]"
         local rc_tag="[NOT INSTALLED]"
         local lts_tag="[NOT INSTALLED]"
         [ "${st_ver}" != "NONE" ] && st_tag="[INSTALLED: ${st_ver}]"
         [ "${bo_ver}" != "NONE" ] && bo_tag="[INSTALLED: ${bo_ver}]"
         [ "${lto_ver}" != "NONE" ] && lto_tag="[INSTALLED: ${lto_ver}]"
+        [ "${eevdf_ver}" != "NONE" ] && eevdf_tag="[INSTALLED: ${eevdf_ver}]"
+        [ "${bmq_ver}" != "NONE" ] && bmq_tag="[INSTALLED: ${bmq_ver}]"
+        [ "${deck_ver}" != "NONE" ] && deck_tag="[INSTALLED: ${deck_ver}]"
+        [ "${rtbore_ver}" != "NONE" ] && rtbore_tag="[INSTALLED: ${rtbore_ver}]"
         [ "${rc_ver}" != "NONE" ] && rc_tag="[INSTALLED: ${rc_ver}]"
         [ "${lts_ver}" != "NONE" ] && lts_tag="[INSTALLED: ${lts_ver}]"
         if [ "${HAS_NVIDIA}" = "true" ] && { [ "${gpu_arch}" = "PASCAL" ] || [ "${gpu_arch}" = "LEGACY" ]; }; then
@@ -891,15 +1028,23 @@ cachyos_kernel_picker_interactive() {
         echo -e "     $(_ CACHY_FLAVOR_BORE)"
         echo -e "  3. \033[1;32mlinux-cachyos-bore-lto\033[0m ${lto_tag}"
         echo -e "     $(_ CACHY_FLAVOR_LTO)"
-        echo -e "  4. \033[1;32mlinux-cachyos-rc\033[0m ${rc_tag}"
+        echo -e "  4. \033[1;32mlinux-cachyos-eevdf\033[0m ${eevdf_tag}"
+        echo -e "     $(_ CACHY_FLAVOR_EEVDF)"
+        echo -e "  5. \033[1;32mlinux-cachyos-bmq\033[0m ${bmq_tag}"
+        echo -e "     $(_ CACHY_FLAVOR_BMQ)"
+        echo -e "  6. \033[1;32mlinux-cachyos-deckify\033[0m ${deck_tag}"
+        echo -e "     $(_ CACHY_FLAVOR_DECKIFY)"
+        echo -e "  7. \033[1;32mlinux-cachyos-rt-bore\033[0m ${rtbore_tag}"
+        echo -e "     $(_ CACHY_FLAVOR_RT_BORE)"
+        echo -e "  8. \033[1;32mlinux-cachyos-rc\033[0m ${rc_tag}"
         echo -e "     $(_ CACHY_FLAVOR_RC)"
-        echo -e "  5. \033[1;32mlinux-cachyos-lts\033[0m ${lts_tag}"
+        echo -e "  9. \033[1;32mlinux-cachyos-lts\033[0m ${lts_tag}"
         echo -e "     $(_ CACHY_FLAVOR_LTS)"
-        echo -e "  6. $(_ CACHY_PICKER_EXIT | sed -E 's/^[0-9]+\.\s*//')"
+        echo -e " 10. $(_ CACHY_PICKER_EXIT | sed -E 's/^[0-9]+\.\s*//')"
         echo ""
-        echo -n "$(_ SELECT_OPERATION_RANGE range="1-6") "
+        echo -n "$(_ SELECT_OPERATION_RANGE range="1-10") "
         local pchoice
-        read -r pchoice || pchoice="6"
+        read -r pchoice || pchoice="10"
 
         case "${pchoice}" in
             1)
@@ -922,6 +1067,30 @@ cachyos_kernel_picker_interactive() {
                 ;;
             4)
                 echo ""
+                deploy_cachyos_kernel_flavor "eevdf"
+                echo ""
+                read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                ;;
+            5)
+                echo ""
+                deploy_cachyos_kernel_flavor "bmq"
+                echo ""
+                read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                ;;
+            6)
+                echo ""
+                deploy_cachyos_kernel_flavor "deckify"
+                echo ""
+                read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                ;;
+            7)
+                echo ""
+                deploy_cachyos_kernel_flavor "rt-bore"
+                echo ""
+                read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                ;;
+            8)
+                echo ""
                 if [ "${HAS_NVIDIA}" = "true" ] && { [ "${gpu_arch}" = "PASCAL" ] || [ "${gpu_arch}" = "LEGACY" ]; }; then
                     log_error "Safety Guardrail: CachyOS Release Candidate (RC) kernels require minimum RTX 20-series (Turing) with precompiled open drivers and do not support Pascal or DKMS."
                 else
@@ -930,13 +1099,13 @@ cachyos_kernel_picker_interactive() {
                 echo ""
                 read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
                 ;;
-            5)
+            9)
                 echo ""
                 deploy_cachyos_kernel_flavor "lts"
                 echo ""
                 read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
                 ;;
-            6)
+            10)
                 return 0
                 ;;
             *)
@@ -1057,8 +1226,16 @@ def rank(k):
     tier = -50
     if '-cachyos-bore-lto' in b or '-cachyos-lto' in b:
         tier = 50
+    elif '-cachyos-rt-bore' in b or '-cachyos-rt' in b:
+        tier = 45
     elif '-cachyos-bore' in b:
         tier = 40
+    elif '-cachyos-eevdf' in b:
+        tier = 38
+    elif '-cachyos-bmq' in b:
+        tier = 36
+    elif '-cachyos-deckify' in b:
+        tier = 34
     elif '-cachyos' in b and '-rc' not in b and '-lts' not in b:
         tier = 30
     elif '-cachyos-lts' in b:
@@ -1105,15 +1282,23 @@ import os, re
 def rank_kernel(k):
     tier = -2
     if '-cachyos-bore-lto' in k or '-cachyos-lto' in k:
-        tier = 5
+        tier = 50
+    elif '-cachyos-rt-bore' in k or '-cachyos-rt' in k:
+        tier = 45
     elif '-cachyos-bore' in k:
-        tier = 4
+        tier = 40
+    elif '-cachyos-eevdf' in k:
+        tier = 38
+    elif '-cachyos-bmq' in k:
+        tier = 36
+    elif '-cachyos-deckify' in k:
+        tier = 34
     elif '-cachyos-lts' in k:
-        tier = 2
+        tier = 20
     elif '-cachyos-rc' in k:
-        tier = 1
+        tier = 10
     elif '-cachyos' in k:
-        tier = 3
+        tier = 30
     elif 'vmlinuz-generic' in k:
         tier = 0
     elif 'vmlinuz-huge' in k:
@@ -1345,12 +1530,101 @@ check_boot_disk_space() {
     return 0
 }
 
+# --- [ MULTI-KERNEL DKMS ENGINE & ANTI-RACE-CONDITION SHIELD ] ---
+build_dkms_modules_for_all_kernels() {
+    local target_mod="${1:-all}"
+    local target_ver="${2:-}"
+
+    if ! command -v dkms >/dev/null 2>&1; then
+        return 0
+    fi
+
+    local depmod_bin
+    depmod_bin=$(command -v depmod 2>/dev/null || echo "/sbin/depmod")
+
+    # Discover all kernel versions with valid headers/build directory
+    local target_kernels=()
+    local all_kdirs
+    all_kdirs=$(find /lib/modules /usr/lib/modules -maxdepth 1 -mindepth 1 -type d 2>/dev/null | sort -u || true)
+    for kpath in ${all_kdirs}; do
+        local kver
+        kver=$(basename "${kpath}")
+        # Check if build directory / Makefile exists
+        if [ -d "${kpath}/build" ] || [ -f "${kpath}/build/Makefile" ] || [ -d "/usr/src/linux-headers-${kver}" ]; then
+            local already=0
+            for ek in "${target_kernels[@]:-}"; do
+                [ "${ek}" = "${kver}" ] && already=1 && break
+            done
+            [ "${already}" -eq 0 ] && target_kernels+=("${kver}")
+        fi
+    done
+
+    if [ "${#target_kernels[@]}" -eq 0 ]; then
+        return 0
+    fi
+
+    # Retrieve registered DKMS modules
+    local dkms_modules=()
+    if [ "${target_mod}" != "all" ] && [ -n "${target_ver}" ]; then
+        dkms_modules+=("${target_mod}/${target_ver}")
+    else
+        while IFS= read -r line; do
+            [ -n "${line}" ] || continue
+            dkms_modules+=("${line}")
+        done <<< "$(dkms status 2>/dev/null | awk -F'[,/]' '{print $1"/"$2}' | tr -d ' ' | sort -u)"
+    fi
+
+    if [ "${#dkms_modules[@]}" -eq 0 ]; then
+        return 0
+    fi
+
+    log_info "⚡ DKMS Multi-Kernel Engine: Auditing modules across ${#target_kernels[@]} kernel trees..."
+
+    for kver in "${target_kernels[@]}"; do
+        local has_precompiled_nvidia=false
+        if find "/lib/modules/${kver}" "/usr/lib/modules/${kver}" -name "nvidia*.ko*" 2>/dev/null | grep -q "nvidia"; then
+            has_precompiled_nvidia=true
+        fi
+
+        for mod_entry in "${dkms_modules[@]}"; do
+            [ -n "${mod_entry}" ] || continue
+            local m_name m_ver
+            IFS='/' read -r m_name m_ver <<< "${mod_entry}"
+
+            # Safety Shield: Never compile NVIDIA DKMS if precompiled nvidia modules are present in kernel tree
+            if [ "${m_name}" = "nvidia" ] && [ "${has_precompiled_nvidia}" = "true" ]; then
+                continue
+            fi
+
+            # Check if already installed for this kernel
+            if dkms status -m "${m_name}" -v "${m_ver}" -k "${kver}" 2>/dev/null | grep -q "installed"; then
+                continue
+            fi
+
+            log_info "Building DKMS module ${m_name} (v${m_ver}) for kernel ${kver}..."
+            sudo dkms build -m "${m_name}" -v "${m_ver}" -k "${kver}" 2>/dev/null || {
+                log_warn "DKMS build warning for ${m_name} on ${kver}"
+                continue
+            }
+            sudo dkms install -m "${m_name}" -v "${m_ver}" -k "${kver}" 2>/dev/null || {
+                log_warn "DKMS install warning for ${m_name} on ${kver}"
+            }
+        done
+
+        # Re-index module tree
+        sudo "${depmod_bin}" -a "${kver}" 2>/dev/null || true
+    done
+
+    log_success "DKMS Multi-Kernel synchronization complete across all installed kernels."
+}
+
 deploy_cachyos_kernel_packages() {
     local ver="$1"
     local k_url="$2"
     local h_url="$3"
     local flavor="${4:-standard}"
     local nv_url="${5:-NONE}"
+    local r8125_url="${6:-NONE}"
     probe_gpu_hardware
 
     local staging_dir
@@ -1377,9 +1651,16 @@ deploy_cachyos_kernel_packages() {
         dl_items+=("${nv_url}|${nv_file}|${nv_url}.sig|${nv_file}.sig")
     fi
 
+    local r8125_filename="" r8125_file=""
+    if [ "${r8125_url}" != "NONE" ] && [ -n "${r8125_url}" ]; then
+        r8125_filename=$(basename "${r8125_url}")
+        r8125_file="${staging_dir}/${r8125_filename}"
+        dl_items+=("${r8125_url}|${r8125_file}|${r8125_url}.sig|${r8125_file}.sig")
+    fi
+
     if ! download_parallel_pacman "CachyOS Kernel (${flavor})" "${dl_items[@]}"; then
         log_error "Failed to download CachyOS kernel packages."
-        rm -f "${k_file}" "${h_file}" "${k_sig_file}" "${h_sig_file}" "${nv_file}" "${nv_file}.sig" 2>/dev/null || true
+        rm -f "${k_file}" "${h_file}" "${k_sig_file}" "${h_sig_file}" "${nv_file}" "${nv_file}.sig" "${r8125_file}" "${r8125_file}.sig" 2>/dev/null || true
         return 1
     fi
 
@@ -1426,6 +1707,14 @@ deploy_cachyos_kernel_packages() {
             if [ ! -d "/usr/lib/modules/${kver_full}" ] && [ -d "/usr/lib/modules/${ver_clean}-cachyos-lto" ]; then
                 kver_full="${ver_clean}-cachyos-lto"
             fi
+        elif [ "${flavor}" = "eevdf" ]; then
+            kver_full="${ver_clean}-cachyos-eevdf"
+        elif [ "${flavor}" = "bmq" ]; then
+            kver_full="${ver_clean}-cachyos-bmq"
+        elif [ "${flavor}" = "deckify" ]; then
+            kver_full="${ver_clean}-cachyos-deckify"
+        elif [ "${flavor}" = "rt-bore" ]; then
+            kver_full="${ver_clean}-cachyos-rt-bore"
         elif [ "${flavor}" = "rc" ]; then
             kver_full="${ver_clean}-cachyos-rc"
         elif [ "${flavor}" = "lts" ]; then
@@ -1469,6 +1758,14 @@ deploy_cachyos_kernel_packages() {
         sudo cp -f "/boot/vmlinuz-linux-cachyos-bore-lto" "/boot/vmlinuz-${kver_full}"
     elif [ -f "/boot/vmlinuz-linux-cachyos-bore" ] && [ "${flavor}" = "bore" ]; then
         sudo cp -f "/boot/vmlinuz-linux-cachyos-bore" "/boot/vmlinuz-${kver_full}"
+    elif [ -f "/boot/vmlinuz-linux-cachyos-eevdf" ] && [ "${flavor}" = "eevdf" ]; then
+        sudo cp -f "/boot/vmlinuz-linux-cachyos-eevdf" "/boot/vmlinuz-${kver_full}"
+    elif [ -f "/boot/vmlinuz-linux-cachyos-bmq" ] && [ "${flavor}" = "bmq" ]; then
+        sudo cp -f "/boot/vmlinuz-linux-cachyos-bmq" "/boot/vmlinuz-${kver_full}"
+    elif [ -f "/boot/vmlinuz-linux-cachyos-deckify" ] && [ "${flavor}" = "deckify" ]; then
+        sudo cp -f "/boot/vmlinuz-linux-cachyos-deckify" "/boot/vmlinuz-${kver_full}"
+    elif [ -f "/boot/vmlinuz-linux-cachyos-rt-bore" ] && [ "${flavor}" = "rt-bore" ]; then
+        sudo cp -f "/boot/vmlinuz-linux-cachyos-rt-bore" "/boot/vmlinuz-${kver_full}"
     elif [ -f "/boot/vmlinuz-linux-cachyos-rc" ] && [ "${flavor}" = "rc" ]; then
         sudo cp -f "/boot/vmlinuz-linux-cachyos-rc" "/boot/vmlinuz-${kver_full}"
     elif [ -f "/boot/vmlinuz-linux-cachyos-lts" ] && [ "${flavor}" = "lts" ]; then
@@ -1486,6 +1783,17 @@ deploy_cachyos_kernel_packages() {
         sudo ln -sf "${headers_dir}" "/lib/modules/${kver_full}/source"
     elif [ -d "/usr/lib/modules/${kver_full}/build" ]; then
         sudo ln -sf "/usr/lib/modules/${kver_full}/build" "/lib/modules/${kver_full}/source"
+    fi
+
+    # Deploy Realtek 2.5GbE (r8125) module if supplied
+    if [ -n "${r8125_file}" ] && [ -f "${r8125_file}" ]; then
+        if verify_cachyos_package_integrity "${r8125_file}"; then
+            log_info "Deploying matching Realtek 2.5GbE (r8125) module for ${kver_full}..."
+            sudo tar --zstd -xf "${r8125_file}" -C /
+            log_success "$(_ R8125_DEPLOY_SUCCESS version="${kver_full}" 2>/dev/null || echo "Realtek r8125 module successfully deployed for kernel ${kver_full}.")"
+        else
+            log_warn "Realtek r8125 package integrity verification failed! Skipping module extraction."
+        fi
     fi
 
     # Fetch and deploy matching CachyOS NVIDIA driver if on supported NVIDIA GPU
@@ -1603,19 +1911,7 @@ deploy_cachyos_kernel_packages() {
     fi
 
     if command -v dkms >/dev/null 2>&1; then
-        if find "/lib/modules/${kver_full}" "/usr/lib/modules/${kver_full}" -name "nvidia*.ko*" 2>/dev/null | grep -q "nvidia"; then
-            # Kernel already has precompiled NVIDIA modules (e.g. from CachyOS package).
-            # Build all non-nvidia registered DKMS modules (e.g. v4l2loopback, broadcom-wl, VirtualBox)
-            for mod_entry in $(dkms status 2>/dev/null | grep -v '^nvidia' | awk -F'[,/]' '{print $1"/"$2}' | tr -d ' ' | sort -u); do
-                [ -n "${mod_entry}" ] || continue
-                local m_name m_ver
-                IFS='/' read -r m_name m_ver <<< "${mod_entry}"
-                sudo dkms install -m "${m_name}" -v "${m_ver}" -k "${kver_full}" 2>/dev/null || true
-            done
-        else
-            log_info "Rebuilding registered DKMS modules for kernel: ${kver_full}..."
-            sudo dkms autoinstall -k "${kver_full}" 2>/dev/null || true
-        fi
+        build_dkms_modules_for_all_kernels
     fi
 
     if [ "${HAS_NVIDIA}" = "true" ]; then

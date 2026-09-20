@@ -204,5 +204,15 @@
   "TOPOLOGY_SCENARIO_A_TITLE": "LIMINE OPPSTARTSTOPOLOGI MIGRERING (SCENARIO A - COWABUNGA!)",
   "TOPOLOGY_SCENARIO_C_PROMPT": "Skanne og huke tak i en romslig partisjon (>= 3.5 GB) til /boot? [Y/n]: ",
   "TOPOLOGY_SCENARIO_C_TITLE": "LIMINE DEDIKERT ESP-PARTISJONSVEIVISER (SCENARIO C)",
-  "TOPOLOGY_SELECT_PARTITION": "Velg grom-partisjon som skal settes opp som /boot [1-{count}]: "
+  "TOPOLOGY_SELECT_PARTITION": "Velg grom-partisjon som skal settes opp som /boot [1-{count}]: ",
+  "CACHY_FLAVOR_EEVDF": "(EEVDF scheduler som knuser all latency i fleroppgavekjøring, megagromt!)",
+  "CACHY_FLAVOR_BMQ": "(Project C BitMap Queue scheduler, lynrask respons og gaming-morro!)",
+  "CACHY_FLAVOR_DECKIFY": "(Full pupp for Steam Deck, ROG Ally og håndholdte konsoller, Cowabunga!)",
+  "CACHY_FLAVOR_RT_BORE": "(Real-Time PREEMPT_RT + BORE for rå pro-lyd, streaming og null jitter!)",
+  "MENU_UNDERPANTS_GNOMES_TRAY": "🧙 Underpants Gnomes 📦",
+  "MENU_GNOMES_TUI": "🖥️ Terminal Console (TUI)",
+  "MENU_GNOMES_GUI": "🎨 Desktop Software Suite (GUI)",
+  "HARDWARE_REALTEK_2_5GBE_DETECTED": "⚡ Wowza! Rått Realtek 2.5GbE-nettverkskort oppdaga (RTL8125)!",
+  "PROMPT_INSTALL_R8125_MODULE": "Vil du dytte inn den rå CachyOS r8125-turbodriveren for kjerne {version}? [Y/n] ",
+  "R8125_DEPLOY_SUCCESS": "Cowabunga! Realtek r8125-driveren er fiksa og klar for {version}!"
 }

@@ -204,5 +204,15 @@
   "TOPOLOGY_SCENARIO_C_TITLE": "LIMINE DEDIKERT ESP-PARTISJONSVEIVISER (SCENARIO C)",
   "TOPOLOGY_SCENARIO_C_PROMPT": "Vil du skanne og velge en partisjon (>= 3.5 GB) for å sette opp som /boot? [Y/n]: ",
   "TOPOLOGY_NO_CANDIDATES": "Ingen egnede partisjoner (>= {min} MB) funnet utenom aktiv root/home/swap.",
-  "TOPOLOGY_SELECT_PARTITION": "Velg partisjon som skal konfigureres som /boot [1-{count}]: "
+  "TOPOLOGY_SELECT_PARTITION": "Velg partisjon som skal konfigureres som /boot [1-{count}]: ",
+  "CACHY_FLAVOR_EEVDF": "(Earliest Eligible Virtual Deadline First scheduler for responsiv fleroppgavekjøring)",
+  "CACHY_FLAVOR_BMQ": "(Project C BitMap Queue scheduler for lav latency og gaming)",
+  "CACHY_FLAVOR_DECKIFY": "(Optimalisert for Steam Deck, ROG Ally og håndholdt gaming)",
+  "CACHY_FLAVOR_RT_BORE": "(Real-Time PREEMPT_RT + BORE for ultra-lav latency og pro lyd/streaming)",
+  "MENU_UNDERPANTS_GNOMES_TRAY": "🧙 Underpants Gnomes 📦",
+  "MENU_GNOMES_TUI": "🖥️ Terminalkonsoll (TUI)",
+  "MENU_GNOMES_GUI": "🎨 Skrivebords-applikasjon (GUI)",
+  "HARDWARE_REALTEK_2_5GBE_DETECTED": "⚡ Realtek 2.5GbE nettverkskort oppdaget (RTL8125).",
+  "PROMPT_INSTALL_R8125_MODULE": "Vil du installere matchende CachyOS r8125-driver for kjerne {version}? [Y/n] ",
+  "R8125_DEPLOY_SUCCESS": "Realtek r8125-drivermodul ble vellykket installert for kjerne {version}."
 }

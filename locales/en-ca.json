@@ -204,5 +204,15 @@
   "TOPOLOGY_SCENARIO_A_TITLE": "LIMINE BOOT TOPOLOGY MIGRATION (SCENARIO A)",
   "TOPOLOGY_SCENARIO_C_PROMPT": "Would you like to scan and select a partition (>= 3.5 GB) to configure as /boot? [Y/n]: ",
   "TOPOLOGY_SCENARIO_C_TITLE": "LIMINE DEDICATED ESP ADOPTION WIZARD (SCENARIO C)",
-  "TOPOLOGY_SELECT_PARTITION": "Select partition to configure as /boot [1-{count}]: "
+  "TOPOLOGY_SELECT_PARTITION": "Select partition to configure as /boot [1-{count}]: ",
+  "CACHY_FLAVOR_EEVDF": "(EEVDF scheduler for responsive multi-tasking, eh)",
+  "CACHY_FLAVOR_BMQ": "(Project C BitMap Queue scheduler for low latency gaming, buddy)",
+  "CACHY_FLAVOR_DECKIFY": "(Steam Deck & handheld gaming optimized kernel, guy)",
+  "CACHY_FLAVOR_RT_BORE": "(Real-Time PREEMPT_RT + BORE for pro audio and streaming, eh)",
+  "MENU_UNDERPANTS_GNOMES_TRAY": "🧙 Underpants Gnomes 📦",
+  "MENU_GNOMES_TUI": "🖥️ Terminal Console (TUI)",
+  "MENU_GNOMES_GUI": "🎨 Desktop Software Suite (GUI)",
+  "HARDWARE_REALTEK_2_5GBE_DETECTED": "⚡ Realtek 2.5GbE Ethernet NIC detected (RTL8125), eh.",
+  "PROMPT_INSTALL_R8125_MODULE": "Would you like to install the matching CachyOS r8125 driver for kernel {version}, please? [Y/n] ",
+  "R8125_DEPLOY_SUCCESS": "Realtek r8125 module successfully deployed for kernel {version}, eh."
 }

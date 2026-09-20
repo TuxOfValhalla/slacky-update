@@ -204,5 +204,15 @@
   "TOPOLOGY_SCENARIO_A_TITLE": "LIMINE BOOT TOPOLOGY MIGRATION (SCENARIO A - COWABUNGA!)",
   "TOPOLOGY_SCENARIO_C_PROMPT": "Scan and jack into a spacious partition (>= 3.5 GB) for /boot? [Y/n]: ",
   "TOPOLOGY_SCENARIO_C_TITLE": "LIMINE DEDICATED ESP ADOPTION WIZARD (SCENARIO C)",
-  "TOPOLOGY_SELECT_PARTITION": "Pick your ride partition for /boot [1-{count}]: "
+  "TOPOLOGY_SELECT_PARTITION": "Pick your ride partition for /boot [1-{count}]: ",
+  "CACHY_FLAVOR_EEVDF": "(Most triumphant EEVDF scheduler for righteous multi-tasking)",
+  "CACHY_FLAVOR_BMQ": "(Bodacious BitMap Queue scheduler for lightning responsiveness)",
+  "CACHY_FLAVOR_DECKIFY": "(Fully tubular handheld gaming kernel for Deck & Ally, Cowabunga!)",
+  "CACHY_FLAVOR_RT_BORE": "(Real-Time PREEMPT_RT + BORE for pro audio, streaming & zero lag, Excellent!)",
+  "MENU_UNDERPANTS_GNOMES_TRAY": "🧙 Underpants Gnomes 📦",
+  "MENU_GNOMES_TUI": "🖥️ Terminal Console (TUI)",
+  "MENU_GNOMES_GUI": "🎨 Desktop Software Suite (GUI)",
+  "HARDWARE_REALTEK_2_5GBE_DETECTED": "⚡ Whoa! Bodacious Realtek 2.5GbE NIC detected (RTL8125)!",
+  "PROMPT_INSTALL_R8125_MODULE": "Wanna drop in the turbo-charged CachyOS r8125 driver for kernel {version}? [Y/n] ",
+  "R8125_DEPLOY_SUCCESS": "Cowabunga! Realtek r8125 module loaded and dialed in for {version}!"
 }

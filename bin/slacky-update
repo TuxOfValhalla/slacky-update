@@ -3,8 +3,8 @@
 
 set -euo pipefail
 
-CURRENT_VERSION="0.13.0"
-RELEASE_CODENAME="Birthday Clown Demolition"
+CURRENT_VERSION="0.14.0"
+RELEASE_CODENAME="Coco Jambo"
 
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 if [ -d "${SCRIPT_DIR}/../lib" ] && [ -f "${SCRIPT_DIR}/../lib/common.sh" ]; then
@@ -715,6 +715,11 @@ manage_nvidia_interactive() {
     fi
 }
 
+# --- [ UNDERPANTS GNOMES LAUNCHER ] ---
+launch_gnomes_station_interactive() {
+    interactive_cachyos_gaming_menu
+}
+
 # --- [ INTERACTIVE TERMINAL MENU ] ---
 interactive_menu() {
     INTERACTIVE_SESSION=1
@@ -772,7 +777,7 @@ interactive_menu() {
                     ;;
                 4)
                     echo ""
-                    interactive_cachyos_gaming_menu
+                    launch_gnomes_station_interactive
                     ;;
                 5)
                     echo ""
@@ -845,7 +850,7 @@ interactive_menu() {
                     ;;
                 4)
                     echo ""
-                    interactive_cachyos_gaming_menu
+                    launch_gnomes_station_interactive
                     ;;
                 5)
                     echo ""
@@ -908,7 +913,7 @@ interactive_menu() {
                     ;;
                 3)
                     echo ""
-                    interactive_cachyos_gaming_menu
+                    launch_gnomes_station_interactive
                     ;;
                 4)
                     echo ""
@@ -963,9 +968,32 @@ elif [ "${1:-}" = "--cmdline" ] || [ "${1:-}" = "-c" ]; then
 elif [ "${1:-}" = "--secure-boot" ] || [ "${1:-}" = "--sb" ]; then
     INTERACTIVE_SESSION=1
     manage_secureboot_interactive
-elif [ "${1:-}" = "--gaming" ] || [ "${1:-}" = "-g" ]; then
+elif [ "${1:-}" = "--gaming" ] || [ "${1:-}" = "-g" ] || [ "${1:-}" = "--gnomes" ] || [ "${1:-}" = "--gnomes-tui" ]; then
     INTERACTIVE_SESSION=1
     interactive_cachyos_gaming_menu
+elif [ "${1:-}" = "--gnomes-data" ] || [ "${1:-}" = "--gaming-json" ]; then
+    if command -v export_gaming_catalog_json >/dev/null 2>&1; then
+        export_gaming_catalog_json
+        exit 0
+    elif [ -f "${APP_DIR}/mod_gaming.sh" ]; then
+        source "${APP_DIR}/mod_gaming.sh"
+        export_gaming_catalog_json
+        exit 0
+    fi
+elif [ "${1:-}" = "--gnomes-deploy" ] || [ "${1:-}" = "--gaming-deploy" ]; then
+    shift
+    validate_privileges
+    if [ $# -eq 1 ]; then
+        transmute_and_deploy_gaming_pkg "$1"
+    else
+        deploy_gaming_packages_batch "$@"
+    fi
+    exit $?
+elif [ "${1:-}" = "--gnomes-uninstall" ] || [ "${1:-}" = "--gaming-uninstall" ]; then
+    shift
+    validate_privileges
+    uninstall_cachyos_gaming_pkg "$1"
+    exit $?
 elif [ "${1:-}" = "--heal-multilib" ] || [ "${1:-}" = "-m" ]; then
     validate_privileges
     heal_multilib_subsystem

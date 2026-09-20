@@ -25,13 +25,20 @@ heroic|Heroic Games Launcher (Epic, GOG, Amazon)|launcher|heroic-games-launcher-
 lutris|Lutris Gaming Platform Manager|launcher|lutris(?:-git)?-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||webkit2gtk-4\.1-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libsoup3-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,python-moddb-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,python-pypresence-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,python-evdev-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,python-distro-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos,arch-extra
 faugus|Faugus Launcher (Fast Proton Launcher)|launcher|faugus-launcher-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||python-vdf-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,icoextract-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,python-pefile-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos
 protonplus|ProtonPlus (Wine/GE & Proton Manager)|launcher|(?:proton-plus|protonplus)-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos,arch-extra
+steam|Steam (Valve Gaming Platform & Proton)|launcher|steam-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||arch-multilib,cachyos
 steam-devices|Steam Controller & Gamepad Udev Rules|launcher|game-devices-udev-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos,arch-extra
 lact|LACT (AMD/Intel GPU Overclocking & Fans)|hardware|lact-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||arch-extra,cachyos
 openrgb|OpenRGB (Hardware RGB Lighting Control)|hardware|openrgb(?:-git)?-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos,arch-extra
 solaar|Solaar (Logitech Wireless Device Manager)|hardware|solaar-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||python-pyudev-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,python-typing_extensions-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,python-xlib-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|arch-extra,cachyos-extra-v3,cachyos
 coolercontrol|CoolerControl (All-in-One Liquid & Fan Control)|hardware|coolercontrol-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||coolercontrold-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos,arch-extra
-# lian-li-linux|Lian Li Uni Fan & Controller Daemon|hardware|lian-li-linux(?:-git)?-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|||chaotic-aur,cachyos (dormant)
-# asusctl|ASUS ROG Laptop Control Daemon & CLI|hardware|asusctl-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||arch-extra,cachyos (dormant)
+asusctl|ASUS ROG Laptop Control Daemon & CLI|hardware|asusctl-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||arch-extra,cachyos
+zenpower3|ZenPower AMD Ryzen Telemetry Driver (DKMS)|hardware|zenpower3-dkms-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|||chaotic-aur,cachyos,arch-extra
+v4l2loopback|V4L2 Loopback Virtual Video Device (DKMS)|hardware|v4l2loopback-dkms-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|||arch-extra,cachyos,chaotic-aur
+rtl8821cu|Realtek RTL8821CU USB Wi-Fi Driver (DKMS)|hardware|rtl8821cu-dkms-git-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|||chaotic-aur,cachyos
+rtl88x2bu|Realtek RTL88x2BU USB Wi-Fi Driver (DKMS)|hardware|rtl88x2bu-dkms-git-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|||chaotic-aur,cachyos
+rtl8812au|Realtek RTL8812AU High-Power Wi-Fi Driver (DKMS)|hardware|rtl8812au-dkms-git-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|||chaotic-aur,cachyos
+broadcom-wl|Broadcom 802.11 Linux STA Wireless Driver (DKMS)|hardware|broadcom-wl-dkms-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|||arch-extra,cachyos
+r8125|Realtek 2.5GbE Ethernet Network Driver (DKMS)|hardware|r8125-dkms-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|||cachyos-extra-v3,cachyos-extra,cachyos
 easyeffects|EasyEffects Studio Audio DSP & JackHack96 Presets|audio|easyeffects-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||lsp-plugins-lv2-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,calf-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,mda\.lv2-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,zam-plugins-lv2-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,zita-convolver-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,rnnoise-[0-9a-zA-Z_\.:-]*\.pkg\.tar\.zst,libbs2b-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,soundtouch-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libebur128-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,webrtc-audio-processing-(?:2|1)-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,lilv-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,serd-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,sord-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,sratom-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,qt6-graphs-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,onetbb-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libmysofa-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,zix-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|arch-extra,cachyos
 pear-desktop|Pear Desktop (YouTube Music with Custom Plugins)|audio|pear-desktop-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||electron42-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libjpeg-turbo-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|chaotic-aur,chaotic-cdn,arch-extra
 audacity|Audacity (Digital Audio Editor & Recording Studio)|audio|audacity-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||suil-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,lilv-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,serd-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,sord-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,sratom-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,zix-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,portsmf-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,portaudio-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,portmidi-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libsbsms-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,vamp-plugin-sdk-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,soundtouch-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,twolame-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libid3tag-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libsoxr-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libmspack-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,wxwidgets-gtk3-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,wxwidgets-common-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libjpeg-turbo-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|arch-extra,cachyos-extra-v3,cachyos
@@ -40,11 +47,18 @@ spotify|Spotify Launcher (Official Native Client Bootstrap)|audio|spotify-launch
 inkscape|Inkscape (Professional Vector Graphics Editor)|creative|inkscape-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||lib2geom-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,double-conversion-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,graphicsmagick-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libcdr-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,poppler-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libvisio-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libwpg-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,librevenge-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos-extra-v3,arch-extra,cachyos
 darktable|Darktable (Advanced RAW Photo Workflow & Editor)|creative|darktable-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||libavif-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libheif-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libde265-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libyuv-(?:r)?[0-9a-zA-Z_\.\+-]*\.pkg\.tar\.zst,rav1e-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,svt-av1-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,openh264-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,pugixml-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,colord-gtk-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,osm-gps-map-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,gmic-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,flickcurl-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos-extra-v3,arch-extra,cachyos
 syncthing|Syncthing (Continuous P2P File Synchronization)|tools|syncthing-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||arch-extra,cachyos-extra-v3,cachyos
-obs-studio|OBS Studio (Isolated App-Bundle & Python 3.14)|community|obs-studio-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst||python-3\.[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,mbedtls-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,obs-studio-plugin-browser-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,cef-minimal-obs(?:-bin)?-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,libdatachannel-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,libjuice-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,librist-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,libusrsctp-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|arch-extra,arch-core,cachyos
-obs-vkcapture|OBS VKCapture (+ 32-bit Multilib Vulkan/GL)|community|obs-vkcapture-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|lib32-obs-vkcapture-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||cachyos,arch-extra
-discord|Official Discord Linux Client|community|discord-[0-9][a-zA-Z0-9_\.:-]*\.pkg\.tar\.zst|||arch-extra,cachyos
-vesktop|Vesktop (Discord Client with Vencord & Wayland Screen)|community|vesktop(?:-bin)?-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos
-sunshine|Sunshine (Self-Hosted Game Stream Host)|community|sunshine-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||libayatana-appindicator-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,miniupnpc-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,numactl-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos,arch-extra
+obs-studio|OBS Studio (Isolated App-Bundle & Python 3.14)|streaming|obs-studio-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst||python-3\.[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,mbedtls-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,obs-studio-plugin-browser-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,cef-minimal-obs(?:-bin)?-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,libdatachannel-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,libjuice-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,librist-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,libusrsctp-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|arch-extra,arch-core,cachyos
+obs-vkcapture|OBS VKCapture (+ 32-bit Multilib Vulkan/GL)|streaming|obs-vkcapture-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|lib32-obs-vkcapture-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||cachyos,arch-extra
+obs-move-transition|OBS Move Transition (Source & Scene Motion)|streaming|obs-move-transition(?:-bin|-git)?-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||chaotic-aur,cachyos-extra,cachyos
+obs-source-record|OBS Source Record (Isolated ISO Track Recording)|streaming|obs-source-record(?:-bin|-git)?-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||chaotic-aur,cachyos-extra,cachyos
+obs-pipewire-audio-capture|OBS PipeWire Audio Capture (Per-App Audio Routing)|streaming|obs-pipewire-audio-capture(?:-bin|-git)?-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||chaotic-aur,cachyos-extra,cachyos
+obs-advanced-scene-switcher|OBS Advanced Scene Switcher (Automation Engine)|streaming|obs-advanced-scene-switcher(?:-bin|-git)?-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||opencv-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|chaotic-aur,cachyos-extra,arch-extra,cachyos
+obs-multi-rtmp|OBS Multi-RTMP (Simultaneous Multi-Streaming)|streaming|obs-multi-rtmp(?:-bin|-git)?-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||chaotic-aur,cachyos-extra,cachyos
+obs-composite-blur|OBS Composite Blur (Gaussian/Box/Motion Blur)|streaming|obs-composite-blur(?:-bin|-git)?-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||chaotic-aur,cachyos-extra,cachyos
+obs-teleport|OBS Teleport (Ultra-Low Latency NDI/LAN Stream)|streaming|obs-teleport(?:-bin|-git)?-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||chaotic-aur,cachyos-extra,cachyos
+discord|Official Discord Linux Client|social|discord-[0-9][a-zA-Z0-9_\.:-]*\.pkg\.tar\.zst|||arch-extra,cachyos
+vesktop|Vesktop (Discord Client with Vencord & Wayland Screen)|social|vesktop(?:-bin)?-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos
+sunshine|Sunshine (Self-Hosted Game Stream Host)|social|sunshine-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||libayatana-appindicator-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,miniupnpc-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,numactl-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos,arch-extra
 google-chrome|Google Chrome (Official Web Browser)|browser|google-chrome-[0-9a-zA-Z_\.:-]*\.pkg\.tar\.zst|||chaotic-aur,chaotic-cdn,cachyos
 microsoft-edge|Microsoft Edge (Official Web Browser)|browser|microsoft-edge-(?:stable|beta|dev)-bin-[0-9a-zA-Z_\.:-]*\.pkg\.tar\.zst|||chaotic-aur,chaotic-cdn,cachyos
 brave|Brave Browser (Privacy Browser with AdBlock)|browser|brave-bin-(?:1%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos,chaotic-aur,chaotic-cdn
@@ -69,15 +83,18 @@ is_gaming_pkg_whitelisted() {
         return 0
     fi
 
-    # Whitelist of 34 tested & verified suites for v0.13
+    # Whitelist of verified suites for v0.14.0 Coco Jambo
     case "${pkg_id}" in
         mangohud|gamemode|goverlay|vram-booster|scx|ananicy|gamescope|retroarch|\
-        heroic|lutris|faugus|protonplus|steam-devices|\
-        lact|openrgb|solaar|coolercontrol|\
+        heroic|lutris|faugus|protonplus|steam-devices|steam|\
+        lact|openrgb|solaar|coolercontrol|asusctl|\
+        zenpower3|v4l2loopback|rtl8821cu|rtl88x2bu|rtl8812au|broadcom-wl|r8125|\
         easyeffects|pear-desktop|audacity|spotify|yabridge|\
         inkscape|darktable|syncthing|\
-        obs-studio|obs-vkcapture|discord|vesktop|sunshine|\
-        google-chrome|microsoft-edge|brave|zen-browser)
+        obs-studio|obs-vkcapture|obs-move-transition|obs-source-record|\
+        obs-pipewire-audio-capture|obs-advanced-scene-switcher|obs-multi-rtmp|\
+        obs-composite-blur|obs-teleport|discord|vesktop|sunshine|\
+        google-chrome|microsoft-edge|brave|zen-browser|sbctl)
             return 0
             ;;
         *)
@@ -117,6 +134,226 @@ is_vram_booster_supported() {
     fi
 
     return 1
+}
+
+export_gaming_catalog_json() {
+    local catalog_raw
+    catalog_raw=$(get_gaming_catalog)
+
+    python3 - "${catalog_raw}" << 'PYJSONEXPORT'
+import sys, json, os, glob, re, shutil, subprocess
+
+raw_catalog = sys.argv[1]
+installed_pkgs = {}
+
+# Fast cache installed packages from /var/log/packages
+pkg_log_dir = "/var/log/packages"
+if os.path.exists(pkg_log_dir):
+    for f in os.listdir(pkg_log_dir):
+        parts = f.rsplit('-', 3)
+        if len(parts) >= 2:
+            p_name = parts[0]
+            p_ver = parts[1] if len(parts) >= 4 else "INSTALLED"
+            for pref in ("underpants-", "cachyos-gnome-", "cachyos-gnome-gnome-"):
+                if p_name.startswith(pref):
+                    p_name = p_name[len(pref):]
+            vm = re.match(r"^(.+?)-([0-9].*)$", p_name)
+            if vm:
+                p_name = vm.group(1)
+                if p_ver.isdigit() or p_ver == "INSTALLED":
+                    p_ver = vm.group(2)
+            installed_pkgs[p_name.lower()] = p_ver
+
+# Binary, driver and service probe fallback table
+BINARY_MAP = {
+    "mangohud": ["mangohud", "mangoapp"],
+    "gamemode": ["gamemoded", "gamemoderun"],
+    "goverlay": ["goverlay"],
+    "vram-booster": ["dmemcg-service", "dmemcg"],
+    "scx": ["scx_manager", "scx_lavd", "scx_bpfland", "scx_rusty"],
+    "ananicy": ["ananicy-cpp", "ananicy"],
+    "gamescope": ["gamescope"],
+    "retroarch": ["retroarch"],
+    "heroic": ["heroic"],
+    "lutris": ["lutris"],
+    "faugus": ["faugus-launcher", "faugus"],
+    "protonplus": ["protonplus", "proton-plus"],
+    "steam": ["steam", "/usr/bin/steam"],
+    "steam-devices": ["/lib/udev/rules.d/60-steam-input.rules", "/usr/lib/udev/rules.d/60-steam-input.rules", "/etc/udev/rules.d/60-steam-input.rules"],
+    "lact": ["lact", "lactd"],
+    "openrgb": ["openrgb"],
+    "solaar": ["solaar"],
+    "coolercontrol": ["coolercontrol", "coolercontrold"],
+    "asusctl": ["asusctl", "supergfxd"],
+    "zenpower3": ["/var/lib/dkms/zenpower*", "/usr/src/zenpower3*"],
+    "v4l2loopback": ["/var/lib/dkms/v4l2loopback*", "/usr/src/v4l2loopback*"],
+    "rtl8821cu": ["/var/lib/dkms/rtl8821cu*", "/var/lib/dkms/8821cu*"],
+    "rtl88x2bu": ["/var/lib/dkms/rtl88x2bu*", "/var/lib/dkms/88x2bu*"],
+    "rtl8812au": ["/var/lib/dkms/rtl8812au*", "/var/lib/dkms/8812au*"],
+    "broadcom-wl": ["/var/lib/dkms/broadcom-wl*", "/var/lib/dkms/wl*"],
+    "r8125": ["/var/lib/dkms/r8125*"],
+    "obs-studio": ["obs"],
+    "obs-vkcapture": ["obs-vkcapture", "/usr/lib64/obs-plugins/linux-vkcapture.so", "/usr/lib/obs-plugins/linux-vkcapture.so"],
+    "obs-move-transition": ["/usr/lib64/obs-plugins/move-transition.so", "/opt/obs-studio/lib/obs-plugins/move-transition.so"],
+    "obs-source-record": ["/usr/lib64/obs-plugins/source-record.so", "/opt/obs-studio/lib/obs-plugins/source-record.so"],
+    "obs-pipewire-audio-capture": ["/usr/lib64/obs-plugins/linux-pipewire-audio.so", "/opt/obs-studio/lib/obs-plugins/linux-pipewire-audio.so"],
+    "obs-advanced-scene-switcher": ["/usr/lib64/obs-plugins/advanced-scene-switcher.so", "/opt/obs-studio/lib/obs-plugins/advanced-scene-switcher.so"],
+    "obs-multi-rtmp": ["/usr/lib64/obs-plugins/obs-multi-rtmp.so", "/opt/obs-studio/lib/obs-plugins/obs-multi-rtmp.so"],
+    "obs-composite-blur": ["/usr/lib64/obs-plugins/composite-blur.so", "/opt/obs-studio/lib/obs-plugins/composite-blur.so"],
+    "obs-teleport": ["/usr/lib64/obs-plugins/obs-teleport.so", "/opt/obs-studio/lib/obs-plugins/obs-teleport.so"],
+    "discord": ["discord", "/opt/discord/Discord"],
+    "vesktop": ["vesktop"],
+    "sunshine": ["sunshine"],
+    "easyeffects": ["easyeffects"],
+    "pear-desktop": ["pear-desktop"],
+    "audacity": ["audacity"],
+    "spotify": ["spotify"],
+    "yabridge": ["yabridgectl"],
+    "inkscape": ["inkscape"],
+    "darktable": ["darktable"],
+    "syncthing": ["syncthing"],
+    "google-chrome": ["google-chrome", "google-chrome-stable"],
+    "microsoft-edge": ["microsoft-edge", "microsoft-edge-stable"],
+    "brave": ["brave", "brave-browser"],
+    "zen-browser": ["zen-browser", "zen"],
+    "sbctl": ["sbctl"]
+}
+
+for pid, cands in BINARY_MAP.items():
+    if pid in installed_pkgs:
+        continue
+    for cand in cands:
+        if cand.startswith('/'):
+            if glob.glob(cand):
+                installed_pkgs[pid] = "INSTALLED"
+                break
+        else:
+            bp = shutil.which(cand) or (os.path.exists(f"/usr/bin/{cand}") and f"/usr/bin/{cand}") or (os.path.exists(f"/usr/local/bin/{cand}") and f"/usr/local/bin/{cand}")
+            if bp:
+                ver = "INSTALLED"
+                try:
+                    out = subprocess.run([bp, "--version"], capture_output=True, text=True, timeout=1).stdout
+                    vm = re.search(r'([0-9]+\.[0-9]+(?:\.[0-9]+)?)', out)
+                    if vm:
+                        ver = vm.group(1)
+                except Exception:
+                    pass
+                installed_pkgs[pid] = ver
+                break
+
+CATEGORY_TITLES = {
+    "engine": "The Engine: Performance, HUD & Schedulers",
+    "launcher": "Storefronts & Launcher Managers",
+    "hardware": "Hardware Control, Tuning & DKMS Drivers",
+    "streaming": "OBS Studio & Video Recording Plugins",
+    "audio": "Studio Audio DSP & Acoustic Processing",
+    "creative": "Creative, 3D & Photography Studio",
+    "social": "Voice Chat, Community & Game Streaming",
+    "tools": "Power Tools & Media Sync",
+    "browser": "Web Navigators & Browsers",
+    "bootloader": "Secure Boot & UEFI Utilities"
+}
+
+CATEGORY_ICONS = {
+    "engine": "utilities-system-monitor",
+    "launcher": "applications-games",
+    "hardware": "preferences-system",
+    "streaming": "obs-studio",
+    "audio": "audio-card",
+    "creative": "applications-graphics",
+    "social": "user-available",
+    "tools": "system-file-manager",
+    "browser": "applications-internet",
+    "bootloader": "system-lock-screen"
+}
+
+PKG_DESCRIPTIONS = {
+    "mangohud": "High-performance Vulkan/OpenGL overlay with hardware telemetry and mangoapp integration.",
+    "gamemode": "Feral GameMode auto-governor prioritizing games and multilib 32-bit processes.",
+    "goverlay": "Graphical Qt6 configurator for MangoHud, vkBasalt, and ReplaySorcery.",
+    "vram-booster": "Dynamic VRAM cgroups booster prioritizing GPU memory for active game windows.",
+    "scx": "Sched-EXT eBPF user-space CPU schedulers and manager for minimal frame latency.",
+    "ananicy": "Auto-nice daemon applying CachyOS latency and priority rules to gaming workloads.",
+    "gamescope": "Valve SteamOS micro-compositor with HDR, integer scaling, and FSR upscaling.",
+    "retroarch": "Multi-system game emulator frontend with Ozone/XMB shaders and PipeWire audio.",
+    "heroic": "Native Epic Games, GOG, and Amazon Games launcher manager.",
+    "lutris": "Open gaming platform managing Wine, Proton, emulators, and runner prefixes.",
+    "faugus": "Ultra-fast lightweight Proton game launcher.",
+    "protonplus": "Modern Wine-GE, Proton-GE, and compatibility tool manager.",
+    "steam": "Official Valve Steam platform launcher & Proton compatibility runtime client.",
+    "steam-devices": "Gamepad and controller udev hardware rules for Steam, DualSense, Xbox & Switch.",
+    "lact": "AMD & Intel Linux GPU overclocking, fan curve, and power state manager.",
+    "openrgb": "Universal RGB lighting control suite supporting hundreds of hardware devices.",
+    "solaar": "Logitech Unifying and Lightspeed receiver and device configuration utility.",
+    "coolercontrol": "Liquid cooling, fan speed curves, and AIO pump control daemon & GUI.",
+    "asusctl": "ASUS ROG and TUF laptop performance profile, fan, and aura LED control CLI & daemon.",
+    "zenpower3": "AMD Ryzen Zen 1-5 voltage, current, and core telemetry driver for MangoHud (DKMS).",
+    "v4l2loopback": "Video4Linux2 virtual loopback device driver for OBS Virtual Camera (DKMS).",
+    "rtl8821cu": "Realtek RTL8821CU USB Wi-Fi network adapter driver (DKMS).",
+    "rtl88x2bu": "Realtek RTL88x2BU USB Wi-Fi network adapter driver (DKMS).",
+    "rtl8812au": "Realtek RTL8812AU high-power USB Wi-Fi network adapter driver (DKMS).",
+    "broadcom-wl": "Broadcom 802.11a/b/g/n wireless network adapter driver (DKMS).",
+    "r8125": "Realtek PCIe 2.5 Gigabit Ethernet network adapter driver (DKMS).",
+    "obs-studio": "Professional open source video recording and live streaming studio app-bundle.",
+    "obs-vkcapture": "OBS Vulkan and OpenGL game capture layer with 32-bit multilib support.",
+    "obs-move-transition": "Smooth movement animations for OBS sources and scene elements.",
+    "obs-source-record": "Isolated track and clean ISO video recording filter for OBS Studio.",
+    "obs-pipewire-audio-capture": "Direct per-application audio source capture and routing for OBS.",
+    "obs-advanced-scene-switcher": "Advanced automated scene switcher and automation macro engine for OBS.",
+    "obs-multi-rtmp": "Simultaneous live streaming to multiple platforms (Twitch, YouTube, Kick).",
+    "obs-composite-blur": "GPU-accelerated box, Gaussian, and motion blur filter for OBS.",
+    "obs-teleport": "Ultra-low latency LAN/NDI video streaming across local networks.",
+    "discord": "Official Discord Linux voice and text chat client.",
+    "vesktop": "Custom Discord client with Vencord plugins and Wayland screen share.",
+    "sunshine": "Self-hosted low-latency game stream host for Moonlight streaming.",
+    "easyeffects": "Studio-grade PipeWire audio DSP with JackHack96 presets and equalizer.",
+    "pear-desktop": "YouTube Music client with custom audio plugins and equalizer.",
+    "audacity": "Multi-track audio editor and digital recording workstation.",
+    "spotify": "Official Spotify native Linux client bootstrap with Sequoia verification.",
+    "yabridge": "Modern VST2/VST3/CLAP Windows audio plugin bridge for Linux DAWs.",
+    "inkscape": "Professional vector graphics editor for illustration and design.",
+    "darktable": "Professional RAW photography workflow application and virtual lighttable.",
+    "syncthing": "Continuous decentralized peer-to-peer file synchronization service.",
+    "google-chrome": "Official Google Chrome web browser.",
+    "microsoft-edge": "Official Microsoft Edge web browser.",
+    "brave": "Privacy-focused web browser with built-in ad and tracker blocking.",
+    "zen-browser": "High-performance Firefox Gecko-based web browser with split-views.",
+    "sbctl": "UEFI Secure Boot key manager, enrollment, and file signing utility."
+}
+
+items = []
+for line in raw_catalog.strip().split("\n"):
+    line = line.strip()
+    if not line or line.startswith("#"):
+        continue
+    parts = line.split("|")
+    if len(parts) < 3:
+        continue
+    pkg_id, name, cat = parts[0], parts[1], parts[2]
+    
+    inst_ver = "NONE"
+    for cand in (pkg_id, f"underpants-{pkg_id}", f"cachyos-gnome-{pkg_id}"):
+        if cand in installed_pkgs:
+            inst_ver = installed_pkgs[cand]
+            break
+    
+    desc = PKG_DESCRIPTIONS.get(pkg_id, f"High-performance native workstation component ({name})")
+    cat_title = CATEGORY_TITLES.get(cat, cat.capitalize())
+    cat_icon = CATEGORY_ICONS.get(cat, "package-x-generic")
+
+    items.append({
+        "id": pkg_id,
+        "name": name,
+        "category": cat,
+        "category_title": cat_title,
+        "category_icon": cat_icon,
+        "installed_version": inst_ver,
+        "is_installed": (inst_ver != "NONE"),
+        "description": desc
+    })
+
+print(json.dumps(items, indent=2))
+PYJSONEXPORT
 }
 
 is_elf_binary() {
@@ -159,7 +396,7 @@ audit_user_hardware_groups() {
 
 audit_multilib_readiness() {
     local pkg_id="$1"
-    if [ "${pkg_id}" = "gamemode" ] || [ "${pkg_id}" = "mangohud" ] || [ "${pkg_id}" = "obs-vkcapture" ] || [ "${pkg_id}" = "yabridge" ]; then
+    if [ "${pkg_id}" = "gamemode" ] || [ "${pkg_id}" = "mangohud" ] || [ "${pkg_id}" = "obs-vkcapture" ] || [ "${pkg_id}" = "yabridge" ] || [ "${pkg_id}" = "steam" ]; then
         if ! ls /var/log/packages/*multilib* >/dev/null 2>&1 && \
            ! ls /var/log/packages/*compat32* >/dev/null 2>&1 && \
            [ ! -f /lib/libc.so.6 ] && [ ! -f /lib/ld-linux.so.2 ] && \
@@ -174,56 +411,111 @@ audit_multilib_readiness() {
 # --- [ PACKAGE STATUS RESOLUTION ] ---
 get_installed_gaming_pkg_version() {
     local pkg_id="$1"
-    python3 -c "
-import os, re
+    python3 - "${pkg_id}" << 'PYPKGVERCHECK'
+import sys, os, re, glob, shutil, subprocess
 
-def clean_v_string(raw):
-    v = re.sub(r'-(?:x86_64(?:_v[0-9]+)?|noarch|i[3-6]86)-[0-9a-zA-Z_]+$', '', raw)
-    v = re.sub(r'-(?:x86_64(?:_v[0-9]+)?|noarch|i[3-6]86|any|aarch64)$', '', v)
-    v = re.sub(r'-[0-9]+(?:\.[0-9]+)?$', '', v)
-    v = re.sub(r'^[0-9]+(?:%3A|:|_)', '', v)
-    v = re.sub(r'(\d+\.\d+(?:\.\d+)?)\.r\d+.*$', r'\1', v)
-    return v
-
-def parse_v(v_str):
-    clean = re.sub(r'^[vV]', '', str(v_str)).strip()
-    tokens = re.split(r'[-._]', clean)
-    res = []
-    for t in tokens:
-        if not t: continue
-        sub = re.findall(r'(\d+|\D+)', t)
-        for s in sub:
-            if s.isdigit():
-                res.append((1, int(s)))
-            else:
-                res.append((0, s.lower()))
-    return res
-
+target_id = sys.argv[1].lower()
 pkg_dir = '/var/log/packages'
-if not os.path.exists(pkg_dir):
-    print('NONE')
-    exit(0)
-
-prefix = 'cachyos-gnome-${pkg_id}-'
 found = []
-for p in os.listdir(pkg_dir):
-    if p.startswith(prefix):
-        clean = clean_v_string(p[len(prefix):])
-        found.append(clean)
 
-if not found:
-    for p in os.listdir(pkg_dir):
-        if re.match(rf'^${pkg_id}-[0-9]', p, re.IGNORECASE):
-            raw = re.sub(rf'^${pkg_id}-', '', p, flags=re.IGNORECASE)
-            clean = clean_v_string(raw)
-            found.append(clean)
+if os.path.exists(pkg_dir):
+    for f in os.listdir(pkg_dir):
+        parts = f.rsplit('-', 3)
+        if len(parts) >= 2:
+            p_name = parts[0].lower()
+            p_ver = parts[1] if len(parts) >= 4 else "INSTALLED"
+            for pref in ("underpants-", "cachyos-gnome-", "cachyos-gnome-gnome-"):
+                if p_name.startswith(pref):
+                    p_name = p_name[len(pref):]
+            vm = re.match(r"^(.+?)-([0-9].*)$", p_name)
+            if vm:
+                p_name = vm.group(1)
+                if p_ver.isdigit() or p_ver == "INSTALLED":
+                    p_ver = vm.group(2)
+            if p_name == target_id:
+                found.append(p_ver)
 
 if found:
-    found.sort(key=parse_v)
     print(found[-1])
-else:
-    print('NONE')
-" 2>/dev/null || echo "NONE"
+    sys.exit(0)
+
+# Binary probe fallback
+BINARY_MAP = {
+    "mangohud": ["mangohud", "mangoapp"],
+    "gamemode": ["gamemoded", "gamemoderun"],
+    "goverlay": ["goverlay"],
+    "vram-booster": ["dmemcg-service", "dmemcg"],
+    "scx": ["scx_manager", "scx_lavd", "scx_bpfland", "scx_rusty"],
+    "ananicy": ["ananicy-cpp", "ananicy"],
+    "gamescope": ["gamescope"],
+    "retroarch": ["retroarch"],
+    "heroic": ["heroic"],
+    "lutris": ["lutris"],
+    "faugus": ["faugus-launcher", "faugus"],
+    "protonplus": ["protonplus", "proton-plus"],
+    "steam": ["steam", "/usr/bin/steam"],
+    "steam-devices": ["/lib/udev/rules.d/60-steam-input.rules", "/usr/lib/udev/rules.d/60-steam-input.rules", "/etc/udev/rules.d/60-steam-input.rules"],
+    "lact": ["lact", "lactd"],
+    "openrgb": ["openrgb"],
+    "solaar": ["solaar"],
+    "coolercontrol": ["coolercontrol", "coolercontrold"],
+    "asusctl": ["asusctl", "supergfxd"],
+    "zenpower3": ["/var/lib/dkms/zenpower*", "/usr/src/zenpower3*"],
+    "v4l2loopback": ["/var/lib/dkms/v4l2loopback*", "/usr/src/v4l2loopback*"],
+    "rtl8821cu": ["/var/lib/dkms/rtl8821cu*", "/var/lib/dkms/8821cu*"],
+    "rtl88x2bu": ["/var/lib/dkms/rtl88x2bu*", "/var/lib/dkms/88x2bu*"],
+    "rtl8812au": ["/var/lib/dkms/rtl8812au*", "/var/lib/dkms/8812au*"],
+    "broadcom-wl": ["/var/lib/dkms/broadcom-wl*", "/var/lib/dkms/wl*"],
+    "r8125": ["/var/lib/dkms/r8125*"],
+    "obs-studio": ["obs"],
+    "obs-vkcapture": ["obs-vkcapture", "/usr/lib64/obs-plugins/linux-vkcapture.so", "/usr/lib/obs-plugins/linux-vkcapture.so"],
+    "obs-move-transition": ["/usr/lib64/obs-plugins/move-transition.so", "/opt/obs-studio/lib/obs-plugins/move-transition.so"],
+    "obs-source-record": ["/usr/lib64/obs-plugins/source-record.so", "/opt/obs-studio/lib/obs-plugins/source-record.so"],
+    "obs-pipewire-audio-capture": ["/usr/lib64/obs-plugins/linux-pipewire-audio.so", "/opt/obs-studio/lib/obs-plugins/linux-pipewire-audio.so"],
+    "obs-advanced-scene-switcher": ["/usr/lib64/obs-plugins/advanced-scene-switcher.so", "/opt/obs-studio/lib/obs-plugins/advanced-scene-switcher.so"],
+    "obs-multi-rtmp": ["/usr/lib64/obs-plugins/obs-multi-rtmp.so", "/opt/obs-studio/lib/obs-plugins/obs-multi-rtmp.so"],
+    "obs-composite-blur": ["/usr/lib64/obs-plugins/composite-blur.so", "/opt/obs-studio/lib/obs-plugins/composite-blur.so"],
+    "obs-teleport": ["/usr/lib64/obs-plugins/obs-teleport.so", "/opt/obs-studio/lib/obs-plugins/obs-teleport.so"],
+    "discord": ["discord", "/opt/discord/Discord"],
+    "vesktop": ["vesktop"],
+    "sunshine": ["sunshine"],
+    "easyeffects": ["easyeffects"],
+    "pear-desktop": ["pear-desktop"],
+    "audacity": ["audacity"],
+    "spotify": ["spotify"],
+    "yabridge": ["yabridgectl"],
+    "inkscape": ["inkscape"],
+    "darktable": ["darktable"],
+    "syncthing": ["syncthing"],
+    "google-chrome": ["google-chrome", "google-chrome-stable"],
+    "microsoft-edge": ["microsoft-edge", "microsoft-edge-stable"],
+    "brave": ["brave", "brave-browser"],
+    "zen-browser": ["zen-browser", "zen"],
+    "sbctl": ["sbctl"]
+}
+
+if target_id in BINARY_MAP:
+    for cand in BINARY_MAP[target_id]:
+        if cand.startswith('/'):
+            if glob.glob(cand):
+                print("INSTALLED")
+                sys.exit(0)
+        else:
+            bp = shutil.which(cand) or (os.path.exists(f"/usr/bin/{cand}") and f"/usr/bin/{cand}") or (os.path.exists(f"/usr/local/bin/{cand}") and f"/usr/local/bin/{cand}")
+            if bp:
+                ver = "INSTALLED"
+                try:
+                    out = subprocess.run([bp, "--version"], capture_output=True, text=True, timeout=1).stdout
+                    vm = re.search(r'([0-9]+\.[0-9]+(?:\.[0-9]+)?)', out)
+                    if vm:
+                        ver = vm.group(1)
+                except Exception:
+                    pass
+                print(ver)
+                sys.exit(0)
+
+print("NONE")
+PYPKGVERCHECK
 }
 
 check_all_installed_gaming_updates_fast() {
@@ -332,7 +624,7 @@ def clean_pkg_version(pid, raw_v):
     v = re.sub(r'^[0-9]+(?:%3A|:|_)', '', v)
     if pid:
         pid_clean = pid.replace("-", "")
-        v = re.sub(rf'^(?:cachyos-gnome-)?(?:{re.escape(pid)}|{re.escape(pid_clean)})(?:-bin|-git|-manager|-launcher|-rules|-udev)?-', '', v, flags=re.IGNORECASE)
+        v = re.sub(rf'^(?:underpants-|cachyos-gnome-)?(?:{re.escape(pid)}|{re.escape(pid_clean)})(?:-bin|-git|-manager|-launcher|-rules|-udev)?-', '', v, flags=re.IGNORECASE)
     v = re.sub(r'^[a-zA-Z0-9_\-+]+?-([0-9])', r'\1', v)
     return v
 
@@ -371,7 +663,7 @@ for pkg in installed_pkgs:
     if ver == 'NONE':
         continue
     for pid in catalog:
-        if name in (f"cachyos-gnome-{pid}", f"cachyos-gnome-gnome-{pid}", pid, f"{pid}-bin", f"{pid}-git", f"{pid}-manager", f"{pid}-launcher"):
+        if name in (f"underpants-{pid}", f"cachyos-gnome-{pid}", f"cachyos-gnome-gnome-{pid}", pid, f"{pid}-bin", f"{pid}-git", f"{pid}-manager", f"{pid}-launcher"):
             detected_installed[pid] = ver
 
 needed_repos = set()
@@ -647,6 +939,7 @@ catalog = {
         r'href=[\'\"]?(python-pefile-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["cachyos", "arch-extra"], []),
     "protonplus": (r'href=[\'\"]?((?:proton-plus|protonplus)-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "arch-extra"], []),
+    "steam": (r'href=[\'\"]?(steam-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-multilib", "cachyos"], []),
     "steam-devices": (None, None, None, [], []),
     "retroarch": (r'href=[\'\"]?(retroarch-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(retroarch-assets-ozone-(?:[0-9]+%3A)?([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["arch-extra", "cachyos"], []),
     "lact": (r'href=[\'\"]?(lact-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
@@ -657,7 +950,6 @@ catalog = {
         r'href=[\'\"]?(python-xlib-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["arch-extra", "cachyos-extra-v3", "cachyos"], []),
     "coolercontrol": (r'href=[\'\"]?(coolercontrol-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(coolercontrold-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["cachyos", "arch-extra"], []),
-    "lian-li-linux": (r'href=[\'\"]?(lian-li-linux(?:-git)?-([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos"], []),
     "asusctl": (r'href=[\'\"]?(asusctl-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
     "brave": (r'href=[\'\"]?(brave-bin-(?:1%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "chaotic-aur", "chaotic-cdn"], []),
     "zen-browser": (r'href=[\'\"]?(zen-browser-bin-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "chaotic-aur", "chaotic-cdn"], []),
@@ -676,6 +968,22 @@ catalog = {
     "discord": (r'href=[\'\"]?(discord-(?:[0-9]+%3A|[0-9]+:)?([0-9][a-zA-Z0-9_\.:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
     "vesktop": (r'href=[\'\"]?(vesktop(?:-bin)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos"], []),
     "obs-vkcapture": (r'href=[\'\"]?(obs-vkcapture-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(lib32-obs-vkcapture-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, ["cachyos", "arch-extra"], ["cachyos", "arch-multilib"]),
+    "obs-move-transition": (r'href=[\'\"]?(obs-move-transition(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos-extra", "cachyos"], []),
+    "obs-source-record": (r'href=[\'\"]?(obs-source-record(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos-extra", "cachyos"], []),
+    "obs-pipewire-audio-capture": (r'href=[\'\"]?(obs-pipewire-audio-capture(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos-extra", "cachyos"], []),
+    "obs-advanced-scene-switcher": (r'href=[\'\"]?(obs-advanced-scene-switcher(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(opencv-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    ], ["chaotic-aur", "cachyos-extra", "arch-extra", "cachyos"], []),
+    "obs-multi-rtmp": (r'href=[\'\"]?(obs-multi-rtmp(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos-extra", "cachyos"], []),
+    "obs-composite-blur": (r'href=[\'\"]?(obs-composite-blur(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos-extra", "cachyos"], []),
+    "obs-teleport": (r'href=[\'\"]?(obs-teleport(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos-extra", "cachyos"], []),
+    "zenpower3": (r'href=[\'\"]?(zenpower3-dkms-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos", "arch-extra"], []),
+    "v4l2loopback": (r'href=[\'\"]?(v4l2loopback-dkms-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos", "chaotic-aur"], []),
+    "rtl8821cu": (r'href=[\'\"]?(rtl8821cu-dkms-git-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos"], []),
+    "rtl88x2bu": (r'href=[\'\"]?(rtl88x2bu-dkms-git-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos"], []),
+    "rtl8812au": (r'href=[\'\"]?(rtl8812au-dkms-git-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos"], []),
+    "broadcom-wl": (r'href=[\'\"]?(broadcom-wl-dkms-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
+    "r8125": (r'href=[\'\"]?(r8125-dkms-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos-extra-v3", "cachyos-extra", "cachyos"], []),
     "sunshine": (r'href=[\'\"]?(sunshine-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
         r'href=[\'\"]?(libayatana-appindicator-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(miniupnpc-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
@@ -727,7 +1035,7 @@ def clean_pkg_version(pid, raw_v):
     v = re.sub(r'^[0-9]+(?:%3A|:|_)', '', v)
     if pid:
         pid_clean = pid.replace("-", "")
-        v = re.sub(rf'^(?:cachyos-gnome-)?(?:{re.escape(pid)}|{re.escape(pid_clean)})(?:-bin|-git|-manager|-launcher|-rules|-udev)?-', '', v, flags=re.IGNORECASE)
+        v = re.sub(rf'^(?:underpants-|cachyos-gnome-)?(?:{re.escape(pid)}|{re.escape(pid_clean)})(?:-bin|-git|-manager|-launcher|-rules|-udev)?-', '', v, flags=re.IGNORECASE)
     v = re.sub(r'^[a-zA-Z0-9_\-+]+?-([0-9])', r'\1', v)
     return v
 
@@ -774,15 +1082,81 @@ def fetch_match(pat, r_list, pid=''):
         return best[2], best[1]
     return None, None
 
-main_ver, main_url = fetch_match(main_pat, main_repos, pkg_id)
-
 aur_pkg_names = {
     "google-chrome": ("google-chrome", "google-chrome-{ver}-x86_64.pkg.tar.zst"),
     "microsoft-edge": ("microsoft-edge-stable-bin", "microsoft-edge-stable-bin-{ver}-x86_64.pkg.tar.zst"),
     "brave": ("brave-bin", "brave-bin-{ver}-x86_64.pkg.tar.zst"),
     "zen-browser": ("zen-browser-bin", "zen-browser-bin-{ver}-x86_64.pkg.tar.zst"),
-    "lian-li-linux": ("lianli-linux-git", "lianli-linux-git-{ver}-x86_64.pkg.tar.zst")
+    "zenpower3": ("zenpower3-dkms", "zenpower3-dkms-{ver}-x86_64.pkg.tar.zst"),
+    "v4l2loopback": ("v4l2loopback-dkms-git", "v4l2loopback-dkms-git-{ver}-x86_64.pkg.tar.zst"),
+    "rtl8821cu": ("rtl8821cu-dkms-git", "rtl8821cu-dkms-git-{ver}-x86_64.pkg.tar.zst"),
+    "rtl88x2bu": ("rtl88x2bu-dkms-git", "rtl88x2bu-dkms-git-{ver}-x86_64.pkg.tar.zst"),
+    "rtl8812au": ("rtl8812au-dkms-git", "rtl8812au-dkms-git-{ver}-x86_64.pkg.tar.zst"),
+    "obs-pipewire-audio-capture": ("obs-pipewire-audio-capture", "obs-pipewire-audio-capture-{ver}-x86_64.pkg.tar.zst")
 }
+
+github_and_direct_pkgs = {
+    "obs-move-transition": {
+        "type": "github_release",
+        "repo": "exeldro/obs-move-transition",
+        "asset_pattern": r"move-transition-([0-9\.]+)-x86_64-linux-gnu\.deb"
+    },
+    "obs-source-record": {
+        "type": "github_release",
+        "repo": "exeldro/obs-source-record",
+        "asset_pattern": r"source-record-([0-9\.]+)-ubuntu.*\.tar\.gz"
+    },
+    "obs-advanced-scene-switcher": {
+        "type": "github_release",
+        "repo": "WarmUpTill/SceneSwitcher",
+        "asset_pattern": r"advanced-scene-switcher-([0-9\.]+)-x86_64-ubuntu.*-linux-gnu\.deb"
+    },
+    "obs-multi-rtmp": {
+        "type": "github_release",
+        "repo": "sorayuki/obs-multi-rtmp",
+        "asset_pattern": r"obs-multi-rtmp-([0-9\.]+)-x86_64-linux-gnu-ubuntu.*\.deb"
+    },
+    "obs-composite-blur": {
+        "type": "github_release",
+        "repo": "FiniteSingularity/obs-composite-blur",
+        "asset_pattern": r"obs-composite-blur-([0-9\.]+)-ubuntu.*\.zip"
+    },
+    "obs-teleport": {
+        "type": "github_release",
+        "repo": "fzwoch/obs-teleport",
+        "asset_pattern": r"obs-teleport\.zip"
+    }
+}
+
+main_ver, main_url = None, None
+
+if pkg_id in github_and_direct_pkgs:
+    meta = github_and_direct_pkgs[pkg_id]
+    if meta["type"] == "direct_url":
+        main_ver = meta["version"]
+        main_url = meta["url"]
+    elif meta["type"] == "github_release":
+        try:
+            gh_url = f"https://api.github.com/repos/{meta['repo']}/releases"
+            raw = fetch_url_cached(gh_url, cache_dir, ttl=1800)
+            if raw:
+                releases = json.loads(raw)
+                for rel in releases:
+                    tag = rel.get("tag_name", "").lstrip("v")
+                    for asset in rel.get("assets", []):
+                        aname = asset.get("name", "")
+                        m = re.search(meta["asset_pattern"], aname)
+                        if m:
+                            main_ver = m.group(1) if m.groups() else tag
+                            main_url = asset.get("browser_download_url")
+                            break
+                    if main_ver and main_url:
+                        break
+        except Exception:
+            pass
+
+if not main_ver or not main_url:
+    main_ver, main_url = fetch_match(main_pat, main_repos, pkg_id)
 
 if (not main_ver or not main_url) and pkg_id in aur_pkg_names:
     aur_name, filename_tmpl = aur_pkg_names[pkg_id]
@@ -800,6 +1174,22 @@ if (not main_ver or not main_url) and pkg_id in aur_pkg_names:
                     break
     except Exception:
         pass
+
+if not main_ver or not main_url:
+    for repo_cand in ("multilib", "extra", "core"):
+        try:
+            api_url = f"https://archlinux.org/packages/{repo_cand}/x86_64/{pkg_id}/json/"
+            raw_json = fetch_url_cached(api_url, cache_dir, ttl=1800)
+            if raw_json:
+                data = json.loads(raw_json)
+                fn = data.get("filename")
+                v = data.get("pkgver")
+                if fn and v:
+                    main_ver = v
+                    main_url = f"https://geo.mirror.pkgbuild.com/{repo_cand}/os/x86_64/{fn}"
+                    break
+        except Exception:
+            pass
 
 if not main_ver or not main_url:
     print("NONE NONE NONE NONE")
@@ -1049,6 +1439,7 @@ catalog = {
         r'href=[\'\"]?(python-pefile-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["cachyos", "arch-extra"], []),
     "protonplus": (r'href=[\'\"]?((?:proton-plus|protonplus)-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "arch-extra"], []),
+    "steam": (r'href=[\'\"]?(steam-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-multilib", "cachyos"], []),
     "steam-devices": (None, None, None, [], []),
     "retroarch": (r'href=[\'\"]?(retroarch-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(retroarch-assets-ozone-(?:[0-9]+%3A)?([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["arch-extra", "cachyos"], []),
     "lact": (r'href=[\'\"]?(lact-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
@@ -1059,7 +1450,6 @@ catalog = {
         r'href=[\'\"]?(python-xlib-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["arch-extra", "cachyos-extra-v3", "cachyos"], []),
     "coolercontrol": (r'href=[\'\"]?(coolercontrol-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(coolercontrold-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["cachyos", "arch-extra"], []),
-    "lian-li-linux": (r'href=[\'\"]?(lian-li-linux(?:-git)?-([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos"], []),
     "asusctl": (r'href=[\'\"]?(asusctl-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
     "brave": (r'href=[\'\"]?(brave-bin-(?:1%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "chaotic-aur", "chaotic-cdn"], []),
     "zen-browser": (r'href=[\'\"]?(zen-browser-bin-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "chaotic-aur", "chaotic-cdn"], []),
@@ -1078,6 +1468,22 @@ catalog = {
     "discord": (r'href=[\'\"]?(discord-(?:[0-9]+%3A|[0-9]+:)?([0-9][a-zA-Z0-9_\.:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
     "vesktop": (r'href=[\'\"]?(vesktop(?:-bin)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos"], []),
     "obs-vkcapture": (r'href=[\'\"]?(obs-vkcapture-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(lib32-obs-vkcapture-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, ["cachyos", "arch-extra"], ["cachyos", "arch-multilib"]),
+    "obs-move-transition": (r'href=[\'\"]?(obs-move-transition(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos-extra", "cachyos"], []),
+    "obs-source-record": (r'href=[\'\"]?(obs-source-record(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos-extra", "cachyos"], []),
+    "obs-pipewire-audio-capture": (r'href=[\'\"]?(obs-pipewire-audio-capture(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos-extra", "cachyos"], []),
+    "obs-advanced-scene-switcher": (r'href=[\'\"]?(obs-advanced-scene-switcher(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(opencv-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    ], ["chaotic-aur", "cachyos-extra", "arch-extra", "cachyos"], []),
+    "obs-multi-rtmp": (r'href=[\'\"]?(obs-multi-rtmp(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos-extra", "cachyos"], []),
+    "obs-composite-blur": (r'href=[\'\"]?(obs-composite-blur(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos-extra", "cachyos"], []),
+    "obs-teleport": (r'href=[\'\"]?(obs-teleport(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos-extra", "cachyos"], []),
+    "zenpower3": (r'href=[\'\"]?(zenpower3-dkms-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos", "arch-extra"], []),
+    "v4l2loopback": (r'href=[\'\"]?(v4l2loopback-dkms-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos", "chaotic-aur"], []),
+    "rtl8821cu": (r'href=[\'\"]?(rtl8821cu-dkms-git-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos"], []),
+    "rtl88x2bu": (r'href=[\'\"]?(rtl88x2bu-dkms-git-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos"], []),
+    "rtl8812au": (r'href=[\'\"]?(rtl8812au-dkms-git-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos"], []),
+    "broadcom-wl": (r'href=[\'\"]?(broadcom-wl-dkms-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
+    "r8125": (r'href=[\'\"]?(r8125-dkms-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos-extra-v3", "cachyos-extra", "cachyos"], []),
     "sunshine": (r'href=[\'\"]?(sunshine-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
         r'href=[\'\"]?(libayatana-appindicator-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(miniupnpc-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
@@ -1123,7 +1529,7 @@ def clean_pkg_version(pid, raw_v):
     v = re.sub(r'^[0-9]+(?:%3A|:|_)', '', v)
     if pid:
         pid_clean = pid.replace("-", "")
-        v = re.sub(rf'^(?:cachyos-gnome-)?(?:{re.escape(pid)}|{re.escape(pid_clean)})(?:-bin|-git|-manager|-launcher|-rules|-udev)?-', '', v, flags=re.IGNORECASE)
+        v = re.sub(rf'^(?:underpants-|cachyos-gnome-)?(?:{re.escape(pid)}|{re.escape(pid_clean)})(?:-bin|-git|-manager|-launcher|-rules|-udev)?-', '', v, flags=re.IGNORECASE)
     v = re.sub(r'^[a-zA-Z0-9_\-+]+?-([0-9])', r'\1', v)
     return v
 
@@ -1175,7 +1581,45 @@ aur_pkg_names = {
     "microsoft-edge": ("microsoft-edge-stable-bin", "microsoft-edge-stable-bin-{ver}-x86_64.pkg.tar.zst"),
     "brave": ("brave-bin", "brave-bin-{ver}-x86_64.pkg.tar.zst"),
     "zen-browser": ("zen-browser-bin", "zen-browser-bin-{ver}-x86_64.pkg.tar.zst"),
-    "lian-li-linux": ("lianli-linux-git", "lianli-linux-git-{ver}-x86_64.pkg.tar.zst")
+    "zenpower3": ("zenpower3-dkms", "zenpower3-dkms-{ver}-x86_64.pkg.tar.zst"),
+    "v4l2loopback": ("v4l2loopback-dkms-git", "v4l2loopback-dkms-git-{ver}-x86_64.pkg.tar.zst"),
+    "rtl8821cu": ("rtl8821cu-dkms-git", "rtl8821cu-dkms-git-{ver}-x86_64.pkg.tar.zst"),
+    "rtl88x2bu": ("rtl88x2bu-dkms-git", "rtl88x2bu-dkms-git-{ver}-x86_64.pkg.tar.zst"),
+    "rtl8812au": ("rtl8812au-dkms-git", "rtl8812au-dkms-git-{ver}-x86_64.pkg.tar.zst"),
+    "obs-pipewire-audio-capture": ("obs-pipewire-audio-capture", "obs-pipewire-audio-capture-{ver}-x86_64.pkg.tar.zst")
+}
+
+github_and_direct_pkgs = {
+    "obs-move-transition": {
+        "type": "github_release",
+        "repo": "exeldro/obs-move-transition",
+        "asset_pattern": r"move-transition-([0-9\.]+)-x86_64-linux-gnu\.deb"
+    },
+    "obs-source-record": {
+        "type": "github_release",
+        "repo": "exeldro/obs-source-record",
+        "asset_pattern": r"source-record-([0-9\.]+)-ubuntu.*\.tar\.gz"
+    },
+    "obs-advanced-scene-switcher": {
+        "type": "github_release",
+        "repo": "WarmUpTill/SceneSwitcher",
+        "asset_pattern": r"advanced-scene-switcher-([0-9\.]+)-x86_64-ubuntu.*-linux-gnu\.deb"
+    },
+    "obs-multi-rtmp": {
+        "type": "github_release",
+        "repo": "sorayuki/obs-multi-rtmp",
+        "asset_pattern": r"obs-multi-rtmp-([0-9\.]+)-x86_64-linux-gnu-ubuntu.*\.deb"
+    },
+    "obs-composite-blur": {
+        "type": "github_release",
+        "repo": "FiniteSingularity/obs-composite-blur",
+        "asset_pattern": r"obs-composite-blur-([0-9\.]+)-ubuntu.*\.zip"
+    },
+    "obs-teleport": {
+        "type": "github_release",
+        "repo": "fzwoch/obs-teleport",
+        "asset_pattern": r"obs-teleport\.zip"
+    }
 }
 
 def resolve_single(pid):
@@ -1184,8 +1628,37 @@ def resolve_single(pid):
     if pid not in catalog:
         return pid, "NONE", "NONE", "NONE", "NONE"
 
+    main_ver, main_url = None, None
+
+    if pid in github_and_direct_pkgs:
+        meta = github_and_direct_pkgs[pid]
+        if meta["type"] == "direct_url":
+            main_ver = meta["version"]
+            main_url = meta["url"]
+        elif meta["type"] == "github_release":
+            try:
+                gh_url = f"https://api.github.com/repos/{meta['repo']}/releases"
+                raw = fetch_url_cached(gh_url, cache_dir, ttl=1800)
+                if raw:
+                    releases = json.loads(raw)
+                    for rel in releases:
+                        tag = rel.get("tag_name", "").lstrip("v")
+                        for asset in rel.get("assets", []):
+                            aname = asset.get("name", "")
+                            m = re.search(meta["asset_pattern"], aname)
+                            if m:
+                                main_ver = m.group(1) if m.groups() else tag
+                                main_url = asset.get("browser_download_url")
+                                break
+                        if main_ver and main_url:
+                            break
+            except Exception:
+                pass
+
     main_pat, lib32_pat, extra_pat, main_repos, lib32_repos = catalog[pid]
-    main_ver, main_url = fetch_match(main_pat, main_repos, pid)
+
+    if not main_ver or not main_url:
+        main_ver, main_url = fetch_match(main_pat, main_repos, pid)
 
     if (not main_ver or not main_url) and pid in aur_pkg_names:
         aur_name, filename_tmpl = aur_pkg_names[pid]
@@ -1203,6 +1676,22 @@ def resolve_single(pid):
                         break
         except Exception:
             pass
+
+    if not main_ver or not main_url:
+        for repo_cand in ("multilib", "extra", "core"):
+            try:
+                api_url = f"https://archlinux.org/packages/{repo_cand}/x86_64/{pid}/json/"
+                raw_json = fetch_url_cached(api_url, cache_dir, ttl=1800)
+                if raw_json:
+                    data = json.loads(raw_json)
+                    fn = data.get("filename")
+                    v = data.get("pkgver")
+                    if fn and v:
+                        main_ver = v
+                        main_url = f"https://geo.mirror.pkgbuild.com/{repo_cand}/os/x86_64/{fn}"
+                        break
+            except Exception:
+                pass
 
     if not main_ver or not main_url:
         return pid, "NONE", "NONE", "NONE", "NONE"
@@ -1291,6 +1780,9 @@ cleanup_foreign_gaming_pkgs() {
         protonplus)
             patterns=("protonplus-[0-9]*" "proton-plus-[0-9]*")
             ;;
+        steam)
+            patterns=("steam-[0-9]*" "steam-launcher-[0-9]*" "underpants-steam-[0-9]*" "cachyos-gnome-steam-[0-9]*")
+            ;;
         steam-devices)
             patterns=("game-devices-udev-[0-9]*" "steam-devices-[0-9]*")
             ;;
@@ -1357,9 +1849,6 @@ cleanup_foreign_gaming_pkgs() {
         coolercontrol)
             patterns=("coolercontrol-[0-9]*" "coolercontrold-[0-9]*")
             ;;
-        lian-li-linux)
-            patterns=("lian-li-linux-[0-9]*" "lian-li-[0-9]*")
-            ;;
         asusctl)
             patterns=("asusctl-[0-9]*")
             ;;
@@ -1375,12 +1864,54 @@ cleanup_foreign_gaming_pkgs() {
         limine-snapper-sync)
             patterns=("limine-snapper-sync-[0-9]*")
             ;;
+        obs-move-transition)
+            patterns=("obs-move-transition-[0-9]*")
+            ;;
+        obs-source-record)
+            patterns=("obs-source-record-[0-9]*")
+            ;;
+        obs-pipewire-audio-capture)
+            patterns=("obs-pipewire-audio-capture-[0-9]*")
+            ;;
+        obs-advanced-scene-switcher)
+            patterns=("obs-advanced-scene-switcher-[0-9]*")
+            ;;
+        obs-multi-rtmp)
+            patterns=("obs-multi-rtmp-[0-9]*")
+            ;;
+        obs-composite-blur)
+            patterns=("obs-composite-blur-[0-9]*")
+            ;;
+        obs-teleport)
+            patterns=("obs-teleport-[0-9]*")
+            ;;
+        zenpower3)
+            patterns=("zenpower3-[0-9]*" "zenpower3-dkms-[0-9]*" "zenpower-[0-9]*")
+            ;;
+        v4l2loopback)
+            patterns=("v4l2loopback-[0-9]*" "v4l2loopback-dkms-[0-9]*")
+            ;;
+        rtl8821cu)
+            patterns=("rtl8821cu-[0-9]*" "rtl8821cu-dkms-[0-9]*" "rtl8821cu-dkms-git-[0-9]*")
+            ;;
+        rtl88x2bu)
+            patterns=("rtl88x2bu-[0-9]*" "rtl88x2bu-dkms-[0-9]*" "rtl88x2bu-dkms-git-[0-9]*")
+            ;;
+        rtl8812au)
+            patterns=("rtl8812au-[0-9]*" "rtl8812au-dkms-[0-9]*" "rtl8812au-dkms-git-[0-9]*")
+            ;;
+        broadcom-wl)
+            patterns=("broadcom-wl-[0-9]*" "broadcom-wl-dkms-[0-9]*")
+            ;;
+        r8125)
+            patterns=("r8125-[0-9]*" "r8125-dkms-[0-9]*")
+            ;;
         sbctl)
             patterns=("sbctl-[0-9]*")
             ;;
     esac
 
-    for pat in "${patterns[@]}" "cachyos-gnome-${pkg_id}-[0-9]*"; do
+    for pat in "${patterns[@]}" "underpants-${pkg_id}-[0-9]*" "cachyos-gnome-${pkg_id}-[0-9]*"; do
         for p in /var/log/packages/${pat}; do
             [ -f "${p}" ] || continue
             local bname
@@ -1403,7 +1934,7 @@ transmute_and_deploy_gaming_pkg() {
     
     # Pre-flight readiness checks
     audit_multilib_readiness "${pkg_id}"
-    if [ "${pkg_id}" = "solaar" ] || [ "${pkg_id}" = "lian-li-linux" ] || [ "${pkg_id}" = "steam-devices" ] || [ "${pkg_id}" = "openrgb" ] || [ "${pkg_id}" = "coolercontrol" ] || [ "${pkg_id}" = "sunshine" ]; then
+    if [ "${pkg_id}" = "solaar" ] || [ "${pkg_id}" = "steam-devices" ] || [ "${pkg_id}" = "openrgb" ] || [ "${pkg_id}" = "coolercontrol" ] || [ "${pkg_id}" = "sunshine" ] || [ "${pkg_id}" = "steam" ]; then
         audit_user_hardware_groups
     fi
 
@@ -1486,13 +2017,21 @@ transmute_and_deploy_gaming_pkg() {
         local main_file="${cache_dir}/$(basename "${main_url}")"
         local dl_items=()
         if [ ! -f "${main_file}" ] || [ ! -s "${main_file}" ]; then
-            dl_items+=("${main_url}|${main_file}|${main_url}.sig|${main_file}.sig")
+            if [[ "${main_url}" =~ (cachyos\.org|pkgbuild\.com|archlinux\.org|chaotic\.cx) ]] && [[ "${main_url}" =~ \.pkg\.tar\.zst$ ]]; then
+                dl_items+=("${main_url}|${main_file}|${main_url}.sig|${main_file}.sig")
+            else
+                dl_items+=("${main_url}|${main_file}")
+            fi
         fi
 
         if [ "${lib32_url}" != "NONE" ] && [ -n "${lib32_url}" ]; then
             local lib32_file="${cache_dir}/$(basename "${lib32_url}")"
             if [ ! -f "${lib32_file}" ] || [ ! -s "${lib32_file}" ]; then
-                dl_items+=("${lib32_url}|${lib32_file}|${lib32_url}.sig|${lib32_file}.sig")
+                if [[ "${lib32_url}" =~ (cachyos\.org|pkgbuild\.com|archlinux\.org|chaotic\.cx) ]] && [[ "${lib32_url}" =~ \.pkg\.tar\.zst$ ]]; then
+                    dl_items+=("${lib32_url}|${lib32_file}|${lib32_url}.sig|${lib32_file}.sig")
+                else
+                    dl_items+=("${lib32_url}|${lib32_file}")
+                fi
             fi
         fi
 
@@ -1502,7 +2041,11 @@ transmute_and_deploy_gaming_pkg() {
                 [ -n "${single_extra_url}" ] || continue
                 local extra_file="${cache_dir}/$(basename "${single_extra_url}")"
                 if [ ! -f "${extra_file}" ] || [ ! -s "${extra_file}" ]; then
-                    dl_items+=("${single_extra_url}|${extra_file}|${single_extra_url}.sig|${extra_file}.sig")
+                    if [[ "${single_extra_url}" =~ (cachyos\.org|pkgbuild\.com|archlinux\.org|chaotic\.cx) ]] && [[ "${single_extra_url}" =~ \.pkg\.tar\.zst$ ]]; then
+                        dl_items+=("${single_extra_url}|${extra_file}|${single_extra_url}.sig|${extra_file}.sig")
+                    else
+                        dl_items+=("${single_extra_url}|${extra_file}")
+                    fi
                 fi
             done
         fi
@@ -1515,13 +2058,40 @@ transmute_and_deploy_gaming_pkg() {
             fi
         fi
 
-        if ! verify_cachyos_gpg_signature "${main_file}" "${main_file}.sig"; then
-            log_error "GPG signature verification failed for ${pkg_id}! Aborting transmutation to protect system integrity."
+        if [ -f "${main_file}.sig" ]; then
+            if ! verify_cachyos_gpg_signature "${main_file}" "${main_file}.sig"; then
+                log_error "GPG signature verification failed for ${pkg_id}! Aborting transmutation to protect system integrity."
+                rm -rf "${staging_base}"
+                return 1
+            fi
+        elif [[ "${main_url}" =~ (cachyos\.org|pkgbuild\.com|archlinux\.org|chaotic\.cx) ]] && [[ "${main_url}" =~ \.pkg\.tar\.zst$ ]]; then
+            log_error "Missing required GPG signature for official upstream package ${pkg_id}!"
             rm -rf "${staging_base}"
             return 1
         fi
 
-        tar --zstd -xf "${main_file}" -C "${tmp_extract}/main" 2>/dev/null || tar -xf "${main_file}" -C "${tmp_extract}/main" 2>/dev/null || true
+        if [[ "${main_file}" =~ \.deb$ ]]; then
+            (
+                cd "${tmp_extract}/main"
+                ar x "${main_file}" 2>/dev/null || true
+                if [ -f data.tar.zst ]; then
+                    tar --zstd -xf data.tar.zst 2>/dev/null || true
+                elif [ -f data.tar.xz ]; then
+                    tar -xf data.tar.xz 2>/dev/null || true
+                elif [ -f data.tar.gz ]; then
+                    tar -xf data.tar.gz 2>/dev/null || true
+                fi
+                rm -f control.tar.* data.tar.* debian-binary 2>/dev/null || true
+            )
+        elif [[ "${main_file}" =~ \.zip$ ]] || [[ "${main_url}" =~ download\?file= ]]; then
+            unzip -q -o "${main_file}" -d "${tmp_extract}/main" 2>/dev/null || true
+            find "${tmp_extract}/main" -type f \( -name "*.tar.gz" -o -name "*.tar.xz" -o -name "*.tgz" \) | while read -r inner_tar; do
+                tar -xf "${inner_tar}" -C "${tmp_extract}/main" 2>/dev/null || true
+                rm -f "${inner_tar}" 2>/dev/null || true
+            done
+        else
+            tar --zstd -xf "${main_file}" -C "${tmp_extract}/main" 2>/dev/null || tar -xf "${main_file}" -C "${tmp_extract}/main" 2>/dev/null || true
+        fi
     fi
 
     # Extract 32-bit Multilib if present
@@ -2024,6 +2594,61 @@ PEAR_WRAPPER_EOF
             )
         fi
 
+        if [ -d "${tmp_extract}/main/usr/src" ]; then
+            mkdir -p "${staging_root}/usr/src"
+            cp -a "${tmp_extract}/main/usr/src/." "${staging_root}/usr/src/"
+        fi
+
+        # OBS Plugin Transmutation Bridge
+        if [[ "${pkg_id}" =~ ^obs- ]] && [ "${pkg_id}" != "obs-studio" ] && [ "${pkg_id}" != "obs-vkcapture" ]; then
+            mkdir -p "${staging_root}/usr/lib64/obs-plugins" \
+                     "${staging_root}/usr/share/obs/obs-plugins" \
+                     "${staging_root}/opt/obs-studio/lib/obs-plugins" \
+                     "${staging_root}/opt/obs-studio/share/obs/obs-plugins"
+
+            # 1. Copy plugin subdirectories (like advanced-scene-switcher-plugins)
+            find "${tmp_extract}/main" -mindepth 1 -type d -name "*-plugins" ! -name "obs-plugins" | while read -r psubdir; do
+                cp -a "${psubdir}" "${staging_root}/usr/lib64/obs-plugins/" 2>/dev/null || true
+                cp -a "${psubdir}" "${staging_root}/opt/obs-studio/lib/obs-plugins/" 2>/dev/null || true
+            done
+
+            # 2. Copy only top-level 64-bit .so plugin binaries (excluding modular subplugins inside subdirs)
+            find "${tmp_extract}/main" -type f \( -name "*.so" -o -name "*.so.*" \) | while read -r so_file; do
+                if file "${so_file}" 2>/dev/null | grep -qE "ARM|aarch64|32-bit"; then
+                    continue
+                fi
+                # Do NOT copy files that belong inside subdirectories (like advanced-scene-switcher-plugins/)
+                if echo "${so_file}" | grep -qE "/[a-zA-Z0-9_\-]+-plugins/"; then
+                    continue
+                fi
+                bso=$(basename "${so_file}")
+                # For advanced-scene-switcher, ensure sub-plugins are only kept in the subfolder
+                if [ "${pkg_id}" = "obs-advanced-scene-switcher" ]; then
+                    if [ "${bso}" != "advanced-scene-switcher.so" ] && [ "${bso}" != "advanced-scene-switcher-lib.so.1" ]; then
+                        continue
+                    fi
+                fi
+                cp -a "${so_file}" "${staging_root}/usr/lib64/obs-plugins/${bso}" 2>/dev/null || true
+                cp -a "${so_file}" "${staging_root}/opt/obs-studio/lib/obs-plugins/${bso}" 2>/dev/null || true
+            done
+
+            # 3. Copy data directories (locales, shaders, etc.)
+            if [ -d "${tmp_extract}/main/usr/share/obs/obs-plugins" ]; then
+                cp -a "${tmp_extract}/main/usr/share/obs/obs-plugins/." "${staging_root}/usr/share/obs/obs-plugins/" 2>/dev/null || true
+                cp -a "${tmp_extract}/main/usr/share/obs/obs-plugins/." "${staging_root}/opt/obs-studio/share/obs/obs-plugins/" 2>/dev/null || true
+            fi
+
+            find "${tmp_extract}/main" -type d -name "data" | while read -r ddir; do
+                pname=$(basename "$(dirname "${ddir}")")
+                if [ "${pname}" != "share" ] && [ "${pname}" != "main" ] && [ "${pname}" != "extract" ] && [ "${pname}" != "obs-plugins" ]; then
+                    mkdir -p "${staging_root}/usr/share/obs/obs-plugins/${pname}" \
+                             "${staging_root}/opt/obs-studio/share/obs/obs-plugins/${pname}"
+                    cp -a "${ddir}/." "${staging_root}/usr/share/obs/obs-plugins/${pname}/" 2>/dev/null || true
+                    cp -a "${ddir}/." "${staging_root}/opt/obs-studio/share/obs/obs-plugins/${pname}/" 2>/dev/null || true
+                fi
+            done
+        fi
+
         # Copy 32-bit Multilib files -> Slackware /usr/lib
         if [ -d "${tmp_extract}/lib32/usr/lib32" ]; then
             (
@@ -2061,6 +2686,10 @@ PEAR_WRAPPER_EOF
             if [ -d "${extra_dir}/etc" ]; then
                 mkdir -p "${staging_root}/etc"
                 cp -a "${extra_dir}/etc/." "${staging_root}/etc/"
+            fi
+            if [ -d "${extra_dir}/usr/src" ]; then
+                mkdir -p "${staging_root}/usr/src"
+                cp -a "${extra_dir}/usr/src/." "${staging_root}/usr/src/"
             fi
         done
 
@@ -2228,22 +2857,29 @@ PEAR_WRAPPER_EOF
         fi
     fi
 
-    if [ "${pkg_id}" = "obs-vkcapture" ]; then
+    if [[ "${pkg_id}" =~ ^obs- ]] && [ "${pkg_id}" != "obs-studio" ]; then
         # Bridge plugin and plugin data into isolated OBS Studio bundle in /opt/obs-studio
         mkdir -p "${staging_root}/opt/obs-studio/lib/obs-plugins" \
                  "${staging_root}/opt/obs-studio/share/obs/obs-plugins"
-        if [ -f "${staging_root}/usr/lib64/obs-plugins/linux-vkcapture.so" ]; then
-            ln -sf /usr/lib64/obs-plugins/linux-vkcapture.so "${staging_root}/opt/obs-studio/lib/obs-plugins/linux-vkcapture.so"
-        fi
-        if [ -d "${staging_root}/usr/share/obs/obs-plugins/linux-vkcapture" ]; then
-            ln -sf /usr/share/obs/obs-plugins/linux-vkcapture "${staging_root}/opt/obs-studio/share/obs/obs-plugins/linux-vkcapture"
-        fi
+        for sopath in "${staging_root}"/usr/lib64/obs-plugins/*.so "${staging_root}"/usr/lib/obs-plugins/*.so; do
+            [ -f "${sopath}" ] || continue
+            local soname
+            soname=$(basename "${sopath}")
+            ln -sf "/usr/lib64/obs-plugins/${soname}" "${staging_root}/opt/obs-studio/lib/obs-plugins/${soname}"
+        done
+        for datapath in "${staging_root}"/usr/share/obs/obs-plugins/*; do
+            [ -d "${datapath}" ] || continue
+            local dataname
+            dataname=$(basename "${datapath}")
+            ln -sf "/usr/share/obs/obs-plugins/${dataname}" "${staging_root}/opt/obs-studio/share/obs/obs-plugins/${dataname}"
+        done
 
-        # Multilib 32-bit Vulkan layer manifest for 32-bit games
-        local vklayer_dir="${staging_root}/usr/share/vulkan/implicit_layer.d"
-        if [ -f "${staging_root}/usr/lib/libVkLayer_obs_vkcapture.so" ] && [ ! -f "${vklayer_dir}/obs_vkcapture_32.json" ]; then
-            mkdir -p "${vklayer_dir}"
-            cat << 'VK32_EOF' > "${vklayer_dir}/obs_vkcapture_32.json"
+        if [ "${pkg_id}" = "obs-vkcapture" ]; then
+            # Multilib 32-bit Vulkan layer manifest for 32-bit games
+            local vklayer_dir="${staging_root}/usr/share/vulkan/implicit_layer.d"
+            if [ -f "${staging_root}/usr/lib/libVkLayer_obs_vkcapture.so" ] && [ ! -f "${vklayer_dir}/obs_vkcapture_32.json" ]; then
+                mkdir -p "${vklayer_dir}"
+                cat << 'VK32_EOF' > "${vklayer_dir}/obs_vkcapture_32.json"
 {
     "file_format_version": "1.1.2",
     "layer": {
@@ -2265,7 +2901,27 @@ PEAR_WRAPPER_EOF
     }
 }
 VK32_EOF
+            fi
         fi
+    fi
+
+    if [ "${pkg_id}" = "zenpower3" ]; then
+        mkdir -p "${staging_root}/etc/modprobe.d" "${staging_root}/etc/modules-load.d"
+        cat << 'ZEN_EOF' > "${staging_root}/etc/modprobe.d/zenpower.conf"
+# Generated by slacky-update Underpants Gnomes
+# Blacklist default k10temp to allow zenpower full access to Zen SVI2 telemetry
+blacklist k10temp
+ZEN_EOF
+        echo "zenpower" > "${staging_root}/etc/modules-load.d/zenpower.conf"
+    fi
+
+    if [ "${pkg_id}" = "v4l2loopback" ]; then
+        mkdir -p "${staging_root}/etc/modprobe.d" "${staging_root}/etc/modules-load.d"
+        cat << 'V4L2_EOF' > "${staging_root}/etc/modprobe.d/v4l2loopback.conf"
+# Generated by slacky-update Underpants Gnomes
+options v4l2loopback devices=1 video_nr=10 card_label="OBS Virtual Camera" exclusive_caps=1
+V4L2_EOF
+        echo "v4l2loopback" > "${staging_root}/etc/modules-load.d/v4l2loopback.conf"
     fi
 
     if [ "${pkg_id}" = "darktable" ]; then
@@ -2649,15 +3305,6 @@ if target in c:
         rm -rf "${staging_root}/usr/lib64/python"*/site-packages/evdev 2>/dev/null || true
     fi
 
-    if [ "${pkg_id}" = "lian-li-linux" ]; then
-        mkdir -p "${staging_root}/lib/udev/rules.d"
-        cat << 'LIANLI_UDEV_EOF' > "${staging_root}/lib/udev/rules.d/99-lian-li.rules"
-# Lian Li Uni Fan & Strimer Controller Udev rules for Slackware
-SUBSYSTEM=="usb", ATTRS{idVendor}=="0cf2", MODE="0666", TAG+="uaccess"
-SUBSYSTEM=="hidraw", ATTRS{idVendor}=="0cf2", MODE="0666", TAG+="uaccess"
-LIANLI_UDEV_EOF
-    fi
-
     if [ "${pkg_id}" = "asusctl" ]; then
         mkdir -p "${staging_root}/etc/rc.d"
         cat << 'ASUS_RC_EOF' > "${staging_root}/etc/rc.d/rc.asusd"
@@ -2841,7 +3488,47 @@ AUDACITY_WRAPPER_EOF
         fi
     fi
 
-    if [ "${pkg_id}" = "steam-devices" ]; then
+    if [ "${pkg_id}" = "steam" ]; then
+        # Ensure /usr/lib/steam and /usr/lib64/steam are fully populated and symlinks are relative
+        if [ -d "${staging_root}/usr/lib64/steam" ] && [ ! -d "${staging_root}/usr/lib/steam" ]; then
+            mkdir -p "${staging_root}/usr/lib"
+            cp -a "${staging_root}/usr/lib64/steam" "${staging_root}/usr/lib/"
+        elif [ -d "${staging_root}/usr/lib/steam" ] && [ ! -d "${staging_root}/usr/lib64/steam" ]; then
+            mkdir -p "${staging_root}/usr/lib64"
+            cp -a "${staging_root}/usr/lib/steam" "${staging_root}/usr/lib64/"
+        fi
+
+        # Fix relative symlinks inside both /usr/lib/steam and /usr/lib64/steam
+        for sdir in "${staging_root}/usr/lib/steam" "${staging_root}/usr/lib64/steam"; do
+            [ -d "${sdir}" ] || continue
+            (
+                cd "${sdir}"
+                rm -f steam
+                ln -sf bin_steam.sh steam
+            )
+        done
+
+        # Ensure /usr/bin/steam is a robust wrapper that checks both /usr/lib64/steam and /usr/lib/steam
+        cat << 'STEAM_BIN_EOF' > "${staging_root}/usr/bin/steam"
+#!/bin/sh
+# Steam launcher wrapper for Slackware Linux
+if [ -x /usr/lib64/steam/steam ]; then
+    exec /usr/lib64/steam/steam "$@"
+elif [ -x /usr/lib/steam/steam ]; then
+    exec /usr/lib/steam/steam "$@"
+elif [ -x /usr/lib64/steam/bin_steam.sh ]; then
+    exec /usr/lib64/steam/bin_steam.sh "$@"
+elif [ -x /usr/lib/steam/bin_steam.sh ]; then
+    exec /usr/lib/steam/bin_steam.sh "$@"
+else
+    echo "Error: Steam launcher binary not found in /usr/lib64/steam or /usr/lib/steam" >&2
+    exit 1
+fi
+STEAM_BIN_EOF
+        chmod 755 "${staging_root}/usr/bin/steam"
+    fi
+
+    if [ "${pkg_id}" = "steam-devices" ] || [ "${pkg_id}" = "steam" ]; then
         mkdir -p "${staging_root}/lib/udev/rules.d"
         cat << 'STEAM_UDEV_EOF' > "${staging_root}/lib/udev/rules.d/60-steam-input.rules"
 # Steam Controller and Gamepad Udev rules for Slackware
@@ -3246,7 +3933,7 @@ RC_DMEMCG_EOF
     fi
 
     # Write Slackware slack-desc
-    local pkg_name="cachyos-gnome-${pkg_id}"
+    local pkg_name="underpants-${pkg_id}"
     cat << DESC_EOF > "${staging_root}/install/slack-desc"
 ${pkg_name}: ${pkg_name} (Underpants Gnomes CachyOS Gaming Suite)
 ${pkg_name}:
@@ -3256,7 +3943,7 @@ ${pkg_name}:
 ${pkg_name}: Part of the Underpants Gnomes Gaming Master Suite.
 ${pkg_name}: Maintained by slacky-update.
 ${pkg_name}:
-${pkg_name}: Profit!
+${pkg_name}: 🧙 💰 Step 3: PROFIT!!!
 ${pkg_name}:
 DESC_EOF
 
@@ -3308,11 +3995,24 @@ if [ -f /usr/share/vulkan/implicit_layer.d/obs_vkcapture_64.json ] && [ ! -e /us
 fi
 if [ -d /opt/obs-studio ]; then
   mkdir -p /opt/obs-studio/lib/obs-plugins /opt/obs-studio/share/obs/obs-plugins 2>/dev/null || true
-  if [ -f /usr/lib64/obs-plugins/linux-vkcapture.so ]; then
-    ( cd /opt/obs-studio/lib/obs-plugins && rm -f linux-vkcapture.so && ln -sf /usr/lib64/obs-plugins/linux-vkcapture.so linux-vkcapture.so 2>/dev/null || true )
+  if [ -d /usr/lib64/obs-plugins ]; then
+    # Clean up stray modular sub-plugins erroneously placed in root plugin directories by earlier builds
+    for stray_so in /usr/lib64/obs-plugins/advanced-scene-switcher-*.so /opt/obs-studio/lib/obs-plugins/advanced-scene-switcher-*.so; do
+      [ -f "${stray_so}" ] || continue
+      rm -f "${stray_so}" 2>/dev/null || true
+    done
+    for obsitem in /usr/lib64/obs-plugins/*; do
+      [ -e "${obsitem}" ] || continue
+      obsbname=$(basename "${obsitem}")
+      ( cd /opt/obs-studio/lib/obs-plugins && rm -rf "${obsbname}" && ln -sf "${obsitem}" "${obsbname}" 2>/dev/null || true )
+    done
   fi
-  if [ -d /usr/share/obs/obs-plugins/linux-vkcapture ]; then
-    ( cd /opt/obs-studio/share/obs/obs-plugins && rm -rf linux-vkcapture && ln -sf /usr/share/obs/obs-plugins/linux-vkcapture linux-vkcapture 2>/dev/null || true )
+  if [ -d /usr/share/obs/obs-plugins ]; then
+    for obsdir in /usr/share/obs/obs-plugins/*; do
+      [ -d "${obsdir}" ] || continue
+      obsbname=$(basename "${obsdir}")
+      ( cd /opt/obs-studio/share/obs/obs-plugins && rm -rf "${obsbname}" && ln -sf "${obsdir}" "${obsbname}" 2>/dev/null || true )
+    done
   fi
 fi
 if [ -d /usr/lib64/darktable ] && [ ! -e /usr/lib/darktable ]; then
@@ -3347,6 +4047,19 @@ if [ -f /usr/lib64/libyabridge-vst2.so ] || [ -f /usr/lib64/libyabridge-chainloa
       [ -e "/usr/lib/${ysoname}" ] || ln -sf "../lib64/${ysoname}" "/usr/lib/${ysoname}" 2>/dev/null || true
     fi
   done
+fi
+if [ -d /usr/lib64/steam ] && [ ! -e /usr/lib/steam ]; then
+  mkdir -p /usr/lib
+  ln -sf ../lib64/steam /usr/lib/steam 2>/dev/null || true
+elif [ -d /usr/lib/steam ] && [ ! -e /usr/lib64/steam ]; then
+  mkdir -p /usr/lib64
+  ln -sf ../lib/steam /usr/lib64/steam 2>/dev/null || true
+fi
+if [ -d /usr/lib64/steam ] && [ -f /usr/lib64/steam/bin_steam.sh ] && [ ! -e /usr/lib64/steam/steam ]; then
+  ( cd /usr/lib64/steam && ln -sf bin_steam.sh steam 2>/dev/null || true )
+fi
+if [ -d /usr/lib/steam ] && [ -f /usr/lib/steam/bin_steam.sh ] && [ ! -e /usr/lib/steam/steam ]; then
+  ( cd /usr/lib/steam && ln -sf bin_steam.sh steam 2>/dev/null || true )
 fi
 
 # Slackware rc.local integration for daemons:
@@ -3522,6 +4235,40 @@ if [ -d /etc/easyeffects/output ]; then
     chown -R "${u_name}:users" "${u_home}/.config/easyeffects" 2>/dev/null || true
   done
 fi
+
+# DKMS Kernel Driver Auto-registration & Compilation
+if [ -x /usr/sbin/dkms ] || [ -x /usr/bin/dkms ]; then
+  DKMS_BIN=$(command -v dkms 2>/dev/null || echo "/usr/sbin/dkms")
+  for dconf in /usr/src/*/dkms.conf; do
+    [ -f "${dconf}" ] || continue
+    ddir=$(dirname "${dconf}")
+    dname=$(basename "${ddir}")
+    mod_name=$(grep -E '^\s*PACKAGE_NAME=' "${dconf}" 2>/dev/null | head -n1 | cut -d= -f2 | tr -d '"'\'' ')
+    mod_ver=$(grep -E '^\s*PACKAGE_VERSION=' "${dconf}" 2>/dev/null | head -n1 | cut -d= -f2 | tr -d '"'\'' ')
+    [ -z "${mod_name}" ] && mod_name=$(echo "${dname}" | sed -E 's/-[0-9].*//')
+    [ -z "${mod_ver}" ] && mod_ver=$(echo "${dname}" | sed -E 's/^[a-zA-Z0-9_\-]+-//')
+    if [ -n "${mod_name}" ] && [ -n "${mod_ver}" ]; then
+      if [ ! -e "/usr/src/${mod_name}-${mod_ver}" ] && [ -d "${ddir}" ]; then
+        ln -sf "${dname}" "/usr/src/${mod_name}-${mod_ver}" 2>/dev/null || true
+      fi
+      "${DKMS_BIN}" add -m "${mod_name}" -v "${mod_ver}" 2>/dev/null || true
+      for kdir in /lib/modules/*; do
+        [ -d "${kdir}/build" ] || continue
+        kver=$(basename "${kdir}")
+        "${DKMS_BIN}" build -m "${mod_name}" -v "${mod_ver}" -k "${kver}" 2>/dev/null || true
+        "${DKMS_BIN}" install -m "${mod_name}" -v "${mod_ver}" -k "${kver}" 2>/dev/null || true
+      done
+    fi
+  done
+fi
+
+if [ -f /etc/modules-load.d/zenpower.conf ]; then
+  /sbin/modprobe -r k10temp 2>/dev/null || true
+  /sbin/modprobe zenpower 2>/dev/null || true
+fi
+if [ -f /etc/modules-load.d/v4l2loopback.conf ]; then
+  /sbin/modprobe v4l2loopback 2>/dev/null || true
+fi
 DOINST_TAIL_EOF
     chmod 755 "${staging_root}/install/doinst.sh"
 
@@ -3694,11 +4441,19 @@ deploy_gaming_packages_batch() {
 
         if [ "${main_url}" != "BUNDLED" ]; then
             local mf="${batch_cache}/$(basename "${main_url}")"
-            dl_items+=("${main_url}|${mf}|${main_url}.sig|${mf}.sig")
+            if [[ "${main_url}" =~ (cachyos\.org|pkgbuild\.com|archlinux\.org|chaotic\.cx) ]] && [[ "${main_url}" =~ \.pkg\.tar\.zst$ ]]; then
+                dl_items+=("${main_url}|${mf}|${main_url}.sig|${mf}.sig")
+            else
+                dl_items+=("${main_url}|${mf}")
+            fi
 
             if [ "${lib32_url}" != "NONE" ] && [ -n "${lib32_url}" ]; then
                 local lf="${batch_cache}/$(basename "${lib32_url}")"
-                dl_items+=("${lib32_url}|${lf}|${lib32_url}.sig|${lf}.sig")
+                if [[ "${lib32_url}" =~ (cachyos\.org|pkgbuild\.com|archlinux\.org|chaotic\.cx) ]] && [[ "${lib32_url}" =~ \.pkg\.tar\.zst$ ]]; then
+                    dl_items+=("${lib32_url}|${lf}|${lib32_url}.sig|${lf}.sig")
+                else
+                    dl_items+=("${lib32_url}|${lf}")
+                fi
             fi
 
             if [ "${extra_url}" != "NONE" ] && [ -n "${extra_url}" ]; then
@@ -3706,7 +4461,11 @@ deploy_gaming_packages_batch() {
                 for single_extra_url in "${EXTRA_URLS[@]}"; do
                     [ -n "${single_extra_url}" ] || continue
                     local ef="${batch_cache}/$(basename "${single_extra_url}")"
-                    dl_items+=("${single_extra_url}|${ef}|${single_extra_url}.sig|${ef}.sig")
+                    if [[ "${single_extra_url}" =~ (cachyos\.org|pkgbuild\.com|archlinux\.org|chaotic\.cx) ]] && [[ "${single_extra_url}" =~ \.pkg\.tar\.zst$ ]]; then
+                        dl_items+=("${single_extra_url}|${ef}|${single_extra_url}.sig|${ef}.sig")
+                    else
+                        dl_items+=("${single_extra_url}|${ef}")
+                    fi
                 done
             fi
         fi
@@ -3756,9 +4515,8 @@ deploy_gaming_packages_batch() {
 uninstall_cachyos_gaming_pkg() {
     local pkg_id="$1"
     validate_privileges
-    local prefix="cachyos-gnome-${pkg_id}-"
     local found=0
-    for p in /var/log/packages/${prefix}*; do
+    for p in /var/log/packages/underpants-${pkg_id}-* /var/log/packages/cachyos-gnome-${pkg_id}-*; do
         [ -f "${p}" ] || continue
         local bname
         bname=$(basename "${p}")
@@ -3785,31 +4543,33 @@ uninstall_cachyos_gaming_pkg() {
             pkill -x sunshine 2>/dev/null || true
         fi
 
-        # Remove rc.local persistence entries
-        if [ -f /etc/rc.d/rc.local ]; then
-            sudo sed -i "/rc\.${pkg_id}/d" /etc/rc.d/rc.local 2>/dev/null || true
-            sudo sed -i "/rc\.ananicy-cpp/d" /etc/rc.d/rc.local 2>/dev/null || true
-            sudo sed -i "/rc\.coolercontrol/d" /etc/rc.d/rc.local 2>/dev/null || true
-            sudo sed -i "/rc\.asusd/d" /etc/rc.d/rc.local 2>/dev/null || true
-            sudo sed -i "/rc\.syncthing/d" /etc/rc.d/rc.local 2>/dev/null || true
-            sudo sed -i "/rc\.dmemcg-booster/d" /etc/rc.d/rc.local 2>/dev/null || true
-            sudo sed -i "/rc\.gamemode/d" /etc/rc.d/rc.local 2>/dev/null || true
-        fi
-        if [ -f /etc/rc.d/rc.local_shutdown ]; then
-            sudo sed -i "/rc\.${pkg_id}/d" /etc/rc.d/rc.local_shutdown 2>/dev/null || true
-            sudo sed -i "/rc\.ananicy-cpp/d" /etc/rc.d/rc.local_shutdown 2>/dev/null || true
-            sudo sed -i "/rc\.coolercontrol/d" /etc/rc.d/rc.local_shutdown 2>/dev/null || true
-            sudo sed -i "/rc\.asusd/d" /etc/rc.d/rc.local_shutdown 2>/dev/null || true
-            sudo sed -i "/rc\.syncthing/d" /etc/rc.d/rc.local_shutdown 2>/dev/null || true
-            sudo sed -i "/rc\.dmemcg-booster/d" /etc/rc.d/rc.local_shutdown 2>/dev/null || true
-            sudo sed -i "/rc\.gamemode/d" /etc/rc.d/rc.local_shutdown 2>/dev/null || true
-        fi
+        # Safely remove multi-line rc.local / rc.local_shutdown persistence blocks without leaving orphaned 'fi' tokens
+        for rc_file in /etc/rc.d/rc.local /etc/rc.d/rc.local_shutdown; do
+            [ -f "${rc_file}" ] || continue
+            python3 -c "
+import sys, re
+path = sys.argv[1]
+target = sys.argv[2]
+try:
+    with open(path, 'r', encoding='utf-8') as f:
+        c = f.read()
+    # Regex removes comment + if ... fi block atomically
+    c = re.sub(rf'(?m)^#[^\n]*\nif\s+\[\s+-[xf]\s+/etc/rc\.d/{re.escape(target)}\s+\];\s+then\n\s+/etc/rc\.d/{re.escape(target)}\s+(?:start|stop)[^\n]*\nfi\n?', '', c)
+    with open(path, 'w', encoding='utf-8') as f:
+        f.write(c)
+except Exception:
+    pass
+" "${rc_file}" "rc.${pkg_id}" 2>/dev/null || true
+        done
 
         sudo "${PKG_REMOVE_CMD}" "${bname}"
         found=1
     done
 
     if [ "${found}" -eq 1 ]; then
+        if [ -d /opt/obs-studio ]; then
+            find /opt/obs-studio/lib/obs-plugins /opt/obs-studio/share/obs/obs-plugins -xtype l -delete 2>/dev/null || true
+        fi
         log_info "[1/3] Updating dynamic linker cache (ldconfig)..."
         sudo /sbin/ldconfig 2>/dev/null || true
         log_info "[2/3] Registering desktop application entries & GSettings..."
@@ -3869,7 +4629,22 @@ sync_all_installed_cachyos_gaming_packages() {
 # --- [ INTERACTIVE TUI GAMING MASTER STATION ] ---
 interactive_cachyos_gaming_menu() {
     set_terminal_title "slacky-update: Underpants Gnomes Gaming Master Suite"
-    
+
+    # Category keys and human labels
+    local CAT_KEYS=("engine" "launcher" "hardware" "streaming" "social" "audio" "creative" "tools" "browser" "bootloader")
+    local CAT_TITLES=(
+        "⚡ The Engine: Performance, HUD & Schedulers"
+        "🎮 Storefronts & Launcher Managers"
+        "🔧 Hardware Control, Tuning & DKMS Drivers"
+        "🎬 OBS Studio & Video Production Plugins"
+        "💬 Voice Chat, Social & Game Streaming"
+        "🎧 Studio Audio DSP & Acoustic Processing"
+        "🎨 Creative, 3D & Photography Studio"
+        "🛠️ Power Tools & Media Sync"
+        "🌐 Web Navigators & Browsers"
+        "🛡️ Secure Boot & UEFI Utilities"
+    )
+
     while true; do
         echo ""
         echo -e "${BLUE}${BOLD}"
@@ -3877,67 +4652,247 @@ interactive_cachyos_gaming_menu() {
         echo " 🧙  UNDERPANTS GNOMES: CACHYOS GAMING & HARDWARE MASTER SUITE (SLACKWARE)  🧙 "
         echo "================================================================================"
         echo -e "${RESET}"
-        echo -e " ${CYAN}Step 1: Steal Underpants  •  Step 2: Transmute to Slackware  •  Step 3: PROFIT!${RESET}\n"
+        echo -e " ${CYAN}Step 1: Steal Underpants  •  Step 2: Transmute to Slackware  •  Step 3: PROFIT!${RESET}"
 
         local index=1
         local item_ids=()
         local item_names=()
         local item_statuses=()
+        local item_cats=()
 
-        render_gaming_cat() {
-            local cat_filter="$1"
-            local cat_title="$2"
-            echo -e "\n${YELLOW}${BOLD}--- [ ${cat_title} ] ---${RESET}"
+        # Fast one-pass status resolution for all packages
+        declare -A FAST_INSTALLED_MAP=()
+        while IFS='=' read -r c_id c_ver; do
+            [ -n "${c_id}" ] || continue
+            FAST_INSTALLED_MAP["${c_id}"]="${c_ver}"
+        done < <(python3 - << 'PYTUIFASTMAP'
+import os, glob, shutil, subprocess, re
+
+installed = {}
+pkg_dir = '/var/log/packages'
+if os.path.exists(pkg_dir):
+    for f in os.listdir(pkg_dir):
+        parts = f.rsplit('-', 3)
+        if len(parts) >= 2:
+            p_name = parts[0]
+            p_ver = parts[1] if len(parts) >= 4 else "INSTALLED"
+            for pref in ("underpants-", "cachyos-gnome-", "cachyos-gnome-gnome-"):
+                if p_name.startswith(pref):
+                    p_name = p_name[len(pref):]
+            vm = re.match(r"^(.+?)-([0-9].*)$", p_name)
+            if vm:
+                p_name = vm.group(1)
+                if p_ver.isdigit() or p_ver == "INSTALLED":
+                    p_ver = vm.group(2)
+            installed[p_name] = p_ver
+
+# Check binaries & explicit files
+BINARY_MAP = {
+    "gamemode": ["gamemoded", "/usr/bin/gamemoded"],
+    "mangohud": ["mangohud", "mangoapp"],
+    "goverlay": ["goverlay"],
+    "scx": ["scx_loader", "scx_lavd", "scx_rusty", "scx_bpfland"],
+    "ananicy": ["ananicy-cpp", "/usr/bin/ananicy-cpp"],
+    "vram-booster": ["dmemcg-booster", "/usr/bin/dmemcg-booster"],
+    "gamescope": ["gamescope"],
+    "retroarch": ["retroarch"],
+    "steam": ["steam", "/usr/bin/steam"],
+    "steam-devices": ["/lib/udev/rules.d/60-steam-input.rules", "/usr/lib/udev/rules.d/60-steam-input.rules", "/etc/udev/rules.d/60-steam-input.rules"],
+    "lact": ["lact", "lactd"],
+    "openrgb": ["openrgb"],
+    "solaar": ["solaar"],
+    "coolercontrol": ["coolercontrol", "coolercontrold"],
+    "asusctl": ["asusctl", "supergfxd"],
+    "zenpower3": ["/var/lib/dkms/zenpower*", "/usr/src/zenpower3*", "/usr/src/zenpower*"],
+    "v4l2loopback": ["/var/lib/dkms/v4l2loopback*", "/usr/src/v4l2loopback*"],
+    "rtl8821cu": ["/var/lib/dkms/rtl8821cu*", "/usr/lib/dkms/8821cu*"],
+    "rtl88x2bu": ["/var/lib/dkms/rtl88x2bu*", "/usr/lib/dkms/8821cu*"],
+    "rtl8812au": ["/var/lib/dkms/rtl8812au*", "/usr/lib/dkms/8812au*"],
+    "broadcom-wl": ["/var/lib/dkms/broadcom-wl*", "/usr/lib/dkms/wl*"],
+    "r8125": ["/var/lib/dkms/r8125*"],
+    "obs-studio": ["obs"],
+    "obs-vkcapture": ["obs-vkcapture", "/usr/lib64/obs-plugins/linux-vkcapture.so", "/usr/lib/obs-plugins/linux-vkcapture.so"],
+    "obs-move-transition": ["/usr/lib64/obs-plugins/move-transition.so", "/opt/obs-studio/lib/obs-plugins/move-transition.so"],
+    "obs-source-record": ["/usr/lib64/obs-plugins/source-record.so", "/opt/obs-studio/lib/obs-plugins/source-record.so"],
+    "obs-pipewire-audio-capture": ["/usr/lib64/obs-plugins/linux-pipewire-audio.so", "/opt/obs-studio/lib/obs-plugins/linux-pipewire-audio.so"],
+    "obs-advanced-scene-switcher": ["/usr/lib64/obs-plugins/advanced-scene-switcher.so", "/opt/obs-studio/lib/obs-plugins/advanced-scene-switcher.so"],
+    "obs-multi-rtmp": ["/usr/lib64/obs-plugins/obs-multi-rtmp.so", "/opt/obs-studio/lib/obs-plugins/obs-multi-rtmp.so"],
+    "obs-composite-blur": ["/usr/lib64/obs-plugins/composite-blur.so", "/opt/obs-studio/lib/obs-plugins/composite-blur.so"],
+    "obs-teleport": ["/usr/lib64/obs-plugins/obs-teleport.so", "/opt/obs-studio/lib/obs-plugins/obs-teleport.so"],
+    "discord": ["discord", "/opt/discord/Discord"],
+    "vesktop": ["vesktop"],
+    "sunshine": ["sunshine"],
+    "easyeffects": ["easyeffects"],
+    "pear-desktop": ["pear-desktop"],
+    "audacity": ["audacity"],
+    "spotify": ["spotify"],
+    "yabridge": ["yabridgectl"],
+    "inkscape": ["inkscape"],
+    "darktable": ["darktable"],
+    "syncthing": ["syncthing"],
+    "google-chrome": ["google-chrome", "google-chrome-stable"],
+    "microsoft-edge": ["microsoft-edge", "microsoft-edge-stable"],
+    "brave": ["brave", "brave-browser"],
+    "zen-browser": ["zen-browser", "zen"],
+    "sbctl": ["sbctl"]
+}
+
+for pid, cands in BINARY_MAP.items():
+    if pid in installed:
+        continue
+    for cand in cands:
+        if cand.startswith('/'):
+            if glob.glob(cand):
+                installed[pid] = "INSTALLED"
+                break
+        else:
+            bp = shutil.which(cand) or (os.path.exists(f"/usr/bin/{cand}") and f"/usr/bin/{cand}") or (os.path.exists(f"/usr/local/bin/{cand}") and f"/usr/local/bin/{cand}")
+            if bp:
+                ver = "INSTALLED"
+                try:
+                    out = subprocess.run([bp, "--version"], capture_output=True, text=True, timeout=1).stdout
+                    vm = re.search(r'([0-9]+\.[0-9]+(?:\.[0-9]+)?)', out)
+                    if vm:
+                        ver = vm.group(1)
+                except Exception:
+                    pass
+                installed[pid] = ver
+                break
+
+for k, v in installed.items():
+    print(f"{k}={v}")
+PYTUIFASTMAP
+        )
+
+        # Render categories in a clean 2-column grid
+        for ci in "${!CAT_KEYS[@]}"; do
+            local ckey="${CAT_KEYS[ci]}"
+            local ctitle="${CAT_TITLES[ci]}"
+
+            # Pre-calculate category items
+            local cat_total=0
+            local cat_installed=0
+            local cat_entries=()
 
             while IFS='|' read -r pkg_id name cat main_pat l32_pat ext_pat repos; do
                 [[ -z "${pkg_id}" || "${pkg_id}" =~ ^# ]] && continue
-                [ "${cat}" = "${cat_filter}" ] || continue
+                [ "${cat}" = "${ckey}" ] || continue
                 if ! is_gaming_pkg_whitelisted "${pkg_id}"; then
                     continue
                 fi
                 if [ "${pkg_id}" = "vram-booster" ] && ! is_vram_booster_supported; then
                     continue
                 fi
-                local cur_ver
-                cur_ver=$(get_installed_gaming_pkg_version "${pkg_id}")
-                local st_color="${RED}"
-                local st_text="[Not Installed]"
+                local cur_ver="${FAST_INSTALLED_MAP[${pkg_id}]:-NONE}"
+                cat_total=$((cat_total + 1))
                 if [ "${cur_ver}" != "NONE" ]; then
-                    st_color="${GREEN}"
-                    st_text="[Installed: v${cur_ver} ✓]"
+                    cat_installed=$((cat_installed + 1))
                 fi
-                printf "  ${BOLD}%2d.${RESET} %-45s ${st_color}%s${RESET}\n" "${index}" "${name}" "${st_text}"
-                item_ids+=("${pkg_id}")
-                item_names+=("${name}")
-                item_statuses+=("${cur_ver}")
-                index=$((index + 1))
+                cat_entries+=("${pkg_id}|${name}|${cur_ver}")
             done <<< "$(get_gaming_catalog)"
-        }
 
-        render_gaming_cat "engine" "The Engine: Performance, HUD & Schedulers"
-        render_gaming_cat "launcher" "Storefronts & Launcher Managers"
-        render_gaming_cat "hardware" "Hardware Control & Tuning"
-        render_gaming_cat "audio" "🎧 Studio Audio DSP & Acoustic Processing"
-        render_gaming_cat "creative" "🎨 Creative, 3D & Photography Studio"
-        render_gaming_cat "tools" "🛠️ Power Tools & Media Sync"
-        render_gaming_cat "community" "Community, Capture & Streaming"
-        render_gaming_cat "browser" "🌐 Web Navigators & Browsers"
+            [ ${cat_total} -gt 0 ] || continue
+
+            # Category Section Header
+            echo -e "\n${CYAN}${BOLD}── 📦 ${ctitle}${RESET} ${YELLOW}[${cat_installed}/${cat_total} installed]${RESET} ${CYAN}──${RESET}"
+
+            # Render 2-by-2 grid for category items
+            local num_entries=${#cat_entries[@]}
+            for ((ei=0; ei < num_entries; ei+=2)); do
+                # Column 1
+                IFS='|' read -r p_id1 p_name1 p_ver1 <<< "${cat_entries[ei]}"
+                item_ids+=("${p_id1}")
+                item_names+=("${p_name1}")
+                item_statuses+=("${p_ver1}")
+                item_cats+=("${ckey}")
+                local idx1=$index
+                index=$((index + 1))
+
+                local badge1
+                if [ "${p_ver1}" != "NONE" ]; then
+                    local sv1="${p_ver1}"
+                    if [ "${sv1}" = "INSTALLED" ]; then
+                        sv1="Inst"
+                    elif [ ${#sv1} -gt 6 ]; then
+                        sv1="${sv1:0:5}…"
+                    fi
+                    badge1="${GREEN}[v${sv1} ✓]${RESET}"
+                else
+                    badge1="${RED}[Not Inst]${RESET}"
+                fi
+
+                local sname1="${p_name1}"
+                if [ ${#sname1} -gt 24 ]; then
+                    sname1="${sname1:0:23}…"
+                fi
+                local col1
+                col1=$(printf " ${BOLD}%2d.${RESET} %-24s %b" "${idx1}" "${sname1}" "${badge1}")
+
+                # Column 2
+                local col2=""
+                if [ $((ei + 1)) -lt ${num_entries} ]; then
+                    IFS='|' read -r p_id2 p_name2 p_ver2 <<< "${cat_entries[ei+1]}"
+                    item_ids+=("${p_id2}")
+                    item_names+=("${p_name2}")
+                    item_statuses+=("${p_ver2}")
+                    item_cats+=("${ckey}")
+                    local idx2=$index
+                    index=$((index + 1))
+
+                    local badge2
+                    if [ "${p_ver2}" != "NONE" ]; then
+                        local sv2="${p_ver2}"
+                        if [ "${sv2}" = "INSTALLED" ]; then
+                            sv2="Inst"
+                        elif [ ${#sv2} -gt 6 ]; then
+                            sv2="${sv2:0:5}…"
+                        fi
+                        badge2="${GREEN}[v${sv2} ✓]${RESET}"
+                    else
+                        badge2="${RED}[Not Inst]${RESET}"
+                    fi
+
+                    local sname2="${p_name2}"
+                    if [ ${#sname2} -gt 24 ]; then
+                        sname2="${sname2:0:23}…"
+                    fi
+                    col2=$(printf "   ${BOLD}%2d.${RESET} %-24s %b" "${idx2}" "${sname2}" "${badge2}")
+                fi
+
+                echo -e "${col1}${col2}"
+            done
+        done
 
         echo -e "\n${BLUE}================================================================================"
-        echo -e " ${BOLD}Actions:${RESET}"
-        echo -e "  ${GREEN}${BOLD}A.${RESET} ⚡ 1-Click Total Gaming Rig (Deploy All Components in Unified Parallel Batch)"
-        echo -e "  ${CYAN}${BOLD}U.${RESET} 🔄 Synchronize & Upgrade All Installed Gaming Packages"
-        echo -e "  ${YELLOW}${BOLD}D.${RESET} 🗑️  Uninstall a Component"
-        echo -e "  ${BOLD}Q.${RESET} 🚪 Catch You on the Flip Side (Return to Main Menu)"
+        echo -e " ${BOLD}Batch & Automation Actions:${RESET}"
+        echo -e "  ${GREEN}${BOLD}A.${RESET}  ⚡ 1-Click Total Gaming Rig (Deploy All ${#item_ids[@]} Components in Unified Batch)"
+        echo -e "  ${MAGENTA}${BOLD}O.${RESET}  🎬 1-Click OBS Creator & Streamer Suite (Deploy Complete OBS Power-Pack)"
+        echo -e "  ${YELLOW}${BOLD}U.${RESET}  🔄 Synchronize & Upgrade All Installed Gaming Packages"
+        echo -e "  ${RED}${BOLD}D.${RESET}  🗑️  Uninstall a Component"
+        echo -e "  ${BOLD}Q.${RESET}  🚪 Catch You on the Flip Side (Return to Main Menu)"
         echo -e "${BLUE}================================================================================${RESET}"
         echo ""
-        read -r -p "Pick your play [1-${#item_ids[@]} (multi-select e.g. 1 3 5 or 1-4), A, U, D, Q]: " user_choice
+        read -r -p "Pick your play [1-${#item_ids[@]} (multi e.g. 1 3 5 or 1-4), O, A, U, D, Q]: " user_choice
         user_choice=$(echo "${user_choice}" | tr '[:lower:]' '[:upper:]' | xargs)
 
         case "${user_choice}" in
             Q|"")
                 trigger_silent_background_refresh 2>/dev/null || true
                 break
+                ;;
+            O|OBS)
+                echo ""
+                local obs_pids=()
+                for oi in "${!item_ids[@]}"; do
+                    if [[ "${item_ids[oi]}" =~ ^obs- ]]; then
+                        obs_pids+=("${item_ids[oi]}")
+                    fi
+                done
+                log_info "Starting 1-Click OBS Creator Suite Deployment (${#obs_pids[@]} packages in unified batch)..."
+                validate_privileges
+                deploy_gaming_packages_batch "${obs_pids[@]}"
+                echo ""
+                read -r -p "Press Enter to continue..."
                 ;;
             A)
                 echo ""
@@ -3956,11 +4911,14 @@ interactive_cachyos_gaming_menu() {
                 ;;
             D)
                 echo ""
-                read -r -p "Enter number to uninstall [1-${#item_ids[@]}]: " del_num
-                if [[ "${del_num}" =~ ^[0-9]+$ ]] && [ "${del_num}" -ge 1 ] && [ "${del_num}" -le "${#item_ids[@]}" ]; then
-                    local target_del_idx=$((del_num - 1))
+                read -r -p "Enter number or package ID to uninstall [1-${#item_ids[@]}]: " del_input
+                del_input=$(echo "${del_input}" | xargs)
+                if [[ "${del_input}" =~ ^[0-9]+$ ]] && [ "${del_input}" -ge 1 ] && [ "${del_input}" -le "${#item_ids[@]}" ]; then
+                    local target_del_idx=$((del_input - 1))
                     local del_id="${item_ids[${target_del_idx}]}"
                     uninstall_cachyos_gaming_pkg "${del_id}"
+                elif [ -n "${del_input}" ]; then
+                    uninstall_cachyos_gaming_pkg "${del_input}"
                 else
                     log_warn "Invalid selection."
                 fi

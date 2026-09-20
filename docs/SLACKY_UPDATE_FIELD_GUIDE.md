@@ -1,12 +1,12 @@
 # 📖 Slacky-Update Survival Guide & System Manual
 ### *Slackware Linux 15.0 & -current — Complete Architecture, Deployment & Operational Manual*
-#### `v0.13.0` — *"It's My Party, And I'll Cry If I Want To..."* (Release Edition)
+#### `v0.14.0` — *"Coco Jambo"* (Release Edition)
 
 ---
 
 > [!CAUTION]
 > **PRE-RELEASE / EARLY ACCESS DISCLAIMER & LIABILITY NOTICE — USE AT YOUR OWN RISK**  
-> Slacky-Update v0.12 is an active *Pre-Release / Early Access* edition. The software executes deep low-level system modifications, including Linux kernel deployments, proprietary NVIDIA drivers, Dracut initramfs generation, Btrfs subvolumes, and bootloader topologies (Limine/GRUB).  
+> Slacky-Update v0.14.0 is an active *Pre-Release / Early Access* edition. The software executes deep low-level system modifications, including Linux kernel deployments, proprietary NVIDIA drivers, Dracut initramfs generation, Btrfs subvolumes, and bootloader topologies (Limine/GRUB).  
 > **All usage, upgrades, and system configurations are executed strictly at your own discretion and risk.** The developers and maintainers assume no liability or warranty for system malfunction, unbootable states, or data loss.  
 > **Pre-requisites:** Always maintain tested, current backups (`/home`, essential configuration files, and boot partitions) and keep a bootable Slackware Live-USB accessible before performing upgrades or modifying bootloader setups.
 
@@ -234,10 +234,9 @@ Slacky-Update inspects your CPU microarchitecture via `/proc/cpuinfo` and `gcc -
 * **Tier 2 (`x86_64_v2`)**: SSE4.2, SSSE3 (Older 64-bit x86 processors).
 
 ### Kernel Flavors & Retention Rules
-* **BORE & BORE-LTO**: Balances interactive desktop smoothness and high-throughput gaming frame pacing.
-* **Sched-EXT (`scx`)**: User-space extensible BPF scheduler framework (`scx_rusty`, `scx_lavd`).
-* **LTS**: Rock-solid stability backed by CachyOS optimizations for mission-critical workstations.
-* **Retention Safeguards**: Automatically retains the **2 newest standard/BORE kernels** and strictly shields the active booted kernel (`uname -r`).
+* **9 Specialized Schedulers**: Deploys upstream CachyOS kernels across `standard` (`linux-cachyos`), `bore` (Burst-Oriented Response Enhancer), `lto` (`bore-lto` Clang LTO optimized), `eevdf` (Earliest Eligible Virtual Deadline First), `bmq` (Project C BitMap Queue), `deckify` (Steam Deck & handheld gaming profile), `rt-bore` (PREEMPT_RT Real-Time low-latency), `rc` (Release Candidate), and `lts` (Long-Term Support fallback).
+* **Smart Realtek 2.5GbE (`r8125`) Auto-Sync**: Probes for RTL8125 / Killer E3100X controllers (`10ec:8125` / `10ec:3000`) and seamlessly downloads precompiled CachyOS `r8125` driver packages alongside kernel upgrades.
+* **Retention Safeguards**: Automatically retains the **2 newest standard/BORE kernels** and 1 newest RC kernel, while strictly shielding the active booted kernel (`uname -r`).
 
 ---
 
@@ -286,22 +285,33 @@ For creative professionals using AMD Radeon GPUs in DaVinci Resolve Studio:
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-Configured automatically via `/etc/modprobe.d/nvidia-power-management.conf` and `/etc/sysctl.d/99-gaming-performance.conf`.
+* **KDE Plasma Dynamic VRAM Leak Guard & Memory Compaction**:
+  * **`underpants-kwin-dynamic-vram-fix`**: Directly hooks into KWin Wayland compositor surface allocation lifecycle, monitoring unevicted video memory buffers, preventing runaway VRAM creep, and releasing stale surface allocations.
+  * **`underpants-vram-booster`**: Continuously monitors GPU utilization and system buffer caches, triggering proactive memory compaction and defragmentation before OOM thresholds are reached—drastically stabilizing 1% low FPS and eliminating micro-stutters.
+* Configured automatically via `/etc/modprobe.d/nvidia-power-management.conf` and `/etc/sysctl.d/99-gaming-performance.conf`.
 
 ---
 
-## 8. The Underpants Gnomes Workstation Suite
+## 8. The Underpants Gnomes Workstation Suite (51 Components)
 
 > [!NOTE]
 > ### 🧩 ELI5 — What does this module do and why do you care?
-> Want Discord, Chrome, OBS Studio, or MangoHud on Slackware without having to compile 50 dependencies by hand? Our Underpants Gnomes fetch prebuilt packages, verify their cryptographic signatures, and package them into self-contained `/opt` folders that never mess up your system libraries.
+> Want Steam, Discord, Chrome, OBS Studio with all pro streamer plugins, DKMS Wi-Fi/hardware drivers, or MangoHud on Slackware without having to compile 50 dependencies by hand? Our Underpants Gnomes fetch prebuilt packages, verify their cryptographic signatures, and package them into self-contained `/opt` folders that never mess up your system libraries.
 
-### Isolated Application Trees in `/opt`
-Complex applications with bundled runtimes reside in isolated directories in `/opt/<name>/` with dedicated wrapper scripts in `/usr/bin/`. Host system Python modules and libraries are **never overwritten**.
+### Unified Terminal Console Station (`slacky-update --gnomes`)
+* **2-Column Grid Layout**: High-performance console interface displaying all 51 components in a clean 2-by-2 column grid with compact version indicators (`[v1.8.2 ✓]` / `[Not Inst]`).
+* **Animated Gnome Download Progress**: Timestamp-paced (~350ms) animated Gnome transmutation (`🧙` <-> `🧙‍♂️`) consuming underpants along the parallel download track.
+* **1-Click Batch Hotkeys**: Fast-track presets for OBS Creator Suite (`O`), Complete Gaming Rig (`A`), and quick-selection shortcuts.
 
-### Security & Services
+### OBS Creator Suite & DKMS Hardware Driver Fleet
+* **OBS Streamer Pack (9 Components)**: `obs-studio`, `obs-vkcapture`, `obs-move-transition`, `obs-source-record`, `obs-pipewire-audio-capture`, `obs-advanced-scene-switcher`, `obs-multi-rtmp`, `obs-composite-blur`, `obs-teleport` with automatic dual-mode bridging into native Slackware and isolated `/opt/obs-studio`.
+* **Out-of-Tree DKMS Drivers**: `zenpower3-dkms`, `v4l2loopback-dkms`, `rtl8821cu-dkms-git`, `rtl88x2bu-dkms-git`, `rtl8812au-dkms-git`, `broadcom-wl-dkms`.
+
+### Security, Polkit & SysVinit Services
 * **GPG Validation**: All upstream archives are strictly verified against official GPG signatures before transmutation.
-* **Slackware SysVinit**: Services integrate natively with `/etc/rc.d/` (`rc.gamemode`, `rc.coolercontrol`, `rc.lact`, `rc.syncthing`, `rc.scx`, `rc.ananicy-cpp`).
+* **Polkit Action Policy (`org.slacky.update.policy`)**: Integrated Polkit policy with `auth_admin_keep` allowing authentication reuse throughout the session without repeated password prompts.
+* **Fast Status Probing**: Sub-10ms package resolution with fallback probing for custom or locally built binaries (LACT, OpenRGB, MangoHud, etc.).
+* **Slackware SysVinit**: Services integrate natively with `/etc/rc.d/` (`rc.gamemode`, `rc.coolercontrol`, `rc.lact`, `rc.syncthing`, `rc.scx`, `rc.ananicy-cpp`, `rc.asusd`).
 
 ---
 

@@ -204,5 +204,12 @@
   "TOPOLOGY_SCENARIO_A_TITLE": "LIMINE 启动拓扑迁移（方案 A）",
   "TOPOLOGY_SCENARIO_C_PROMPT": "是否扫描并选择一个分区（>= 3.5 GB）配置为 /boot？[Y/n]：",
   "TOPOLOGY_SCENARIO_C_TITLE": "LIMINE 独立 ESP 分区接入向导（方案 C）",
-  "TOPOLOGY_SELECT_PARTITION": "选择要配置为 /boot 的分区 [1-{count}]："
+  "TOPOLOGY_SELECT_PARTITION": "选择要配置为 /boot 的分区 [1-{count}]：",
+  "CACHY_FLAVOR_EEVDF": "(Earliest Eligible Virtual Deadline First scheduler for responsive multi-tasking)",
+  "CACHY_FLAVOR_BMQ": "(Project C BitMap Queue scheduler for low latency & gaming)",
+  "CACHY_FLAVOR_DECKIFY": "(Steam Deck, ROG Ally & handheld gaming device optimized kernel)",
+  "CACHY_FLAVOR_RT_BORE": "(Real-Time PREEMPT_RT + BORE scheduler for ultra-low latency & pro audio/streaming)",
+  "MENU_UNDERPANTS_GNOMES_TRAY": "🧙 Underpants Gnomes 📦",
+  "MENU_GNOMES_TUI": "🖥️ Terminal Console (TUI)",
+  "MENU_GNOMES_GUI": "🎨 Desktop Software Suite (GUI)"
 }

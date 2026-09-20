@@ -574,6 +574,7 @@ menu_category_graphics() {
         "goverlay" "graphics/goverlay" "Vulkan/OpenGL Overlay Config GUI" \
         "inkscape" "graphics/inkscape" "Professional Vector Graphics Editor" \
         "mangohud" "graphics/mangohud" "Radical In-Game HUD & Telemetry" \
+        "plasticity" "graphics/plasticity" "3D CAD for Concept Artists & Industrial Design" \
         "storyboarder" "graphics/storyboarder" "Fast Visual Storytelling & Animatics" \
         "volt-gui" "graphics/volt-gui" "Undervolt & Power Management Suite"
 }
@@ -647,25 +648,27 @@ manage_curated_suite_interactive() {
         echo -e "  \033[1;33m1.\033[0m 🎮 Games & Launchers"
         echo -e "  \033[1;33m2.\033[0m 🎨 Graphics & Design"
         echo -e "  \033[1;33m3.\033[0m 🎬 Multimedia & Video"
-        echo -e "  \033[1;33m4.\033[0m ⚙️ System, Wine & Tuning"
-        echo -e "  \033[1;33m5.\033[0m 🏢 Office & Productivity"
-        echo -e "  \033[1;33m6.\033[0m 🌐 Network & Browsers"
-        echo -e "  \033[1;33m7.\033[0m 📚 Libraries & Drivers"
-        echo -e "  \033[1;33m8.\033[0m $(_ SBO_BACK_OPTION)"
+        echo -e "  \033[1;33m4.\033[0m 🛠️ Development & Engines"
+        echo -e "  \033[1;33m5.\033[0m ⚙️ System, Wine & Tuning"
+        echo -e "  \033[1;33m6.\033[0m 🏢 Office & Productivity"
+        echo -e "  \033[1;33m7.\033[0m 🌐 Network & Browsers"
+        echo -e "  \033[1;33m8.\033[0m 📚 Libraries & Drivers"
+        echo -e "  \033[1;33m9.\033[0m $(_ SBO_BACK_OPTION)"
         echo ""
-        echo -n "$(_ SELECT_OPERATION_RANGE range="1-8") "
+        echo -n "$(_ SELECT_OPERATION_RANGE range="1-9") "
         local cat_sel
-        read -r cat_sel || cat_sel="8"
+        read -r cat_sel || cat_sel="9"
 
         case "${cat_sel}" in
             1) menu_category_games "${suite_dir}" ;;
             2) menu_category_graphics "${suite_dir}" ;;
             3) menu_category_multimedia "${suite_dir}" ;;
-            4) menu_category_system "${suite_dir}" ;;
-            5) menu_category_office "${suite_dir}" ;;
-            6) menu_category_network "${suite_dir}" ;;
-            7) menu_category_libraries "${suite_dir}" ;;
-            8) return 0 ;;
+            4) menu_category_development "${suite_dir}" ;;
+            5) menu_category_system "${suite_dir}" ;;
+            6) menu_category_office "${suite_dir}" ;;
+            7) menu_category_network "${suite_dir}" ;;
+            8) menu_category_libraries "${suite_dir}" ;;
+            9) return 0 ;;
             *) log_warn "Invalid selection." ;;
         esac
     done

@@ -204,5 +204,12 @@
   "TOPOLOGY_SCENARIO_A_TITLE": "LIMINE STARTTOPOLOGI MIGRERING (SCENARIE A)",
   "TOPOLOGY_SCENARIO_C_PROMPT": "Vil du scanne og vælge en partition (>= 3.5 GB) til at konfigurere som /boot? [Y/n]: ",
   "TOPOLOGY_SCENARIO_C_TITLE": "LIMINE DEDIKERET ESP-PARTITIONSVEJLEDER (SCENARIE C)",
-  "TOPOLOGY_SELECT_PARTITION": "Vælg partition der skal konfigureres som /boot [1-{count}]: "
+  "TOPOLOGY_SELECT_PARTITION": "Vælg partition der skal konfigureres som /boot [1-{count}]: ",
+  "CACHY_FLAVOR_EEVDF": "(EEVDF scheduler til responsiv multitasking)",
+  "CACHY_FLAVOR_BMQ": "(Project C BitMap Queue scheduler til lav latenstid og gaming)",
+  "CACHY_FLAVOR_DECKIFY": "(Optimeret til Steam Deck, ROG Ally og håndholdt gaming)",
+  "CACHY_FLAVOR_RT_BORE": "(Real-Time PREEMPT_RT + BORE til ultra-lav latenstid og pro lyd/streaming)",
+  "MENU_UNDERPANTS_GNOMES_TRAY": "🧙 Underpants Gnomes 📦",
+  "MENU_GNOMES_TUI": "🖥️ Terminalkonsol (TUI)",
+  "MENU_GNOMES_GUI": "🎨 Skrivebordsprogram (GUI)"
 }

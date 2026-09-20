@@ -903,8 +903,16 @@ import os, re, json
 def get_flavor_and_label(k):
     if '-cachyos-bore-lto' in k or '-cachyos-lto' in k:
         return ('cachyos-bore-lto', 'Linux Cachyos BORE (LTO)', 50)
+    elif '-cachyos-rt-bore' in k or '-cachyos-rt' in k:
+        return ('cachyos-rt-bore', 'Linux Cachyos RT (BORE)', 45)
     elif '-cachyos-bore' in k:
         return ('cachyos-bore', 'Linux Cachyos BORE', 40)
+    elif '-cachyos-eevdf' in k:
+        return ('cachyos-eevdf', 'Linux Cachyos EEVDF', 38)
+    elif '-cachyos-bmq' in k:
+        return ('cachyos-bmq', 'Linux Cachyos BMQ', 36)
+    elif '-cachyos-deckify' in k:
+        return ('cachyos-deckify', 'Linux Cachyos Deckify', 34)
     elif '-cachyos-rc' in k:
         return ('cachyos-rc', 'Linux Cachyos RC', 10)
     elif '-cachyos-lts' in k:

@@ -204,5 +204,12 @@
   "TOPOLOGY_SCENARIO_A_TITLE": "MIGRATION DE LA TOPOLOGIE DE DÉMARRAGE LIMINE (SCÉNARIO A)",
   "TOPOLOGY_SCENARIO_C_PROMPT": "Voulez-vous scanner et sélectionner une partition (>= 3.5 Go) à configurer comme /boot ? [Y/n] : ",
   "TOPOLOGY_SCENARIO_C_TITLE": "ASSISTANT D ADOPTION D ESP DÉDIÉE LIMINE (SCÉNARIO C)",
-  "TOPOLOGY_SELECT_PARTITION": "Sélectionnez la partition à configurer comme /boot [1-{count}] : "
+  "TOPOLOGY_SELECT_PARTITION": "Sélectionnez la partition à configurer comme /boot [1-{count}] : ",
+  "CACHY_FLAVOR_EEVDF": "(Planificateur EEVDF pour un multitâche ultra-réactif)",
+  "CACHY_FLAVOR_BMQ": "(Planificateur Project C BMQ pour une faible latence et le jeu)",
+  "CACHY_FLAVOR_DECKIFY": "(Noyau optimisé pour Steam Deck, ROG Ally et consoles portables)",
+  "CACHY_FLAVOR_RT_BORE": "(Temps réel PREEMPT_RT + BORE pour latence minimale et audio pro)",
+  "MENU_UNDERPANTS_GNOMES_TRAY": "🧙 Underpants Gnomes 📦",
+  "MENU_GNOMES_TUI": "🖥️ Console de terminal (TUI)",
+  "MENU_GNOMES_GUI": "🎨 Suite logicielle de bureau (GUI)"
 }
