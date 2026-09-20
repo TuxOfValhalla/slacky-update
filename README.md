@@ -2,7 +2,7 @@
 
 # ⚡ Slacky-Update
 ### *Enterprise-Grade System Maintenance, Kernel Lifecycle, Driver Orchestrator & Workstation Suite for Slackware Linux*
-#### `v0.14.0` — *"Coco Jambo"* (Release Edition)
+#### `v0.14.0` — *"Coco Jambo"* (Pre-Release Edition)
 
 [![Slackware -current](https://img.shields.io/badge/Slackware--current-15.0%2B-blue?style=for-the-badge&logo=slackware&logoColor=white)](http://www.slackware.com/)
 [![Release](https://img.shields.io/badge/Release-v0.14.0-purple?style=for-the-badge)](https://github.com/TuxOfValhalla/slacky-update/releases)
