@@ -3,8 +3,8 @@
 
 set -euo pipefail
 
-CURRENT_VERSION="0.14.0"
-RELEASE_CODENAME="Coco Jambo"
+CURRENT_VERSION="0.15.0"
+RELEASE_CODENAME="Now This Is Podracing!"
 
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 if [ -d "${SCRIPT_DIR}/../lib" ] && [ -f "${SCRIPT_DIR}/../lib/common.sh" ]; then
@@ -45,6 +45,8 @@ source "${APP_DIR}/mod_clean.sh"
 [ -f "${APP_DIR}/mod_tweaks.sh" ] && source "${APP_DIR}/mod_tweaks.sh"
 # shellcheck source=/dev/null
 [ -f "${APP_DIR}/mod_gaming.sh" ] && source "${APP_DIR}/mod_gaming.sh"
+# shellcheck source=/dev/null
+[ -f "${APP_DIR}/mod_gnomes_engine.sh" ] && source "${APP_DIR}/mod_gnomes_engine.sh"
 # shellcheck source=/dev/null
 [ -f "${APP_DIR}/mod_docs.sh" ] && source "${APP_DIR}/mod_docs.sh"
 
@@ -384,6 +386,22 @@ except Exception:
         fi
     fi
 
+    if [ -f "${APP_DIR}/gnomes_pacman.py" ]; then
+        local gnomes_count
+        gnomes_count=$(python3 "${APP_DIR}/gnomes_pacman.py" list-updates --count 2>/dev/null || echo "0")
+        if [ "${gnomes_count}" -gt 0 ]; then
+            local reply_gnomes="Y"
+            if [ "${is_headless}" -eq 0 ]; then
+                read -r -p "$(_ PROMPT_UPGRADE_GNOMES)" reply_gnomes || reply_gnomes="Y"
+                reply_gnomes=${reply_gnomes:-Y}
+            fi
+            if [[ "$reply_gnomes" =~ ^[YyJjSsOo]$ ]]; then
+                echo -e "\n${BLUE}${BOLD}$(_ UPGRADING_GNOMES)${RESET}"
+                python3 "${APP_DIR}/gnomes_pacman.py" list-updates
+            fi
+        fi
+    fi
+
     if [ "${HAS_NVIDIA}" = "true" ] && [ "$(has_cachyos_kernels_installed 2>/dev/null || echo false)" != "true" ]; then
         local nv_count
         nv_count=$(get_status_key_count "nvidia_driver_updates")
@@ -514,6 +532,39 @@ except Exception:
 " 2>/dev/null || true
 
     run_post_update_smoke_test
+
+    if [ "${is_headless}" -eq 0 ] && [ -f "${APP_DIR}/gnomes_pacman.py" ]; then
+        local gnomes_cache_sz gnomes_cache_human
+        gnomes_cache_sz=$(python3 -c "
+import os
+cache_dir = os.path.expanduser('~/.cache/slacky-update/gnomes/pkg')
+total = 0
+if os.path.isdir(cache_dir):
+    for root, _, files in os.walk(cache_dir):
+        for f in files:
+            try:
+                total += os.path.getsize(os.path.join(root, f))
+            except Exception:
+                pass
+print(total)
+" 2>/dev/null || echo "0")
+        if [ "${gnomes_cache_sz}" -gt 10485760 ]; then # > 10 MB
+            gnomes_cache_human=$(python3 -c "
+b = int('${gnomes_cache_sz}')
+if b >= 1024*1024*1024:
+    print(f'{b/(1024*1024*1024):.1f} GB')
+else:
+    print(f'{b/(1024*1024):.1f} MB')
+" 2>/dev/null || echo "0 MB")
+            echo ""
+            local reply_clean="n"
+            read -r -p "🩲 $(_ PROMPT_CLEAR_GNOMES_CACHE "${gnomes_cache_human}") " reply_clean || reply_clean="n"
+            if [[ "$reply_clean" =~ ^[YyJjSsOo]$ ]]; then
+                python3 "${APP_DIR}/gnomes_pacman.py" clean-cache --all
+            fi
+        fi
+    fi
+
     echo -e "\n${GREEN}${BOLD}$(_ UPGRADE_COMPLETE_SYSTEM)${RESET}"
 
     prompt_reboot_or_close "${snap_before_file}" "${snap_after_file}" "${kernel_or_driver_changed}"
@@ -968,6 +1019,17 @@ elif [ "${1:-}" = "--cmdline" ] || [ "${1:-}" = "-c" ]; then
 elif [ "${1:-}" = "--secure-boot" ] || [ "${1:-}" = "--sb" ]; then
     INTERACTIVE_SESSION=1
     manage_secureboot_interactive
+elif [ "${1:-}" = "--gnomes-pacman" ] || [ "${1:-}" = "gnomes" ] || [ "${1:-}" = "-P" ]; then
+    shift
+    if [ -x "${SCRIPT_DIR}/gnomes" ]; then
+        exec "${SCRIPT_DIR}/gnomes" "$@"
+    elif [ -x "/usr/bin/gnomes" ]; then
+        exec /usr/bin/gnomes "$@"
+    elif [ -x "/usr/local/bin/gnomes" ]; then
+        exec /usr/local/bin/gnomes "$@"
+    else
+        python3 "${APP_DIR}/gnomes_pacman.py" "$@"
+    fi
 elif [ "${1:-}" = "--gaming" ] || [ "${1:-}" = "-g" ] || [ "${1:-}" = "--gnomes" ] || [ "${1:-}" = "--gnomes-tui" ]; then
     INTERACTIVE_SESSION=1
     interactive_cachyos_gaming_menu
@@ -1020,9 +1082,6 @@ elif [ "${1:-}" = "--sync-boot" ] || [ "${1:-}" = "--boot" ] || [ "${1:-}" = "-b
     fi
     if command -v sync_bootloader_configuration >/dev/null 2>&1; then
         sync_bootloader_configuration "$(uname -r)"
-    fi
-    if command -v enroll_and_sign_limine >/dev/null 2>&1; then
-        enroll_and_sign_limine
     fi
 elif [ "${1:-}" = "--sync-snapper" ] || [ "${1:-}" = "--snapper-sync" ]; then
     validate_privileges

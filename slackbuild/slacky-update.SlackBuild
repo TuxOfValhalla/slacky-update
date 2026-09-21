@@ -4,15 +4,17 @@
 set -euo pipefail
 
 PRGNAM="slacky-update"
-VERSION="0.14.0"
+VERSION="0.15.0"
 ARCH="noarch"
-BUILD="1_slacky"
+BUILD="32_slacky"
 
 SRC_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 BUILD_DIR="/tmp/build-${PRGNAM}"
 PKG_DIR="/tmp/package-${PRGNAM}"
 OUTPUT_DIR="${OUTPUT_DIR:-${SRC_DIR}/../slacky-updates_releases}"
-mkdir -p "${OUTPUT_DIR}" 2>/dev/null || OUTPUT_DIR="/tmp"
+if ! mkdir -p "${OUTPUT_DIR}" 2>/dev/null || [ ! -w "${OUTPUT_DIR}" ]; then
+    OUTPUT_DIR="/tmp"
+fi
 
 PKG_NAME="${PRGNAM}-${VERSION}-${ARCH}-${BUILD}.txz"
 
@@ -48,11 +50,17 @@ install -m 0755 "${SRC_DIR}/bin/slacky-update-tray" "${PKG_DIR}/usr/bin/"
 
 install -m 0755 "${SRC_DIR}/bin/slacky-update" "${PKG_DIR}/usr/local/bin/"
 install -m 0755 "${SRC_DIR}/bin/slacky-update-tray" "${PKG_DIR}/usr/local/bin/"
+if [ -f "${SRC_DIR}/bin/gnomes" ]; then
+    install -m 0755 "${SRC_DIR}/bin/gnomes" "${PKG_DIR}/usr/bin/"
+    install -m 0755 "${SRC_DIR}/bin/gnomes" "${PKG_DIR}/usr/local/bin/"
+fi
 
 install -m 0755 "${SRC_DIR}"/lib/*.sh "${PKG_DIR}/usr/local/lib/slacky-update/"
 install -m 0755 "${SRC_DIR}"/lib/*.sh "${PKG_DIR}/usr/share/slacky-update/lib/"
 install -m 0755 "${SRC_DIR}/lib/slacky-update-tray" "${PKG_DIR}/usr/share/slacky-update/lib/" 2>/dev/null || true
 install -m 0755 "${SRC_DIR}/lib/slacky-update-tray" "${PKG_DIR}/usr/local/lib/slacky-update/" 2>/dev/null || true
+install -m 0755 "${SRC_DIR}/lib/gnomes_pacman.py" "${PKG_DIR}/usr/share/slacky-update/lib/"
+install -m 0755 "${SRC_DIR}/lib/gnomes_pacman.py" "${PKG_DIR}/usr/local/lib/slacky-update/"
 install -m 0644 "${SRC_DIR}/lib/slacky_update_i18n.py" "${PKG_DIR}/usr/share/slacky-update/lib/"
 install -m 0644 "${SRC_DIR}/lib/slacky_update_i18n.py" "${PKG_DIR}/usr/local/lib/slacky-update/"
 install -m 0644 "${SRC_DIR}"/locales/*.json "${PKG_DIR}/usr/share/slacky-update/locales/"
@@ -175,7 +183,7 @@ chmod 755 "${PKG_DIR}/install/doinst.sh"
 # --- [ PACKAGE COMPILATION ] ---
 cd "${PKG_DIR}"
 MAKEPKG_BIN=$(command -v makepkg 2>/dev/null || echo "/sbin/makepkg")
-"${MAKEPKG_BIN}" -l y -c n "${OUTPUT_DIR}/${PKG_NAME}"
+XZ_OPT="-T0" "${MAKEPKG_BIN}" -l y -c n "${OUTPUT_DIR}/${PKG_NAME}"
 cp -f "${OUTPUT_DIR}/${PKG_NAME}" "${OUTPUT_DIR}/${PRGNAM}.txz" 2>/dev/null || true
 cp -f "${OUTPUT_DIR}/${PKG_NAME}" "/tmp/${PKG_NAME}" 2>/dev/null || true
 cp -f "${OUTPUT_DIR}/${PKG_NAME}" "/tmp/${PRGNAM}.txz" 2>/dev/null || true

@@ -1,4 +1,4 @@
-# Coco Jambo
+# Coco Jambo - 'Put Me Up, Put Me Down, Put My Feet Back On The Ground'
 ### ⚡ Slacky-Update v0.14.0 — "Coco Jambo" (Release Edition)
 
 ---

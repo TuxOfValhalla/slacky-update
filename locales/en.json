@@ -133,6 +133,8 @@
   "APP_UP_TO_DATE": "Slacky-Update is up to date ({tag})",
   "CACHY_FLAVOR_LTS": "(Long Term Support kernel for high stability)",
   "CACHY_FLAVOR_RC": "(Release Candidate kernel for testing)",
+  "CACHY_FLAVOR_ZEN": "(Arch Linux Zen kernel: Low-latency desktop and gaming tuning - Bodacious!)",
+  "CACHY_FLAVOR_ARCH": "(Arch Linux Standard vanilla kernel - Party on, Wayne!)",
   "CACHY_PICKER_RESTORE_STOCK": "7. 🛟 Restore Stock Slackware Kernels (Reintegrate into bootloader)",
   "MOK_OPTION_REVERT_SB": "6. Revert to Standard Unsigned GRUB (Disable Secure Boot)",
   "NVIDIA_CACHYOS_MASTER_SYNC": "0. [CachyOS-Master] Full Suite Sync (64-bit, 32-bit Multilib & All Kernels)",
@@ -214,5 +216,15 @@
   "MENU_GNOMES_GUI": "🎨 Desktop Software Suite (GUI)",
   "HARDWARE_REALTEK_2_5GBE_DETECTED": "⚡ Realtek 2.5GbE Ethernet NIC detected (RTL8125).",
   "PROMPT_INSTALL_R8125_MODULE": "Would you like to install the matching high-performance CachyOS r8125 driver for kernel {version}? [Y/n] ",
-  "R8125_DEPLOY_SUCCESS": "Realtek r8125 module successfully deployed for kernel {version}."
+  "R8125_DEPLOY_SUCCESS": "Realtek r8125 module successfully deployed for kernel {version}.",
+  "MENU_GNOMES_PACMAN": "Universal Underpants Gnomes Pacman Sidecar Engine (Arch/CachyOS Transmutation)",
+  "GNOMES_SEARCH_TITLE": "🔍 SEARCH & TRANSMUTE UPSTREAM PACKAGES",
+  "GNOMES_PROMPT_SEARCH": "Enter search keyword or package name: ",
+  "GNOMES_PROMPT_INSTALL": "Enter package name to transmute/install (or press Enter to return): ",
+  "GNOMES_EXCLUDES_SHIELD": "Host Sovereignty Shield: Core Slackware base system protected.",
+  "PROMPT_CLEAR_GNOMES_CACHE": "Would you like to clear the Underpants Gnome Cache? ({0}) [y/N] ",
+  "PROMPT_UPGRADE_GNOMES": "Upgrade transmuted Underpants Gnomes packages? [Y/n] ",
+  "UPGRADING_GNOMES": "Upgrading Underpants Gnomes packages...",
+  "GNOMES_CURATED_COLLISION_WARN": "Warning: \"{0}\" is already installed as a curated Slackware package ({1}). Transmuting it will override its launcher in /usr/bin/. Proceed? [y/N] ",
+  "GNOMES_CACHE_CLEANED": "Cleaned {0} of cached packages from Underpants Gnomes cache."
 }

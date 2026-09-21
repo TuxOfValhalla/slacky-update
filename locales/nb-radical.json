@@ -214,5 +214,15 @@
   "MENU_GNOMES_GUI": "🎨 Desktop Software Suite (GUI)",
   "HARDWARE_REALTEK_2_5GBE_DETECTED": "⚡ Wowza! Rått Realtek 2.5GbE-nettverkskort oppdaga (RTL8125)!",
   "PROMPT_INSTALL_R8125_MODULE": "Vil du dytte inn den rå CachyOS r8125-turbodriveren for kjerne {version}? [Y/n] ",
-  "R8125_DEPLOY_SUCCESS": "Cowabunga! Realtek r8125-driveren er fiksa og klar for {version}!"
+  "R8125_DEPLOY_SUCCESS": "Cowabunga! Realtek r8125-driveren er fiksa og klar for {version}!",
+  "MENU_GNOMES_PACMAN": "Universal Underpants Gnomes Pacman Sidecar Engine (Arch/CachyOS Transmutation)",
+  "GNOMES_SEARCH_TITLE": "🔍 SEARCH & TRANSMUTE UPSTREAM PACKAGES",
+  "GNOMES_PROMPT_SEARCH": "Enter search keyword or package name: ",
+  "GNOMES_PROMPT_INSTALL": "Enter package name to transmute/install (or press Enter to return): ",
+  "GNOMES_EXCLUDES_SHIELD": "Host Sovereignty Shield: Core Slackware base system protected.",
+  "PROMPT_CLEAR_GNOMES_CACHE": "Fett mann! Skal vi renske ut heile Underpants Gnome-lageret? ({0}) [j/N] ",
+  "PROMPT_UPGRADE_GNOMES": "Gønne på med oppdatering av Underpants Gnomes-pakkene? [J/n] ",
+  "UPGRADING_GNOMES": "Kliner til med blodferske Underpants Gnomes-pakker...",
+  "GNOMES_CURATED_COLLISION_WARN": "Halla! Sjukt opplegg: \"{0}\" ligger allerede inne som kuratert Slackware-pakke ({1})! Skal vi overstyre den i /usr/bin/? [j/N] ",
+  "GNOMES_CACHE_CLEANED": "Konge! Rydda bort {0} med nissesmuss fra Underpants Gnomes-cachen!"
 }

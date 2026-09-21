@@ -211,5 +211,18 @@
   "CACHY_FLAVOR_RT_BORE": "(Real-Time PREEMPT_RT + BORE scheduler for ultra-low latency & pro audio/streaming)",
   "MENU_UNDERPANTS_GNOMES_TRAY": "🧙 Underpants Gnomes 📦",
   "MENU_GNOMES_TUI": "🖥️ Terminal Console (TUI)",
-  "MENU_GNOMES_GUI": "🎨 Desktop Software Suite (GUI)"
+  "MENU_GNOMES_GUI": "🎨 Desktop Software Suite (GUI)",
+  "HARDWARE_REALTEK_2_5GBE_DETECTED": "⚡ Realtek 2.5GbE Ethernet NIC detected (RTL8125).",
+  "PROMPT_INSTALL_R8125_MODULE": "Would you like to install the matching high-performance CachyOS r8125 driver for kernel {version}? [Y/n] ",
+  "R8125_DEPLOY_SUCCESS": "Realtek r8125 module successfully deployed for kernel {version}.",
+  "MENU_GNOMES_PACMAN": "Universal Underpants Gnomes Pacman Sidecar Engine (Arch/CachyOS Transmutation)",
+  "GNOMES_SEARCH_TITLE": "🔍 SEARCH & TRANSMUTE UPSTREAM PACKAGES",
+  "GNOMES_PROMPT_SEARCH": "Enter search keyword or package name: ",
+  "GNOMES_PROMPT_INSTALL": "Enter package name to transmute/install (or press Enter to return): ",
+  "GNOMES_EXCLUDES_SHIELD": "Host Sovereignty Shield: Core Slackware base system protected.",
+  "PROMPT_CLEAR_GNOMES_CACHE": "您想清除 Underpants Gnomes 软件包缓存吗？ ({0}) [y/N] ",
+  "PROMPT_UPGRADE_GNOMES": "升级已转换的 Underpants Gnomes 软件包？ [Y/n] ",
+  "UPGRADING_GNOMES": "正在升级 Underpants Gnomes 软件包...",
+  "GNOMES_CURATED_COLLISION_WARN": "警告：\"{0}\" 已作为原生 Slackware 软件包 ({1}) 安装。转换将覆盖 /usr/bin/ 中的启动器。是否继续？ [y/N] ",
+  "GNOMES_CACHE_CLEANED": "已从 Underpants Gnomes 缓存中清除 {0} 的软件包。"
 }

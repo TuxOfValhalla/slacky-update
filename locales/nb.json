@@ -133,6 +133,8 @@
   "APP_UP_TO_DATE": "Slacky-Update er oppdatert ({tag})",
   "CACHY_FLAVOR_LTS": "(Langtidsstøttet LTS-kjerne for høy stabilitet)",
   "CACHY_FLAVOR_RC": "(Release Candidate-kjerne for testing)",
+  "CACHY_FLAVOR_ZEN": "(Arch Linux Zen-kjerne: Lav latens for skrivebord og spill - Bodacious!)",
+  "CACHY_FLAVOR_ARCH": "(Arch Linux Standard ren kjerne - Party on, Wayne!)",
   "CACHY_PICKER_RESTORE_STOCK": "7. 🛟 Gjenopprett standard Slackware-kjerner",
   "MOK_OPTION_REVERT_SB": "6. Gjenopprett standard usignert GRUB (Deaktiver Secure Boot)",
   "NVIDIA_CACHYOS_MASTER_SYNC": "0. [CachyOS-Master] Full pakkesynkronisering (64-bit, 32-bit Multilib & alle kjerner)",
@@ -214,5 +216,15 @@
   "MENU_GNOMES_GUI": "🎨 Skrivebords-applikasjon (GUI)",
   "HARDWARE_REALTEK_2_5GBE_DETECTED": "⚡ Realtek 2.5GbE nettverkskort oppdaget (RTL8125).",
   "PROMPT_INSTALL_R8125_MODULE": "Vil du installere matchende CachyOS r8125-driver for kjerne {version}? [Y/n] ",
-  "R8125_DEPLOY_SUCCESS": "Realtek r8125-drivermodul ble vellykket installert for kjerne {version}."
+  "R8125_DEPLOY_SUCCESS": "Realtek r8125-drivermodul ble vellykket installert for kjerne {version}.",
+  "MENU_GNOMES_PACMAN": "Universell Underpants Gnomes Pacman-motor (Transmutasjon fra Arch/CachyOS)",
+  "GNOMES_SEARCH_TITLE": "🔍 SØK OG TRANSMUTER PAKKER FRA CACHYOS/ARCH",
+  "GNOMES_PROMPT_SEARCH": "Skriv inn søkeord eller pakkenavn: ",
+  "GNOMES_PROMPT_INSTALL": "Skriv inn pakkenavn som skal transmuteres/installeres (eller trykk Enter for å gå tilbake): ",
+  "GNOMES_EXCLUDES_SHIELD": "Vertssystem-skjold: Slackware-base og glibc er 100 % beskyttet.",
+  "PROMPT_CLEAR_GNOMES_CACHE": "Vil du tømme Underpants Gnomes-pakkecachen? ({0}) [j/N] ",
+  "PROMPT_UPGRADE_GNOMES": "Oppgradere transmuterte Underpants Gnomes-pakker? [J/n] ",
+  "UPGRADING_GNOMES": "Oppgraderer Underpants Gnomes-pakker...",
+  "GNOMES_CURATED_COLLISION_WARN": "Advarsel: \"{0}\" er allerede installert som en kuratert Slackware-pakke ({1}). Transmutering vil overstyre oppstartsfilen i /usr/bin/. Vil du fortsette? [j/N] ",
+  "GNOMES_CACHE_CLEANED": "Ryddet {0} med hurtigbufrede pakker fra Underpants Gnomes-cachen."
 }

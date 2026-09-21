@@ -377,8 +377,10 @@ install_curated_slackbuild() {
                     fi
                 else
                     log_info "Downloading source archive: ${url} ..."
-                    sudo mkdir -p /var/cache/slacky-update/archives
-                    if wget -c --no-check-certificate "${url}" -O "${build_tmp}/${filename}"; then
+                    sudo mkdir -p /var/cache/slacky-update/archives 2>/dev/null || true
+                    if download_parallel_pacman "SBo: ${filename}" "${url}|${build_tmp}/${filename}"; then
+                        sudo cp -f "${build_tmp}/${filename}" "/var/cache/slacky-update/archives/${filename}" 2>/dev/null || true
+                    elif wget -c --no-check-certificate "${url}" -O "${build_tmp}/${filename}"; then
                         sudo cp -f "${build_tmp}/${filename}" "/var/cache/slacky-update/archives/${filename}" 2>/dev/null || true
                     elif curl -Lo "${build_tmp}/${filename}" "${url}"; then
                         sudo cp -f "${build_tmp}/${filename}" "/var/cache/slacky-update/archives/${filename}" 2>/dev/null || true

@@ -211,5 +211,18 @@
   "CACHY_FLAVOR_RT_BORE": "(Tiempo real PREEMPT_RT + BORE para latencia ultrabaja y audio profesional)",
   "MENU_UNDERPANTS_GNOMES_TRAY": "🧙 Underpants Gnomes 📦",
   "MENU_GNOMES_TUI": "🖥️ Consola de terminal (TUI)",
-  "MENU_GNOMES_GUI": "🎨 Suite de software de escritorio (GUI)"
+  "MENU_GNOMES_GUI": "🎨 Suite de software de escritorio (GUI)",
+  "HARDWARE_REALTEK_2_5GBE_DETECTED": "⚡ Realtek 2.5GbE Ethernet NIC detected (RTL8125).",
+  "PROMPT_INSTALL_R8125_MODULE": "Would you like to install the matching high-performance CachyOS r8125 driver for kernel {version}? [Y/n] ",
+  "R8125_DEPLOY_SUCCESS": "Realtek r8125 module successfully deployed for kernel {version}.",
+  "MENU_GNOMES_PACMAN": "Universal Underpants Gnomes Pacman Sidecar Engine (Arch/CachyOS Transmutation)",
+  "GNOMES_SEARCH_TITLE": "🔍 SEARCH & TRANSMUTE UPSTREAM PACKAGES",
+  "GNOMES_PROMPT_SEARCH": "Enter search keyword or package name: ",
+  "GNOMES_PROMPT_INSTALL": "Enter package name to transmute/install (or press Enter to return): ",
+  "GNOMES_EXCLUDES_SHIELD": "Host Sovereignty Shield: Core Slackware base system protected.",
+  "PROMPT_CLEAR_GNOMES_CACHE": "¿Desea limpiar la caché de paquetes de Underpants Gnomes? ({0}) [s/N] ",
+  "PROMPT_UPGRADE_GNOMES": "¿Actualizar paquetes transmutados de Underpants Gnomes? [S/n] ",
+  "UPGRADING_GNOMES": "Actualizando paquetes de Underpants Gnomes...",
+  "GNOMES_CURATED_COLLISION_WARN": "Advertencia: \"{0}\" ya está instalado como un paquete nativo de Slackware ({1}). Transmutarlo anulará el lanzador en /usr/bin/. ¿Continuar? [s/N] ",
+  "GNOMES_CACHE_CLEANED": "Se limpiaron {0} de paquetes en caché de Underpants Gnomes."
 }

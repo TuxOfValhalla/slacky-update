@@ -129,11 +129,11 @@ get_cachyos_repo_url() {
 }
 
 is_cachyos_kernel_installed() {
-    if uname -r | grep -qi "cachyos"; then
+    if uname -r | grep -qiE "cachyos|zen|arch"; then
         echo "true"
         return 0
     fi
-    if find /lib/modules /boot -maxdepth 2 -name "*cachyos*" 2>/dev/null | grep -q "cachyos"; then
+    if find /lib/modules /boot -maxdepth 2 \( -name "*cachyos*" -o -name "*zen*" -o -name "*arch*" -o -name "vmlinuz-linux*" \) 2>/dev/null | grep -qE "cachyos|zen|arch|vmlinuz-linux"; then
         echo "true"
         return 0
     fi
@@ -163,14 +163,21 @@ def get_flavor(k_str):
         return 'lts'
     elif '-cachyos' in k_str:
         return 'standard'
+    elif '-zen' in k_str or k_str in ('vmlinuz-linux-zen', 'linux-zen'):
+        return 'zen'
+    elif '-arch' in k_str or k_str in ('vmlinuz-linux', 'linux'):
+        return 'arch'
     return None
+
+def is_custom_k(name):
+    return ('cachyos' in name or '-zen' in name or '-arch' in name or name in ('vmlinuz-linux', 'vmlinuz-linux-zen', 'linux', 'linux-zen'))
 
 flavors = set()
 
 if os.path.exists('/lib/modules'):
     try:
         for d in os.listdir('/lib/modules'):
-            if 'cachyos' in d:
+            if is_custom_k(d):
                 flv = get_flavor(d)
                 if flv: flavors.add(flv)
     except Exception:
@@ -179,7 +186,7 @@ if os.path.exists('/lib/modules'):
 if os.path.exists('/boot'):
     try:
         for f in os.listdir('/boot'):
-            if 'cachyos' in f and f.startswith('vmlinuz-') and not os.path.islink(os.path.join('/boot', f)):
+            if is_custom_k(f) and f.startswith('vmlinuz-') and not os.path.islink(os.path.join('/boot', f)):
                 flv = get_flavor(f)
                 if flv: flavors.add(flv)
     except Exception:
@@ -188,14 +195,14 @@ if os.path.exists('/boot'):
 if os.path.exists('/var/log/packages'):
     try:
         for p in os.listdir('/var/log/packages'):
-            if 'linux-cachyos' in p:
+            if 'linux-cachyos' in p or p.startswith('linux-zen-') or p.startswith('linux-'):
                 flv = get_flavor(p)
                 if flv: flavors.add(flv)
     except Exception:
         pass
 
 uname_r = os.uname().release
-if 'cachyos' in uname_r:
+if is_custom_k(uname_r):
     flv = get_flavor(uname_r)
     if flv: flavors.add(flv)
 
@@ -227,10 +234,20 @@ def get_flavor(k_str):
         return 'lts'
     elif '-cachyos' in k_str:
         return 'standard'
+    elif '-zen' in k_str or k_str in ('vmlinuz-linux-zen', 'linux-zen'):
+        return 'zen'
+    elif '-arch' in k_str or k_str in ('vmlinuz-linux', 'linux'):
+        return 'arch'
     return None
 
 def parse_ver(v_str):
-    return [int(x) for x in re.findall(r'\d+', v_str.split('-cachyos')[0])]
+    nums = [int(x) for x in re.findall(r'\d+', v_str)]
+    return nums if nums else [0]
+
+def clean_ver(v_str):
+    c = v_str.replace('vmlinuz-', '')
+    c = re.sub(r'-(cachyos|zen|arch).*$', '', c)
+    return c
 
 cachy_vers = set()
 target_flv = '$flavor'
@@ -238,8 +255,8 @@ target_flv = '$flavor'
 if os.path.exists('/lib/modules'):
     try:
         for d in os.listdir('/lib/modules'):
-            if 'cachyos' in d and get_flavor(d) == target_flv:
-                v = d.split('-cachyos')[0]
+            if get_flavor(d) == target_flv:
+                v = clean_ver(d)
                 if v: cachy_vers.add(v)
     except Exception:
         pass
@@ -247,16 +264,16 @@ if os.path.exists('/lib/modules'):
 if os.path.exists('/boot'):
     try:
         for f in os.listdir('/boot'):
-            if 'cachyos' in f and f.startswith('vmlinuz-') and not os.path.islink(os.path.join('/boot', f)):
+            if f.startswith('vmlinuz-') and not os.path.islink(os.path.join('/boot', f)):
                 if get_flavor(f) == target_flv:
-                    v = f.replace('vmlinuz-', '').split('-cachyos')[0]
+                    v = clean_ver(f)
                     if v: cachy_vers.add(v)
     except Exception:
         pass
 
 uname_r = os.uname().release
-if 'cachyos' in uname_r and get_flavor(uname_r) == target_flv:
-    cachy_vers.add(uname_r.split('-cachyos')[0])
+if get_flavor(uname_r) == target_flv:
+    cachy_vers.add(clean_ver(uname_r))
 
 if cachy_vers:
     sorted_vers = sorted(list(cachy_vers), key=parse_ver, reverse=True)
@@ -271,15 +288,24 @@ get_newest_installed_cachyos_version() {
 import os, re
 
 def parse_ver(v_str):
-    return [int(x) for x in re.findall(r'\d+', v_str.split('-cachyos')[0])]
+    nums = [int(x) for x in re.findall(r'\d+', v_str)]
+    return nums if nums else [0]
+
+def clean_ver(v_str):
+    c = v_str.replace('vmlinuz-', '')
+    c = re.sub(r'-(cachyos|zen|arch).*$', '', c)
+    return c
+
+def is_custom_k(name):
+    return ('cachyos' in name or '-zen' in name or '-arch' in name or name in ('vmlinuz-linux', 'vmlinuz-linux-zen', 'linux', 'linux-zen'))
 
 cachy_vers = set()
 
 if os.path.exists('/lib/modules'):
     try:
         for d in os.listdir('/lib/modules'):
-            if 'cachyos' in d:
-                v = d.split('-cachyos')[0]
+            if is_custom_k(d):
+                v = clean_ver(d)
                 if v:
                     cachy_vers.add(v)
     except Exception:
@@ -288,16 +314,16 @@ if os.path.exists('/lib/modules'):
 if os.path.exists('/boot'):
     try:
         for f in os.listdir('/boot'):
-            if 'cachyos' in f and f.startswith('vmlinuz-') and not os.path.islink(os.path.join('/boot', f)):
-                v = f.replace('vmlinuz-', '').split('-cachyos')[0]
+            if is_custom_k(f) and f.startswith('vmlinuz-') and not os.path.islink(os.path.join('/boot', f)):
+                v = clean_ver(f)
                 if v:
                     cachy_vers.add(v)
     except Exception:
         pass
 
 uname_r = os.uname().release
-if 'cachyos' in uname_r:
-    cachy_vers.add(uname_r.split('-cachyos')[0])
+if is_custom_k(uname_r):
+    cachy_vers.add(clean_ver(uname_r))
 
 if cachy_vers:
     sorted_vers = sorted(list(cachy_vers), key=parse_ver, reverse=True)
@@ -313,20 +339,27 @@ check_cachyos_upstream_flavor() {
     local tier
     tier=$(detect_cpu_tier)
     local repo_urls=()
-    case "${tier}" in
-        znver4)
-            repo_urls=("https://mirror.cachyos.org/repo/x86_64_v4/cachyos-znver4/" "https://mirror.cachyos.org/repo/x86_64_v4/cachyos-v4/")
-            ;;
-        v4)
-            repo_urls=("https://mirror.cachyos.org/repo/x86_64_v4/cachyos-v4/")
-            ;;
-        v3)
-            repo_urls=("https://mirror.cachyos.org/repo/x86_64_v3/cachyos-v3/" "https://mirror.cachyos.org/repo/x86_64/cachyos/")
-            ;;
-        *)
-            repo_urls=("https://mirror.cachyos.org/repo/x86_64/cachyos/")
-            ;;
-    esac
+
+    if [ "${flavor}" = "zen" ]; then
+        repo_urls=("https://geo.mirror.pkgbuild.com/extra/os/x86_64/")
+    elif [ "${flavor}" = "arch" ]; then
+        repo_urls=("https://geo.mirror.pkgbuild.com/core/os/x86_64/")
+    else
+        case "${tier}" in
+            znver4)
+                repo_urls=("https://mirror.cachyos.org/repo/x86_64_v4/cachyos-znver4/" "https://mirror.cachyos.org/repo/x86_64_v4/cachyos-v4/")
+                ;;
+            v4)
+                repo_urls=("https://mirror.cachyos.org/repo/x86_64_v4/cachyos-v4/")
+                ;;
+            v3)
+                repo_urls=("https://mirror.cachyos.org/repo/x86_64_v3/cachyos-v3/" "https://mirror.cachyos.org/repo/x86_64/cachyos/")
+                ;;
+            *)
+                repo_urls=("https://mirror.cachyos.org/repo/x86_64/cachyos/")
+                ;;
+        esac
+    fi
 
     local k_prefix="linux-cachyos"
     local h_prefix="linux-cachyos-headers"
@@ -354,6 +387,12 @@ check_cachyos_upstream_flavor() {
     elif [ "${flavor}" = "lts" ]; then
         k_prefix="linux-cachyos-lts"
         h_prefix="linux-cachyos-lts-headers"
+    elif [ "${flavor}" = "zen" ]; then
+        k_prefix="linux-zen"
+        h_prefix="linux-zen-headers"
+    elif [ "${flavor}" = "arch" ]; then
+        k_prefix="linux"
+        h_prefix="linux-headers"
     fi
 
     for repo_url in "${repo_urls[@]}"; do
@@ -979,7 +1018,7 @@ for k, data in sorted(kernels.items()):
 
 cachyos_kernel_picker_interactive() {
     while true; do
-        local st_ver bo_ver lto_ver eevdf_ver bmq_ver deck_ver rtbore_ver rc_ver lts_ver
+        local st_ver bo_ver lto_ver eevdf_ver bmq_ver deck_ver rtbore_ver rc_ver lts_ver zen_ver arch_ver
         st_ver=$(get_installed_cachyos_flavor_version "standard")
         bo_ver=$(get_installed_cachyos_flavor_version "bore")
         lto_ver=$(get_installed_cachyos_flavor_version "lto")
@@ -989,6 +1028,8 @@ cachyos_kernel_picker_interactive() {
         rtbore_ver=$(get_installed_cachyos_flavor_version "rt-bore")
         rc_ver=$(get_installed_cachyos_flavor_version "rc")
         lts_ver=$(get_installed_cachyos_flavor_version "lts")
+        zen_ver=$(get_installed_cachyos_flavor_version "zen")
+        arch_ver=$(get_installed_cachyos_flavor_version "arch")
 
         probe_gpu_hardware
         local gpu_arch="MODERN"
@@ -996,55 +1037,65 @@ cachyos_kernel_picker_interactive() {
             gpu_arch=$(detect_nvidia_gpu)
         fi
 
-        local st_tag="[NOT INSTALLED]"
-        local bo_tag="[NOT INSTALLED]"
-        local lto_tag="[NOT INSTALLED]"
-        local eevdf_tag="[NOT INSTALLED]"
-        local bmq_tag="[NOT INSTALLED]"
-        local deck_tag="[NOT INSTALLED]"
-        local rtbore_tag="[NOT INSTALLED]"
-        local rc_tag="[NOT INSTALLED]"
-        local lts_tag="[NOT INSTALLED]"
-        [ "${st_ver}" != "NONE" ] && st_tag="[INSTALLED: ${st_ver}]"
-        [ "${bo_ver}" != "NONE" ] && bo_tag="[INSTALLED: ${bo_ver}]"
-        [ "${lto_ver}" != "NONE" ] && lto_tag="[INSTALLED: ${lto_ver}]"
-        [ "${eevdf_ver}" != "NONE" ] && eevdf_tag="[INSTALLED: ${eevdf_ver}]"
-        [ "${bmq_ver}" != "NONE" ] && bmq_tag="[INSTALLED: ${bmq_ver}]"
-        [ "${deck_ver}" != "NONE" ] && deck_tag="[INSTALLED: ${deck_ver}]"
-        [ "${rtbore_ver}" != "NONE" ] && rtbore_tag="[INSTALLED: ${rtbore_ver}]"
-        [ "${rc_ver}" != "NONE" ] && rc_tag="[INSTALLED: ${rc_ver}]"
-        [ "${lts_ver}" != "NONE" ] && lts_tag="[INSTALLED: ${lts_ver}]"
+        local not_inst="\033[0;36m[NOT INSTALLED]\033[0m"
+        local st_tag="${not_inst}"
+        local bo_tag="${not_inst}"
+        local lto_tag="${not_inst}"
+        local eevdf_tag="${not_inst}"
+        local bmq_tag="${not_inst}"
+        local deck_tag="${not_inst}"
+        local rtbore_tag="${not_inst}"
+        local rc_tag="${not_inst}"
+        local lts_tag="${not_inst}"
+        local zen_tag="${not_inst}"
+        local arch_tag="${not_inst}"
+
+        [ "${st_ver}" != "NONE" ] && st_tag="\033[1;32m[INSTALLED: ${st_ver}]\033[0m"
+        [ "${bo_ver}" != "NONE" ] && bo_tag="\033[1;32m[INSTALLED: ${bo_ver}]\033[0m"
+        [ "${lto_ver}" != "NONE" ] && lto_tag="\033[1;32m[INSTALLED: ${lto_ver}]\033[0m"
+        [ "${eevdf_ver}" != "NONE" ] && eevdf_tag="\033[1;32m[INSTALLED: ${eevdf_ver}]\033[0m"
+        [ "${bmq_ver}" != "NONE" ] && bmq_tag="\033[1;32m[INSTALLED: ${bmq_ver}]\033[0m"
+        [ "${deck_ver}" != "NONE" ] && deck_tag="\033[1;32m[INSTALLED: ${deck_ver}]\033[0m"
+        [ "${rtbore_ver}" != "NONE" ] && rtbore_tag="\033[1;32m[INSTALLED: ${rtbore_ver}]\033[0m"
+        [ "${rc_ver}" != "NONE" ] && rc_tag="\033[1;32m[INSTALLED: ${rc_ver}]\033[0m"
+        [ "${lts_ver}" != "NONE" ] && lts_tag="\033[1;32m[INSTALLED: ${lts_ver}]\033[0m"
+        [ "${zen_ver}" != "NONE" ] && zen_tag="\033[1;32m[INSTALLED: ${zen_ver}]\033[0m"
+        [ "${arch_ver}" != "NONE" ] && arch_tag="\033[1;32m[INSTALLED: ${arch_ver}]\033[0m"
         if [ "${HAS_NVIDIA}" = "true" ] && { [ "${gpu_arch}" = "PASCAL" ] || [ "${gpu_arch}" = "LEGACY" ]; }; then
-            rc_tag="[UNSUPPORTED ON PASCAL/LEGACY GPU]"
+            rc_tag="\033[1;31m[UNSUPPORTED ON PASCAL/LEGACY GPU]\033[0m"
         fi
 
         echo ""
         echo -e "${CYAN}============================================================${RESET}"
         echo -e "${YELLOW}${BOLD}$(_ CACHY_PICKER_TITLE)${RESET}"
         echo -e "${CYAN}============================================================${RESET}"
-        echo -e "  1. \033[1;32mlinux-cachyos\033[0m ${st_tag}"
+        echo -e "  1. \033[1;34mlinux-cachyos\033[0m ${st_tag}"
         echo -e "     $(_ CACHY_FLAVOR_STANDARD)"
-        echo -e "  2. \033[1;32mlinux-cachyos-bore\033[0m ${bo_tag}"
+        echo -e "  2. \033[1;34mlinux-cachyos-bore\033[0m ${bo_tag}"
         echo -e "     $(_ CACHY_FLAVOR_BORE)"
-        echo -e "  3. \033[1;32mlinux-cachyos-bore-lto\033[0m ${lto_tag}"
+        echo -e "  3. \033[1;34mlinux-cachyos-bore-lto\033[0m ${lto_tag}"
         echo -e "     $(_ CACHY_FLAVOR_LTO)"
-        echo -e "  4. \033[1;32mlinux-cachyos-eevdf\033[0m ${eevdf_tag}"
+        echo -e "  4. \033[1;34mlinux-cachyos-eevdf\033[0m ${eevdf_tag}"
         echo -e "     $(_ CACHY_FLAVOR_EEVDF)"
-        echo -e "  5. \033[1;32mlinux-cachyos-bmq\033[0m ${bmq_tag}"
+        echo -e "  5. \033[1;34mlinux-cachyos-bmq\033[0m ${bmq_tag}"
         echo -e "     $(_ CACHY_FLAVOR_BMQ)"
-        echo -e "  6. \033[1;32mlinux-cachyos-deckify\033[0m ${deck_tag}"
+        echo -e "  6. \033[1;34mlinux-cachyos-deckify\033[0m ${deck_tag}"
         echo -e "     $(_ CACHY_FLAVOR_DECKIFY)"
-        echo -e "  7. \033[1;32mlinux-cachyos-rt-bore\033[0m ${rtbore_tag}"
+        echo -e "  7. \033[1;34mlinux-cachyos-rt-bore\033[0m ${rtbore_tag}"
         echo -e "     $(_ CACHY_FLAVOR_RT_BORE)"
-        echo -e "  8. \033[1;32mlinux-cachyos-rc\033[0m ${rc_tag}"
+        echo -e "  8. \033[1;34mlinux-cachyos-rc\033[0m ${rc_tag}"
         echo -e "     $(_ CACHY_FLAVOR_RC)"
-        echo -e "  9. \033[1;32mlinux-cachyos-lts\033[0m ${lts_tag}"
+        echo -e "  9. \033[1;34mlinux-cachyos-lts\033[0m ${lts_tag}"
         echo -e "     $(_ CACHY_FLAVOR_LTS)"
-        echo -e " 10. $(_ CACHY_PICKER_EXIT | sed -E 's/^[0-9]+\.\s*//')"
+        echo -e " 10. \033[1;34mlinux-zen\033[0m ${zen_tag}"
+        echo -e "     $(_ CACHY_FLAVOR_ZEN)"
+        echo -e " 11. \033[1;34mlinux\033[0m ${arch_tag}"
+        echo -e "     $(_ CACHY_FLAVOR_ARCH)"
+        echo -e " 12. $(_ CACHY_PICKER_EXIT | sed -E 's/^[0-9]+\.\s*//')"
         echo ""
-        echo -n "$(_ SELECT_OPERATION_RANGE range="1-10") "
+        echo -n "$(_ SELECT_OPERATION_RANGE range="1-12") "
         local pchoice
-        read -r pchoice || pchoice="10"
+        read -r pchoice || pchoice="12"
 
         case "${pchoice}" in
             1)
@@ -1106,6 +1157,18 @@ cachyos_kernel_picker_interactive() {
                 read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
                 ;;
             10)
+                echo ""
+                deploy_cachyos_kernel_flavor "zen"
+                echo ""
+                read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                ;;
+            11)
+                echo ""
+                deploy_cachyos_kernel_flavor "arch"
+                echo ""
+                read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                ;;
+            12)
                 return 0
                 ;;
             *)
@@ -1234,10 +1297,14 @@ def rank(k):
         tier = 38
     elif '-cachyos-bmq' in b:
         tier = 36
+    elif '-zen' in b or b.endswith('-zen') or b == 'vmlinuz-linux-zen':
+        tier = 35
     elif '-cachyos-deckify' in b:
         tier = 34
-    elif '-cachyos' in b and '-rc' not in b and '-lts' not in b:
+    elif '-cachyos' in b and '-rc' not in b and '-lts' not in b and '-bore' not in b and '-rt' not in b and '-eevdf' not in b and '-bmq' not in b and '-deckify' not in b:
         tier = 30
+    elif '-arch' in b or b == 'vmlinuz-linux':
+        tier = 28
     elif '-cachyos-lts' in b:
         tier = 20
     elif '-cachyos-rc' in b:
@@ -1291,14 +1358,18 @@ def rank_kernel(k):
         tier = 38
     elif '-cachyos-bmq' in k:
         tier = 36
+    elif '-zen' in k or k.endswith('-zen') or k == 'vmlinuz-linux-zen':
+        tier = 35
     elif '-cachyos-deckify' in k:
         tier = 34
     elif '-cachyos-lts' in k:
         tier = 20
     elif '-cachyos-rc' in k:
         tier = 10
-    elif '-cachyos' in k:
+    elif '-cachyos' in k and '-rc' not in k and '-lts' not in k and '-bore' not in k and '-rt' not in k and '-eevdf' not in k and '-bmq' not in k and '-deckify' not in k:
         tier = 30
+    elif '-arch' in k or k == 'vmlinuz-linux':
+        tier = 28
     elif 'vmlinuz-generic' in k:
         tier = 0
     elif 'vmlinuz-huge' in k:
@@ -1719,6 +1790,10 @@ deploy_cachyos_kernel_packages() {
             kver_full="${ver_clean}-cachyos-rc"
         elif [ "${flavor}" = "lts" ]; then
             kver_full="${ver_clean}-cachyos-lts"
+        elif [ "${flavor}" = "zen" ]; then
+            kver_full="${ver_clean}-zen"
+        elif [ "${flavor}" = "arch" ]; then
+            kver_full="${ver_clean}-arch"
         else
             kver_full="${ver_clean}-cachyos"
         fi
@@ -1744,6 +1819,8 @@ deploy_cachyos_kernel_packages() {
     if [ -z "${headers_dir}" ] || [ ! -d "${headers_dir}" ]; then
         if [ -d "/usr/src/linux-headers-${kver_full}" ]; then
             headers_dir="/usr/src/linux-headers-${kver_full}"
+        elif [ -d "/usr/lib/modules/${kver_full}/build" ]; then
+            headers_dir="/usr/lib/modules/${kver_full}/build"
         else
             headers_dir=$(find /usr/src -maxdepth 1 -type d -name "linux-headers-*${flavor}*" 2>/dev/null | sort -V | tail -n 1 || true)
         fi
@@ -1772,6 +1849,10 @@ deploy_cachyos_kernel_packages() {
         sudo cp -f "/boot/vmlinuz-linux-cachyos-lts" "/boot/vmlinuz-${kver_full}"
     elif [ -f "/boot/vmlinuz-linux-cachyos" ] && [ "${flavor}" = "standard" ]; then
         sudo cp -f "/boot/vmlinuz-linux-cachyos" "/boot/vmlinuz-${kver_full}"
+    elif [ -f "/boot/vmlinuz-linux-zen" ] && [ "${flavor}" = "zen" ]; then
+        sudo cp -f "/boot/vmlinuz-linux-zen" "/boot/vmlinuz-${kver_full}"
+    elif [ -f "/boot/vmlinuz-linux" ] && [ "${flavor}" = "arch" ]; then
+        sudo cp -f "/boot/vmlinuz-linux" "/boot/vmlinuz-${kver_full}"
     elif [ -f "/usr/lib/modules/${kver_full}/vmlinuz" ]; then
         sudo cp -f "/usr/lib/modules/${kver_full}/vmlinuz" "/boot/vmlinuz-${kver_full}"
     elif [ -f "/lib/modules/${kver_full}/vmlinuz" ]; then
@@ -1782,6 +1863,7 @@ deploy_cachyos_kernel_packages() {
         sudo ln -sf "${headers_dir}" "/lib/modules/${kver_full}/build"
         sudo ln -sf "${headers_dir}" "/lib/modules/${kver_full}/source"
     elif [ -d "/usr/lib/modules/${kver_full}/build" ]; then
+        sudo ln -sf "/usr/lib/modules/${kver_full}/build" "/lib/modules/${kver_full}/build" 2>/dev/null || true
         sudo ln -sf "/usr/lib/modules/${kver_full}/build" "/lib/modules/${kver_full}/source"
     fi
 

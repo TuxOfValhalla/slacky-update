@@ -214,5 +214,15 @@
   "MENU_GNOMES_GUI": "🎨 Skrivebords-applikasjon (GUI)",
   "HARDWARE_REALTEK_2_5GBE_DETECTED": "⚡ Realtek 2.5GbE nettverkskort oppdaga (RTL8125).",
   "PROMPT_INSTALL_R8125_MODULE": "Vil du installere høvande CachyOS r8125-drivar for kjerne {version}? [Y/n] ",
-  "R8125_DEPLOY_SUCCESS": "Realtek r8125-drivarmodul vart vellykka installert for kjerne {version}."
+  "R8125_DEPLOY_SUCCESS": "Realtek r8125-drivarmodul vart vellykka installert for kjerne {version}.",
+  "MENU_GNOMES_PACMAN": "Universal Underpants Gnomes Pacman Sidecar Engine (Arch/CachyOS Transmutation)",
+  "GNOMES_SEARCH_TITLE": "🔍 SEARCH & TRANSMUTE UPSTREAM PACKAGES",
+  "GNOMES_PROMPT_SEARCH": "Enter search keyword or package name: ",
+  "GNOMES_PROMPT_INSTALL": "Enter package name to transmute/install (or press Enter to return): ",
+  "GNOMES_EXCLUDES_SHIELD": "Host Sovereignty Shield: Core Slackware base system protected.",
+  "PROMPT_CLEAR_GNOMES_CACHE": "Vil du tøma Underpants Gnomes-pakkebuffere? ({0}) [j/N] ",
+  "PROMPT_UPGRADE_GNOMES": "Oppgradera transmutterte Underpants Gnomes-pakkar? [J/n] ",
+  "UPGRADING_GNOMES": "Oppgraderer Underpants Gnomes-pakkar...",
+  "GNOMES_CURATED_COLLISION_WARN": "Åtvaring: \"{0}\" er alt installert som ein kuratert Slackware-pakke ({1}). Transmutering vil overstyra startfila i /usr/bin/. Vil du halda fram? [j/N] ",
+  "GNOMES_CACHE_CLEANED": "Rydda {0} med hurtigbufra pakkar frå Underpants Gnomes-bufferen."
 }

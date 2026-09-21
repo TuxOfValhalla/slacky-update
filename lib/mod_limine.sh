@@ -911,6 +911,8 @@ def get_flavor_and_label(k):
         return ('cachyos-eevdf', 'Linux Cachyos EEVDF', 38)
     elif '-cachyos-bmq' in k:
         return ('cachyos-bmq', 'Linux Cachyos BMQ', 36)
+    elif '-zen' in k or k in ('vmlinuz-linux-zen', 'linux-zen'):
+        return ('arch-zen', 'Arch Linux Zen', 35)
     elif '-cachyos-deckify' in k:
         return ('cachyos-deckify', 'Linux Cachyos Deckify', 34)
     elif '-cachyos-rc' in k:
@@ -919,6 +921,8 @@ def get_flavor_and_label(k):
         return ('cachyos-lts', 'Linux Cachyos LTS', 20)
     elif '-cachyos' in k:
         return ('cachyos-standard', 'Linux Cachyos Standard', 30)
+    elif '-arch' in k or k in ('vmlinuz-linux', 'linux'):
+        return ('arch-standard', 'Arch Linux Standard', 28)
     elif 'vmlinuz-generic' in k or 'generic' in k:
         return ('slackware', 'Slackware Linux', -40)
     elif 'vmlinuz-huge' in k or 'huge' in k:
@@ -1406,9 +1410,7 @@ sign_limine_efi_sbctl() {
             sudo "${sbctl_bin}" sign -s "${target_efi}" >/dev/null 2>&1 || true
         fi
         if sudo test -f "${esp_path}/EFI/BOOT/BOOTX64.EFI"; then
-            if strings "${esp_path}/EFI/BOOT/BOOTX64.EFI" 2>/dev/null | grep -qi "Limine"; then
-                sudo "${sbctl_bin}" sign -s "${esp_path}/EFI/BOOT/BOOTX64.EFI" >/dev/null 2>&1 || true
-            fi
+            sudo "${sbctl_bin}" sign -s "${esp_path}/EFI/BOOT/BOOTX64.EFI" >/dev/null 2>&1 || true
         fi
     fi
 

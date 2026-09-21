@@ -63,8 +63,8 @@ HAS_NVIDIA=false
 HAS_AMD=false
 HAS_INTEL=false
 
-CURRENT_VERSION="0.14.0"
-RELEASE_CODENAME="Coco Jambo"
+CURRENT_VERSION="0.15.0"
+RELEASE_CODENAME="Now This Is Podracing!"
 
 CURL_CONNECT_TIMEOUT=15
 CURL_MAX_TIME=60
@@ -752,15 +752,22 @@ def format_eta(seconds):
 
 def render_pacman_bar(pct, width=16, chomp_state=0):
     pct = max(0.0, min(100.0, pct))
-    pos = int((pct / 100.0) * width)
-    pos = min(width - 1, pos)
-    gnome_state = "🧙" if (chomp_state % 2 == 0) else "🧙‍♂️"
-    eaten = "\033[1;32m" + "━" * pos + "\033[0m"
-    rem = width - pos - 1
-    trail = "".join("🩲" if (i % 2 == 0) else "·" for i in range(rem))
     if pct >= 100.0:
-        return "\033[1;32m[" + "━" * width + " 🧙 💰 PROFIT!]\033[0m"
-    return f"[{eaten}\033[1;33m{gnome_state}\033[0m \033[1;36m{trail}\033[0m]"
+        return f"[{'-' * width}]"
+    pos = int((pct / 100.0) * width)
+    pos = min(width - 1, max(0, pos))
+    eaten = "-" * pos
+    mouth_open = (chomp_state % 2 == 0)
+    eater = "\033[1;34mS\033[0m" if mouth_open else "\033[1;34ms\033[0m"
+    rem_len = max(0, width - pos - 1)
+    food_chars = []
+    for i in range(rem_len):
+        if i % 3 == 1:
+            food_chars.append("o")
+        else:
+            food_chars.append(" ")
+    food = "".join(food_chars)
+    return f"[{eaten}{eater}{food}]"
 
 size_map = {}
 def probe_size(item):

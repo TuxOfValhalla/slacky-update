@@ -4865,6 +4865,7 @@ PYTUIFASTMAP
 
         echo -e "\n${BLUE}================================================================================"
         echo -e " ${BOLD}Batch & Automation Actions:${RESET}"
+        echo -e "  ${CYAN}${BOLD}S.${RESET}  🔍 Search & Transmute Upstream Packages (30,000+ CachyOS & Arch Packages)"
         echo -e "  ${GREEN}${BOLD}A.${RESET}  ⚡ 1-Click Total Gaming Rig (Deploy All ${#item_ids[@]} Components in Unified Batch)"
         echo -e "  ${MAGENTA}${BOLD}O.${RESET}  🎬 1-Click OBS Creator & Streamer Suite (Deploy Complete OBS Power-Pack)"
         echo -e "  ${YELLOW}${BOLD}U.${RESET}  🔄 Synchronize & Upgrade All Installed Gaming Packages"
@@ -4872,13 +4873,16 @@ PYTUIFASTMAP
         echo -e "  ${BOLD}Q.${RESET}  🚪 Catch You on the Flip Side (Return to Main Menu)"
         echo -e "${BLUE}================================================================================${RESET}"
         echo ""
-        read -r -p "Pick your play [1-${#item_ids[@]} (multi e.g. 1 3 5 or 1-4), O, A, U, D, Q]: " user_choice
+        read -r -p "Pick your play [1-${#item_ids[@]} (multi e.g. 1 3 5 or 1-4), S, O, A, U, D, Q]: " user_choice
         user_choice=$(echo "${user_choice}" | tr '[:lower:]' '[:upper:]' | xargs)
 
         case "${user_choice}" in
             Q|"")
                 trigger_silent_background_refresh 2>/dev/null || true
                 break
+                ;;
+            S|SEARCH)
+                gnomes_interactive_station
                 ;;
             O|OBS)
                 echo ""

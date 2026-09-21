@@ -214,5 +214,15 @@
   "MENU_GNOMES_GUI": "🎨 Desktop Software Suite (GUI)",
   "HARDWARE_REALTEK_2_5GBE_DETECTED": "⚡ Whoa! Bodacious Realtek 2.5GbE NIC detected (RTL8125)!",
   "PROMPT_INSTALL_R8125_MODULE": "Wanna drop in the turbo-charged CachyOS r8125 driver for kernel {version}? [Y/n] ",
-  "R8125_DEPLOY_SUCCESS": "Cowabunga! Realtek r8125 module loaded and dialed in for {version}!"
+  "R8125_DEPLOY_SUCCESS": "Cowabunga! Realtek r8125 module loaded and dialed in for {version}!",
+  "MENU_GNOMES_PACMAN": "Universal Underpants Gnomes Pacman Sidecar Engine (Arch/CachyOS Transmutation)",
+  "GNOMES_SEARCH_TITLE": "🔍 SEARCH & TRANSMUTE UPSTREAM PACKAGES",
+  "GNOMES_PROMPT_SEARCH": "Enter search keyword or package name: ",
+  "GNOMES_PROMPT_INSTALL": "Enter package name to transmute/install (or press Enter to return): ",
+  "GNOMES_EXCLUDES_SHIELD": "Host Sovereignty Shield: Core Slackware base system protected.",
+  "PROMPT_CLEAR_GNOMES_CACHE": "Yo dude! Wanna torch the gnarly Underpants Gnome Cache? ({0}) [y/N] ",
+  "PROMPT_UPGRADE_GNOMES": "Juice up transmuted Underpants Gnomes packages? [Y/n] ",
+  "UPGRADING_GNOMES": "Pumping pure wattage into Underpants Gnomes packages...",
+  "GNOMES_CURATED_COLLISION_WARN": "Whoa! Major Bummer: \"{0}\" is already kicking as a curated Slackware package ({1})! Override its launcher in /usr/bin/? [y/N] ",
+  "GNOMES_CACHE_CLEANED": "Bodacious! Cleaned {0} of cached junk from Underpants Gnomes cache!"
 }

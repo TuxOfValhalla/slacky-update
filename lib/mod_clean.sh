@@ -30,33 +30,43 @@ def get_flavor(k_str):
         return 'lts'
     elif '-cachyos' in k_str:
         return 'standard'
+    elif '-zen' in k_str or k_str.endswith('-zen'):
+        return 'zen'
+    elif '-arch' in k_str:
+        return 'arch'
     return 'other'
 
 def parse_ver(v_str):
-    return [int(x) for x in re.findall(r'\d+', v_str.split('-cachyos')[0])]
+    nums = [int(x) for x in re.findall(r'\d+', v_str)]
+    return nums if nums else [0]
 
-cachy_kernels = set()
+def is_custom_k(name):
+    return ('cachyos' in name or '-zen' in name or '-arch' in name or name in ('vmlinuz-linux', 'vmlinuz-linux-zen', 'linux', 'linux-zen'))
+
+custom_kernels = set()
 if os.path.exists('/boot'):
     try:
         for f in os.listdir('/boot'):
-            if 'cachyos' in f and f.startswith('vmlinuz-') and not os.path.islink(os.path.join('/boot', f)):
-                cachy_kernels.add(f.replace('vmlinuz-', ''))
+            if is_custom_k(f) and f.startswith('vmlinuz-') and not os.path.islink(os.path.join('/boot', f)):
+                custom_kernels.add(f.replace('vmlinuz-', ''))
     except Exception:
         pass
 
 for mdir in ('/lib/modules', '/usr/lib/modules'):
     if os.path.exists(mdir):
         for d in os.listdir(mdir):
-            if 'cachyos' in d:
-                cachy_kernels.add(d)
+            if is_custom_k(d):
+                custom_kernels.add(d)
 
 active = os.uname().release
 by_flavor = defaultdict(list)
-for k in cachy_kernels:
-    by_flavor[get_flavor(k)].append(k)
+for k in custom_kernels:
+    flv = get_flavor(k)
+    if flv != 'other':
+        by_flavor[flv].append(k)
 
 to_keep = set()
-if active in cachy_kernels:
+if active in custom_kernels:
     to_keep.add(active)
 
 for flv, klist in by_flavor.items():
@@ -66,7 +76,7 @@ for flv, klist in by_flavor.items():
     else:
         to_keep.update(sorted_k[:2])
 
-to_remove = [k for k in cachy_kernels if k not in to_keep]
+to_remove = [k for k in custom_kernels if k not in to_keep]
 for k in to_remove:
     print(k)
 " 2>/dev/null || true)
@@ -123,11 +133,16 @@ def parse_ver(v_str):
     clean = re.sub(r'\.(?:img|gz|old)$', '', clean)
     return [int(x) for x in re.findall(r'\d+', clean)]
 
+def is_slackware_k(name):
+    if 'cachyos' in name or '-zen' in name or '-arch' in name or name in ('vmlinuz-linux', 'vmlinuz-linux-zen', 'linux', 'linux-zen'):
+        return False
+    return True
+
 slack_kernels = set()
 if os.path.exists('/boot'):
     try:
         for f in os.listdir('/boot'):
-            if f.startswith('vmlinuz-') and 'cachyos' not in f and not os.path.islink(os.path.join('/boot', f)):
+            if f.startswith('vmlinuz-') and is_slackware_k(f) and not os.path.islink(os.path.join('/boot', f)):
                 v = f.replace('vmlinuz-', '')
                 if v and v != 'generic' and v != 'huge':
                     slack_kernels.add(v)
@@ -137,7 +152,7 @@ if os.path.exists('/boot'):
 for mdir in ('/lib/modules', '/usr/lib/modules'):
     if os.path.exists(mdir):
         for d in os.listdir(mdir):
-            if 'cachyos' not in d:
+            if is_slackware_k(d):
                 slack_kernels.add(d)
 
 active = os.uname().release
@@ -145,7 +160,7 @@ sorted_k = sorted(list(slack_kernels), key=parse_ver, reverse=True)
 
 keep_count = 1
 to_keep = set(sorted_k[:keep_count])
-if 'cachyos' not in active:
+if is_slackware_k(active):
     to_keep.add(active)
 
 to_remove = [k for k in sorted_k if k not in to_keep]
@@ -234,9 +249,31 @@ clean_system_cache_and_orphans() {
     validate_privileges
 
     log_info "Cleaning package cache and temporary build directories..."
-    sudo rm -rf /var/cache/slacky-update/kernel/* 2>/dev/null || true
-    sudo rm -f /var/cache/slacky-update/*.tmp 2>/dev/null || true
-    sudo rm -rf /tmp/slacky-build-* /tmp/slacky-rocm-* /tmp/slacky-sign-* /tmp/SBo/* 2>/dev/null || true
+    sudo rm -rf /var/cache/slacky-update/kernel/* \
+                /var/cache/slacky-update/nvidia/* \
+                /var/cache/slacky-update/archives/* \
+                /var/cache/slacky-update/rocm/* \
+                /var/cache/slacky-update/*.tmp \
+                /var/cache/sbopkg/* \
+                /var/cache/slackpkg/* 2>/dev/null || true
+
+    sudo rm -rf /tmp/slacky-build-* \
+                /tmp/slacky-rocm-* \
+                /tmp/slacky-sign-* \
+                /tmp/SBo/* \
+                /tmp/build-* \
+                /tmp/package-* \
+                /tmp/transmute-gnomes-* \
+                /tmp/underpants-*.txz \
+                /tmp/pycache 2>/dev/null || true
+
+    if command -v gnomes >/dev/null 2>&1; then
+        log_info "Cleaning Underpants Gnomes cache and package residue..."
+        sudo gnomes -Scc >/dev/null 2>&1 || true
+    elif [ -f "/usr/share/slacky-update/lib/gnomes_pacman.py" ]; then
+        log_info "Cleaning Underpants Gnomes cache and package residue..."
+        sudo python3 /usr/share/slacky-update/lib/gnomes_pacman.py clean --all >/dev/null 2>&1 || true
+    fi
 
     if command -v flatpak >/dev/null 2>&1; then
         log_info "Uninstalling unused Flatpak runtimes..."
