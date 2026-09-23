@@ -260,12 +260,25 @@ clean_system_cache_and_orphans() {
     sudo rm -rf /tmp/slacky-build-* \
                 /tmp/slacky-rocm-* \
                 /tmp/slacky-sign-* \
+                /tmp/slacky-snap-* \
+                /tmp/slacky-gnome* \
+                /tmp/slacky-update-check.* \
+                /tmp/slacky-staging-* \
+                /tmp/dracut-* \
+                /tmp/initrd-tree-* \
+                /tmp/initrd-*.gz \
                 /tmp/SBo/* \
                 /tmp/build-* \
                 /tmp/package-* \
                 /tmp/transmute-gnomes-* \
                 /tmp/underpants-*.txz \
+                /tmp/underpants-*.part \
                 /tmp/pycache 2>/dev/null || true
+
+    # Clean stale lock file if no active slacky-update process is running
+    if [ -f /tmp/slacky-update-running.lock ] && [ "${SLACKY_UPDATE_RUNNING:-0}" != "1" ]; then
+        sudo rm -f /tmp/slacky-update-running.lock 2>/dev/null || true
+    fi
 
     if command -v gnomes >/dev/null 2>&1; then
         log_info "Cleaning Underpants Gnomes cache and package residue..."

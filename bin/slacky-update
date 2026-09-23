@@ -3,8 +3,8 @@
 
 set -euo pipefail
 
-CURRENT_VERSION="0.15.0"
-RELEASE_CODENAME="Now This Is Podracing!"
+CURRENT_VERSION="0.16.0"
+RELEASE_CODENAME="Tubthumping"
 
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 if [ -d "${SCRIPT_DIR}/../lib" ] && [ -f "${SCRIPT_DIR}/../lib/common.sh" ]; then
@@ -57,6 +57,9 @@ elif [ -f "/usr/share/slacky-update/lib/slacky_update_i18n.py" ]; then
 else
     I18N_PY="${SCRIPT_DIR}/../lib/slacky_update_i18n.py"
 fi
+
+# Initialize hardware detection globally (for both interactive and headless/batch modes)
+probe_gpu_hardware
 
 if [ -f "${SCRIPT_DIR}/../lib/check_backend.sh" ]; then
     CHECK_BIN="${SCRIPT_DIR}/../lib/check_backend.sh"
@@ -1030,6 +1033,18 @@ elif [ "${1:-}" = "--gnomes-pacman" ] || [ "${1:-}" = "gnomes" ] || [ "${1:-}" =
     else
         python3 "${APP_DIR}/gnomes_pacman.py" "$@"
     fi
+elif [ "${1:-}" = "--hyprland" ] || [ "${1:-}" = "--hyprland-noctalia" ]; then
+    validate_privileges
+    ensure_cache_dir
+    probe_gpu_hardware
+    transmute_and_deploy_gaming_pkg "hyprland-noctalia"
+    exit 0
+elif [ "${1:-}" = "--hyprland-core" ] || [ "${1:-}" = "--hyprland-minimal" ]; then
+    validate_privileges
+    ensure_cache_dir
+    probe_gpu_hardware
+    transmute_and_deploy_gaming_pkg "hyprland-core"
+    exit 0
 elif [ "${1:-}" = "--gaming" ] || [ "${1:-}" = "-g" ] || [ "${1:-}" = "--gnomes" ] || [ "${1:-}" = "--gnomes-tui" ]; then
     INTERACTIVE_SESSION=1
     interactive_cachyos_gaming_menu
@@ -1150,6 +1165,8 @@ elif [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
     echo "      --restore-limine    Restore Limine bootloader from known good self-heal backup"
     echo "      --sb, --secure-boot Open UEFI Secure Boot & MOK Armor Command Center"
     echo "  -g, --gaming            Open CachyOS Underpants Gnomes Gaming Suite menu"
+    echo "      --hyprland          Install curated Hyprland Desktop Suite (Noctalia Shell)"
+    echo "      --hyprland-core     Install Hyprland Minimal Core Compositor"
     echo "  -m, --heal-multilib     Audit and repair AlienBOB 32-bit Multilib subsystem"
     echo "  -s, --slackbuilds       Open SlackBuilds and sbotools management hub"
     echo "  -t, --tweaks            Open system performance and gaming tweaks menu"

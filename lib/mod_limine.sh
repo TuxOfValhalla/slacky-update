@@ -747,11 +747,19 @@ if header and ('timeout:' in header or 'hash_mismatch_panic:' in header or 'inte
         h = ''
         if os.path.exists(full_path):
             try:
-                res = subprocess.run(['b2sum', full_path], capture_output=True, text=True)
-                if res.returncode == 0:
-                    h = res.stdout.strip().split()[0]
+                import hashlib
+                hb = hashlib.blake2b()
+                with open(full_path, 'rb') as f:
+                    while chunk := f.read(65536):
+                        hb.update(chunk)
+                h = hb.hexdigest().lower()
             except Exception:
-                pass
+                try:
+                    res = subprocess.run(['b2sum', full_path], capture_output=True, text=True)
+                    if res.returncode == 0:
+                        h = res.stdout.strip().split()[0]
+                except Exception:
+                    pass
         if h:
             return f'wallpaper: boot():/{fname}#{h}'
         return m_match.group(0)
@@ -2374,11 +2382,19 @@ for sdir in scan_dirs:
 
 def compute_b2(path):
     try:
-        r = subprocess.run(['b2sum', path], capture_output=True, text=True, timeout=10)
-        if r.returncode == 0:
-            return r.stdout.strip().split()[0].lower()
+        import hashlib
+        hb = hashlib.blake2b()
+        with open(path, 'rb') as f:
+            while chunk := f.read(65536):
+                hb.update(chunk)
+        return hb.hexdigest().lower()
     except Exception:
-        pass
+        try:
+            r = subprocess.run(['b2sum', path], capture_output=True, text=True, timeout=10)
+            if r.returncode == 0:
+                return r.stdout.strip().split()[0].lower()
+        except Exception:
+            pass
     return ''
 
 def short_h(h):

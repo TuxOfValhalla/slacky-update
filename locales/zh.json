@@ -224,5 +224,15 @@
   "PROMPT_UPGRADE_GNOMES": "升级已转换的 Underpants Gnomes 软件包？ [Y/n] ",
   "UPGRADING_GNOMES": "正在升级 Underpants Gnomes 软件包...",
   "GNOMES_CURATED_COLLISION_WARN": "警告：\"{0}\" 已作为原生 Slackware 软件包 ({1}) 安装。转换将覆盖 /usr/bin/ 中的启动器。是否继续？ [y/N] ",
-  "GNOMES_CACHE_CLEANED": "已从 Underpants Gnomes 缓存中清除 {0} 的软件包。"
+  "GNOMES_CACHE_CLEANED": "已从 Underpants Gnomes 缓存中清除 {0} 的软件包。",
+  "CACHY_FLAVOR_ZEN": "(Arch Linux Zen kernel: Low-latency desktop and gaming tuning - Bodacious!)",
+  "CACHY_FLAVOR_ARCH": "(Arch Linux Standard vanilla kernel - Party on, Wayne!)",
+  "PACMAN_DOWNLOAD_LABEL": "Turbo Parallel Pre-fetch: {label} [{count} files • ~{size}]",
+  "PACMAN_DOWNLOAD_SUCCESS": "✓ Bodacious! {count} files ({size}) successfully cached in {time}s (avg {speed}).",
+  "PACMAN_DOWNLOAD_FAILED": "⚠️ Major Bummer: {success}/{total} files cached ({size}) in {time}s ({failed} failed).",
+  "TUBTHUMPING_BANNER": "Tubthumping Engine: I get knocked down, but I get up again!",
+  "COWABUNGA_READY": "Cowabunga! System components verified rock-solid.",
+  "CAT_DESKTOP": "Wayland 桌面与 Shell",
+  "MENU_HYPRLAND": "精选 Hyprland 桌面套件 (Noctalia Shell / Wayland)",
+  "PROMPT_UPGRADE_DESKTOP": "是否升级精选 Hyprland 桌面套件？[Y/n] "
 }

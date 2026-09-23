@@ -224,5 +224,15 @@
   "PROMPT_UPGRADE_GNOMES": "Atualizar pacotes transmutados do Underpants Gnomes? [S/n] ",
   "UPGRADING_GNOMES": "Atualizando pacotes do Underpants Gnomes...",
   "GNOMES_CURATED_COLLISION_WARN": "Aviso: \"{0}\" já está instalado como um pacote Slackware nativo ({1}). A transmutação substituirá o inicializador em /usr/bin/. Continuar? [s/N] ",
-  "GNOMES_CACHE_CLEANED": "Foram limpos {0} de pacotes em cache do Underpants Gnomes."
+  "GNOMES_CACHE_CLEANED": "Foram limpos {0} de pacotes em cache do Underpants Gnomes.",
+  "CACHY_FLAVOR_ZEN": "(Arch Linux Zen kernel: Low-latency desktop and gaming tuning - Bodacious!)",
+  "CACHY_FLAVOR_ARCH": "(Arch Linux Standard vanilla kernel - Party on, Wayne!)",
+  "PACMAN_DOWNLOAD_LABEL": "Turbo Parallel Pre-fetch: {label} [{count} files • ~{size}]",
+  "PACMAN_DOWNLOAD_SUCCESS": "✓ Bodacious! {count} files ({size}) successfully cached in {time}s (avg {speed}).",
+  "PACMAN_DOWNLOAD_FAILED": "⚠️ Major Bummer: {success}/{total} files cached ({size}) in {time}s ({failed} failed).",
+  "TUBTHUMPING_BANNER": "Tubthumping Engine: I get knocked down, but I get up again!",
+  "COWABUNGA_READY": "Cowabunga! System components verified rock-solid.",
+  "CAT_DESKTOP": "Ambientes de Trabalho e Shells Wayland",
+  "MENU_HYPRLAND": "Suite de Ambiente de Trabalho Hyprland (Noctalia Shell / Wayland)",
+  "PROMPT_UPGRADE_DESKTOP": "Atualizar a suite de ambiente de trabalho Hyprland? [S/n] "
 }

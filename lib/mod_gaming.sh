@@ -64,6 +64,9 @@ microsoft-edge|Microsoft Edge (Official Web Browser)|browser|microsoft-edge-(?:s
 brave|Brave Browser (Privacy Browser with AdBlock)|browser|brave-bin-(?:1%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos,chaotic-aur,chaotic-cdn
 zen-browser|Zen Browser (High-Performance Gecko Browser)|browser|zen-browser-bin-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos,chaotic-aur,chaotic-cdn
 sbctl|sbctl (Secure Boot Key Manager & Signer)|bootloader|sbctl-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||arch-extra,cachyos
+hyprland-noctalia|Hyprland Mac-like Desktop Suite (Noctalia Shell & Portals)|desktop|hyprland-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||noctalia-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,xdg-desktop-portal-hyprland-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprlock-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hypridle-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpaper-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpicker-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprland-guiutils-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,aquamarine-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprlang-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprcursor-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprgraphics-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprutils-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpolkitagent-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprwire-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprtoolkit-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,sdbus-cpp-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,tomlplusplus-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,muparser-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,re2-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,md4c-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,lua-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libical-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos-extra-v3,cachyos-v3,cachyos,arch-extra,chaotic-aur
+hyprland-core|Hyprland Minimal Core Compositor (+ Wayland Portals & Lock)|desktop|hyprland-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||xdg-desktop-portal-hyprland-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprlock-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hypridle-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpaper-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpicker-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprland-guiutils-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,aquamarine-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprlang-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprcursor-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprgraphics-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprutils-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpolkitagent-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprwire-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprtoolkit-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,sdbus-cpp-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,tomlplusplus-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,muparser-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,re2-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,lua-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos-extra-v3,cachyos-v3,cachyos,arch-extra
+hyprpicker|Hyprpicker (Wayland Eyedropper & Color Picker)|desktop|hyprpicker-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos-extra-v3,cachyos-v3,cachyos,arch-extra
 CATALOG_EOF
 }
 
@@ -94,7 +97,8 @@ is_gaming_pkg_whitelisted() {
         obs-studio|obs-vkcapture|obs-move-transition|obs-source-record|\
         obs-pipewire-audio-capture|obs-advanced-scene-switcher|obs-multi-rtmp|\
         obs-composite-blur|obs-teleport|discord|vesktop|sunshine|\
-        google-chrome|microsoft-edge|brave|zen-browser|sbctl)
+        google-chrome|microsoft-edge|brave|zen-browser|sbctl|\
+        hyprland-noctalia|hyprland-core)
             return 0
             ;;
         *)
@@ -216,7 +220,9 @@ BINARY_MAP = {
     "microsoft-edge": ["microsoft-edge", "microsoft-edge-stable"],
     "brave": ["brave", "brave-browser"],
     "zen-browser": ["zen-browser", "zen"],
-    "sbctl": ["sbctl"]
+    "sbctl": ["sbctl"],
+    "hyprland-noctalia": ["hyprland", "noctalia", "/usr/bin/Hyprland", "noctalia-shell"],
+    "hyprland-core": ["hyprland", "/usr/bin/Hyprland"]
 }
 
 for pid, cands in BINARY_MAP.items():
@@ -242,6 +248,7 @@ for pid, cands in BINARY_MAP.items():
                 break
 
 CATEGORY_TITLES = {
+    "desktop": "Desktop Environments & Wayland Shells",
     "engine": "The Engine: Performance, HUD & Schedulers",
     "launcher": "Storefronts & Launcher Managers",
     "hardware": "Hardware Control, Tuning & DKMS Drivers",
@@ -255,6 +262,7 @@ CATEGORY_TITLES = {
 }
 
 CATEGORY_ICONS = {
+    "desktop": "preferences-desktop-display",
     "engine": "utilities-system-monitor",
     "launcher": "applications-games",
     "hardware": "preferences-system",
@@ -268,6 +276,8 @@ CATEGORY_ICONS = {
 }
 
 PKG_DESCRIPTIONS = {
+    "hyprland-noctalia": "Curated Mac-like Wayland desktop suite powered by Noctalia Shell (topbar, dock, launcher, control center) and Hyprland.",
+    "hyprland-core": "Minimalist Hyprland Wayland compositor with core portals, lock daemons, and Slacky environment wrapper.",
     "mangohud": "High-performance Vulkan/OpenGL overlay with hardware telemetry and mangoapp integration.",
     "gamemode": "Feral GameMode auto-governor prioritizing games and multilib 32-bit processes.",
     "goverlay": "Graphical Qt6 configurator for MangoHud, vkBasalt, and ReplaySorcery.",
@@ -491,7 +501,9 @@ BINARY_MAP = {
     "microsoft-edge": ["microsoft-edge", "microsoft-edge-stable"],
     "brave": ["brave", "brave-browser"],
     "zen-browser": ["zen-browser", "zen"],
-    "sbctl": ["sbctl"]
+    "sbctl": ["sbctl"],
+    "hyprland-noctalia": ["hyprland", "noctalia", "/usr/bin/Hyprland", "noctalia-shell"],
+    "hyprland-core": ["hyprland", "/usr/bin/Hyprland"]
 }
 
 if target_id in BINARY_MAP:
@@ -605,7 +617,7 @@ def fetch_url_cached(url, cdir, ttl=1800):
             pass
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64)"})
-        with urllib.request.urlopen(req, timeout=5) as resp:
+        with urllib.request.urlopen(req, timeout=10) as resp:
             content = resp.read().decode("utf-8", errors="ignore")
             try:
                 with open(cache_file, 'w', encoding='utf-8', errors='ignore') as f:
@@ -621,11 +633,12 @@ def clean_pkg_version(pid, raw_v):
     v = re.sub(r'\.pkg\.tar\.(?:zst|xz|gz)$', '', v)
     v = re.sub(r'-(?:x86_64(?:_v[0-9]+)?|noarch|i[3-6]86|any|aarch64)(?:-[0-9a-zA-Z_]+)?$', '', v)
     v = re.sub(r'-[0-9]+(?:\.[0-9]+)?$', '', v)
-    v = re.sub(r'^[0-9]+(?:%3A|:|_)', '', v)
     if pid:
         pid_clean = pid.replace("-", "")
         v = re.sub(rf'^(?:underpants-|cachyos-gnome-)?(?:{re.escape(pid)}|{re.escape(pid_clean)})(?:-bin|-git|-manager|-launcher|-rules|-udev)?-', '', v, flags=re.IGNORECASE)
+    v = re.sub(r'^[0-9]+(?:%3A|:|_)', '', v)
     v = re.sub(r'^[a-zA-Z0-9_\-+]+?-([0-9])', r'\1', v)
+    v = re.sub(r'^[0-9]+(?:%3A|:|_)', '', v)
     return v
 
 def parse_version_key(v_str):
@@ -672,6 +685,8 @@ for pid in detected_installed:
         _, pat, r_list = catalog[pid]
         if pat:
             for rk in r_list:
+                if rk in ("arch-extra", "arch-core", "arch-multilib"):
+                    continue
                 u = repos.get(rk)
                 if u:
                     needed_repos.add(u)
@@ -686,6 +701,24 @@ def check_single_package(pid, cur_ver):
     if not pat or pid == "steam-devices":
         return None
     all_candidates = []
+
+    # Fast Arch Linux JSON API check for Arch Extra / Multilib packages
+    if any(r in ("arch-extra", "arch-core", "arch-multilib") for r in r_list):
+        for repo_cand in ("extra", "multilib", "core"):
+            try:
+                api_url = f"https://archlinux.org/packages/{repo_cand}/x86_64/{pid}/json/"
+                raw_json = fetch_url_cached(api_url, cache_dir, ttl=1800)
+                if raw_json:
+                    data = json.loads(raw_json)
+                    v = data.get("pkgver")
+                    if v:
+                        cv = clean_pkg_version(pid, v)
+                        if cv:
+                            all_candidates.append(cv)
+                            break
+            except Exception:
+                pass
+
     for rk in r_list:
         base_u = repos.get(rk, "")
         html = repo_contents.get(base_u, "")
@@ -993,7 +1026,53 @@ catalog = {
     "limine": (r'href=[\'\"]?(limine-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "arch-extra"], []),
     "limine-entry-tool": (r'href=[\'\"]?(limine-entry-tool-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos"], []),
     "limine-snapper-sync": (r'href=[\'\"]?(limine-snapper-sync-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos"], []),
-    "sbctl": (r'href=[\'\"]?(sbctl-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], [])
+    "sbctl": (r'href=[\'\"]?(sbctl-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
+    "hyprland-noctalia": (r'href=[\'\"]?(hyprland-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(noctalia(?:-shell)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(xdg-desktop-portal-hyprland-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hyprlock-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hypridle-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hyprpaper-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hyprpicker-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hyprland-guiutils-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(aquamarine-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hyprlang-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hyprcursor-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hyprgraphics-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hyprutils-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hyprpolkitagent-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hyprwire-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hyprtoolkit-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(sdbus-cpp-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(tomlplusplus-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(muparser-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(re2-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(md4c-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(lua-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libical-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    ], ["cachyos-extra-v3", "cachyos-v3", "cachyos", "arch-extra", "chaotic-aur"], []),
+    "hyprland-core": (r'href=[\'\"]?(hyprland-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(xdg-desktop-portal-hyprland-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hyprlock-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hypridle-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hyprpaper-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hyprpicker-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hyprland-guiutils-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(aquamarine-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hyprlang-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hyprcursor-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hyprgraphics-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hyprutils-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hyprpolkitagent-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hyprwire-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hyprtoolkit-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(sdbus-cpp-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(tomlplusplus-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(muparser-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(re2-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(lua-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    ], ["cachyos-extra-v3", "cachyos-v3", "cachyos", "arch-extra"], []),
+    "hyprpicker": (r'href=[\'\"]?(hyprpicker-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos-extra-v3", "cachyos-v3", "cachyos", "arch-extra"], [])
 }
 
 if pkg_id not in catalog:
@@ -1032,11 +1111,12 @@ def clean_pkg_version(pid, raw_v):
     v = re.sub(r'\.pkg\.tar\.(?:zst|xz|gz)$', '', v)
     v = re.sub(r'-(?:x86_64(?:_v[0-9]+)?|noarch|i[3-6]86|any|aarch64)(?:-[0-9a-zA-Z_]+)?$', '', v)
     v = re.sub(r'-[0-9]+(?:\.[0-9]+)?$', '', v)
-    v = re.sub(r'^[0-9]+(?:%3A|:|_)', '', v)
     if pid:
         pid_clean = pid.replace("-", "")
         v = re.sub(rf'^(?:underpants-|cachyos-gnome-)?(?:{re.escape(pid)}|{re.escape(pid_clean)})(?:-bin|-git|-manager|-launcher|-rules|-udev)?-', '', v, flags=re.IGNORECASE)
+    v = re.sub(r'^[0-9]+(?:%3A|:|_)', '', v)
     v = re.sub(r'^[a-zA-Z0-9_\-+]+?-([0-9])', r'\1', v)
+    v = re.sub(r'^[0-9]+(?:%3A|:|_)', '', v)
     return v
 
 def parse_version_key(v_str):
@@ -1493,7 +1573,53 @@ catalog = {
     "limine": (r'href=[\'\"]?(limine-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "arch-extra"], []),
     "limine-entry-tool": (r'href=[\'\"]?(limine-entry-tool-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos"], []),
     "limine-snapper-sync": (r'href=[\'\"]?(limine-snapper-sync-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos"], []),
-    "sbctl": (r'href=[\'\"]?(sbctl-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], [])
+    "sbctl": (r'href=[\'\"]?(sbctl-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
+    "hyprland-noctalia": (r'href=[\'\"]?(hyprland-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(noctalia(?:-shell)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(xdg-desktop-portal-hyprland-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hyprlock-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hypridle-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hyprpaper-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hyprpicker-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hyprland-guiutils-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(aquamarine-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hyprlang-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hyprcursor-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hyprgraphics-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hyprutils-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hyprpolkitagent-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hyprwire-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hyprtoolkit-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(sdbus-cpp-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(tomlplusplus-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(muparser-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(re2-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(md4c-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(lua-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libical-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    ], ["cachyos-extra-v3", "cachyos-v3", "cachyos", "arch-extra", "chaotic-aur"], []),
+    "hyprland-core": (r'href=[\'\"]?(hyprland-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(xdg-desktop-portal-hyprland-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hyprlock-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hypridle-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hyprpaper-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hyprpicker-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hyprland-guiutils-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(aquamarine-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hyprlang-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hyprcursor-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hyprgraphics-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hyprutils-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hyprpolkitagent-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hyprwire-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(hyprtoolkit-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(sdbus-cpp-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(tomlplusplus-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(muparser-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(re2-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(lua-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    ], ["cachyos-extra-v3", "cachyos-v3", "cachyos", "arch-extra"], []),
+    "hyprpicker": (r'href=[\'\"]?(hyprpicker-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos-extra-v3", "cachyos-v3", "cachyos", "arch-extra"], [])
 }
 
 def fetch_url_cached(url, cdir, ttl=1800):
@@ -1526,11 +1652,12 @@ def clean_pkg_version(pid, raw_v):
     v = re.sub(r'\.pkg\.tar\.(?:zst|xz|gz)$', '', v)
     v = re.sub(r'-(?:x86_64(?:_v[0-9]+)?|noarch|i[3-6]86|any|aarch64)(?:-[0-9a-zA-Z_]+)?$', '', v)
     v = re.sub(r'-[0-9]+(?:\.[0-9]+)?$', '', v)
-    v = re.sub(r'^[0-9]+(?:%3A|:|_)', '', v)
     if pid:
         pid_clean = pid.replace("-", "")
         v = re.sub(rf'^(?:underpants-|cachyos-gnome-)?(?:{re.escape(pid)}|{re.escape(pid_clean)})(?:-bin|-git|-manager|-launcher|-rules|-udev)?-', '', v, flags=re.IGNORECASE)
+    v = re.sub(r'^[0-9]+(?:%3A|:|_)', '', v)
     v = re.sub(r'^[a-zA-Z0-9_\-+]+?-([0-9])', r'\1', v)
+    v = re.sub(r'^[0-9]+(?:%3A|:|_)', '', v)
     return v
 
 def parse_version_key(v_str):
@@ -1802,10 +1929,10 @@ cleanup_foreign_gaming_pkgs() {
             patterns=("vivaldi-[0-9]*" "vivaldi-ffmpeg-codecs-[0-9]*")
             ;;
         google-chrome)
-            patterns=("google-chrome-[0-9]*" "google-chrome-stable-[0-9]*")
+            patterns=("google-chrome-[0-9]*" "google-chrome-stable-[0-9]*" "google-chrome-stable_*" "google-chrome-the-latest-*")
             ;;
         microsoft-edge)
-            patterns=("microsoft-edge-[0-9]*" "microsoft-edge-stable-[0-9]*" "microsoft-edge-stable-bin-[0-9]*")
+            patterns=("microsoft-edge-[0-9]*" "microsoft-edge-stable-[0-9]*" "microsoft-edge-stable-bin-[0-9]*" "microsoft-edge-stable_*" "microsoft-edge-bin-[0-9]*")
             ;;
         opera)
             patterns=("opera-[0-9]*" "opera-ffmpeg-codecs-[0-9]*")
@@ -1814,7 +1941,7 @@ cleanup_foreign_gaming_pkgs() {
             patterns=("obs-studio-[0-9]*" "obs-[0-9]*")
             ;;
         discord)
-            patterns=("discord-[0-9]*")
+            patterns=("discord-[0-9]*" "discord-canary-[0-9]*" "discord-ptb-[0-9]*")
             ;;
         vesktop)
             patterns=("vesktop-[0-9]*" "vesktop-bin-[0-9]*")
@@ -1908,6 +2035,9 @@ cleanup_foreign_gaming_pkgs() {
             ;;
         sbctl)
             patterns=("sbctl-[0-9]*")
+            ;;
+        hyprland-noctalia|hyprland-core)
+            patterns=("hyprland-[0-9]*" "hyprland-noctalia-[0-9]*" "hyprland-core-[0-9]*" "noctalia-[0-9]*" "noctalia-shell-[0-9]*" "cachyos-gnome-hyprland-[0-9]*" "underpants-hyprland-[0-9]*")
             ;;
     esac
 
@@ -2715,6 +2845,16 @@ PEAR_WRAPPER_EOF
             fi
         done
         find "${staging_root}/usr/lib64/python${py_sys_ver}/site-packages" -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+    fi
+
+    # Host Sovereignty Shield: Prevent auxiliary packages from conflicting with Slackware base
+    if [ "${pkg_id}" = "hyprland-noctalia" ] || [ "${pkg_id}" = "hyprland-core" ]; then
+        # 1. Never overwrite Slackware's native Lua interpreter binary
+        rm -f "${staging_root}/usr/bin/lua" "${staging_root}/usr/bin/luac" 2>/dev/null || true
+        # 2. Never overwrite development symlinks that belong to Slackware base
+        rm -f "${staging_root}/usr/lib64/liblua.so" "${staging_root}/usr/lib64/libical.so" "${staging_root}/usr/lib64/libicalss.so" "${staging_root}/usr/lib64/libicalvcal.so" 2>/dev/null || true
+        # 3. Clean up headers from auxiliary packages that Slackware already manages
+        rm -rf "${staging_root}/usr/include/lua"* "${staging_root}/usr/include/libical"* 2>/dev/null || true
     fi
 
     # Browser conveniences in /usr/bin:
@@ -3708,16 +3848,24 @@ def boost_pid(pid):
     except Exception:
         return False
 
-def get_plasma_foreground_pid():
-    # Detect active window in KDE Plasma Wayland or X11 / Gamescope
+def get_foreground_pid():
+    # Detect active window in Hyprland, KDE Plasma Wayland, or X11 / Gamescope
     for cmd in [
+        ["hyprctl", "activewindow", "-j"],
         ["kdotool", "getactivewindow", "getwindowpid"],
         ["xdotool", "getactivewindow", "getwindowpid"]
     ]:
         try:
             res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, timeout=0.5)
-            if res.returncode == 0 and res.stdout.strip().isdigit():
-                return res.stdout.strip()
+            if res.returncode == 0 and res.stdout.strip():
+                if cmd[0] == "hyprctl":
+                    import json
+                    w_data = json.loads(res.stdout)
+                    w_pid = w_data.get("pid")
+                    if w_pid and str(w_pid).isdigit() and int(w_pid) > 0:
+                        return str(w_pid)
+                elif res.stdout.strip().isdigit():
+                    return res.stdout.strip()
         except Exception:
             pass
     return None
@@ -3726,13 +3874,13 @@ def scan_and_boost_games():
     boosted = get_boosted_pids()
     count = 0
 
-    # 1. Boost active KDE Plasma / Gamescope foreground window (plasma-foreground-booster)
-    fg_pid = get_plasma_foreground_pid()
+    # 1. Boost active Wayland / X11 / Gamescope foreground window
+    fg_pid = get_foreground_pid()
     if fg_pid and fg_pid not in boosted:
         try:
             with open(f"/proc/{fg_pid}/comm", "r") as f:
                 fg_comm = f.read().strip()
-            if fg_comm not in ["plasmashell", "kwin_wayland", "systemsettings", "konsole", "zsh", "bash"]:
+            if fg_comm not in ["plasmashell", "kwin_wayland", "systemsettings", "konsole", "zsh", "bash", "Hyprland", "noctalia", "waybar"]:
                 if boost_pid(fg_pid):
                     log(f"⚡ Foreground GPU Shield: Boosted active window '{fg_comm}' (PID {fg_pid}) into dmemcg-gaming slice")
                     count += 1
@@ -4235,8 +4383,23 @@ if [ -d /etc/easyeffects/output ]; then
     chown -R "${u_name}:users" "${u_home}/.config/easyeffects" 2>/dev/null || true
   done
 fi
+DOINST_TAIL_EOF
 
-# DKMS Kernel Driver Auto-registration & Compilation
+    # Conditionally append DKMS & Kernel Module handler ONLY for driver packages
+    local has_dkms_driver=0
+    if compgen -G "${staging_root}/usr/src/*/dkms.conf" >/dev/null 2>&1 || compgen -G "${staging_root}/var/lib/dkms/*" >/dev/null 2>&1; then
+        has_dkms_driver=1
+    fi
+    case "${pkg_id}" in
+        zenpower3|v4l2loopback|rtl8821cu|rtl88x2bu|rtl8812au|broadcom-wl|r8125)
+            has_dkms_driver=1
+            ;;
+    esac
+
+    if [ "${has_dkms_driver}" -eq 1 ]; then
+        cat << 'DKMS_DOINST_EOF' >> "${staging_root}/install/doinst.sh"
+
+# DKMS Kernel Driver Auto-registration & Compilation (Drivers Only)
 if [ -x /usr/sbin/dkms ] || [ -x /usr/bin/dkms ]; then
   DKMS_BIN=$(command -v dkms 2>/dev/null || echo "/usr/sbin/dkms")
   for dconf in /usr/src/*/dkms.conf; do
@@ -4251,25 +4414,37 @@ if [ -x /usr/sbin/dkms ] || [ -x /usr/bin/dkms ]; then
       if [ ! -e "/usr/src/${mod_name}-${mod_ver}" ] && [ -d "${ddir}" ]; then
         ln -sf "${dname}" "/usr/src/${mod_name}-${mod_ver}" 2>/dev/null || true
       fi
-      "${DKMS_BIN}" add -m "${mod_name}" -v "${mod_ver}" 2>/dev/null || true
+      "${DKMS_BIN}" add -m "${mod_name}" -v "${mod_ver}" >/dev/null 2>&1 || true
       for kdir in /lib/modules/*; do
         [ -d "${kdir}/build" ] || continue
         kver=$(basename "${kdir}")
-        "${DKMS_BIN}" build -m "${mod_name}" -v "${mod_ver}" -k "${kver}" 2>/dev/null || true
-        "${DKMS_BIN}" install -m "${mod_name}" -v "${mod_ver}" -k "${kver}" 2>/dev/null || true
+        if ! "${DKMS_BIN}" status -m "${mod_name}" -v "${mod_ver}" -k "${kver}" 2>/dev/null | grep -q "installed"; then
+          "${DKMS_BIN}" build -m "${mod_name}" -v "${mod_ver}" -k "${kver}" >/dev/null 2>&1 || true
+          "${DKMS_BIN}" install -m "${mod_name}" -v "${mod_ver}" -k "${kver}" >/dev/null 2>&1 || true
+        fi
       done
     fi
   done
 fi
+DKMS_DOINST_EOF
+    fi
 
+    if [ "${pkg_id}" = "zenpower3" ] || [ -f "${staging_root}/etc/modules-load.d/zenpower.conf" ]; then
+        cat << 'ZEN_DOINST_EOF' >> "${staging_root}/install/doinst.sh"
 if [ -f /etc/modules-load.d/zenpower.conf ]; then
-  /sbin/modprobe -r k10temp 2>/dev/null || true
-  /sbin/modprobe zenpower 2>/dev/null || true
+  /sbin/modprobe -r k10temp >/dev/null 2>&1 || true
+  /sbin/modprobe zenpower >/dev/null 2>&1 || true
 fi
+ZEN_DOINST_EOF
+    fi
+
+    if [ "${pkg_id}" = "v4l2loopback" ] || [ -f "${staging_root}/etc/modules-load.d/v4l2loopback.conf" ]; then
+        cat << 'V4L2_DOINST_EOF' >> "${staging_root}/install/doinst.sh"
 if [ -f /etc/modules-load.d/v4l2loopback.conf ]; then
-  /sbin/modprobe v4l2loopback 2>/dev/null || true
+  /sbin/modprobe v4l2loopback >/dev/null 2>&1 || true
 fi
-DOINST_TAIL_EOF
+V4L2_DOINST_EOF
+    fi
     chmod 755 "${staging_root}/install/doinst.sh"
 
     # Permissions
@@ -4347,10 +4522,32 @@ DOINST_TAIL_EOF
                 sudo /etc/rc.d/rc.scx restart 2>/dev/null || true
             fi
         elif [ "${pkg_id}" = "easyeffects" ]; then
-            if [ -d /etc/easyeffects/output ]; then
-                for u_home in "${HOME:-}" /home/*; do
-                    [ -d "${u_home}" ] || continue
-                    [ -w "${u_home}" ] || continue
+            mkdir -p /etc/skel/.config/easyeffects/db 2>/dev/null || true
+            cat << 'EERC_EOF' > /etc/skel/.config/easyeffects/db/easyeffectsrc
+[Window]
+autostartOnLogin=true
+showTrayIcon=true
+noWindowAfterStarting=true
+EERC_EOF
+            for u_home in "${HOME:-}" /home/*; do
+                [ -d "${u_home}" ] || continue
+                local u_name
+                u_name=$(basename "${u_home}")
+                local ee_db="${u_home}/.config/easyeffects/db/easyeffectsrc"
+                mkdir -p "$(dirname "${ee_db}")" 2>/dev/null || true
+                if [ -f "${ee_db}" ]; then
+                    if ! grep -q "showTrayIcon" "${ee_db}"; then
+                        sed -i '/\[Window\]/a showTrayIcon=true\nnoWindowAfterStarting=true' "${ee_db}" 2>/dev/null || true
+                    fi
+                else
+                    cat << 'EERC_EOF' > "${ee_db}"
+[Window]
+autostartOnLogin=true
+showTrayIcon=true
+noWindowAfterStarting=true
+EERC_EOF
+                fi
+                if [ -d /etc/easyeffects/output ]; then
                     mkdir -p "${u_home}/.config/easyeffects/output" "${u_home}/.config/easyeffects/irs" 2>/dev/null || true
                     cp -n /etc/easyeffects/output/*.json "${u_home}/.config/easyeffects/output/" 2>/dev/null || true
                     if [ -d /etc/easyeffects/irs ]; then
@@ -4359,6 +4556,42 @@ DOINST_TAIL_EOF
                     for jf in "${u_home}/.config/easyeffects/output"/*.json; do
                         [ -f "${jf}" ] || continue
                         sed -i "s|<PRESETS_DIRECTORY>|${u_home}/.config/easyeffects|g" "${jf}" 2>/dev/null || true
+                    done
+                fi
+                chown -R "${u_name}:users" "${u_home}/.config/easyeffects" 2>/dev/null || true
+            done
+        elif [ "${pkg_id}" = "google-chrome" ] || [ "${pkg_id}" = "microsoft-edge" ] || [ "${pkg_id}" = "brave" ]; then
+            probe_gpu_hardware
+            if [ "${HAS_NVIDIA}" = "true" ]; then
+                log_info "[*] NVIDIA GPU detected: Configuring hardware-accelerated Wayland & VA-API flags for ${pkg_id}..."
+                local flag_files=()
+                case "${pkg_id}" in
+                    google-chrome)
+                        flag_files=("chrome-flags.conf")
+                        ;;
+                    brave)
+                        flag_files=("brave-flags.conf")
+                        ;;
+                    microsoft-edge)
+                        flag_files=("edge-flags.conf" "microsoft-edge-stable-flags.conf")
+                        ;;
+                esac
+
+                local flags_content="--ozone-platform-hint=auto\n--ozone-platform=wayland\n--enable-features=AcceleratedVideoDecodeLinuxGL,AcceleratedVideoDecodeLinuxZeroCopyGL,VaapiOnNvidiaGPUs\n--enable-gpu-rasterization\n--enable-zero-copy\n--ignore-gpu-blocklist\n"
+
+                mkdir -p /etc/skel/.config 2>/dev/null || true
+                for ff in "${flag_files[@]}"; do
+                    echo -e "${flags_content}" > "/etc/skel/.config/${ff}" 2>/dev/null || true
+                done
+
+                for u_home in /home/* "${HOME:-}"; do
+                    [ -d "${u_home}" ] || continue
+                    local u_name
+                    u_name=$(basename "${u_home}")
+                    mkdir -p "${u_home}/.config" 2>/dev/null || true
+                    for ff in "${flag_files[@]}"; do
+                        echo -e "${flags_content}" > "${u_home}/.config/${ff}" 2>/dev/null || true
+                        chown "${u_name}:users" "${u_home}/.config/${ff}" 2>/dev/null || true
                     done
                 done
             fi
@@ -4394,6 +4627,254 @@ DOINST_TAIL_EOF
                 log_info "[*] sbctl updated: re-signing Limine EFI payload..."
                 sign_limine_efi_sbctl 2>/dev/null || true
             fi
+        elif [ "${pkg_id}" = "hyprland-noctalia" ] || [ "${pkg_id}" = "hyprland-core" ]; then
+            log_info "[*] Configuring Wayland environment and hardware-adaptive Hyprland session..."
+            probe_gpu_hardware
+
+            # Strip file capabilities on pipewire & wireplumber if present (avoids AT_SECURE dropping session DBus)
+            if command -v setcap >/dev/null 2>&1; then
+                [ -f /usr/bin/wireplumber ] && sudo setcap -r /usr/bin/wireplumber 2>/dev/null || true
+                [ -f /usr/bin/pipewire ] && sudo setcap -r /usr/bin/pipewire 2>/dev/null || true
+            fi
+
+            # 1. Hardware-adaptive GPU environment (/etc/hypr/hyprland.env)
+            sudo mkdir -p /etc/hypr /usr/share/wayland-sessions /usr/bin
+            local env_content="# Auto-generated by slacky-update probe_gpu_hardware\n"
+            if [ "${HAS_NVIDIA}" = "true" ]; then
+                env_content+="export LIBVA_DRIVER_NAME=nvidia\n"
+                env_content+="export GBM_BACKEND=nvidia-drm\n"
+                env_content+="export __GLX_VENDOR_LIBRARY_NAME=nvidia\n"
+                env_content+="export NVD_BACKEND=direct\n"
+                env_content+="export ELECTRON_OZONE_PLATFORM_HINT=auto\n"
+            elif [ "${HAS_AMD}" = "true" ]; then
+                env_content+="export LIBVA_DRIVER_NAME=radeonsi\n"
+                env_content+="export VDPAU_DRIVER=radeonsi\n"
+            elif [ "${HAS_INTEL}" = "true" ]; then
+                env_content+="export LIBVA_DRIVER_NAME=iHD\n"
+            fi
+            echo -e "${env_content}" | sudo tee /etc/hypr/hyprland.env >/dev/null
+
+            # 2. Session launcher wrapper (/usr/bin/start-hyprland)
+            cat << 'STARTHYPR_EOF' | sudo tee /usr/bin/start-hyprland >/dev/null
+#!/usr/bin/env bash
+# --- [ Slacky-Update Hyprland Wayland Session Wrapper ] ---
+set -e
+
+export XDG_CURRENT_DESKTOP=Hyprland:KDE
+export XDG_SESSION_TYPE=wayland
+export XDG_SESSION_DESKTOP=Hyprland
+export MOZ_ENABLE_WAYLAND=1
+export QT_QPA_PLATFORM="wayland;xcb"
+export QT_QPA_PLATFORMTHEME="kde"
+export QT_STYLE_OVERRIDE="Breeze"
+export GTK_THEME="Breeze-Dark"
+export QT_WAYLAND_DISABLE_WINDOWDECORATION="0"
+export GDK_BACKEND="wayland,x11,*"
+export CLUTTER_BACKEND=wayland
+export SDL_VIDEODRIVER=wayland
+
+if [ -f /etc/hypr/hyprland.env ]; then
+    # shellcheck source=/dev/null
+    source /etc/hypr/hyprland.env
+fi
+
+if [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]; then
+    exec dbus-run-session Hyprland "$@"
+else
+    exec Hyprland "$@"
+fi
+STARTHYPR_EOF
+            sudo chmod 755 /usr/bin/start-hyprland
+
+            # 3. SDDM / Display Manager session desktop entry
+            cat << 'WAYLAND_SESSION_EOF' | sudo tee /usr/share/wayland-sessions/hyprland.desktop >/dev/null
+[Desktop Entry]
+Name=Hyprland (Slacky Curated)
+Comment=An intelligent dynamic tiling Wayland compositor on Slackware
+Exec=/usr/bin/start-hyprland
+Type=Application
+DesktopNames=Hyprland
+WAYLAND_SESSION_EOF
+            sudo chmod 644 /usr/share/wayland-sessions/hyprland.desktop
+
+            # 4. Seed user & skel dotfiles if not present
+            local terminal_cand="konsole"
+            if command -v konsole >/dev/null 2>&1; then
+                terminal_cand="konsole"
+            elif command -v xfce4-terminal >/dev/null 2>&1; then
+                terminal_cand="xfce4-terminal"
+            elif command -v kitty >/dev/null 2>&1; then
+                terminal_cand="kitty"
+            elif command -v foot >/dev/null 2>&1; then
+                terminal_cand="foot"
+            elif command -v alacritty >/dev/null 2>&1; then
+                terminal_cand="alacritty"
+            elif command -v xterm >/dev/null 2>&1; then
+                terminal_cand="xterm"
+            fi
+
+            local target_dirs=("/etc/skel")
+            if [ -n "${HOME:-}" ] && [ -d "${HOME}" ]; then
+                target_dirs+=("${HOME}")
+            fi
+            for hdir in /home/*; do
+                [ -d "${hdir}" ] || continue
+                local b_user
+                b_user=$(basename "${hdir}")
+                if [ "${b_user}" = "ftp" ] || [ "${b_user}" = "http" ] || [ "${b_user}" = "nobody" ]; then
+                    continue
+                fi
+                if [ "${hdir}" != "${HOME:-}" ] && { [ -w "${hdir}" ] || [ "$(id -u)" -eq 0 ]; }; then
+                    target_dirs+=("${hdir}")
+                fi
+            done
+
+            for target_dir in "${target_dirs[@]}"; do
+                [ -d "${target_dir}" ] || continue
+                local hypr_dir="${target_dir}/.config/hypr"
+                local noct_dir="${target_dir}/.config/noctalia"
+                mkdir -p "${hypr_dir}" "${noct_dir}" 2>/dev/null || sudo mkdir -p "${hypr_dir}" "${noct_dir}" 2>/dev/null || true
+
+                local hypr_conf="${hypr_dir}/hyprland.conf"
+                if [ ! -f "${hypr_conf}" ]; then
+                    local hypr_body="# --- [ Slacky-Update Curated Hyprland Config ] ---\n"
+                    hypr_body+="monitor=,preferred,auto,1\n\n"
+                    hypr_body+="# Theming & Environment (KDE Dark Theme & Window Decorations)\n"
+                    hypr_body+="env = QT_QPA_PLATFORMTHEME,kde\n"
+                    hypr_body+="env = QT_STYLE_OVERRIDE,Breeze\n"
+                    hypr_body+="env = GTK_THEME,Breeze-Dark\n"
+                    hypr_body+="env = QT_WAYLAND_DISABLE_WINDOWDECORATION,0\n"
+                    hypr_body+="env = XDG_CURRENT_DESKTOP,Hyprland:KDE\n\n"
+                    hypr_body+="\$terminal = ${terminal_cand}\n"
+                    hypr_body+="\$fileManager = dolphin || thunar\n"
+                    hypr_body+="\$menu = rofi -show drun || fuzzel\n\n"
+                    hypr_body+="# Autostart essential Daemons\n"
+                    hypr_body+="exec-once = dbus-update-activation-environment --all &\n"
+                    hypr_body+="exec-once = /usr/lib64/xdg-desktop-portal-hyprland || /usr/libexec/xdg-desktop-portal-hyprland &\n"
+                    hypr_body+="exec-once = /usr/lib64/hyprpolkitagent/hyprpolkitagent || /usr/libexec/hyprpolkitagent || polkit-gnome-authentication-agent-1 &\n"
+                    hypr_body+="exec-once = pipewire &\n"
+                    hypr_body+="exec-once = pipewire-pulse &\n"
+                    hypr_body+="exec-once = wireplumber &\n"
+                    hypr_body+="exec-once = hypridle &\n"
+                    hypr_body+="exec-once = hyprpaper &\n"
+                    if [ "${pkg_id}" = "hyprland-noctalia" ]; then
+                        hypr_body+="# Noctalia Mac-like Shell (Top bar, bottom dock, launcher)\n"
+                        hypr_body+="exec-once = noctalia &\n"
+                        hypr_body+="exec-once = QT_QPA_PLATFORM=xcb /usr/bin/slacky-update-tray || /usr/bin/slacky-update-tray &\n"
+                    fi
+                    if command -v easyeffects >/dev/null 2>&1 || [ -x /usr/bin/easyeffects ]; then
+                        hypr_body+="# EasyEffects Audio Enhancement Daemon\n"
+                        hypr_body+="exec-once = easyeffects --service-mode || easyeffects --gapplication-service &\n"
+                    fi
+                    if command -v openrgb >/dev/null 2>&1 || [ -x /usr/bin/openrgb ]; then
+                        hypr_body+="# OpenRGB Lighting Controller\n"
+                        hypr_body+="exec-once = openrgb --startminimized --profile slackware1 || openrgb --startminimized &\n"
+                    fi
+                    if command -v syncthing >/dev/null 2>&1 || [ -x /usr/bin/syncthing ]; then
+                        hypr_body+="# Syncthing File Synchronization Daemon\n"
+                        hypr_body+="exec-once = syncthing --no-browser &\n"
+                    fi
+                    hypr_body+="\n"
+                    hypr_body+="# Input & General Settings\n"
+                    hypr_body+="input {\n    kb_layout = no,us\n    numlock_by_default = true\n    follow_mouse = 1\n    touchpad {\n        natural_scroll = true\n    }\n}\n\n"
+                    hypr_body+="general {\n    gaps_in = 6\n    gaps_out = 12\n    border_size = 2\n    col.active_border = rgba(00b4d8ee) rgba(0e3c61ee) 45deg\n    col.inactive_border = rgba(1c2833aa)\n    layout = dwindle\n}\n\n"
+                    hypr_body+="decoration {\n    rounding = 12\n    blur {\n        enabled = true\n        size = 8\n        passes = 3\n        new_optimizations = true\n    }\n}\n\n"
+                    hypr_body+="# Real Glass Blur on Noctalia UI\n"
+                    hypr_body+="layerrule = blur on, match:namespace noctalia\n"
+                    hypr_body+="layerrule = blur on, match:namespace gtk-layer-shell\n\n"
+                    hypr_body+="# Snappy, fluid animations (200-250ms)\n"
+                    hypr_body+="animations {\n    enabled = yes\n    bezier = snappy, 0.2, 0.8, 0.2, 1.0\n    bezier = linear, 0, 0, 1, 1\n    animation = windows,     1, 2.5, snappy, popin 80%\n    animation = windowsIn,   1, 2.5, snappy, popin 80%\n    animation = windowsOut,  1, 2,   snappy, popin 80%\n    animation = windowsMove, 1, 2.5, snappy\n    animation = fade,        1, 2,   snappy\n    animation = workspaces,  1, 2.5, snappy, slide\n    animation = border,      1, 1.5, linear\n}\n\n"
+                    hypr_body+="misc {\n    disable_hyprland_logo = true\n    disable_splash_rendering = true\n    force_default_wallpaper = 0\n    background_color = 0x11111b\n    vrr = 0\n    disable_watchdog_warning = true\n    disable_hyprland_guiutils_check = true\n    disable_xdg_env_checks = true\n}\n\n"
+                    hypr_body+="ecosystem {\n    no_update_news = true\n    no_donation_nag = true\n}\n\n"
+                    hypr_body+="# Keybindings\n"
+                    hypr_body+="bind = SUPER, RETURN, exec, \$terminal\n"
+                    hypr_body+="bind = SUPER, U, exec, \$terminal -e /usr/bin/slacky-update\n"
+                    if [ "${pkg_id}" = "hyprland-noctalia" ]; then
+                        hypr_body+="bind = SUPER, SPACE, exec, noctalia msg panel-toggle launcher || \$menu\n"
+                        hypr_body+="bind = SUPER, C, exec, noctalia msg panel-toggle control-center\n"
+                        hypr_body+="bind = SUPER, I, exec, noctalia msg settings-toggle\n"
+                    else
+                        hypr_body+="bind = SUPER, SPACE, exec, \$menu\n"
+                    fi
+                    hypr_body+="bind = SUPER, Q, killactive,\n"
+                    hypr_body+="bind = SUPER, M, exit,\n"
+                    hypr_body+="bind = SUPER, E, exec, \$fileManager\n"
+                    hypr_body+="bind = SUPER, V, togglefloating,\n"
+                    hypr_body+="bind = SUPER, F, fullscreen,\n\n"
+                    hypr_body+="# Screenshots & Annotation (Spectacle-like experience)\n"
+                    hypr_body+="bind = , PRINT, exec, noctalia msg screenshot-annotate\n"
+                    hypr_body+="bind = SUPER SHIFT, S, exec, noctalia msg screenshot-annotate\n\n"
+                    hypr_body+="# Color Picker (Eyedropper magnifier with hex clipboard copy)\n"
+                    hypr_body+="bind = SUPER SHIFT, C, exec, hyprpicker -a\n"
+                    hypr_body+="bind = SUPER, P, exec, hyprpicker -a\n\n"
+                    hypr_body+="# Media keys and volume wheel (also functional inside fullscreen games)\n"
+                    hypr_body+="bindel = , XF86AudioRaiseVolume, exec, wpctl set-volume -l 1.5 @DEFAULT_AUDIO_SINK@ 5%+\n"
+                    hypr_body+="bindel = , XF86AudioLowerVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-\n"
+                    hypr_body+="bindl  = , XF86AudioMute, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle\n"
+                    hypr_body+="bindl  = , XF86AudioPlay, exec, playerctl play-pause 2>/dev/null || true\n"
+                    hypr_body+="bindl  = , XF86AudioNext, exec, playerctl next 2>/dev/null || true\n"
+                    hypr_body+="bindl  = , XF86AudioPrev, exec, playerctl previous 2>/dev/null || true\n\n"
+                    hypr_body+="# Move and resize windows with mouse and keyboard\n"
+                    hypr_body+="bindm = SUPER, mouse:272, movewindow\n"
+                    hypr_body+="bindm = SUPER, mouse:273, resizewindow\n"
+                    hypr_body+="binde = SUPER CTRL, right, resizeactive, 30 0\n"
+                    hypr_body+="binde = SUPER CTRL, left, resizeactive, -30 0\n"
+                    hypr_body+="binde = SUPER CTRL, up, resizeactive, 0 -30\n"
+                    hypr_body+="binde = SUPER CTRL, down, resizeactive, 0 30\n\n"
+                    hypr_body+="# Workspace navigation (SUPER + 1..9)\n"
+                    for ws in {1..9}; do
+                        hypr_body+="bind = SUPER, ${ws}, workspace, ${ws}\n"
+                        hypr_body+="bind = SUPER SHIFT, ${ws}, movetoworkspace, ${ws}\n"
+                    done
+                    hypr_body+="\n"
+                    hypr_body+="# --- [ Universal Game and Launcher Window Rules ] ---\n"
+                    hypr_body+="xwayland {\n    force_zero_scaling = true\n}\n\n"
+                    hypr_body+="# Game launchers kept in floating mode\n"
+                    hypr_body+="windowrule = float on, match:class ^(faugus.*)$\n"
+                    hypr_body+="windowrule = float on, match:class ^(battle\\\\.net\\\\.exe)$\n"
+                    hypr_body+="windowrule = float on, match:title ^(Battle\\\\.net.*)$\n\n"
+                    hypr_body+="# All games (Steam, Proton, Faugus, Wine .exe, Gamescope) automatically get fullscreen and low latency\n"
+                    hypr_body+="windowrule = fullscreen on, match:class ^(steam_app_.*)$\n"
+                    hypr_body+="windowrule = fullscreen on, match:class ^(gamescope.*)$\n"
+                    hypr_body+="windowrule = immediate on, match:class ^(steam_app_.*)$\n\n"
+                    if [ "${HAS_NVIDIA}" = "true" ]; then
+                        hypr_body+="# NVIDIA Hardware Cursor Settings\ncursor {\n    no_hardware_cursors = true\n    enable_hyprcursor = false\n}\n"
+                    fi
+                    echo -e "${hypr_body}" > "${hypr_conf}" 2>/dev/null || echo -e "${hypr_body}" | sudo tee "${hypr_conf}" >/dev/null || true
+                fi
+
+                local hypridle_conf="${hypr_dir}/hypridle.conf"
+                if [ ! -f "${hypridle_conf}" ]; then
+                    local idle_body="# --- [ Slacky-Update OLED Protection Hypridle Config ] ---\ngeneral {\n    after_sleep_cmd = hyprctl dispatch dpms on\n    ignore_dbus_inhibit = false\n    ignore_systemd_inhibit = false\n}\n\n# 1. Dim screens after 2 minutes (120 sec)\nlistener {\n    timeout = 120\n    on-timeout = hyprctl keyword decoration:dim_inactive true && hyprctl keyword decoration:dim_strength 0.75\n    on-resume = hyprctl keyword decoration:dim_inactive false\n}\n\n# 2. Turn off OLED screens completely (DPMS Standby / 0 nits, no password lock) after 3 minutes (180 sec)\nlistener {\n    timeout = 180\n    on-timeout = hyprctl dispatch dpms off\n    on-resume = hyprctl dispatch dpms on && hyprctl keyword decoration:dim_inactive false\n}\n"
+                    echo -e "${idle_body}" > "${hypridle_conf}" 2>/dev/null || echo -e "${idle_body}" | sudo tee "${hypridle_conf}" >/dev/null || true
+                fi
+
+                if [ "${pkg_id}" = "hyprland-noctalia" ]; then
+                    local noct_conf="${noct_dir}/config.toml"
+                    if [ ! -f "${noct_conf}" ]; then
+                        local term_pinned="${terminal_cand}"
+                        if [ "${term_pinned}" = "konsole" ]; then
+                            term_pinned="org.kde.konsole"
+                        fi
+                        local fm_pinned="org.kde.dolphin"
+                        if ! command -v dolphin >/dev/null 2>&1; then
+                            fm_pinned="thunar"
+                        fi
+                        local noct_body="[shell.panel]\ntransparency_mode = \"glass\"\n\n"
+                        noct_body+="[bar.default]\nenabled = true\nposition = \"top\"\nbackground_opacity = 0.60\n\n"
+                        noct_body+="[dock]\nenabled = true\nposition = \"bottom\"\nbackground_opacity = 0.65\nlauncher_position = \"start\"\nlauncher_icon = \"grid-dots\"\nmagnification = true\nmagnification_scale = 1.35\nicon_size = 48\nmargin_edge = 8\nmargin_ends = 12\nradius = 16\npinned = [\"slacky-update\", \"${term_pinned}\", \"${fm_pinned}\", \"firefox\", \"steam\"]\n"
+                        echo -e "${noct_body}" > "${noct_conf}" 2>/dev/null || echo -e "${noct_body}" | sudo tee "${noct_conf}" >/dev/null || true
+                    fi
+                fi
+
+                # Ensure non-root ownership on all configured user dotfiles
+                local user_grp
+                user_grp=$(id -gn "${b_user}" 2>/dev/null || echo "users")
+                chown -R "${b_user}:${user_grp}" "${hypr_dir}" "${noct_dir}" 2>/dev/null || sudo chown -R "${b_user}:${user_grp}" "${hypr_dir}" "${noct_dir}" 2>/dev/null || true
+                if [ -d "${target_dir}/.config/easyeffects" ]; then
+                    chown -R "${b_user}:${user_grp}" "${target_dir}/.config/easyeffects" 2>/dev/null || sudo chown -R "${b_user}:${user_grp}" "${target_dir}/.config/easyeffects" 2>/dev/null || true
+                fi
+            done
         fi
 
         log_info "[4/4] Synchronizing system status & background registry..."
@@ -4631,8 +5112,9 @@ interactive_cachyos_gaming_menu() {
     set_terminal_title "slacky-update: Underpants Gnomes Gaming Master Suite"
 
     # Category keys and human labels
-    local CAT_KEYS=("engine" "launcher" "hardware" "streaming" "social" "audio" "creative" "tools" "browser" "bootloader")
+    local CAT_KEYS=("desktop" "engine" "launcher" "hardware" "streaming" "social" "audio" "creative" "tools" "browser" "bootloader")
     local CAT_TITLES=(
+        "🪟 Wayland Desktops & Shells (Hyprland / Noctalia)"
         "⚡ The Engine: Performance, HUD & Schedulers"
         "🎮 Storefronts & Launcher Managers"
         "🔧 Hardware Control, Tuning & DKMS Drivers"

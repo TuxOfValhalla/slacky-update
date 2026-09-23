@@ -224,5 +224,15 @@
   "PROMPT_UPGRADE_GNOMES": "Transmutierte Underpants Gnomes-Pakete aktualisieren? [J/n] ",
   "UPGRADING_GNOMES": "Underpants Gnomes-Pakete werden aktualisiert...",
   "GNOMES_CURATED_COLLISION_WARN": "Warnung: \"{0}\" ist bereits als kuratiertes Slackware-Paket ({1}) installiert. Transmutation überschreibt die Startdatei in /usr/bin/. Fortfahren? [j/N] ",
-  "GNOMES_CACHE_CLEANED": "{0} zwischengespeicherte Pakete aus dem Underpants Gnomes-Cache bereinigt."
+  "GNOMES_CACHE_CLEANED": "{0} zwischengespeicherte Pakete aus dem Underpants Gnomes-Cache bereinigt.",
+  "CACHY_FLAVOR_ZEN": "(Arch Linux Zen kernel: Low-latency desktop and gaming tuning - Bodacious!)",
+  "CACHY_FLAVOR_ARCH": "(Arch Linux Standard vanilla kernel - Party on, Wayne!)",
+  "PACMAN_DOWNLOAD_LABEL": "Turbo Parallel Pre-fetch: {label} [{count} files • ~{size}]",
+  "PACMAN_DOWNLOAD_SUCCESS": "✓ Bodacious! {count} files ({size}) successfully cached in {time}s (avg {speed}).",
+  "PACMAN_DOWNLOAD_FAILED": "⚠️ Major Bummer: {success}/{total} files cached ({size}) in {time}s ({failed} failed).",
+  "TUBTHUMPING_BANNER": "Tubthumping Engine: I get knocked down, but I get up again!",
+  "COWABUNGA_READY": "Cowabunga! System components verified rock-solid.",
+  "CAT_DESKTOP": "Wayland-Desktops und Shells",
+  "MENU_HYPRLAND": "Kuratierte Hyprland Desktop-Suite (Noctalia Shell / Wayland)",
+  "PROMPT_UPGRADE_DESKTOP": "Kuratierte Hyprland Desktop-Suite aktualisieren? [J/n] "
 }

@@ -224,5 +224,15 @@
   "PROMPT_UPGRADE_GNOMES": "변환된 Underpants Gnomes 패키지를 업그레이드하시겠습니까? [Y/n] ",
   "UPGRADING_GNOMES": "Underpants Gnomes 패키지 업그레이드 중...",
   "GNOMES_CURATED_COLLISION_WARN": "경고: \"{0}\"은(는) 이미 Slackware 패키지({1})로 설치되어 있습니다. 변환 시 /usr/bin/의 실행 파일이 덮어쓰여집니다. 계속하시겠습니까? [y/N] ",
-  "GNOMES_CACHE_CLEANED": "Underpants Gnomes 캐시에서 {0}을(를) 삭제했습니다."
+  "GNOMES_CACHE_CLEANED": "Underpants Gnomes 캐시에서 {0}을(를) 삭제했습니다.",
+  "CACHY_FLAVOR_ZEN": "(Arch Linux Zen kernel: Low-latency desktop and gaming tuning - Bodacious!)",
+  "CACHY_FLAVOR_ARCH": "(Arch Linux Standard vanilla kernel - Party on, Wayne!)",
+  "PACMAN_DOWNLOAD_LABEL": "Turbo Parallel Pre-fetch: {label} [{count} files • ~{size}]",
+  "PACMAN_DOWNLOAD_SUCCESS": "✓ Bodacious! {count} files ({size}) successfully cached in {time}s (avg {speed}).",
+  "PACMAN_DOWNLOAD_FAILED": "⚠️ Major Bummer: {success}/{total} files cached ({size}) in {time}s ({failed} failed).",
+  "TUBTHUMPING_BANNER": "Tubthumping Engine: I get knocked down, but I get up again!",
+  "COWABUNGA_READY": "Cowabunga! System components verified rock-solid.",
+  "CAT_DESKTOP": "Wayland 데스크톱 및 셸",
+  "MENU_HYPRLAND": "큐레이티드 Hyprland 데스크톱 스위트 (Noctalia Shell / Wayland)",
+  "PROMPT_UPGRADE_DESKTOP": "큐레이티드 Hyprland 데스크톱 스위트를 업그레이드하시겠습니까? [Y/n] "
 }

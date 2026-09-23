@@ -224,5 +224,15 @@
   "PROMPT_UPGRADE_GNOMES": "Ođasmahttit Underpants Gnomes-báhkaid? [J/n] ",
   "UPGRADING_GNOMES": "Ođasmahttimin Underpants Gnomes-báhkaid...",
   "GNOMES_CURATED_COLLISION_WARN": "Váruhus: \"{0}\" lea juo sajáiduhttojuvvon Slackware-báhkan ({1}). Transmuteren boahtá buhttet álggahanfiilla /usr/bin/. Joatkit? [j/N] ",
-  "GNOMES_CACHE_CLEANED": "Gurrejuvvon {0} vurohuvvon báhkat Underpants Gnomes-vuorkkás."
+  "GNOMES_CACHE_CLEANED": "Gurrejuvvon {0} vurohuvvon báhkat Underpants Gnomes-vuorkkás.",
+  "CACHY_FLAVOR_ZEN": "(Arch Linux Zen kernel: Low-latency desktop and gaming tuning - Bodacious!)",
+  "CACHY_FLAVOR_ARCH": "(Arch Linux Standard vanilla kernel - Party on, Wayne!)",
+  "PACMAN_DOWNLOAD_LABEL": "Turbo Parallel Pre-fetch: {label} [{count} files • ~{size}]",
+  "PACMAN_DOWNLOAD_SUCCESS": "✓ Bodacious! {count} files ({size}) successfully cached in {time}s (avg {speed}).",
+  "PACMAN_DOWNLOAD_FAILED": "⚠️ Major Bummer: {success}/{total} files cached ({size}) in {time}s ({failed} failed).",
+  "TUBTHUMPING_BANNER": "Tubthumping Engine: I get knocked down, but I get up again!",
+  "COWABUNGA_READY": "Cowabunga! System components verified rock-solid.",
+  "CAT_DESKTOP": "Wayland-čállinbeavddit ja shellat",
+  "MENU_HYPRLAND": "Kurertejuvvon Hyprland Desktop Suite (Noctalia Shell / Wayland)",
+  "PROMPT_UPGRADE_DESKTOP": "Áiggut go ođasmahttit kurertejuvvon Hyprland Desktop Suite? [J/n] "
 }

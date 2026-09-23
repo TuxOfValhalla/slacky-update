@@ -613,11 +613,46 @@ update_cachyos_kernels() {
         download_parallel_pacman "CachyOS Kernel Suite (${#flavors_to_update[@]} flavors)" "${dl_items[@]}" || true
     fi
 
+    # Execute single-pass batch deployment: extract all flavors with deferred boot/DKMS sync, then seal in one atomic pass
+    export DEFER_BOOT_SYNC=1
     for flv in "${flavors_to_update[@]}"; do
         deploy_cachyos_kernel_flavor "${flv}"
     done
+    unset DEFER_BOOT_SYNC || true
 
-    log_success "CachyOS kernel upgrade completed."
+    log_info "⚡ Running Single-Pass Post-Installation Pipeline (DKMS, Dracut, MOK & Limine)..."
+    if command -v dkms >/dev/null 2>&1; then
+        build_dkms_modules_for_all_kernels
+    fi
+
+    if [ "${HAS_NVIDIA}" = "true" ]; then
+        if command -v ensure_cachyos_nvidia_duties >/dev/null 2>&1; then
+            ensure_cachyos_nvidia_duties
+        fi
+    fi
+
+    # Generate initramfs for all active installed kernels
+    local all_installed_cachyos
+    all_installed_cachyos=$(get_installed_cachyos_flavors 2>/dev/null || echo "")
+    for flv in ${all_installed_cachyos}; do
+        local kver_full
+        kver_full=$(get_installed_cachyos_flavor_version "${flv}" 2>/dev/null || echo "")
+        if [ -n "${kver_full}" ] && [ "${kver_full}" != "NONE" ]; then
+            # Resolve exact kernel directory under /usr/lib/modules
+            local mod_dir
+            mod_dir=$(find /usr/lib/modules -maxdepth 1 -type d -name "*${flv}*" 2>/dev/null | sort -V | tail -n 1 || true)
+            if [ -n "${mod_dir}" ] && [ -d "${mod_dir}" ]; then
+                generate_kernel_initramfs "$(basename "${mod_dir}")"
+            fi
+        fi
+    done
+
+    if command -v enforce_secure_boot_armor >/dev/null 2>&1; then
+        enforce_secure_boot_armor
+    fi
+    sync_bootloader_configuration
+
+    log_success "CachyOS kernel upgrade completed (Single-Pass Batch)."
 }
 
 remove_stock_slackware_kernels() {
@@ -1673,11 +1708,11 @@ build_dkms_modules_for_all_kernels() {
             fi
 
             log_info "Building DKMS module ${m_name} (v${m_ver}) for kernel ${kver}..."
-            sudo dkms build -m "${m_name}" -v "${m_ver}" -k "${kver}" 2>/dev/null || {
+            sudo dkms build -m "${m_name}" -v "${m_ver}" -k "${kver}" >/dev/null 2>&1 || {
                 log_warn "DKMS build warning for ${m_name} on ${kver}"
                 continue
             }
-            sudo dkms install -m "${m_name}" -v "${m_ver}" -k "${kver}" 2>/dev/null || {
+            sudo dkms install -m "${m_name}" -v "${m_ver}" -k "${kver}" >/dev/null 2>&1 || {
                 log_warn "DKMS install warning for ${m_name} on ${kver}"
             }
         done
@@ -1992,19 +2027,19 @@ deploy_cachyos_kernel_packages() {
         fi
     fi
 
-    if command -v dkms >/dev/null 2>&1; then
-        build_dkms_modules_for_all_kernels
-    fi
-
-    if [ "${HAS_NVIDIA}" = "true" ]; then
-        if [ ! -d "/usr/lib/modules/${kver_full}/kernel/drivers/video" ] && [ ! -d "/lib/modules/${kver_full}/kernel/drivers/video" ]; then
-            if command -v build_nvidia_modules >/dev/null 2>&1; then
-                build_nvidia_modules "${kver_full}"
-            fi
+    if [ "${DEFER_BOOT_SYNC:-0}" != "1" ]; then
+        if command -v dkms >/dev/null 2>&1; then
+            build_dkms_modules_for_all_kernels
         fi
 
-        # Synchronize CachyOS NVIDIA user-space package and any stock Slackware kernels unless deferred
-        if [ "${DEFER_BOOT_SYNC:-0}" != "1" ]; then
+        if [ "${HAS_NVIDIA}" = "true" ]; then
+            if [ ! -d "/usr/lib/modules/${kver_full}/kernel/drivers/video" ] && [ ! -d "/lib/modules/${kver_full}/kernel/drivers/video" ]; then
+                if command -v build_nvidia_modules >/dev/null 2>&1; then
+                    build_nvidia_modules "${kver_full}"
+                fi
+            fi
+
+            # Synchronize CachyOS NVIDIA user-space package and any stock Slackware kernels unless deferred
             if command -v ensure_cachyos_nvidia_duties >/dev/null 2>&1; then
                 ensure_cachyos_nvidia_duties
             fi

@@ -63,8 +63,8 @@ HAS_NVIDIA=false
 HAS_AMD=false
 HAS_INTEL=false
 
-CURRENT_VERSION="0.15.0"
-RELEASE_CODENAME="Now This Is Podracing!"
+CURRENT_VERSION="0.16.0"
+RELEASE_CODENAME="Tubthumping"
 
 CURL_CONNECT_TIMEOUT=15
 CURL_MAX_TIME=60
@@ -508,6 +508,25 @@ probe_gpu_hardware() {
     if echo "${pci_devs}" | grep -qi '\[8086:'; then
         HAS_INTEL=true
     fi
+
+    # Robust sysfs fallback if lspci is unavailable or unprivileged
+    if [ "${HAS_NVIDIA}" = "false" ] && [ "${HAS_AMD}" = "false" ] && [ "${HAS_INTEL}" = "false" ]; then
+        if ls -d /sys/bus/pci/devices/* 1>/dev/null 2>&1; then
+            for vfile in /sys/bus/pci/devices/*/vendor; do
+                [ -f "${vfile}" ] || continue
+                local v_id
+                v_id=$(cat "${vfile}" 2>/dev/null | tr '[:upper:]' '[:lower:]' || true)
+                case "${v_id}" in
+                    *10de*) HAS_NVIDIA=true ;;
+                    *1002*) HAS_AMD=true ;;
+                    *8086*) HAS_INTEL=true ;;
+                esac
+            done
+        fi
+        if [ -d /proc/driver/nvidia ] || [ -f /sys/module/nvidia/version ]; then
+            HAS_NVIDIA=true
+        fi
+    fi
 }
 
 resolve_mok_keypair() {
@@ -750,6 +769,30 @@ def format_eta(seconds):
         return f"{h:02d}:{m:02d}:{s:02d}"
     return f"{m:02d}:{s:02d}"
 
+CURSOR_HIDE = "\033[?25l"
+CURSOR_SHOW = "\033[?25h"
+
+def hide_cursor():
+    if is_tty:
+        sys.stdout.write(CURSOR_HIDE)
+        sys.stdout.flush()
+
+def show_cursor():
+    if is_tty:
+        sys.stdout.write(CURSOR_SHOW)
+        sys.stdout.flush()
+
+import atexit, signal
+atexit.register(show_cursor)
+def _sig_handler(sig, frame):
+    show_cursor()
+    sys.exit(128 + sig if isinstance(sig, int) else 1)
+try:
+    signal.signal(signal.SIGINT, _sig_handler)
+    signal.signal(signal.SIGTERM, _sig_handler)
+except Exception:
+    pass
+
 def render_pacman_bar(pct, width=16, chomp_state=0):
     pct = max(0.0, min(100.0, pct))
     if pct >= 100.0:
@@ -760,12 +803,7 @@ def render_pacman_bar(pct, width=16, chomp_state=0):
     mouth_open = (chomp_state % 2 == 0)
     eater = "\033[1;34mS\033[0m" if mouth_open else "\033[1;34ms\033[0m"
     rem_len = max(0, width - pos - 1)
-    food_chars = []
-    for i in range(rem_len):
-        if i % 3 == 1:
-            food_chars.append("o")
-        else:
-            food_chars.append(" ")
+    food_chars = ["o" if (i % 2 == 0) else " " for i in range(rem_len)]
     food = "".join(food_chars)
     return f"[{eaten}{eater}{food}]"
 
@@ -877,11 +915,12 @@ num_lines_rendered = 0
 
 def monitor_thread():
     global first_render, num_lines_rendered, total_bytes_expected
+    hide_cursor()
     chomp_step = 0
     last_reported_pct = -1
 
     while not stop_monitor.is_set():
-        time.sleep(0.08)
+        time.sleep(0.14)
         now = time.time()
         chomp_step = int(now / 0.35)
 
@@ -1056,19 +1095,21 @@ def download_item_wrapper(args):
 
     global completed_bytes, success_count, fail_count
     try:
-        res = subprocess.run(["curl", "-sSL", "-f", "-C", "-", "-m", "300", "-o", part_file, url], capture_output=True)
+        curl_args = ["curl", "-sSL", "-f", "--connect-timeout", "15", "-m", "1800", "--speed-time", "45", "--speed-limit", "1000"]
+        res = subprocess.run(curl_args + ["-C", "-", "-o", part_file, url], capture_output=True)
         if res.returncode != 0:
             if os.path.exists(part_file):
                 try: os.remove(part_file)
                 except Exception: pass
-            res = subprocess.run(["curl", "-sSL", "-f", "-m", "300", "-o", part_file, url], capture_output=True)
+            res = subprocess.run(curl_args + ["-o", part_file, url], capture_output=True)
         if res.returncode == 0 and os.path.exists(part_file) and os.path.getsize(part_file) > 0:
             if sig_url and sig_dest:
-                res_sig = subprocess.run(["curl", "-sSL", "-f", "-m", "60", "-o", part_sig, sig_url], capture_output=True)
+                curl_sig = ["curl", "-sSL", "-f", "--connect-timeout", "15", "-m", "120", "--speed-time", "45", "--speed-limit", "1000"]
+                res_sig = subprocess.run(curl_sig + ["-o", part_sig, sig_url], capture_output=True)
                 if res_sig.returncode != 0 and os.path.exists(part_sig):
                     try: os.remove(part_sig)
                     except Exception: pass
-                    res_sig = subprocess.run(["curl", "-sSL", "-f", "-m", "60", "-o", part_sig, sig_url], capture_output=True)
+                    res_sig = subprocess.run(curl_sig + ["-o", part_sig, sig_url], capture_output=True)
                 if res_sig.returncode == 0 and os.path.exists(part_sig) and os.path.getsize(part_sig) > 0:
                     os.replace(part_sig, sig_dest)
                 else:
@@ -1104,6 +1145,7 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
 
 stop_monitor.set()
 mon.join(timeout=1.0)
+show_cursor()
 
 total_elapsed = max(time.time() - start_time, 0.1)
 avg_speed_mb = (completed_bytes / (1024 * 1024)) / total_elapsed

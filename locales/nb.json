@@ -226,5 +226,13 @@
   "PROMPT_UPGRADE_GNOMES": "Oppgradere transmuterte Underpants Gnomes-pakker? [J/n] ",
   "UPGRADING_GNOMES": "Oppgraderer Underpants Gnomes-pakker...",
   "GNOMES_CURATED_COLLISION_WARN": "Advarsel: \"{0}\" er allerede installert som en kuratert Slackware-pakke ({1}). Transmutering vil overstyre oppstartsfilen i /usr/bin/. Vil du fortsette? [j/N] ",
-  "GNOMES_CACHE_CLEANED": "Ryddet {0} med hurtigbufrede pakker fra Underpants Gnomes-cachen."
+  "GNOMES_CACHE_CLEANED": "Ryddet {0} med hurtigbufrede pakker fra Underpants Gnomes-cachen.",
+  "PACMAN_DOWNLOAD_LABEL": "Turbo parallell forhåndsnedlasting: {label} [{count} filer • ~{size}]",
+  "PACMAN_DOWNLOAD_SUCCESS": "✓ Bodacious! {count} filer ({size}) ble vellykket hurtigbufret på {time}s (snitt {speed}).",
+  "PACMAN_DOWNLOAD_FAILED": "⚠️ Major Bummer: {success}/{total} filer hurtigbufret ({size}) på {time}s ({failed} feilet).",
+  "TUBTHUMPING_BANNER": "Tubthumping-motor: I get knocked down, but I get up again!",
+  "COWABUNGA_READY": "Cowabunga! Systemkomponenter verifisert fjellstøtt.",
+  "CAT_DESKTOP": "Wayland-skrivebord og sheller",
+  "MENU_HYPRLAND": "Kuratert Hyprland Desktop Suite (Noctalia Shell / Wayland)",
+  "PROMPT_UPGRADE_DESKTOP": "Oppgradere kuratert Hyprland Desktop Suite? [J/n] "
 }

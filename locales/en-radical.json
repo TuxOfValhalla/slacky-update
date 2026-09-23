@@ -224,5 +224,15 @@
   "PROMPT_UPGRADE_GNOMES": "Juice up transmuted Underpants Gnomes packages? [Y/n] ",
   "UPGRADING_GNOMES": "Pumping pure wattage into Underpants Gnomes packages...",
   "GNOMES_CURATED_COLLISION_WARN": "Whoa! Major Bummer: \"{0}\" is already kicking as a curated Slackware package ({1})! Override its launcher in /usr/bin/? [y/N] ",
-  "GNOMES_CACHE_CLEANED": "Bodacious! Cleaned {0} of cached junk from Underpants Gnomes cache!"
+  "GNOMES_CACHE_CLEANED": "Bodacious! Cleaned {0} of cached junk from Underpants Gnomes cache!",
+  "CACHY_FLAVOR_ZEN": "(Arch Linux Zen kernel: Low-latency desktop and gaming tuning - Bodacious!)",
+  "CACHY_FLAVOR_ARCH": "(Arch Linux Standard vanilla kernel - Party on, Wayne!)",
+  "PACMAN_DOWNLOAD_LABEL": "Turbo Parallel Pre-fetch: {label} [{count} files • ~{size}]",
+  "PACMAN_DOWNLOAD_SUCCESS": "✓ Bodacious! {count} files ({size}) successfully cached in {time}s (avg {speed}).",
+  "PACMAN_DOWNLOAD_FAILED": "⚠️ Major Bummer: {success}/{total} files cached ({size}) in {time}s ({failed} failed).",
+  "TUBTHUMPING_BANNER": "Tubthumping Engine: I get knocked down, but I get up again!",
+  "COWABUNGA_READY": "Cowabunga! System components verified rock-solid.",
+  "CAT_DESKTOP": "Wayland Desktops & Radical Shells",
+  "MENU_HYPRLAND": "Curated Hyprland Desktop Suite (Noctalia Shell / Wayland)",
+  "PROMPT_UPGRADE_DESKTOP": "Upgrade Bodacious Hyprland Desktop Suite? [Y/n] "
 }

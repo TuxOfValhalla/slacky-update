@@ -224,5 +224,15 @@
   "PROMPT_UPGRADE_GNOMES": "Päivitetäänkö muunnetut Underpants Gnomes -paketit? [K/e] ",
   "UPGRADING_GNOMES": "Päivitetään Underpants Gnomes -paketteja...",
   "GNOMES_CURATED_COLLISION_WARN": "Varoitus: \"{0}\" on jo asennettu kuratoituna Slackware-pakettina ({1}). Muuntaminen korvaa käynnistystiedoston polussa /usr/bin/. Jatketaanko? [k/E] ",
-  "GNOMES_CACHE_CLEANED": "Tyhjennettiin {0} välimuistipaketteja Underpants Gnomes -välimuistista."
+  "GNOMES_CACHE_CLEANED": "Tyhjennettiin {0} välimuistipaketteja Underpants Gnomes -välimuistista.",
+  "CACHY_FLAVOR_ZEN": "(Arch Linux Zen kernel: Low-latency desktop and gaming tuning - Bodacious!)",
+  "CACHY_FLAVOR_ARCH": "(Arch Linux Standard vanilla kernel - Party on, Wayne!)",
+  "PACMAN_DOWNLOAD_LABEL": "Turbo Parallel Pre-fetch: {label} [{count} files • ~{size}]",
+  "PACMAN_DOWNLOAD_SUCCESS": "✓ Bodacious! {count} files ({size}) successfully cached in {time}s (avg {speed}).",
+  "PACMAN_DOWNLOAD_FAILED": "⚠️ Major Bummer: {success}/{total} files cached ({size}) in {time}s ({failed} failed).",
+  "TUBTHUMPING_BANNER": "Tubthumping Engine: I get knocked down, but I get up again!",
+  "COWABUNGA_READY": "Cowabunga! System components verified rock-solid.",
+  "CAT_DESKTOP": "Wayland-työpöydät ja kuoret",
+  "MENU_HYPRLAND": "Kuratoitu Hyprland-työpöytäpaketti (Noctalia Shell / Wayland)",
+  "PROMPT_UPGRADE_DESKTOP": "Päivitetäänkö kuratoitu Hyprland-työpöytäpaketti? [K/e] "
 }

@@ -93,6 +93,20 @@ VIRTUAL_PROVIDES_DEFAULT = {
     "libjack.so": "host:libjack.so.0",
     "x-display-server": "host:xorg-server",
     "wayland": "host:libwayland-client.so.0",
+    "wayland-protocols": "host:wayland-protocols",
+    "libwayland-client": "host:libwayland-client.so.0",
+    "libwayland-client.so": "host:libwayland-client.so.0",
+    "libwayland-server": "host:libwayland-server.so.0",
+    "libwayland-server.so": "host:libwayland-server.so.0",
+    "libwayland-cursor": "host:libwayland-cursor.so.0",
+    "libwayland-egl": "host:libwayland-egl.so.1",
+    "libxkbcommon": "host:libxkbcommon.so.0",
+    "libxkbcommon.so": "host:libxkbcommon.so.0",
+    "libseat": "host:libseat.so.1",
+    "libseat.so": "host:libseat.so.1",
+    "seatd": "host:seatd",
+    "polkit": "host:polkit-1",
+    "libpolkit-gobject-1.so": "host:libpolkit-gobject-1.so.0",
     "java-runtime": "host:openjdk",
     "java-environment": "host:openjdk-jdk",
     "ntsync-module": "host:kernel-ntsync-module",
@@ -863,7 +877,7 @@ class GnomesPacmanEngine:
     def sync_repositories(self, force: bool = False, verbose: bool = True) -> Dict[str, int]:
         """Download and cache all active repository sync databases."""
         results: Dict[str, int] = {}
-        headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) Slacky-Update/0.15.0 UnderpantsGnomes"}
+        headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) Slacky-Update/0.16.0 UnderpantsGnomes"}
 
         for repo in self.repositories:
             rname = repo["name"]
@@ -2082,7 +2096,8 @@ exec "${{TARGET_BIN}}" "$@"
             return f"{bytes_per_sec / (1024.0 * 1024.0):.2f} MiB/s"
 
     @classmethod
-    def render_gnome_bar(cls, pct: float, width: int = 28) -> str:
+    @classmethod
+    def render_gnome_bar(cls, pct: float, width: int = 28, chomp_state: int = 0) -> str:
         """Pacman S/s progress bar eating small 'o' pellets (ILoveCandy style)."""
         pct = max(0.0, min(100.0, pct))
         pct_str = f"{int(pct):>3d}%"
@@ -2091,16 +2106,11 @@ exec "${{TARGET_BIN}}" "$@"
         pos = int((pct / 100.0) * width)
         pos = min(width - 1, max(0, pos))
         eaten = "-" * pos
-        # Animated S/s mouth toggling every 120ms (Slackware Blue S/s)
-        mouth_open = (time.time() % 0.24) < 0.12
+        # Animated S/s mouth toggling ~1.4 toggles/sec (Slackware Bold Blue S/s)
+        mouth_open = (chomp_state % 2 == 0)
         eater = "\033[1;34mS\033[0m" if mouth_open else "\033[1;34ms\033[0m"
         rem_len = max(0, width - pos - 1)
-        food_chars = []
-        for i in range(rem_len):
-            if i % 3 == 1:
-                food_chars.append("o")
-            else:
-                food_chars.append(" ")
+        food_chars = ["o" if (i % 2 == 0) else " " for i in range(rem_len)]
         food = "".join(food_chars)
         return f"[{eaten}{eater}{food}] {pct_str}"
 
@@ -2117,7 +2127,7 @@ exec "${{TARGET_BIN}}" "$@"
         total_bytes_expected = sum(int(p.get("CSIZE", 15 * 1024 * 1024)) for p in pkgs)
         downloaded_results: List[Tuple[Dict[str, Any], str]] = []
 
-        headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) Slacky-Update/0.15.0 UnderpantsGnomes"}
+        headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) Slacky-Update/0.16.0 UnderpantsGnomes"}
         lock = threading.Lock()
         slot_lock = threading.Lock()
         print_lock = threading.Lock()
@@ -2185,9 +2195,13 @@ exec "${{TARGET_BIN}}" "$@"
 
         def monitor():
             first_draw = True
+            if is_tty:
+                sys.stdout.write("\033[?25l")
+                sys.stdout.flush()
             while not stop_event.is_set():
-                time.sleep(0.12)
+                time.sleep(0.14)
                 now = time.time()
+                chomp_step = int(now / 0.35)
 
                 with lock:
                     cur_comp = completed_bytes[0]
@@ -2196,7 +2210,7 @@ exec "${{TARGET_BIN}}" "$@"
                     c_cnt = completed_count[0]
 
                 pct = (cur_comp / total_bytes_expected * 100.0) if total_bytes_expected > 0 else 0.0
-                bar = self.render_gnome_bar(pct, width=bar_width)
+                bar = self.render_gnome_bar(pct, width=bar_width, chomp_state=chomp_step)
                 elapsed = max(0.001, now - start_t)
                 speed_bps = cur_comp / elapsed
                 spd_str_tot = self._format_speed(speed_bps)
@@ -2234,7 +2248,7 @@ exec "${{TARGET_BIN}}" "$@"
                                 else:
                                     w_eta = "00:00" if w_pct >= 100 else "--:--"
 
-                                w_bar = self.render_gnome_bar(w_pct, width=bar_width)
+                                w_bar = self.render_gnome_bar(w_pct, width=bar_width, chomp_state=chomp_step + sid)
                                 pname = sinfo["name"]
                                 pver = sinfo.get("ver", "")
                                 full_n = f"{pname}-{pver}" if pver else pname
@@ -2246,8 +2260,8 @@ exec "${{TARGET_BIN}}" "$@"
                         tot_label = f"Total ({c_cnt}/{total_pkgs})"
                         output_lines.append(f"{tot_label:<32} {tot_size_str:>10} {spd_str_tot:>11} {eta_str:>5} {bar}")
 
-                        for l in output_lines:
-                            sys.stdout.write(f"\033[2K\r{l}\n")
+                        out_block = "".join(f"\033[2K\r{l}\n" for l in output_lines)
+                        sys.stdout.write(out_block)
                         sys.stdout.flush()
                         lines_printed[0] = len(output_lines)
                         first_draw = False
@@ -2365,18 +2379,6 @@ exec "${{TARGET_BIN}}" "$@"
                 full_name = f"{pname}-{pver}" if pver else pname
                 disp_name = (full_name[:30] + "...") if len(full_name) > 32 else full_name
 
-                if verbose and is_tty:
-                    with print_lock:
-                        if lines_printed[0] > 0:
-                            sys.stdout.write(f"\033[{lines_printed[0]}A")
-                            for _ in range(lines_printed[0]):
-                                sys.stdout.write("\033[2K\r\n")
-                            sys.stdout.write(f"\033[{lines_printed[0]}A")
-                        done_bar = f"[{'-' * bar_width}] 100%"
-                        sys.stdout.write(f"\033[2K\r{disp_name:<32} {sz_str:>10} {spd_str:>11} 00:00 {done_bar}\n")
-                        sys.stdout.flush()
-                        lines_printed[0] = 0
-
             if slot_id is not None:
                 with slot_lock:
                     worker_status[slot_id]["active"] = False
@@ -2398,6 +2400,7 @@ exec "${{TARGET_BIN}}" "$@"
         if mon_t:
             mon_t.join(timeout=1.0)
             if verbose and is_tty:
+                sys.stdout.write("\033[?25h")
                 with print_lock:
                     if lines_printed[0] > 0:
                         sys.stdout.write(f"\033[{lines_printed[0]}A")
@@ -3805,6 +3808,9 @@ class RuntimeManager:
         "graphics": ["vulkan-icd-loader", "openxr", "embree", "hwloc", "onetbb", "libsquish", "libwslay", "miniupnpc", "glm", "freeglut", "glew", "glfw", "openal"],
         "cad": ["opencascade", "vtk", "ngspice", "verdict", "pugixml", "jsoncpp", "poppler", "mpdecimal", "cblas", "lapack", "openblas"],
         "mobile": ["libimobiledevice", "libimobiledevice-glue", "libplist", "libtatsu", "libusbmuxd", "usbmuxd", "libgpod", "sg3_utils"],
+        "desktop": ["hyprland", "xdg-desktop-portal-hyprland", "hyprlock", "hypridle", "hyprpaper", "aquamarine", "hyprlang", "hyprcursor", "hyprgraphics", "hyprutils", "hyprpolkitagent"],
+        "hyprland": ["hyprland", "xdg-desktop-portal-hyprland", "hyprlock", "hypridle", "hyprpaper", "aquamarine", "hyprlang", "hyprcursor", "hyprgraphics", "hyprutils", "hyprpolkitagent"],
+        "noctalia": ["noctalia", "hyprland", "xdg-desktop-portal-hyprland", "hyprlock", "hypridle", "hyprpaper", "aquamarine", "hyprlang", "hyprcursor", "hyprgraphics", "hyprutils", "hyprpolkitagent"],
         "all": [
             "python", "glib2", "sqlite", "openssl", "curl", "libxml2", "icu", "fmt", "onetbb",
             "gtk3", "gtk4", "libadwaita", "librsvg", "gdk-pixbuf2", "shared-mime-info", "adwaita-icon-theme", "hicolor-icon-theme", "qt5-base", "qt5-wayland", "qt5-svg", "qt6-base", "qt6-wayland", "qt6-declarative", "qt6-svg", "qt6-webengine", "wxwidgets-gtk3", "libnotify", "webkit2gtk-4.1", "libspnav", "libmanette",
@@ -3989,7 +3995,7 @@ class RuntimeManager:
 def main():
     """CLI dispatcher for shell integration and testing."""
     if len(sys.argv) < 2:
-        print("Underpants Gnomes Pacman Engine v0.15.0 ('Now This Is Podracing!')")
+        print("Underpants Gnomes Pacman Engine v0.16.0 ('Tubthumping')")
         print("Usage: gnomes_pacman.py [sync|search|info|deps|transmute|runtime|url|check-host|list-repos|list-installed] [args...]")
         sys.exit(0)
 

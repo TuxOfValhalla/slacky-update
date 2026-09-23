@@ -224,5 +224,15 @@
   "PROMPT_UPGRADE_GNOMES": "ترقية حزم Underpants Gnomes المحولة؟ [Y/n] ",
   "UPGRADING_GNOMES": "جارٍ ترقية حزم Underpants Gnomes...",
   "GNOMES_CURATED_COLLISION_WARN": "تحذير: \"{0}\" مثبت بالفعل كحزمة Slackware مخصصة ({1}). سيؤدي التحويل إلى استبدال المشغل في /usr/bin/. هل تريد المتابعة؟ [y/N] ",
-  "GNOMES_CACHE_CLEANED": "تم تنظيف {0} من الحزم المخزنة مؤقتًا من ذاكرة Underpants Gnomes."
+  "GNOMES_CACHE_CLEANED": "تم تنظيف {0} من الحزم المخزنة مؤقتًا من ذاكرة Underpants Gnomes.",
+  "CACHY_FLAVOR_ZEN": "(Arch Linux Zen kernel: Low-latency desktop and gaming tuning - Bodacious!)",
+  "CACHY_FLAVOR_ARCH": "(Arch Linux Standard vanilla kernel - Party on, Wayne!)",
+  "PACMAN_DOWNLOAD_LABEL": "Turbo Parallel Pre-fetch: {label} [{count} files • ~{size}]",
+  "PACMAN_DOWNLOAD_SUCCESS": "✓ Bodacious! {count} files ({size}) successfully cached in {time}s (avg {speed}).",
+  "PACMAN_DOWNLOAD_FAILED": "⚠️ Major Bummer: {success}/{total} files cached ({size}) in {time}s ({failed} failed).",
+  "TUBTHUMPING_BANNER": "Tubthumping Engine: I get knocked down, but I get up again!",
+  "COWABUNGA_READY": "Cowabunga! System components verified rock-solid.",
+  "CAT_DESKTOP": "أسطح مكاتب وأغلفة Wayland",
+  "MENU_HYPRLAND": "حزمة سطح مكتب Hyprland المختارة (Noctalia Shell / Wayland)",
+  "PROMPT_UPGRADE_DESKTOP": "هل تريد ترقية حزمة سطح مكتب Hyprland المختارة؟ [Y/n] "
 }

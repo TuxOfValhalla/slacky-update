@@ -47,11 +47,11 @@ ensure_dkms_installed_interactive() {
         mkdir -p "${build_dir}"
         (
             cd "${build_dir}"
-            curl -sSL "https://slackbuilds.org/slackbuilds/15.0/system/dkms.tar.gz" | tar -xz
+            curl -sSL --connect-timeout 8 -m 20 "https://slackbuilds.org/slackbuilds/15.0/system/dkms.tar.gz" | tar -xz
             cd dkms
             local dkms_ver
             dkms_ver=$(grep -E '^VERSION=' dkms.SlackBuild | cut -d'"' -f2 || echo "3.0.12")
-            curl -sSL -o "dkms-${dkms_ver}.tar.gz" "https://github.com/dell/dkms/archive/v${dkms_ver}/dkms-${dkms_ver}.tar.gz" || curl -sSL -o "dkms-${dkms_ver}.tar.gz" "https://github.com/dell/dkms/archive/refs/tags/v${dkms_ver}.tar.gz"
+            curl -sSL --connect-timeout 8 -m 30 -o "dkms-${dkms_ver}.tar.gz" "https://github.com/dell/dkms/archive/v${dkms_ver}/dkms-${dkms_ver}.tar.gz" || curl -sSL --connect-timeout 8 -m 30 -o "dkms-${dkms_ver}.tar.gz" "https://github.com/dell/dkms/archive/refs/tags/v${dkms_ver}.tar.gz"
             sudo bash dkms.SlackBuild
             local pkg_file
             pkg_file=$(ls -t /tmp/dkms-*.t?z 2>/dev/null | head -n1 || true)
@@ -176,7 +176,7 @@ sys.exit(0 if p('$req_ver') > p('$cachy_nv_ver') else 1)
 
     sudo mkdir -p "${dest_dir}" "/var/cache/slacky-update/backup/nvidia"
     log_info "Downloading NVIDIA driver installer (${branch} branch: ${filename})..."
-    sudo curl -sSL -o "${target_file}" "${url}"
+    sudo curl -sSL --connect-timeout 8 -m 180 -o "${target_file}" "${url}"
     sudo chmod +x "${target_file}"
     sudo cp -f "${target_file}" "/var/cache/slacky-update/backup/nvidia/${filename}" 2>/dev/null || true
 
@@ -249,7 +249,7 @@ build_nvidia_modules() {
                 fi
 
                 log_info "Building NVIDIA DKMS modules for kernel: ${kver}..."
-                sudo "${dkms_bin}" autoinstall -k "${kver}" || log_warn "DKMS build warning for kernel: ${kver}"
+                sudo "${dkms_bin}" autoinstall -k "${kver}" >/dev/null 2>&1 || log_warn "DKMS build warning for kernel: ${kver}"
             done
         fi
     else
@@ -271,7 +271,7 @@ build_nvidia_modules() {
         fi
 
         log_info "Building NVIDIA DKMS modules for kernel: ${target_kver}..."
-        sudo "${dkms_bin}" autoinstall -k "${target_kver}" || log_warn "DKMS build warning for kernel: ${target_kver}"
+        sudo "${dkms_bin}" autoinstall -k "${target_kver}" >/dev/null 2>&1 || log_warn "DKMS build warning for kernel: ${target_kver}"
     fi
 
     log_success "NVIDIA module compilation phase completed."

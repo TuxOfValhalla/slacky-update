@@ -224,5 +224,15 @@
   "PROMPT_UPGRADE_GNOMES": "Uppfæra umbreytta Underpants Gnomes pakka? [J/n] ",
   "UPGRADING_GNOMES": "Uppfæri Underpants Gnomes pakka...",
   "GNOMES_CURATED_COLLISION_WARN": "Aðvörun: \"{0}\" er nú þegar uppsettur sem Slackware pakki ({1}). Umbreyting mun yfirskrifa ræsiskrána í /usr/bin/. Halda áfram? [j/N] ",
-  "GNOMES_CACHE_CLEANED": "Hreinsaði {0} af skyndiminni úr Underpants Gnomes geymslu."
+  "GNOMES_CACHE_CLEANED": "Hreinsaði {0} af skyndiminni úr Underpants Gnomes geymslu.",
+  "CACHY_FLAVOR_ZEN": "(Arch Linux Zen kernel: Low-latency desktop and gaming tuning - Bodacious!)",
+  "CACHY_FLAVOR_ARCH": "(Arch Linux Standard vanilla kernel - Party on, Wayne!)",
+  "PACMAN_DOWNLOAD_LABEL": "Turbo Parallel Pre-fetch: {label} [{count} files • ~{size}]",
+  "PACMAN_DOWNLOAD_SUCCESS": "✓ Bodacious! {count} files ({size}) successfully cached in {time}s (avg {speed}).",
+  "PACMAN_DOWNLOAD_FAILED": "⚠️ Major Bummer: {success}/{total} files cached ({size}) in {time}s ({failed} failed).",
+  "TUBTHUMPING_BANNER": "Tubthumping Engine: I get knocked down, but I get up again!",
+  "COWABUNGA_READY": "Cowabunga! System components verified rock-solid.",
+  "CAT_DESKTOP": "Wayland skjáborð og skeljar",
+  "MENU_HYPRLAND": "Kúraður Hyprland skjáborðspakki (Noctalia Shell / Wayland)",
+  "PROMPT_UPGRADE_DESKTOP": "Uppfæra Hyprland skjáborðspakka? [J/n] "
 }

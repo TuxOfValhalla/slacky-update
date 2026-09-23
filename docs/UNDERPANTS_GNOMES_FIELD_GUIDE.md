@@ -50,8 +50,11 @@ gnomes runtime status
 ### 1. 🛡️ Always Check Slackware Base & SBo First!
 Before installing a package via `gnomes -S`, always check if it is already provided natively by Slackware (`/var/log/packages`) or available via SlackBuilds (`sbopkg` / `slacky-update --sbo`). Native Slackware packages should always be your first choice.
 
-### 2. 🎮 For Gaming Packages, Use Curated Modules!
-For core gaming components such as **Steam, MangoHud, Gamescope, GOverlay, ProtonPlus, Faugus Launcher, and Ananicy-Cpp**, we strongly recommend installing them through `slacky-update --party-on` or the curated Underpants Gnomes gaming menu. These curated packages are tuned and patched specifically for optimal Slackware desktop and gaming performance.
+### 2. 🎮 For Gaming Packages & Desktop Suites, Use Curated Modules!
+For core gaming components such as **Steam, MangoHud, Gamescope, GOverlay, ProtonPlus, Faugus Launcher, and Ananicy-Cpp**, or complete desktop environments like **`hyprland-noctalia`** (Mac-like Wayland desktop with Noctalia Shell) and **`hyprland-core`**, we strongly recommend installing them through `slacky-update --party-on`, `slacky-update --hyprland`, or the curated Underpants Gnomes menu (`gnomes -S hyprland-noctalia`). These curated packages are tuned and patched specifically for optimal Slackware desktop and gaming performance:
+* **PipeWire AT_SECURE Protection:** Automatically strips conflicting file capabilities from `pipewire` and `wireplumber` (`setcap -r`), preventing session DBus drops under Wayland.
+* **Systray Daemon Integration:** Built-in autostart and StatusNotifierItem registration for `slacky-update-tray`, `openrgb` (with automatic profile loading), and `easyeffects`.
+* **Hardware-Accelerated Browsers:** Installing `google-chrome`, `brave`, or `microsoft-edge` automatically detects NVIDIA hardware and provisions hardware-accelerated Wayland and VA-API flags (`--ozone-platform=wayland`, `VaapiOnNvidiaGPUs`, `--enable-gpu-rasterization`, `--enable-zero-copy`).
 
 ### 3. ⚠️ KERNELS MUST NEVER BE INSTALLED VIA `gnomes -S`!
 **Do NOT attempt to install Linux kernels, kernel headers, or out-of-tree kernel modules via `gnomes -S` (e.g. `gnomes -S linux` or `gnomes -S linux-zen`).**  

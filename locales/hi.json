@@ -224,5 +224,15 @@
   "PROMPT_UPGRADE_GNOMES": "ट्रांसम्यूट किए गए Underpants Gnomes पैकेज अपग्रेड करें? [Y/n] ",
   "UPGRADING_GNOMES": "Underpants Gnomes पैकेज अपग्रेड हो रहे हैं...",
   "GNOMES_CURATED_COLLISION_WARN": "चेतावनी: \"{0}\" पहले से ही Slackware पैकेज ({1}) के रूप में स्थापित है। ट्रांसम्यूट करने पर /usr/bin/ का लॉन्चर बदल जाएगा। क्या आगे बढ़ें? [y/N] ",
-  "GNOMES_CACHE_CLEANED": "Underpants Gnomes कैश से {0} साफ़ किया गया।"
+  "GNOMES_CACHE_CLEANED": "Underpants Gnomes कैश से {0} साफ़ किया गया।",
+  "CACHY_FLAVOR_ZEN": "(Arch Linux Zen kernel: Low-latency desktop and gaming tuning - Bodacious!)",
+  "CACHY_FLAVOR_ARCH": "(Arch Linux Standard vanilla kernel - Party on, Wayne!)",
+  "PACMAN_DOWNLOAD_LABEL": "Turbo Parallel Pre-fetch: {label} [{count} files • ~{size}]",
+  "PACMAN_DOWNLOAD_SUCCESS": "✓ Bodacious! {count} files ({size}) successfully cached in {time}s (avg {speed}).",
+  "PACMAN_DOWNLOAD_FAILED": "⚠️ Major Bummer: {success}/{total} files cached ({size}) in {time}s ({failed} failed).",
+  "TUBTHUMPING_BANNER": "Tubthumping Engine: I get knocked down, but I get up again!",
+  "COWABUNGA_READY": "Cowabunga! System components verified rock-solid.",
+  "CAT_DESKTOP": "Wayland डेस्कटॉप और शेल्स",
+  "MENU_HYPRLAND": "क्यूरेटेड Hyprland डेस्कटॉप सुइट (Noctalia Shell / Wayland)",
+  "PROMPT_UPGRADE_DESKTOP": "क्या क्यूरेटेड Hyprland डेस्कटॉप सुइट को अपग्रेड करें? [Y/n] "
 }

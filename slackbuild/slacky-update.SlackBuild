@@ -4,9 +4,9 @@
 set -euo pipefail
 
 PRGNAM="slacky-update"
-VERSION="0.15.0"
+VERSION="0.16.0"
 ARCH="noarch"
-BUILD="32_slacky"
+BUILD="6_slacky"
 
 SRC_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 BUILD_DIR="/tmp/build-${PRGNAM}"
@@ -61,6 +61,8 @@ install -m 0755 "${SRC_DIR}/lib/slacky-update-tray" "${PKG_DIR}/usr/share/slacky
 install -m 0755 "${SRC_DIR}/lib/slacky-update-tray" "${PKG_DIR}/usr/local/lib/slacky-update/" 2>/dev/null || true
 install -m 0755 "${SRC_DIR}/lib/gnomes_pacman.py" "${PKG_DIR}/usr/share/slacky-update/lib/"
 install -m 0755 "${SRC_DIR}/lib/gnomes_pacman.py" "${PKG_DIR}/usr/local/lib/slacky-update/"
+install -m 0644 "${SRC_DIR}/lib/pacman_candy.py" "${PKG_DIR}/usr/share/slacky-update/lib/"
+install -m 0644 "${SRC_DIR}/lib/pacman_candy.py" "${PKG_DIR}/usr/local/lib/slacky-update/"
 install -m 0644 "${SRC_DIR}/lib/slacky_update_i18n.py" "${PKG_DIR}/usr/share/slacky-update/lib/"
 install -m 0644 "${SRC_DIR}/lib/slacky_update_i18n.py" "${PKG_DIR}/usr/local/lib/slacky-update/"
 install -m 0644 "${SRC_DIR}"/locales/*.json "${PKG_DIR}/usr/share/slacky-update/locales/"
