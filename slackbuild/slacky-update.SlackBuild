@@ -6,7 +6,7 @@ set -euo pipefail
 PRGNAM="slacky-update"
 VERSION="0.16.0"
 ARCH="noarch"
-BUILD="6_slacky"
+BUILD="7_slacky"
 
 SRC_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 BUILD_DIR="/tmp/build-${PRGNAM}"

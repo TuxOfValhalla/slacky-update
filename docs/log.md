@@ -75,8 +75,16 @@ Oppnå 100 % konsistens og fjellstø stabilitet for LTS. Eliminere terminalflimm
     `--enable-zero-copy`
     `--ignore-gpu-blocklist`
 
-#### 9. SlackBuild Oppgradering
-* Bygget oppgradert til `0.16.0-noarch-6_slacky` i `slackbuild/slacky-update.SlackBuild`.
+#### 9. Atomisk Single-Pass Multi-Kernel Pipeline (`lib/mod_kernel.sh`)
+* **Problem:** Ved installasjon av flere CachyOS-kjernevarianter i samme kjøring (f.eks. `linux-cachyos-bore`, `linux-cachyos-lto`, `linux-cachyos-rc`) kjørte hver pakke full DKMS-kompilering, initramfs-generering, MOK-signering og Limine bootloader-synk i serie, noe som tok unødvendig lang tid.
+* **Løsning:** Innført `DEFER_BOOT_SYNC=1` under kjerne-løkker, etterfulgt av en samlet atomisk fullføring av DKMS, Dracut, Secure Boot-signering og Limine BLAKE2B-forsegling.
+
+#### 10. Sanitering av Curated Hyprland Konfigurasjon (`lib/mod_gaming.sh`)
+* **Problem:** Hyprland Lua API (`hl.config()`) avviste `.conf`-spesifikke deprecation-nøkler i `misc`-tabellen med feilmeldingen `unknown config key misc.disable_xdg_env_warning`.
+* **Løsning:** Sanert `hyprland.lua`- og `hyprland.conf`-malene slik at `hyprland.lua` utelukkende inneholder gyldige Lua API-tabellnøkler (`disable_hyprland_logo`, `disable_splash_rendering`, `force_default_wallpaper`, `background_color`, `vrr`), mens `.conf`-malen bruker de offisielle parser-direktivene.
+
+#### 11. SlackBuild Oppgradering
+* Bygget oppgradert til `0.16.0-noarch-7_slacky` i `slackbuild/slacky-update.SlackBuild`.
 
 ---
 

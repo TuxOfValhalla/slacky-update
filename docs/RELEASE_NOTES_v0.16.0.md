@@ -8,7 +8,7 @@
 
 ## 🌟 Major Highlights of v0.16.0
 
-### 1. 🍒 Unified Flimmerfri Pacman ILoveCandy Engine (`lib/pacman_candy.py`)
+### 1. 🍒 Unified Flicker free Pacman ILoveCandy Engine (`lib/pacman_candy.py`)
 * **100% Authentic ILoveCandy Parity:** True `o o o o` pellet spacing (`i % 2 == 0`) with bold Slackware Blue `S`/`s` mouth toggling at a steady ~1.4 toggles/sec (`int(now / 0.35)`).
 * **Zero Terminal Flicker & Tear Elimination:** Automatic cursor suppression (`\033[?25l`) during multi-line rendering with robust exit/signal restoration (`\033[?25h`). Single-pass atomic buffer flushes locked at a calm 140 ms refresh rate eliminate screen shearing.
 * **Unified Ecosystem Look & Feel:** One canonical engine shared across Slackware base updates, CachyOS kernels, NVIDIA driver stacks, SlackBuilds.org (SBo), Flatpaks, ROCm, and Underpants Gnomes.
@@ -45,12 +45,16 @@
 * **Intelligent GPU Interception:** When installing `google-chrome`, `brave`, or `microsoft-edge` via Underpants Gnomes, hardware detection automatically checks for NVIDIA cards.
 * **Turnkey Flags Generation:** Automatically deploys hardware-accelerated Wayland and VA-API flags (`--ozone-platform=wayland`, `VaapiOnNvidiaGPUs`, `--enable-gpu-rasterization`, `--enable-zero-copy`) to user configs and `/etc/skel/.config/`.
 
+### 9. 🚀 Atomic Single-Pass Multi-Kernel Pipeline
+* **Batched Kernel Flavors:** When upgrading multiple CachyOS kernel flavors concurrently (e.g., `linux-cachyos-bore`, `linux-cachyos-lto`, `linux-cachyos-rc`), intermediate boot syncs are automatically deferred (`DEFER_BOOT_SYNC=1`).
+* **Single-Pass Finalization:** Performs an atomic single-pass DKMS compilation, Dracut initramfs generation, MOK Secure Boot signing, and Limine BLAKE2B seal at the conclusion of all kernel flavor installs.
+
 ---
 
 ## 📦 Package Summary
 * **Release Target:** Slackware 15.0 & Slackware -current
 * **Toolchain Compatibility:** GCC 11–15, LLVM/Clang 15–21, Python 3.9–3.14
-* **Build System:** `slackbuild/slacky-update.SlackBuild` (Version 0.16.0, Build 6_slacky)
+* **Build System:** `slackbuild/slacky-update.SlackBuild` (Version 0.16.0, Build 7_slacky)
 
 ---
 
