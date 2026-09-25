@@ -1,0 +1,92 @@
+#!/bin/bash
+
+# Slackware build script for ddcui
+# Maintained by TuxOfValhalla <agnar1984@gmail.com>
+
+PRGNAM=ddcui
+VERSION=${VERSION:-0.6.0}
+BUILD=${BUILD:-1_slacky}
+TAG=${TAG:-_slacky}
+PKGTYPE=${PKGTYPE:-txz}
+
+if [ -z "$ARCH" ]; then
+  case "$( uname -m )" in
+    i?86) ARCH=i586 ;;
+    arm*) ARCH=arm ;;
+       *) ARCH=$( uname -m ) ;;
+  esac
+fi
+
+if [ ! -z "${PRINT_PACKAGE_NAME}" ]; then
+  echo "$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"
+  exit 0
+fi
+
+CWD=$(pwd)
+TMP=${TMP:-/tmp/SBo}
+PKG=$TMP/package-$PRGNAM
+OUTPUT=${OUTPUT:-/tmp}
+
+if [ "$ARCH" = "i586" ]; then
+  SLKCFLAGS="-O2 -march=i586 -mtune=i686"
+  LIBDIRSUFFIX=""
+elif [ "$ARCH" = "i686" ]; then
+  SLKCFLAGS="-O2 -march=i686 -mtune=i686"
+  LIBDIRSUFFIX=""
+elif [ "$ARCH" = "x86_64" ]; then
+  SLKCFLAGS="-O2 -fPIC"
+  LIBDIRSUFFIX="64"
+else
+  SLKCFLAGS="-O2"
+  LIBDIRSUFFIX=""
+fi
+
+set -euo pipefail
+
+rm -rf "$PKG"
+mkdir -p "$TMP" "$PKG" "$OUTPUT"
+cd "$TMP"
+rm -rf "$PRGNAM-$VERSION"
+
+SRC_TAR="$CWD/v$VERSION.tar.gz"
+if [ ! -f "$SRC_TAR" ] && [ -f "$CWD/$PRGNAM-$VERSION.tar.gz" ]; then
+  SRC_TAR="$CWD/$PRGNAM-$VERSION.tar.gz"
+fi
+
+if [ ! -f "$SRC_TAR" ]; then
+  DOWNLOAD_URL="https://github.com/rockowitz/ddcui/archive/refs/tags/v${VERSION}.tar.gz"
+  echo "Downloading $DOWNLOAD_URL..."
+  curl -sSL -o "$SRC_TAR" "$DOWNLOAD_URL"
+fi
+
+tar -xf "$SRC_TAR"
+cd "$PRGNAM-$VERSION"
+
+mkdir -p build
+cd build
+
+cmake .. \
+  -DCMAKE_C_FLAGS:STRING="$SLKCFLAGS" \
+  -DCMAKE_CXX_FLAGS:STRING="$SLKCFLAGS" \
+  -DCMAKE_INSTALL_PREFIX=/usr \
+  -DCMAKE_INSTALL_LIBDIR=lib${LIBDIRSUFFIX} \
+  -DCMAKE_INSTALL_MANDIR=/usr/man \
+  -DCMAKE_INSTALL_DOCDIR=/usr/doc/$PRGNAM-$VERSION \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DUSE_QT6=ON
+
+make -j$(nproc)
+make install DESTDIR="$PKG"
+
+find "$PKG" -print0 | xargs -0 file | grep -e "executable" -e "shared object" | grep ELF \
+  | cut -f 1 -d : | xargs strip --strip-unneeded 2> /dev/null || true
+
+mkdir -p "$PKG/usr/doc/$PRGNAM-$VERSION"
+cp -a ../README.md ../COPYING* "$PKG/usr/doc/$PRGNAM-$VERSION" 2>/dev/null || true
+cat "$CWD/$PRGNAM.SlackBuild" > "$PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild"
+
+mkdir -p "$PKG/install"
+cat "$CWD/slack-desc" > "$PKG/install/slack-desc"
+
+cd "$PKG"
+/sbin/makepkg -l y -c n "$OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"

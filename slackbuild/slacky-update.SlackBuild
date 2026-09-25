@@ -4,9 +4,9 @@
 set -euo pipefail
 
 PRGNAM="slacky-update"
-VERSION="0.16.0"
+VERSION="0.17.0"
 ARCH="noarch"
-BUILD="7_slacky"
+BUILD="2_slacky"
 
 SRC_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 BUILD_DIR="/tmp/build-${PRGNAM}"
@@ -34,6 +34,7 @@ mkdir -p "${PKG_DIR}/usr/local/lib/slacky-update/docs"
 mkdir -p "${PKG_DIR}/usr/share/applications"
 mkdir -p "${PKG_DIR}/usr/share/icons/hicolor/128x128/apps"
 mkdir -p "${PKG_DIR}/etc/xdg/autostart"
+mkdir -p "${PKG_DIR}/etc/profile.d"
 mkdir -p "${PKG_DIR}/etc/cron.hourly"
 mkdir -p "${PKG_DIR}/etc/cron.weekly"
 mkdir -p "${PKG_DIR}/etc/kernel/postinst.d"
@@ -63,6 +64,8 @@ install -m 0755 "${SRC_DIR}/lib/gnomes_pacman.py" "${PKG_DIR}/usr/share/slacky-u
 install -m 0755 "${SRC_DIR}/lib/gnomes_pacman.py" "${PKG_DIR}/usr/local/lib/slacky-update/"
 install -m 0644 "${SRC_DIR}/lib/pacman_candy.py" "${PKG_DIR}/usr/share/slacky-update/lib/"
 install -m 0644 "${SRC_DIR}/lib/pacman_candy.py" "${PKG_DIR}/usr/local/lib/slacky-update/"
+install -m 0755 "${SRC_DIR}/lib/rank_mirrors.py" "${PKG_DIR}/usr/share/slacky-update/lib/"
+install -m 0755 "${SRC_DIR}/lib/rank_mirrors.py" "${PKG_DIR}/usr/local/lib/slacky-update/"
 install -m 0644 "${SRC_DIR}/lib/slacky_update_i18n.py" "${PKG_DIR}/usr/share/slacky-update/lib/"
 install -m 0644 "${SRC_DIR}/lib/slacky_update_i18n.py" "${PKG_DIR}/usr/local/lib/slacky-update/"
 install -m 0644 "${SRC_DIR}"/locales/*.json "${PKG_DIR}/usr/share/slacky-update/locales/"
@@ -78,6 +81,10 @@ install -m 0644 "${SRC_DIR}/desktop/slacky-update-tray.desktop" "${PKG_DIR}/etc/
 
 install -m 0755 "${SRC_DIR}/cron/slacky-snapper-limine-sync" "${PKG_DIR}/etc/cron.hourly/"
 install -m 0755 "${SRC_DIR}/cron/slacky-update-check" "${PKG_DIR}/etc/cron.weekly/"
+
+if [ -d "${SRC_DIR}/assets/profile.d" ]; then
+    install -m 0755 "${SRC_DIR}"/assets/profile.d/* "${PKG_DIR}/etc/profile.d/" 2>/dev/null || true
+fi
 
 if [ -f "${SRC_DIR}/assets/hooks/slacky-limine-hook" ]; then
     install -m 0755 "${SRC_DIR}/assets/hooks/slacky-limine-hook" "${PKG_DIR}/etc/kernel/postinst.d/"

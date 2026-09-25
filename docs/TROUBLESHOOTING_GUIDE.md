@@ -1,12 +1,17 @@
 # 🚨 Slacky-Update Disaster Recovery & Troubleshooting Guide
 ### *The Symptom-Based Field Catalog for Emergency Recovery, Kernel Glitches, NVRAM Resets & Secure Boot Armor*
-#### `v0.14.0` — *"Coco Jambo"* (Release Edition)
+#### `v0.17.0` — *"I AM THE LAW!"* (Security, Compliance & Hardening Milestone)
 
 ---
 
+> [!IMPORTANT]
+> **TARGET DISTRIBUTION REQUIREMENT & VERSION DISCLAIMER**  
+> **Slacky-Update is engineered strictly for Slackware 15+ (`slackware-current` / `Slackware 16 alpha`).**  
+> Legacy **Slackware 15.0 (stable)** is strictly unsupported. Older core libraries, toolchains, and sonames present in 15.0 cause conflicts that cannot be reliably detected or mediated. Slackware 15.0 users must upgrade to `-current` before using this suite.
+
 > [!CAUTION]
 > **PRE-RELEASE / EARLY ACCESS DISCLAIMER & LIABILITY NOTICE — USE AT YOUR OWN RISK**  
-> Slacky-Update v0.14.0 is an active *Pre-Release / Early Access* edition. The software operates at a low system level with critical infrastructure, including Linux kernels, proprietary NVIDIA drivers, Dracut initramfs, Btrfs subvolumes, and bootloader topologies (Limine/GRUB).  
+> Slacky-Update is an active *Pre-Release / Early Access* edition. The software operates at a low system level with critical infrastructure, including Linux kernels, proprietary NVIDIA drivers, Dracut initramfs, Btrfs subvolumes, and bootloader topologies (Limine/GRUB).  
 > **All troubleshooting, emergency recovery procedures, and system modifications are executed strictly at your own discretion and risk.** The developers, maintainers, and contributors assume no liability or warranty for system malfunction, unbootable states, hardware damage, or data loss.  
 > **Golden Rule:** Always ensure you have a bootable Slackware Live-USB accessible and maintain current, verified backups of `/home` and configuration files before performing system interventions.
 
@@ -35,13 +40,15 @@ flowchart TD
     MatchSymptom -->|"App installed via SlackBuild but missing from menu"| S9["Symptom 9: Installed App 'Nowhere to be Found' / Missing Menu Icon"]
     MatchSymptom -->|"Steam / Proton / 32-bit Game crashes on launch"| S10["Symptom 10: Gaming, Proton or MangoHud Crash on Launch"]
     MatchSymptom -->|"No sound / PipeWire or Wine audio silent"| S11["Symptom 11: Audio Silence / PipeWire Session Hiccup"]
+    MatchSymptom -->|"OLED screens dim but never power off / DPMS resets"| S12["Symptom 12: Hypridle 120s Self-Resetting Loop"]
+    MatchSymptom -->|"Tiny UI fonts / blurry scaling on 4K display"| S13["Symptom 13: 4K HiDPI Scaling Glitches under Wayland/Qt"]
 
-    S1 & S2 & S3 & S4 & S5 & S6 & S7 & S8 & S9 & S10 & S11 --> Recovered["✓ System Restored to 100% Normal Operation"]
+    S1 & S2 & S3 & S4 & S5 & S6 & S7 & S8 & S9 & S10 & S11 & S12 & S13 --> Recovered["✓ System Restored to 100% Normal Operation"]
 ```
 
 ---
 
-## 🛠️ The 11 Critical Failure Scenarios
+## 🛠️ The 13 Critical Failure Scenarios
 
 ---
 
@@ -523,14 +530,108 @@ Do NOT run `pipewire` or `pulseaudio` as root with `sudo` — audio servers must
 
 ---
 
+### 12. 🖥️ OLED Screen Dims but Never Powers Off (Hypridle 120s Self-Resetting Loop)
+
+> [!TIP]
+> #### 🧩 ELI5 (Explain Like I'm 5)
+> *Hypridle is your computer's sleep timer. If a program tries to dim the screen by rewriting Hyprland's internal settings every 2 minutes, Hyprland thinks "Hey, someone just touched the settings! The user must be back!", and resets the sleep timer to zero. The screen stays dim forever and never actually turns off to save power and protect your OLED panel.*
+
+#### A. Symptom
+In a Hyprland Wayland session, leaving the computer idle dims inactive windows after 120 seconds, but monitors never enter DPMS standby (screens never switch off / power LEDs remain blue instead of orange), even after 10–30 minutes.
+
+#### B. Where are you?
+* **Position:** Desktop user session running `hyprland` and `hypridle`.
+
+#### C. Diagnosis
+Check `hypridle.conf` for self-resetting keyword loops:
+```bash
+grep -E 'keyword|dpms' ~/.config/hypr/hypridle.conf
+```
+*Problematic pattern:* A listener running `hyprctl keyword decoration:dim_inactive true`. Modifying Hyprland keywords over IPC emits a config reload event, resetting Wayland's `ext-idle-notify-v1` idle tracker back to 0.
+
+#### D. Fix (Deploy Clean 3-Minute DPMS Listener with Lua Dispatcher Parity)
+1. **Update `~/.config/hypr/hypridle.conf`:**
+   ```ini
+   # --- [ Slacky-Update OLED Protection Hypridle Config ] ---
+   general {
+       after_sleep_cmd = hyprctl dispatch 'hl.dsp.dpms({ action = "on" })' || hyprctl dispatch dpms on
+       ignore_dbus_inhibit = false
+       ignore_systemd_inhibit = false
+   }
+
+   # Turn off OLED & secondary screens completely after 3 minutes (180 sec)
+   listener {
+       timeout = 180
+       on-timeout = hyprctl dispatch 'hl.dsp.dpms({ action = "off" })' || hyprctl dispatch dpms off
+       on-resume = hyprctl dispatch 'hl.dsp.dpms({ action = "on" })' || hyprctl dispatch dpms on
+   }
+   ```
+2. **Restart `hypridle`:**
+   ```bash
+   killall -9 hypridle 2>/dev/null || true
+   hypridle &
+   ```
+
+#### E. Stop-Line
+Never put IPC `hyprctl keyword` mutations inside `hypridle.conf` listeners.
+
+---
+
+### 13. 🔍 4K / HiDPI Scaling Glitches (Tiny UI or Blurry XWayland Windows)
+
+> [!TIP]
+> #### 🧩 ELI5 (Explain Like I'm 5)
+> *On ultra-high resolution 4K monitors, standard fonts look like ants and some apps get blurry. Slacky-Update includes automatic system environment scripts that tell Qt and GTK apps to scale up crisp and clear, while preventing Wayland from double-stretching legacy games.*
+
+#### A. Symptom
+On a 4K / 1440p high-DPI display, Qt5/Qt6 applications (like the tray applet, OBS, or Dolphin) render with microscopic UI fonts, or XWayland gaming launchers appear fuzzy/blurry.
+
+#### B. Where are you?
+* **Position:** Slackware graphical desktop (KDE Plasma, XFCE, or Hyprland).
+
+#### C. Diagnosis
+Check if HiDPI profile scripts are loaded:
+```bash
+echo "QT_ENABLE_HIGHDPI_SCALING=$QT_ENABLE_HIGHDPI_SCALING"
+echo "QT_SCALE_FACTOR_ROUNDING_POLICY=$QT_SCALE_FACTOR_ROUNDING_POLICY"
+```
+
+#### D. Fix (Deploy System HiDPI Profile Script)
+1. **Ensure `/etc/profile.d/slacky-hidpi.sh` is present and executable:**
+   ```bash
+   sudo bash -c 'cat << "EOF" > /etc/profile.d/slacky-hidpi.sh
+   #!/bin/sh
+   # System-wide HiDPI & Wayland Scaling Defaults
+   export QT_ENABLE_HIGHDPI_SCALING=1
+   export QT_AUTO_SCREEN_SCALE_FACTOR=1
+   export QT_SCALE_FACTOR_ROUNDING_POLICY=PassThrough
+   [ -n "$WAYLAND_DISPLAY" ] && export QT_QPA_PLATFORM="wayland;xcb"
+   [ -n "$WAYLAND_DISPLAY" ] && export GDK_BACKEND="wayland,x11,*"
+   EOF'
+   sudo chmod 0755 /etc/profile.d/slacky-hidpi.sh
+   ```
+2. **For Hyprland XWayland scaling parity, ensure in `hyprland.conf` or `hyprland.lua`:**
+   ```ini
+   xwayland {
+       force_zero_scaling = true
+   }
+   ```
+
+#### E. Stop-Line
+Do not force static `GDK_SCALE=2` globally across all sessions if using mixed-DPI multi-monitor setups; allow Wayland compositors to manage fractional scaling dynamically.
+
+---
+
 ## 📞 Summary of Emergency Commands
 
 | Objective | Slacky-Update CLI Command |
 | :--- | :--- |
 | **Restore Bootloader & Safe Hashes** | `sudo slacky-update --sync-boot` |
 | **Restore Limine from Known-Good Backup** | `sudo slacky-update --restore-limine` |
+| **Verify On-Disk BLAKE2B Hashes** | `slacky-update --hash-check` |
 | **Repair NVIDIA & DKMS after Crash** | `sudo slacky-update --sync-nvidia` |
 | **Repair 32-bit Multilib for Gaming** | `sudo slacky-update --multilib` |
+| **Benchmark Slackware Mirrors** | `slacky-update --rank-mirrors` |
 | **Purge Old Kernels when Disk is Full** | `sudo slacky-update --clean` |
 | **Configure Secure Boot & sbctl** | `sudo slacky-update --limine` |
 | **Check System Health (Read-Only)** | `slacky-update --check` |

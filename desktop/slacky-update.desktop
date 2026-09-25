@@ -2,7 +2,7 @@
 Type=Application
 Name=Slacky Update
 Comment=System Update and Maintenance Suite for Slackware
-Exec=/usr/local/bin/slacky-update
+Exec=/usr/bin/slacky-update
 Icon=slacky-update
 Terminal=true
 Categories=System;PackageManager;Utility;

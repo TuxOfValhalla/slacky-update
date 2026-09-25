@@ -79,15 +79,135 @@ if [ -f "$QT6PAS_RPM" ]; then
   ( cd "$PKG" && rpm2cpio "$QT6PAS_RPM" | cpio -idmv >/dev/null 2>&1 || true )
 fi
 
-# Fix launcher script for Slackware 64-bit path
-if [ -f "$PKG/usr/bin/goverlay" ]; then
-  sed -i 's|/usr/lib/goverlay|/usr/lib64/goverlay|g' "$PKG/usr/bin/goverlay"
-  chmod 755 "$PKG/usr/bin/goverlay"
+# Fix launcher script and install smart sync wrapper for GOverlay
+mkdir -p "$PKG/usr/lib64/goverlay" "$PKG/usr/lib/goverlay" "$PKG/usr/bin"
+if [ -f "$PKG/usr/bin/goverlay" ] && file -b "$PKG/usr/bin/goverlay" | grep -qi "ELF"; then
+  mv -f "$PKG/usr/bin/goverlay" "$PKG/usr/lib64/goverlay/goverlay-bin"
+elif [ -f "$PKG/usr/lib64/goverlay" ] && file -b "$PKG/usr/lib64/goverlay" | grep -qi "ELF"; then
+  mv -f "$PKG/usr/lib64/goverlay" "$PKG/usr/lib64/goverlay/goverlay-bin"
+elif [ -f "$PKG/usr/lib/goverlay" ] && file -b "$PKG/usr/lib/goverlay" | grep -qi "ELF"; then
+  mv -f "$PKG/usr/lib/goverlay" "$PKG/usr/lib64/goverlay/goverlay-bin"
 fi
 
+cat <<'EOF' > "$PKG/usr/bin/goverlay"
+#!/usr/bin/env bash
+# Slacky-Update GOverlay Smart Wrapper with Automatic MangoHud Font Sync
+if [ -x "/usr/lib64/goverlay/goverlay-bin" ]; then
+    /usr/lib64/goverlay/goverlay-bin "$@"
+elif [ -x "/usr/lib/goverlay/goverlay-bin" ]; then
+    /usr/lib/goverlay/goverlay-bin "$@"
+elif [ -x "/usr/lib64/goverlay/goverlay" ]; then
+    /usr/lib64/goverlay/goverlay "$@"
+elif [ -x "/usr/lib/goverlay/goverlay" ]; then
+    /usr/lib/goverlay/goverlay "$@"
+fi
+
+# Automatically synchronize MangoHud font_file -> font_file_text, current_font.ttf local copy & font_size
+python3 -c '
+import os, glob, shutil
+
+# Mirror /usr/local/share/fonts to /usr/share/fonts
+if os.path.isdir("/usr/local/share/fonts"):
+    os.makedirs("/usr/share/fonts", exist_ok=True)
+    for root, dirs, files in os.walk("/usr/local/share/fonts"):
+        rel = os.path.relpath(root, "/usr/local/share/fonts")
+        target_dir = os.path.join("/usr/share/fonts", rel) if rel != "." else "/usr/share/fonts"
+        os.makedirs(target_dir, exist_ok=True)
+        for f in files:
+            src_f = os.path.join(root, f)
+            dst_f = os.path.join(target_dir, f)
+            try:
+                if not os.path.exists(dst_f):
+                    try:
+                        os.link(src_f, dst_f)
+                    except Exception:
+                        shutil.copy2(src_f, dst_f)
+            except Exception:
+                pass
+
+mconf = os.path.expanduser("~/.config/MangoHud/MangoHud.conf")
+mconf_dir = os.path.dirname(mconf)
+if os.path.isfile(mconf):
+    try:
+        with open(mconf, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+        has_font_file = False
+        font_file_val = ""
+        font_size_val = ""
+        for l in lines:
+            ls = l.strip()
+            if ls.startswith("font_file="):
+                has_font_file = True
+                font_file_val = ls.split("=", 1)[1]
+            elif ls.startswith("font_size="):
+                font_size_val = ls.split("=", 1)[1]
+        if has_font_file and font_file_val:
+            cur_font = os.path.join(mconf_dir, "current_font.ttf")
+            cur_font_text = os.path.join(mconf_dir, "current_font_text.ttf")
+            resolved_font = font_file_val
+            if resolved_font.startswith("/usr/local/share/fonts/"):
+                resolved_font = resolved_font.replace("/usr/local/share/fonts/", "/usr/share/fonts/", 1)
+            
+            # If font_file points to an external file, copy it locally into ~/.config/MangoHud/
+            if os.path.isfile(resolved_font) and os.path.abspath(resolved_font) not in [os.path.abspath(cur_font), os.path.abspath(cur_font_text)]:
+                try:
+                    if os.path.islink(cur_font) or os.path.exists(cur_font):
+                        os.remove(cur_font)
+                    shutil.copy2(resolved_font, cur_font)
+                except Exception:
+                    pass
+                try:
+                    if os.path.islink(cur_font_text) or os.path.exists(cur_font_text):
+                        os.remove(cur_font_text)
+                    shutil.copy2(resolved_font, cur_font_text)
+                except Exception:
+                    pass
+            elif not os.path.exists(cur_font):
+                for cand in [resolved_font, "/usr/share/fonts/Apple/SF-Pro-Italic.ttf", "/usr/local/share/fonts/Apple/SF-Pro-Italic.ttf", "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf"]:
+                    if os.path.isfile(cand):
+                        try:
+                            shutil.copy2(cand, cur_font)
+                            shutil.copy2(cand, cur_font_text)
+                            break
+                        except Exception:
+                            pass
+            
+            new_lines = []
+            has_updated_font_file_text = False
+            has_updated_font_size_text = False
+            has_font_file_text_in_orig = any(x.strip().startswith("font_file_text=") for x in lines)
+            has_font_size_text_in_orig = any(x.strip().startswith("font_size_text=") for x in lines)
+            for l in lines:
+                ls = l.strip()
+                if ls.startswith("font_file="):
+                    new_lines.append(f"font_file={cur_font}\n")
+                    if not has_font_file_text_in_orig and not has_updated_font_file_text:
+                        new_lines.append(f"font_file_text={cur_font_text}\n")
+                        has_updated_font_file_text = True
+                elif ls.startswith("font_file_text="):
+                    new_lines.append(f"font_file_text={cur_font_text}\n")
+                    has_updated_font_file_text = True
+                elif ls.startswith("font_size="):
+                    new_lines.append(l)
+                    if font_size_val and not has_font_size_text_in_orig and not has_updated_font_size_text:
+                        new_lines.append(f"font_size_text={font_size_val}\n")
+                        has_updated_font_size_text = True
+                elif ls.startswith("font_size_text=") and font_size_val:
+                    new_lines.append(f"font_size_text={font_size_val}\n")
+                    has_updated_font_size_text = True
+                else:
+                    new_lines.append(l)
+            with open(mconf, "w", encoding="utf-8") as f:
+                f.writelines(new_lines)
+    except Exception:
+        pass
+' 2>/dev/null || true
+EOF
+chmod 755 "$PKG/usr/bin/goverlay"
+
 # Maintain compatibility symlinks
-mkdir -p "$PKG/usr/lib" "$PKG/usr/lib64/goverlay" "$PKG/usr/lib/goverlay"
-ln -sf /usr/lib64/goverlay "$PKG/usr/lib/goverlay" 2>/dev/null || true
+ln -sf /usr/lib64/goverlay/goverlay-bin "$PKG/usr/lib64/goverlay/goverlay" 2>/dev/null || true
+ln -sf /usr/lib64/goverlay/goverlay-bin "$PKG/usr/lib/goverlay/goverlay" 2>/dev/null || true
 ln -sf /usr/lib64/bgmod "$PKG/usr/lib/bgmod" 2>/dev/null || true
 if [ -f "$PKG/usr/bin/pascube" ]; then
   ln -sf /usr/bin/pascube "$PKG/usr/lib64/goverlay/pascube" 2>/dev/null || true

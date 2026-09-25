@@ -9,6 +9,16 @@ CACHYOS_EXTRA_REPO="https://mirror.cachyos.org/repo/x86_64/cachyos-extra"
 ARCH_EXTRA_REPO="https://geo.mirror.pkgbuild.com/extra/os/x86_64"
 ARCH_MULTILIB_REPO="https://geo.mirror.pkgbuild.com/multilib/os/x86_64"
 
+# Dynamically load fastest ranked repos if available
+_ranked_conf="${XDG_CACHE_HOME:-${HOME:-/tmp}/.cache}/slacky-update/ranked_mirrors.json"
+[ -f "/var/cache/slacky-update/ranked_mirrors.json" ] && [ ! -f "${_ranked_conf}" ] && _ranked_conf="/var/cache/slacky-update/ranked_mirrors.json"
+if [ -f "${_ranked_conf}" ]; then
+    _c_prim=$(grep -o '"cachyos_primary": *"[^"]*"' "${_ranked_conf}" 2>/dev/null | cut -d'"' -f4 || echo "")
+    _a_prim=$(grep -o '"arch_primary": *"[^"]*"' "${_ranked_conf}" 2>/dev/null | cut -d'"' -f4 || echo "")
+    [ -n "${_c_prim}" ] && CACHYOS_MAIN_REPO="${_c_prim}/x86_64/cachyos" && CACHYOS_EXTRA_REPO="${_c_prim}/x86_64/cachyos-extra"
+    [ -n "${_a_prim}" ] && ARCH_EXTRA_REPO="${_a_prim}/extra/os/x86_64" && ARCH_MULTILIB_REPO="${_a_prim}/multilib/os/x86_64"
+fi
+
 # --- [ GAMING SUITE REGISTRY ] ---
 # Key: id | Name | Category | Primary Pkg Pattern | Lib32 Pattern | Extra Pkg Pattern | Repos
 get_gaming_catalog() {
@@ -64,8 +74,11 @@ microsoft-edge|Microsoft Edge (Official Web Browser)|browser|microsoft-edge-(?:s
 brave|Brave Browser (Privacy Browser with AdBlock)|browser|brave-bin-(?:1%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos,chaotic-aur,chaotic-cdn
 zen-browser|Zen Browser (High-Performance Gecko Browser)|browser|zen-browser-bin-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos,chaotic-aur,chaotic-cdn
 sbctl|sbctl (Secure Boot Key Manager & Signer)|bootloader|sbctl-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||arch-extra,cachyos
-hyprland-noctalia|Hyprland Mac-like Desktop Suite (Noctalia Shell & Portals)|desktop|hyprland-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||noctalia-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,xdg-desktop-portal-hyprland-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprlock-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hypridle-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpaper-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpicker-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprland-guiutils-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,aquamarine-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprlang-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprcursor-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprgraphics-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprutils-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpolkitagent-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprwire-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprtoolkit-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,sdbus-cpp-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,tomlplusplus-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,muparser-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,re2-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,md4c-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,lua-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libical-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos-extra-v3,cachyos-v3,cachyos,arch-extra,chaotic-aur
-hyprland-core|Hyprland Minimal Core Compositor (+ Wayland Portals & Lock)|desktop|hyprland-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||xdg-desktop-portal-hyprland-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprlock-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hypridle-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpaper-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpicker-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprland-guiutils-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,aquamarine-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprlang-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprcursor-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprgraphics-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprutils-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpolkitagent-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprwire-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprtoolkit-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,sdbus-cpp-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,tomlplusplus-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,muparser-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,re2-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,lua-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos-extra-v3,cachyos-v3,cachyos,arch-extra
+limine|Limine Bootloader (>= 12.x EFI & Tools)|bootloader|limine-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos
+limine-entry-tool|Limine Entry Tool (Config & Enrollment Generator)|bootloader|limine-entry-tool-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos
+limine-snapper-sync|Limine Snapper Sync (Btrfs Snapshot Integrator)|bootloader|limine-snapper-sync-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos
+hyprland-noctalia|Hyprland Mac-like Desktop Suite (Noctalia Shell, Portals & Display Tools)|desktop|hyprland-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||noctalia-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,xdg-desktop-portal-hyprland-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprlock-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hypridle-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpaper-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpicker-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprland-guiutils-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,aquamarine-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprlang-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprcursor-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprgraphics-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprutils-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpolkitagent-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprwire-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprtoolkit-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,sdbus-cpp-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,tomlplusplus-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,muparser-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,re2-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,md4c-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,lua-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libical-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,ddcui-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,wlr-randr-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,nwg-displays-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,python-i3ipc-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos-extra-v3,cachyos-v3,cachyos,arch-extra,chaotic-aur
+hyprland-core|Hyprland Minimal Core Compositor (+ Wayland Portals, Lock & Display Tools)|desktop|hyprland-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||xdg-desktop-portal-hyprland-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprlock-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hypridle-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpaper-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpicker-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprland-guiutils-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,aquamarine-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprlang-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprcursor-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprgraphics-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprutils-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpolkitagent-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprwire-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprtoolkit-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,sdbus-cpp-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,tomlplusplus-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,muparser-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,re2-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,lua-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,ddcui-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,wlr-randr-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,nwg-displays-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,python-i3ipc-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos-extra-v3,cachyos-v3,cachyos,arch-extra
 hyprpicker|Hyprpicker (Wayland Eyedropper & Color Picker)|desktop|hyprpicker-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos-extra-v3,cachyos-v3,cachyos,arch-extra
 CATALOG_EOF
 }
@@ -97,7 +110,7 @@ is_gaming_pkg_whitelisted() {
         obs-studio|obs-vkcapture|obs-move-transition|obs-source-record|\
         obs-pipewire-audio-capture|obs-advanced-scene-switcher|obs-multi-rtmp|\
         obs-composite-blur|obs-teleport|discord|vesktop|sunshine|\
-        google-chrome|microsoft-edge|brave|zen-browser|sbctl|\
+        google-chrome|microsoft-edge|brave|zen-browser|sbctl|limine|limine-entry-tool|limine-snapper-sync|\
         hyprland-noctalia|hyprland-core)
             return 0
             ;;
@@ -802,15 +815,15 @@ def get_chaotic_fastest_mirror(cdir):
             pass
 
     mirrors = [
-        'https://cdn-mirror.chaotic.cx/chaotic-aur/x86_64/',
-        'https://geo-mirror.chaotic.cx/chaotic-aur/x86_64/',
         'https://de-1-mirror.chaotic.cx/chaotic-aur/x86_64/',
         'https://de-2-mirror.chaotic.cx/chaotic-aur/x86_64/',
-        'https://de-4-mirror.chaotic.cx/chaotic-aur/x86_64/',
-        'https://es-mirror.chaotic.cx/chaotic-aur/x86_64/',
-        'https://bg-mirror.chaotic.cx/chaotic-aur/x86_64/',
         'https://nl-1-mirror.chaotic.cx/chaotic-aur/x86_64/',
         'https://fr-1-mirror.chaotic.cx/chaotic-aur/x86_64/',
+        'https://de-4-mirror.chaotic.cx/chaotic-aur/x86_64/',
+        'https://cdn-mirror.chaotic.cx/chaotic-aur/x86_64/',
+        'https://geo-mirror.chaotic.cx/chaotic-aur/x86_64/',
+        'https://es-mirror.chaotic.cx/chaotic-aur/x86_64/',
+        'https://bg-mirror.chaotic.cx/chaotic-aur/x86_64/',
         'https://ca-mirror.chaotic.cx/chaotic-aur/x86_64/',
         'https://us-mi-mirror.chaotic.cx/chaotic-aur/x86_64/',
         'https://us-ut-mirror.chaotic.cx/chaotic-aur/x86_64/'
@@ -819,8 +832,8 @@ def get_chaotic_fastest_mirror(cdir):
     def ping_m(u):
         t0 = time.time()
         try:
-            req = urllib.request.Request(u + 'chaotic-mirrorlist.pkg.tar.zst', headers={'User-Agent': 'Mozilla/5.0', 'Range': 'bytes=0-256'})
-            with urllib.request.urlopen(req, timeout=1.8) as resp:
+            req = urllib.request.Request(u + 'chaotic-mirrorlist.pkg.tar.zst', headers={'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64)', 'Range': 'bytes=0-256'})
+            with urllib.request.urlopen(req, timeout=0.75) as resp:
                 resp.read(256)
                 return ((time.time() - t0) * 1000, u)
         except Exception:
@@ -828,15 +841,30 @@ def get_chaotic_fastest_mirror(cdir):
 
     best_url = 'https://cdn-mirror.chaotic.cx/chaotic-aur/x86_64/'
     best_lat = 999999
+    completed_valid = []
     try:
         with concurrent.futures.ThreadPoolExecutor(max_workers=len(mirrors)) as ex:
-            results = list(ex.map(ping_m, mirrors))
-        valid = [r for r in results if r[0] < 90000]
-        if valid:
-            valid.sort(key=lambda x: x[0])
-            best_lat, best_url = valid[0]
+            futures = {ex.submit(ping_m, m): m for m in mirrors}
+            for fut in concurrent.futures.as_completed(futures, timeout=0.85):
+                try:
+                    lat, u = fut.result()
+                    if lat < 90000:
+                        completed_valid.append((lat, u))
+                        if lat < 55:
+                            best_lat, best_url = lat, u
+                            break
+                        if len(completed_valid) >= 3:
+                            completed_valid.sort(key=lambda x: x[0])
+                            best_lat, best_url = completed_valid[0]
+                            break
+                except Exception:
+                    pass
     except Exception:
         pass
+
+    if best_lat >= 90000 and completed_valid:
+        completed_valid.sort(key=lambda x: x[0])
+        best_lat, best_url = completed_valid[0]
 
     try:
         with open(m_file, 'w', encoding='utf-8') as f:
@@ -1049,7 +1077,11 @@ catalog = {
         r'href=[\'\"]?(re2-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(md4c-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(lua-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libical-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+        r'href=[\'\"]?(libical-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(ddcui-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(wlr-randr-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(nwg-displays-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(python-i3ipc-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["cachyos-extra-v3", "cachyos-v3", "cachyos", "arch-extra", "chaotic-aur"], []),
     "hyprland-core": (r'href=[\'\"]?(hyprland-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
         r'href=[\'\"]?(xdg-desktop-portal-hyprland-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
@@ -1070,7 +1102,11 @@ catalog = {
         r'href=[\'\"]?(tomlplusplus-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(muparser-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(re2-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(lua-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+        r'href=[\'\"]?(lua-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(ddcui-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(wlr-randr-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(nwg-displays-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(python-i3ipc-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["cachyos-extra-v3", "cachyos-v3", "cachyos", "arch-extra"], []),
     "hyprpicker": (r'href=[\'\"]?(hyprpicker-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos-extra-v3", "cachyos-v3", "cachyos", "arch-extra"], [])
 }
@@ -1596,7 +1632,11 @@ catalog = {
         r'href=[\'\"]?(re2-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(md4c-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(lua-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libical-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+        r'href=[\'\"]?(libical-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(ddcui-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(wlr-randr-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(nwg-displays-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(python-i3ipc-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["cachyos-extra-v3", "cachyos-v3", "cachyos", "arch-extra", "chaotic-aur"], []),
     "hyprland-core": (r'href=[\'\"]?(hyprland-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
         r'href=[\'\"]?(xdg-desktop-portal-hyprland-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
@@ -1617,7 +1657,11 @@ catalog = {
         r'href=[\'\"]?(tomlplusplus-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(muparser-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(re2-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(lua-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+        r'href=[\'\"]?(lua-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(ddcui-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(wlr-randr-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(nwg-displays-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(python-i3ipc-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["cachyos-extra-v3", "cachyos-v3", "cachyos", "arch-extra"], []),
     "hyprpicker": (r'href=[\'\"]?(hyprpicker-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos-extra-v3", "cachyos-v3", "cachyos", "arch-extra"], [])
 }
@@ -2914,7 +2958,7 @@ PEAR_WRAPPER_EOF
 
     # Service & Special Integrations:
     if [ "${pkg_id}" = "mangohud" ]; then
-        # Fix /usr/bin/mangohud launcher script paths
+        # Fix /usr/bin/mangohud launcher script paths & inject font synchronization
         if [ -f "${staging_root}/usr/bin/mangohud" ]; then
             sed -i 's|/usr/lib/mangohud/|/usr/lib64/mangohud/|g; s|/usr/lib32/mangohud/|/usr/lib/mangohud/|g; s|/usr/lib32/|/usr/lib/|g' "${staging_root}/usr/bin/mangohud"
             chmod 755 "${staging_root}/usr/bin/mangohud"
@@ -2946,54 +2990,149 @@ PEAR_WRAPPER_EOF
     fi
 
     if [ "${pkg_id}" = "goverlay" ]; then
-        # If /usr/lib64/goverlay or /usr/lib/goverlay is an ELF binary, move it to /usr/bin/goverlay
-        if [ -f "${staging_root}/usr/lib64/goverlay" ]; then
-            if is_elf_binary "${staging_root}/usr/lib64/goverlay"; then
-                mv -f "${staging_root}/usr/lib64/goverlay" "${staging_root}/usr/bin/goverlay"
-            else
-                rm -f "${staging_root}/usr/lib64/goverlay"
-            fi
-        fi
-        if [ -f "${staging_root}/usr/lib/goverlay" ]; then
-            if is_elf_binary "${staging_root}/usr/lib/goverlay"; then
-                mv -f "${staging_root}/usr/lib/goverlay" "${staging_root}/usr/bin/goverlay"
-            else
-                rm -f "${staging_root}/usr/lib/goverlay"
-            fi
+        mkdir -p "${staging_root}/usr/lib64/goverlay" "${staging_root}/usr/lib/goverlay" "${staging_root}/usr/bin"
+        # If /usr/lib64/goverlay or /usr/lib/goverlay or /usr/bin/goverlay is an ELF binary, move it to /usr/lib64/goverlay/goverlay-bin
+        if [ -f "${staging_root}/usr/bin/goverlay" ] && is_elf_binary "${staging_root}/usr/bin/goverlay"; then
+            mv -f "${staging_root}/usr/bin/goverlay" "${staging_root}/usr/lib64/goverlay/goverlay-bin"
+        elif [ -f "${staging_root}/usr/lib64/goverlay" ] && is_elf_binary "${staging_root}/usr/lib64/goverlay"; then
+            mv -f "${staging_root}/usr/lib64/goverlay" "${staging_root}/usr/lib64/goverlay/goverlay-bin"
+        elif [ -f "${staging_root}/usr/lib/goverlay" ] && is_elf_binary "${staging_root}/usr/lib/goverlay"; then
+            mv -f "${staging_root}/usr/lib/goverlay" "${staging_root}/usr/lib64/goverlay/goverlay-bin"
         fi
 
         # If /usr/lib64/pascube or /usr/lib/pascube is an ELF binary, move it to /usr/bin/pascube
-        if [ -f "${staging_root}/usr/lib64/pascube" ]; then
-            if is_elf_binary "${staging_root}/usr/lib64/pascube"; then
-                mv -f "${staging_root}/usr/lib64/pascube" "${staging_root}/usr/bin/pascube"
-            else
-                rm -f "${staging_root}/usr/lib64/pascube"
-            fi
-        fi
-        if [ -f "${staging_root}/usr/lib/pascube" ]; then
-            if is_elf_binary "${staging_root}/usr/lib/pascube"; then
-                mv -f "${staging_root}/usr/lib/pascube" "${staging_root}/usr/bin/pascube"
-            else
-                rm -f "${staging_root}/usr/lib/pascube"
-            fi
+        if [ -f "${staging_root}/usr/lib64/pascube" ] && is_elf_binary "${staging_root}/usr/lib64/pascube"; then
+            mv -f "${staging_root}/usr/lib64/pascube" "${staging_root}/usr/bin/pascube"
+        elif [ -f "${staging_root}/usr/lib/pascube" ] && is_elf_binary "${staging_root}/usr/lib/pascube"; then
+            mv -f "${staging_root}/usr/lib/pascube" "${staging_root}/usr/bin/pascube"
         fi
 
-        # Ensure binaries in /usr/bin are executable
-        [ -f "${staging_root}/usr/bin/goverlay" ] && chmod 755 "${staging_root}/usr/bin/goverlay"
+        # Write smart launcher script for GOverlay that automatically syncs MangoHud font_file_text & font mesh upon exit
+        cat <<'EOF' > "${staging_root}/usr/bin/goverlay"
+#!/usr/bin/env bash
+# Slacky-Update GOverlay Smart Wrapper with Automatic MangoHud Font Sync
+if [ -x "/usr/lib64/goverlay/goverlay-bin" ]; then
+    /usr/lib64/goverlay/goverlay-bin "$@"
+elif [ -x "/usr/lib/goverlay/goverlay-bin" ]; then
+    /usr/lib/goverlay/goverlay-bin "$@"
+elif [ -x "/usr/lib64/goverlay/goverlay" ]; then
+    /usr/lib64/goverlay/goverlay "$@"
+elif [ -x "/usr/lib/goverlay/goverlay" ]; then
+    /usr/lib/goverlay/goverlay "$@"
+fi
+
+# Automatically synchronize MangoHud font_file -> font_file_text, current_font.ttf local copy & font_size
+python3 -c '
+import os, glob, shutil
+
+# Mirror /usr/local/share/fonts to /usr/share/fonts
+if os.path.isdir("/usr/local/share/fonts"):
+    os.makedirs("/usr/share/fonts", exist_ok=True)
+    for root, dirs, files in os.walk("/usr/local/share/fonts"):
+        rel = os.path.relpath(root, "/usr/local/share/fonts")
+        target_dir = os.path.join("/usr/share/fonts", rel) if rel != "." else "/usr/share/fonts"
+        os.makedirs(target_dir, exist_ok=True)
+        for f in files:
+            src_f = os.path.join(root, f)
+            dst_f = os.path.join(target_dir, f)
+            try:
+                if not os.path.exists(dst_f):
+                    try:
+                        os.link(src_f, dst_f)
+                    except Exception:
+                        shutil.copy2(src_f, dst_f)
+            except Exception:
+                pass
+
+mconf = os.path.expanduser("~/.config/MangoHud/MangoHud.conf")
+mconf_dir = os.path.dirname(mconf)
+if os.path.isfile(mconf):
+    try:
+        with open(mconf, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+        has_font_file = False
+        font_file_val = ""
+        font_size_val = ""
+        for l in lines:
+            ls = l.strip()
+            if ls.startswith("font_file="):
+                has_font_file = True
+                font_file_val = ls.split("=", 1)[1]
+            elif ls.startswith("font_size="):
+                font_size_val = ls.split("=", 1)[1]
+        if has_font_file and font_file_val:
+            cur_font = os.path.join(mconf_dir, "current_font.ttf")
+            cur_font_text = os.path.join(mconf_dir, "current_font_text.ttf")
+            resolved_font = font_file_val
+            if resolved_font.startswith("/usr/local/share/fonts/"):
+                resolved_font = resolved_font.replace("/usr/local/share/fonts/", "/usr/share/fonts/", 1)
+            
+            # If font_file points to an external file, copy it locally into ~/.config/MangoHud/
+            if os.path.isfile(resolved_font) and os.path.abspath(resolved_font) not in [os.path.abspath(cur_font), os.path.abspath(cur_font_text)]:
+                try:
+                    if os.path.islink(cur_font) or os.path.exists(cur_font):
+                        os.remove(cur_font)
+                    shutil.copy2(resolved_font, cur_font)
+                except Exception:
+                    pass
+                try:
+                    if os.path.islink(cur_font_text) or os.path.exists(cur_font_text):
+                        os.remove(cur_font_text)
+                    shutil.copy2(resolved_font, cur_font_text)
+                except Exception:
+                    pass
+            elif not os.path.exists(cur_font):
+                for cand in [resolved_font, "/usr/share/fonts/Apple/SF-Pro-Italic.ttf", "/usr/local/share/fonts/Apple/SF-Pro-Italic.ttf", "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf"]:
+                    if os.path.isfile(cand):
+                        try:
+                            shutil.copy2(cand, cur_font)
+                            shutil.copy2(cand, cur_font_text)
+                            break
+                        except Exception:
+                            pass
+            
+            new_lines = []
+            has_updated_font_file_text = False
+            has_updated_font_size_text = False
+            has_font_file_text_in_orig = any(x.strip().startswith("font_file_text=") for x in lines)
+            has_font_size_text_in_orig = any(x.strip().startswith("font_size_text=") for x in lines)
+            for l in lines:
+                ls = l.strip()
+                if ls.startswith("font_file="):
+                    new_lines.append(f"font_file={cur_font}\n")
+                    if not has_font_file_text_in_orig and not has_updated_font_file_text:
+                        new_lines.append(f"font_file_text={cur_font_text}\n")
+                        has_updated_font_file_text = True
+                elif ls.startswith("font_file_text="):
+                    new_lines.append(f"font_file_text={cur_font_text}\n")
+                    has_updated_font_file_text = True
+                elif ls.startswith("font_size="):
+                    new_lines.append(l)
+                    if font_size_val and not has_font_size_text_in_orig and not has_updated_font_size_text:
+                        new_lines.append(f"font_size_text={font_size_val}\n")
+                        has_updated_font_size_text = True
+                elif ls.startswith("font_size_text=") and font_size_val:
+                    new_lines.append(f"font_size_text={font_size_val}\n")
+                    has_updated_font_size_text = True
+                else:
+                    new_lines.append(l)
+            with open(mconf, "w", encoding="utf-8") as f:
+                f.writelines(new_lines)
+    except Exception:
+        pass
+' 2>/dev/null || true
+EOF
+        chmod 755 "${staging_root}/usr/bin/goverlay"
         [ -f "${staging_root}/usr/bin/pascube" ] && chmod 755 "${staging_root}/usr/bin/pascube"
 
-        # Create compatibility symlinks in /usr/lib64 and /usr/lib pointing to /usr/bin binaries
-        mkdir -p "${staging_root}/usr/lib64" "${staging_root}/usr/lib"
-        rm -rf "${staging_root}/usr/lib64/goverlay" "${staging_root}/usr/lib/goverlay" 2>/dev/null || true
-        rm -rf "${staging_root}/usr/lib64/pascube" "${staging_root}/usr/lib/pascube" 2>/dev/null || true
-
-        if [ -f "${staging_root}/usr/bin/goverlay" ]; then
-            ln -sf /usr/bin/goverlay "${staging_root}/usr/lib64/goverlay"
-            ln -sf /usr/bin/goverlay "${staging_root}/usr/lib/goverlay"
-        fi
+        # Create compatibility symlinks in /usr/lib64 and /usr/lib pointing to real binary
+        ln -sf /usr/lib64/goverlay/goverlay-bin "${staging_root}/usr/lib64/goverlay/goverlay" 2>/dev/null || true
+        ln -sf /usr/lib64/goverlay/goverlay-bin "${staging_root}/usr/lib/goverlay/goverlay" 2>/dev/null || true
         if [ -f "${staging_root}/usr/bin/pascube" ]; then
-            ln -sf /usr/bin/pascube "${staging_root}/usr/lib64/pascube"
-            ln -sf /usr/bin/pascube "${staging_root}/usr/lib/pascube"
+            ln -sf /usr/bin/pascube "${staging_root}/usr/lib64/pascube" 2>/dev/null || true
+            ln -sf /usr/bin/pascube "${staging_root}/usr/lib/pascube" 2>/dev/null || true
+            ln -sf /usr/bin/pascube "${staging_root}/usr/lib64/goverlay/pascube" 2>/dev/null || true
+            ln -sf /usr/bin/pascube "${staging_root}/usr/lib/goverlay/pascube" 2>/dev/null || true
         fi
     fi
 
@@ -3880,7 +4019,7 @@ def scan_and_boost_games():
         try:
             with open(f"/proc/{fg_pid}/comm", "r") as f:
                 fg_comm = f.read().strip()
-            if fg_comm not in ["plasmashell", "kwin_wayland", "systemsettings", "konsole", "zsh", "bash", "Hyprland", "noctalia", "waybar"]:
+            if fg_comm not in ["plasmashell", "kwin_wayland", "systemsettings", "konsole", "zsh", "bash", "Hyprland", "noctalia", "waybar", "xfwm4", "xfce4-panel", "xfdesktop"]:
                 if boost_pid(fg_pid):
                     log(f"⚡ Foreground GPU Shield: Boosted active window '{fg_comm}' (PID {fg_pid}) into dmemcg-gaming slice")
                     count += 1
@@ -4562,39 +4701,44 @@ EERC_EOF
             done
         elif [ "${pkg_id}" = "google-chrome" ] || [ "${pkg_id}" = "microsoft-edge" ] || [ "${pkg_id}" = "brave" ]; then
             probe_gpu_hardware
+            local flag_files=()
+            case "${pkg_id}" in
+                google-chrome)
+                    flag_files=("chrome-flags.conf")
+                    ;;
+                brave)
+                    flag_files=("brave-flags.conf")
+                    ;;
+                microsoft-edge)
+                    flag_files=("edge-flags.conf" "microsoft-edge-stable-flags.conf")
+                    ;;
+            esac
+
+            local flags_content=""
             if [ "${HAS_NVIDIA}" = "true" ]; then
                 log_info "[*] NVIDIA GPU detected: Configuring hardware-accelerated Wayland & VA-API flags for ${pkg_id}..."
-                local flag_files=()
-                case "${pkg_id}" in
-                    google-chrome)
-                        flag_files=("chrome-flags.conf")
-                        ;;
-                    brave)
-                        flag_files=("brave-flags.conf")
-                        ;;
-                    microsoft-edge)
-                        flag_files=("edge-flags.conf" "microsoft-edge-stable-flags.conf")
-                        ;;
-                esac
-
-                local flags_content="--ozone-platform-hint=auto\n--ozone-platform=wayland\n--enable-features=AcceleratedVideoDecodeLinuxGL,AcceleratedVideoDecodeLinuxZeroCopyGL,VaapiOnNvidiaGPUs\n--enable-gpu-rasterization\n--enable-zero-copy\n--ignore-gpu-blocklist\n"
-
-                mkdir -p /etc/skel/.config 2>/dev/null || true
-                for ff in "${flag_files[@]}"; do
-                    echo -e "${flags_content}" > "/etc/skel/.config/${ff}" 2>/dev/null || true
-                done
-
-                for u_home in /home/* "${HOME:-}"; do
-                    [ -d "${u_home}" ] || continue
-                    local u_name
-                    u_name=$(basename "${u_home}")
-                    mkdir -p "${u_home}/.config" 2>/dev/null || true
-                    for ff in "${flag_files[@]}"; do
-                        echo -e "${flags_content}" > "${u_home}/.config/${ff}" 2>/dev/null || true
-                        chown "${u_name}:users" "${u_home}/.config/${ff}" 2>/dev/null || true
-                    done
-                done
+                flags_content="--ozone-platform-hint=auto\n--ozone-platform=wayland\n--enable-features=AcceleratedVideoDecodeLinuxGL,AcceleratedVideoDecodeLinuxZeroCopyGL,VaapiOnNvidiaGPUs\n--enable-gpu-rasterization\n--enable-zero-copy\n--ignore-gpu-blocklist\n"
+            else
+                log_info "[*] AMD/Intel GPU detected: Configuring native Wayland flags for ${pkg_id}..."
+                flags_content="--ozone-platform-hint=auto\n--ozone-platform=wayland\n--enable-gpu-rasterization\n--enable-zero-copy\n--ignore-gpu-blocklist\n"
             fi
+
+            mkdir -p /etc/skel/.config 2>/dev/null || true
+            for ff in "${flag_files[@]}"; do
+                echo -e "${flags_content}" > "/etc/skel/.config/${ff}" 2>/dev/null || true
+            done
+
+            for u_home in /home/* "${HOME:-}"; do
+                [ -d "${u_home}" ] || continue
+                local u_name
+                u_name=$(basename "${u_home}")
+                [ "${u_name}" != "ftp" ] && [ "${u_name}" != "http" ] && [ "${u_name}" != "nobody" ] || continue
+                mkdir -p "${u_home}/.config" 2>/dev/null || true
+                for ff in "${flag_files[@]}"; do
+                    echo -e "${flags_content}" > "${u_home}/.config/${ff}" 2>/dev/null || true
+                    chown "${u_name}:users" "${u_home}/.config/${ff}" 2>/dev/null || true
+                done
+            done
         elif [ "${pkg_id}" = "coolercontrol" ] && [ -x /etc/rc.d/rc.coolercontrol ]; then
             sudo /etc/rc.d/rc.coolercontrol restart 2>/dev/null || true
         elif [ "${pkg_id}" = "asusctl" ] && [ -x /etc/rc.d/rc.asusd ]; then
@@ -4615,6 +4759,154 @@ EERC_EOF
                     done
                 done
             done
+        elif [ "${pkg_id}" = "goverlay" ] || [ "${pkg_id}" = "mangohud" ] || [ "${pkg_id}" = "hyprland-noctalia" ] || [ "${pkg_id}" = "hyprland-core" ]; then
+            log_info "[*] Synchronizing universal multi-path font mesh for MangoHud, GOverlay & Wayland..."
+            python3 -c '
+import os, glob, shutil
+
+# 1. Mirror /usr/local/share/fonts to /usr/share/fonts for container compatibility (Steam/Proton/Pressure-Vessel)
+if os.path.isdir("/usr/local/share/fonts"):
+    os.makedirs("/usr/share/fonts", exist_ok=True)
+    for root, dirs, files in os.walk("/usr/local/share/fonts"):
+        rel = os.path.relpath(root, "/usr/local/share/fonts")
+        target_dir = os.path.join("/usr/share/fonts", rel) if rel != "." else "/usr/share/fonts"
+        os.makedirs(target_dir, exist_ok=True)
+        for f in files:
+            src_f = os.path.join(root, f)
+            dst_f = os.path.join(target_dir, f)
+            try:
+                if not os.path.exists(dst_f):
+                    try:
+                        os.link(src_f, dst_f)
+                    except Exception:
+                        shutil.copy2(src_f, dst_f)
+            except Exception:
+                pass
+
+font_roots = ["/usr/share/fonts", "/usr/local/share/fonts"]
+subdirs = ["TTF", "OTF", "truetype", "opentype"]
+user_homes = [h for h in glob.glob("/home/*") if os.path.isdir(h)]
+if os.path.isdir("/etc/skel"):
+    user_homes.append("/etc/skel")
+if os.environ.get("HOME") and os.environ.get("HOME") not in user_homes:
+    user_homes.append(os.environ.get("HOME"))
+
+for uhome in user_homes:
+    bname = os.path.basename(uhome)
+    if bname in ["ftp", "http", "nobody"]:
+        continue
+    target_base = os.path.join(uhome, ".local/share/fonts")
+    for s in [""] + subdirs:
+        os.makedirs(os.path.join(target_base, s), exist_ok=True)
+    
+    for r in font_roots:
+        if not os.path.isdir(r):
+            continue
+        for item in os.listdir(r):
+            full_p = os.path.join(r, item)
+            if not os.path.isdir(full_p):
+                continue
+            if item in subdirs:
+                for sub_item in os.listdir(full_p):
+                    sub_full = os.path.join(full_p, sub_item)
+                    if not os.path.isdir(sub_full):
+                        continue
+                    for s in [""] + subdirs:
+                        dst = os.path.join(target_base, s, sub_item)
+                        try:
+                            if os.path.islink(dst) or os.path.exists(dst):
+                                os.remove(dst)
+                            os.symlink(sub_full, dst)
+                        except Exception:
+                            pass
+            else:
+                for s in [""] + subdirs:
+                    dst = os.path.join(target_base, s, item)
+                    try:
+                        if os.path.islink(dst) or os.path.exists(dst):
+                            os.remove(dst)
+                        os.symlink(full_p, dst)
+                    except Exception:
+                        pass
+
+    # Universal MangoHud font_file -> font_file_text propagation, local current_font.ttf copy & normalization
+    mconf = os.path.join(uhome, ".config/MangoHud/MangoHud.conf")
+    mconf_dir = os.path.dirname(mconf)
+    if os.path.isfile(mconf):
+        try:
+            with open(mconf, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+            has_font_file = False
+            font_file_val = ""
+            font_size_val = ""
+            for l in lines:
+                ls = l.strip()
+                if ls.startswith("font_file="):
+                    has_font_file = True
+                    font_file_val = ls.split("=", 1)[1]
+                elif ls.startswith("font_size="):
+                    font_size_val = ls.split("=", 1)[1]
+            if has_font_file and font_file_val:
+                cur_font = os.path.join(mconf_dir, "current_font.ttf")
+                cur_font_text = os.path.join(mconf_dir, "current_font_text.ttf")
+                resolved_font = font_file_val
+                if resolved_font.startswith("/usr/local/share/fonts/"):
+                    resolved_font = resolved_font.replace("/usr/local/share/fonts/", "/usr/share/fonts/", 1)
+                
+                # If font_file points to an external file, copy it locally into ~/.config/MangoHud/
+                if os.path.isfile(resolved_font) and os.path.abspath(resolved_font) not in [os.path.abspath(cur_font), os.path.abspath(cur_font_text)]:
+                    try:
+                        if os.path.islink(cur_font) or os.path.exists(cur_font):
+                            os.remove(cur_font)
+                        shutil.copy2(resolved_font, cur_font)
+                    except Exception:
+                        pass
+                    try:
+                        if os.path.islink(cur_font_text) or os.path.exists(cur_font_text):
+                            os.remove(cur_font_text)
+                        shutil.copy2(resolved_font, cur_font_text)
+                    except Exception:
+                        pass
+                elif not os.path.exists(cur_font):
+                    for cand in [resolved_font, "/usr/share/fonts/Apple/SF-Pro-Italic.ttf", "/usr/local/share/fonts/Apple/SF-Pro-Italic.ttf", "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf"]:
+                        if os.path.isfile(cand):
+                            try:
+                                shutil.copy2(cand, cur_font)
+                                shutil.copy2(cand, cur_font_text)
+                                break
+                            except Exception:
+                                pass
+
+                new_lines = []
+                has_updated_font_file_text = False
+                has_updated_font_size_text = False
+                has_font_file_text_in_orig = any(x.strip().startswith("font_file_text=") for x in lines)
+                has_font_size_text_in_orig = any(x.strip().startswith("font_size_text=") for x in lines)
+                for l in lines:
+                    ls = l.strip()
+                    if ls.startswith("font_file="):
+                        new_lines.append(f"font_file={cur_font}\n")
+                        if not has_font_file_text_in_orig and not has_updated_font_file_text:
+                            new_lines.append(f"font_file_text={cur_font_text}\n")
+                            has_updated_font_file_text = True
+                    elif ls.startswith("font_file_text="):
+                        new_lines.append(f"font_file_text={cur_font_text}\n")
+                        has_updated_font_file_text = True
+                    elif ls.startswith("font_size="):
+                        new_lines.append(l)
+                        if font_size_val and not has_font_size_text_in_orig and not has_updated_font_size_text:
+                            new_lines.append(f"font_size_text={font_size_val}\n")
+                            has_updated_font_size_text = True
+                    elif ls.startswith("font_size_text=") and font_size_val:
+                        new_lines.append(f"font_size_text={font_size_val}\n")
+                        has_updated_font_size_text = True
+                    else:
+                        new_lines.append(l)
+                with open(mconf, "w", encoding="utf-8") as f:
+                    f.writelines(new_lines)
+        except Exception:
+            pass
+' 2>/dev/null || true
         elif [ "${pkg_id}" = "limine" ]; then
             if command -v is_limine_installed >/dev/null 2>&1 && [ "$(is_limine_installed)" = "true" ]; then
                 log_info "[*] Limine bootloader package updated: syncing EFI payload, configuration & BLAKE2B enrollment..."
@@ -4660,7 +4952,7 @@ EERC_EOF
 # --- [ Slacky-Update Hyprland Wayland Session Wrapper ] ---
 set -e
 
-export XDG_CURRENT_DESKTOP=Hyprland:KDE
+export XDG_CURRENT_DESKTOP=Hyprland
 export XDG_SESSION_TYPE=wayland
 export XDG_SESSION_DESKTOP=Hyprland
 export MOZ_ENABLE_WAYLAND=1
@@ -4744,35 +5036,35 @@ WAYLAND_SESSION_EOF
                     hypr_body+="env = QT_STYLE_OVERRIDE,Breeze\n"
                     hypr_body+="env = GTK_THEME,Breeze-Dark\n"
                     hypr_body+="env = QT_WAYLAND_DISABLE_WINDOWDECORATION,0\n"
-                    hypr_body+="env = XDG_CURRENT_DESKTOP,Hyprland:KDE\n\n"
+                    hypr_body+="env = XDG_CURRENT_DESKTOP,Hyprland\n\n"
                     hypr_body+="\$terminal = ${terminal_cand}\n"
                     hypr_body+="\$fileManager = dolphin || thunar\n"
                     hypr_body+="\$menu = rofi -show drun || fuzzel\n\n"
                     hypr_body+="# Autostart essential Daemons\n"
-                    hypr_body+="exec-once = dbus-update-activation-environment --all &\n"
-                    hypr_body+="exec-once = /usr/lib64/xdg-desktop-portal-hyprland || /usr/libexec/xdg-desktop-portal-hyprland &\n"
-                    hypr_body+="exec-once = /usr/lib64/hyprpolkitagent/hyprpolkitagent || /usr/libexec/hyprpolkitagent || polkit-gnome-authentication-agent-1 &\n"
-                    hypr_body+="exec-once = pipewire &\n"
-                    hypr_body+="exec-once = pipewire-pulse &\n"
-                    hypr_body+="exec-once = wireplumber &\n"
-                    hypr_body+="exec-once = hypridle &\n"
-                    hypr_body+="exec-once = hyprpaper &\n"
+                    hypr_body+="exec-once = dbus-update-activation-environment --all\n"
+                    hypr_body+="exec-once = /usr/lib64/xdg-desktop-portal-hyprland || /usr/libexec/xdg-desktop-portal-hyprland\n"
+                    hypr_body+="exec-once = /usr/lib64/hyprpolkitagent/hyprpolkitagent || /usr/libexec/hyprpolkitagent || polkit-gnome-authentication-agent-1\n"
+                    hypr_body+="exec-once = pipewire\n"
+                    hypr_body+="exec-once = pipewire-pulse\n"
+                    hypr_body+="exec-once = wireplumber\n"
+                    hypr_body+="exec-once = hypridle\n"
+                    hypr_body+="exec-once = hyprpaper\n"
                     if [ "${pkg_id}" = "hyprland-noctalia" ]; then
                         hypr_body+="# Noctalia Mac-like Shell (Top bar, bottom dock, launcher)\n"
-                        hypr_body+="exec-once = noctalia &\n"
-                        hypr_body+="exec-once = QT_QPA_PLATFORM=xcb /usr/bin/slacky-update-tray || /usr/bin/slacky-update-tray &\n"
+                        hypr_body+="exec-once = noctalia\n"
+                        hypr_body+="exec-once = QT_QPA_PLATFORM=xcb /usr/bin/slacky-update-tray || /usr/bin/slacky-update-tray\n"
                     fi
                     if command -v easyeffects >/dev/null 2>&1 || [ -x /usr/bin/easyeffects ]; then
                         hypr_body+="# EasyEffects Audio Enhancement Daemon\n"
-                        hypr_body+="exec-once = easyeffects --service-mode || easyeffects --gapplication-service &\n"
+                        hypr_body+="exec-once = easyeffects --service-mode || easyeffects --gapplication-service\n"
                     fi
                     if command -v openrgb >/dev/null 2>&1 || [ -x /usr/bin/openrgb ]; then
                         hypr_body+="# OpenRGB Lighting Controller\n"
-                        hypr_body+="exec-once = openrgb --startminimized --profile slackware1 || openrgb --startminimized &\n"
+                        hypr_body+="exec-once = openrgb --startminimized --profile slackware1 || openrgb --startminimized\n"
                     fi
                     if command -v syncthing >/dev/null 2>&1 || [ -x /usr/bin/syncthing ]; then
                         hypr_body+="# Syncthing File Synchronization Daemon\n"
-                        hypr_body+="exec-once = syncthing --no-browser &\n"
+                        hypr_body+="exec-once = syncthing --no-browser\n"
                     fi
                     hypr_body+="\n"
                     hypr_body+="# Input & General Settings\n"
@@ -4820,7 +5112,21 @@ WAYLAND_SESSION_EOF
                     hypr_body+="binde = SUPER CTRL, right, resizeactive, 30 0\n"
                     hypr_body+="binde = SUPER CTRL, left, resizeactive, -30 0\n"
                     hypr_body+="binde = SUPER CTRL, up, resizeactive, 0 -30\n"
-                    hypr_body+="binde = SUPER CTRL, down, resizeactive, 0 30\n\n"
+                    hypr_body+="# Move window focus / active control (ALT + Arrow keys & Mouse hover)\n"
+                    hypr_body+="bind = ALT, left,  movefocus, l\n"
+                    hypr_body+="bind = ALT, right, movefocus, r\n"
+                    hypr_body+="bind = ALT, up,    movefocus, u\n"
+                    hypr_body+="bind = ALT, down,  movefocus, d\n\n"
+                    hypr_body+="# Move windows within screen (SUPER + Arrow keys)\n"
+                    hypr_body+="bind = SUPER, left,  movewindow, l\n"
+                    hypr_body+="bind = SUPER, right, movewindow, r\n"
+                    hypr_body+="bind = SUPER, up,    movewindow, u\n"
+                    hypr_body+="bind = SUPER, down,  movewindow, d\n\n"
+                    hypr_body+="# Move active window across monitors (SUPER + SHIFT + Arrow keys)\n"
+                    hypr_body+="bind = SUPER SHIFT, left,  movewindow, mon:l\n"
+                    hypr_body+="bind = SUPER SHIFT, right, movewindow, mon:r\n"
+                    hypr_body+="bind = SUPER SHIFT, up,    movewindow, mon:u\n"
+                    hypr_body+="bind = SUPER SHIFT, down,  movewindow, mon:d\n\n"
                     hypr_body+="# Workspace navigation (SUPER + 1..9)\n"
                     for ws in {1..9}; do
                         hypr_body+="bind = SUPER, ${ws}, workspace, ${ws}\n"
@@ -4844,92 +5150,133 @@ WAYLAND_SESSION_EOF
                 fi
 
                 local hypr_lua="${hypr_dir}/hyprland.lua"
-                if [ ! -f "${hypr_lua}" ]; then
-                    local hypr_lua_body="-- --- [ Slacky-Update Curated Hyprland Lua Config (0.57+ Ready) ] ---\n\n"
-                    hypr_lua_body+="-- Monitors\n"
-                    hypr_lua_body+="hl.monitor({ output = \"\", mode = \"preferred\", position = \"auto\", scale = 1.0 })\n\n"
-                    hypr_lua_body+="-- Environment Variables\n"
-                    hypr_lua_body+="hl.env(\"QT_QPA_PLATFORMTHEME\", \"kde\")\n"
-                    hypr_lua_body+="hl.env(\"QT_STYLE_OVERRIDE\", \"Breeze\")\n"
-                    hypr_lua_body+="hl.env(\"GTK_THEME\", \"Breeze-Dark\")\n"
-                    hypr_lua_body+="hl.env(\"QT_WAYLAND_DISABLE_WINDOWDECORATION\", \"0\")\n"
-                    hypr_lua_body+="hl.env(\"XDG_CURRENT_DESKTOP\", \"Hyprland:KDE\")\n\n"
-                    hypr_lua_body+="-- General & Theming Config\n"
-                    hypr_lua_body+="hl.config({\n"
-                    hypr_lua_body+="    general = {\n"
-                    hypr_lua_body+="        gaps_in = 6,\n"
-                    hypr_lua_body+="        gaps_out = 12,\n"
-                    hypr_lua_body+="        border_size = 2,\n"
-                    hypr_lua_body+="        layout = \"dwindle\"\n"
-                    hypr_lua_body+="    },\n"
-                    hypr_lua_body+="    decoration = {\n"
-                    hypr_lua_body+="        rounding = 12,\n"
-                    hypr_lua_body+="        blur = {\n"
-                    hypr_lua_body+="            enabled = true,\n"
-                    hypr_lua_body+="            size = 8,\n"
-                    hypr_lua_body+="            passes = 3,\n"
-                    hypr_lua_body+="            new_optimizations = true,\n"
-                    hypr_lua_body+="            xray = false\n"
-                    hypr_lua_body+="        }\n"
-                    hypr_lua_body+="    },\n"
-                    hypr_lua_body+="    input = {\n"
-                    hypr_lua_body+="        kb_layout = \"no,us\",\n"
-                    hypr_lua_body+="        numlock_by_default = true,\n"
-                    hypr_lua_body+="        follow_mouse = 1,\n"
-                    hypr_lua_body+="        touchpad = {\n"
-                    hypr_lua_body+="            natural_scroll = true\n"
-                    hypr_lua_body+="        }\n"
-                    hypr_lua_body+="    },\n"
-                    hypr_lua_body+="    misc = {\n"
-                    hypr_lua_body+="        disable_hyprland_logo = true,\n"
-                    hypr_lua_body+="        disable_splash_rendering = true,\n"
-                    hypr_lua_body+="        force_default_wallpaper = 0,\n"
-                    hypr_lua_body+="        background_color = 0x11111b,\n"
-                    hypr_lua_body+="        vrr = 0,\n"
-                    hypr_lua_body+="    },\n"
-                    hypr_lua_body+="    xwayland = {\n"
-                    hypr_lua_body+="        force_zero_scaling = true\n"
-                    hypr_lua_body+="    }\n"
-                    hypr_lua_body+="})\n\n"
-                    hypr_lua_body+="-- Autostart Daemons\n"
-                    hypr_lua_body+="hl.on(\"hyprland.start\", function()\n"
-                    hypr_lua_body+="    hl.exec_cmd(\"dbus-update-activation-environment --all &\")\n"
-                    hypr_lua_body+="    hl.exec_cmd(\"/usr/lib64/xdg-desktop-portal-hyprland || /usr/libexec/xdg-desktop-portal-hyprland &\")\n"
-                    hypr_lua_body+="    hl.exec_cmd(\"/usr/lib64/hyprpolkitagent/hyprpolkitagent || /usr/libexec/hyprpolkitagent || polkit-gnome-authentication-agent-1 &\")\n"
-                    hypr_lua_body+="    hl.exec_cmd(\"pipewire &\")\n"
-                    hypr_lua_body+="    hl.exec_cmd(\"pipewire-pulse &\")\n"
-                    hypr_lua_body+="    hl.exec_cmd(\"wireplumber &\")\n"
-                    hypr_lua_body+="    hl.exec_cmd(\"hypridle &\")\n"
-                    hypr_lua_body+="    hl.exec_cmd(\"hyprpaper &\")\n"
+                local hypr_lua_example="${hypr_dir}/hyprland.lua.example"
+                local hypr_mods="${hypr_dir}/modules"
+                mkdir -p "${hypr_mods}" 2>/dev/null || sudo mkdir -p "${hypr_mods}" 2>/dev/null || true
+
+                if [ ! -f "${hypr_lua}" ] || [ ! -f "${hypr_lua_example}" ]; then
+                    local hypr_lua_body="-- --- [ Slacky-Update Curated Hyprland Modular Lua Config (0.57+ Ready) ] ---\n\n"
+                    hypr_lua_body+="local config_dir = os.getenv(\"HOME\") .. \"/.config/hypr\"\n"
+                    hypr_lua_body+="package.path = package.path .. \";\" .. config_dir .. \"/?.lua;\" .. config_dir .. \"/modules/?.lua\"\n\n"
+                    hypr_lua_body+="require(\"modules.monitors\")\n"
+                    hypr_lua_body+="require(\"modules.env\")\n"
+                    hypr_lua_body+="require(\"modules.autostart\")\n"
+                    hypr_lua_body+="require(\"modules.general\")\n"
+                    hypr_lua_body+="require(\"modules.animations\")\n"
+                    hypr_lua_body+="require(\"modules.rules\")\n"
+                    hypr_lua_body+="require(\"modules.keybinds\")\n"
+                    [ ! -f "${hypr_lua}" ] && echo -e "${hypr_lua_body}" > "${hypr_lua}" 2>/dev/null || true
+                    echo -e "${hypr_lua_body}" > "${hypr_lua_example}" 2>/dev/null || echo -e "${hypr_lua_body}" | sudo tee "${hypr_lua_example}" >/dev/null || true
+
+                    local mod_mon="-- Monitors & Workspaces\nhl.monitor({ output = \"\", mode = \"preferred\", position = \"auto\", scale = 1.0 })\n"
+                    [ ! -f "${hypr_mods}/monitors.lua" ] && echo -e "${mod_mon}" > "${hypr_mods}/monitors.lua" 2>/dev/null || true
+
+                    local mod_env="-- Environment Variables\nhl.env(\"QT_QPA_PLATFORM\", \"wayland;xcb\")\nhl.env(\"GDK_BACKEND\", \"wayland,x11,*\")\nhl.env(\"QT_QPA_PLATFORMTHEME\", \"kde\")\nhl.env(\"QT_STYLE_OVERRIDE\", \"Breeze\")\nhl.env(\"GTK_THEME\", \"Breeze-Dark\")\nhl.env(\"QT_WAYLAND_DISABLE_WINDOWDECORATION\", \"0\")\nhl.env(\"XDG_CURRENT_DESKTOP\", \"Hyprland\")\n"
+                    [ ! -f "${hypr_mods}/env.lua" ] && echo -e "${mod_env}" > "${hypr_mods}/env.lua" 2>/dev/null || true
+
+                    local mod_auto="-- Autostart Daemons\nhl.on(\"hyprland.start\", function()\n"
+                    mod_auto+="    hl.exec_cmd(\"dbus-update-activation-environment --all\")\n"
+                    mod_auto+="    hl.exec_cmd(\"/usr/lib64/xdg-desktop-portal-hyprland || /usr/libexec/xdg-desktop-portal-hyprland\")\n"
+                    mod_auto+="    hl.exec_cmd(\"/usr/lib64/hyprpolkitagent/hyprpolkitagent || /usr/libexec/hyprpolkitagent || polkit-gnome-authentication-agent-1\")\n"
+                    mod_auto+="    hl.exec_cmd(\"pipewire\")\n"
+                    mod_auto+="    hl.exec_cmd(\"pipewire-pulse\")\n"
+                    mod_auto+="    hl.exec_cmd(\"wireplumber\")\n"
+                    mod_auto+="    hl.exec_cmd(\"hypridle\")\n"
                     if [ "${pkg_id}" = "hyprland-noctalia" ]; then
-                        hypr_lua_body+="    hl.exec_cmd(\"noctalia &\")\n"
-                        hypr_lua_body+="    hl.exec_cmd(\"QT_QPA_PLATFORM=xcb /usr/bin/slacky-update-tray || /usr/bin/slacky-update-tray &\")\n"
+                        mod_auto+="    hl.exec_cmd(\"noctalia\")\n"
+                        mod_auto+="    hl.exec_cmd(\"QT_QPA_PLATFORM=xcb /usr/bin/slacky-update-tray\")\n"
                     fi
-                    hypr_lua_body+="end)\n\n"
-                    hypr_lua_body+="-- Keybindings\n"
-                    hypr_lua_body+="hl.bind(\"SUPER\", \"Return\", function() hl.exec_cmd(\"${terminal_cand}\") end)\n"
-                    hypr_lua_body+="hl.bind(\"SUPER\", \"U\", function() hl.exec_cmd(\"${terminal_cand} -e /usr/bin/slacky-update\") end)\n"
+                    mod_auto+="    hl.exec_cmd(\"canberra-gtk-play -i desktop-login\")\n"
+                    mod_auto+="end)\n"
+                    [ ! -f "${hypr_mods}/autostart.lua" ] && echo -e "${mod_auto}" > "${hypr_mods}/autostart.lua" 2>/dev/null || true
+
+                    local mod_gen="-- Core Configuration\nhl.config({\n"
+                    mod_gen+="    input = {\n        kb_layout = \"no,us\",\n        numlock_by_default = true,\n        follow_mouse = 1,\n        touchpad = { natural_scroll = true },\n    },\n"
+                    mod_gen+="    general = {\n        gaps_in = 6,\n        gaps_out = 12,\n        border_size = 2,\n        col = {\n            active_border = { colors = {\"rgba(00b4d8ee)\", \"rgba(0e3c61ee)\"}, angle = 45 },\n            inactive_border = \"rgba(1c2833aa)\",\n        },\n        layout = \"dwindle\",\n        allow_tearing = false,\n    },\n"
+                    mod_gen+="    decoration = {\n        rounding = 12,\n        active_opacity = 1.0,\n        inactive_opacity = 1.0,\n        blur = { enabled = true, size = 6, passes = 2, new_optimizations = true, xray = false },\n    },\n"
+                    mod_gen+="    misc = {\n        disable_hyprland_logo = true,\n        disable_splash_rendering = true,\n        force_default_wallpaper = 0,\n        background_color = 0x11111b,\n        vrr = 0,\n        disable_watchdog_warning = true,\n        disable_hyprland_guiutils_check = true,\n        disable_xdg_env_checks = true,\n    },\n"
+                    mod_gen+="    ecosystem = { no_update_news = true, no_donation_nag = true },\n"
+                    mod_gen+="    cursor = { no_hardware_cursors = true, enable_hyprcursor = false },\n"
+                    mod_gen+="    xwayland = { force_zero_scaling = true },\n"
+                    mod_gen+="    dwindle = { preserve_split = true },\n"
+                    mod_gen+="})\n"
+                    [ ! -f "${hypr_mods}/general.lua" ] && echo -e "${mod_gen}" > "${hypr_mods}/general.lua" 2>/dev/null || true
+
+                    local mod_anim="-- Animations & Bezier Curves\n"
+                    mod_anim+="hl.curve(\"snappy\", { type = \"bezier\", points = { {0.2, 0.8}, {0.2, 1.0} } })\n"
+                    mod_anim+="hl.curve(\"linear\", { type = \"bezier\", points = { {0, 0}, {1, 1} } })\n"
+                    mod_anim+="hl.animation({ leaf = \"windows\", enabled = true, speed = 2.5, bezier = \"snappy\", style = \"popin 80%\" })\n"
+                    mod_anim+="hl.animation({ leaf = \"windowsIn\", enabled = true, speed = 2.5, bezier = \"snappy\", style = \"popin 80%\" })\n"
+                    mod_anim+="hl.animation({ leaf = \"windowsOut\", enabled = true, speed = 2.0, bezier = \"snappy\", style = \"popin 80%\" })\n"
+                    mod_anim+="hl.animation({ leaf = \"windowsMove\", enabled = true, speed = 2.5, bezier = \"snappy\" })\n"
+                    mod_anim+="hl.animation({ leaf = \"fade\", enabled = true, speed = 2.0, bezier = \"snappy\" })\n"
+                    mod_anim+="hl.animation({ leaf = \"workspaces\", enabled = true, speed = 2.5, bezier = \"snappy\", style = \"slide\" })\n"
+                    mod_anim+="hl.animation({ leaf = \"border\", enabled = true, speed = 1.5, bezier = \"linear\" })\n"
+                    [ ! -f "${hypr_mods}/animations.lua" ] && echo -e "${mod_anim}" > "${hypr_mods}/animations.lua" 2>/dev/null || true
+
+                    local mod_rules="-- Window & Layer Rules\n"
+                    mod_rules+="hl.layer_rule({ match = { namespace = \"noctalia\" }, blur = true })\n"
+                    mod_rules+="hl.layer_rule({ match = { namespace = \"gtk-layer-shell\" }, blur = true })\n"
+                    mod_rules+="hl.window_rule({ name = \"battlenet-floating\", match = { title = \"^(Battle\\\\.net.*)$\" }, float = true })\n"
+                    mod_rules+="hl.window_rule({ name = \"faugus-floating\", match = { class = \"^(faugus.*)$\" }, float = true })\n"
+                    mod_rules+="hl.window_rule({ name = \"ddcui-floating\", match = { class = \"^(ddcui.*)$\" }, float = true })\n"
+                    mod_rules+="hl.window_rule({ name = \"nwg-displays-floating\", match = { class = \"^(nwg-displays.*)$\" }, float = true })\n"
+                    mod_rules+="hl.window_rule({ name = \"goverlay-floating\", match = { class = \"^(goverlay.*)$\" }, float = true })\n"
+                    mod_rules+="hl.window_rule({ name = \"steam-games-fullscreen\", match = { class = \"^(steam_app_[0-9]+)$\" }, fullscreen = true, immediate = true })\n"
+                    mod_rules+="hl.window_rule({ name = \"gamescope-fullscreen\", match = { class = \"^(gamescope.*)$\" }, fullscreen = true })\n"
+                    [ ! -f "${hypr_mods}/rules.lua" ] && echo -e "${mod_rules}" > "${hypr_mods}/rules.lua" 2>/dev/null || true
+
+                    local mod_keys="-- Keybindings\nlocal terminal = \"${terminal_cand}\"\nlocal fileManager = \"dolphin\"\nlocal mainMod = \"SUPER\"\n\n"
+                    mod_keys+="hl.bind(mainMod .. \" + Q\",     hl.dsp.exec_cmd(terminal))\n"
+                    mod_keys+="hl.bind(mainMod .. \" + RETURN\", hl.dsp.exec_cmd(terminal))\n"
+                    mod_keys+="hl.bind(mainMod .. \" + W\",     hl.dsp.window.close())\n"
+                    mod_keys+="hl.bind(mainMod .. \" + SHIFT + K\", hl.dsp.window.close())\n"
+                    mod_keys+="hl.bind(mainMod .. \" + U\",     hl.dsp.exec_cmd(terminal .. \" -e /usr/bin/slacky-update\"))\n"
+                    mod_keys+="hl.bind(mainMod .. \" + E\",     hl.dsp.exec_cmd(fileManager .. \" || thunar\"))\n"
                     if [ "${pkg_id}" = "hyprland-noctalia" ]; then
-                        hypr_lua_body+="hl.bind(\"SUPER\", \"Space\", function() hl.exec_cmd(\"noctalia msg panel-toggle launcher || ${terminal_cand}\") end)\n"
-                        hypr_lua_body+="hl.bind(\"SUPER\", \"C\", function() hl.exec_cmd(\"noctalia msg panel-toggle control-center\") end)\n"
-                        hypr_lua_body+="hl.bind(\"SUPER\", \"I\", function() hl.exec_cmd(\"noctalia msg settings-toggle\") end)\n"
+                        mod_keys+="hl.bind(mainMod .. \" + SPACE\", hl.dsp.exec_cmd(\"noctalia msg panel-toggle launcher || \" .. terminal))\n"
+                        mod_keys+="hl.bind(mainMod .. \" + C\",     hl.dsp.exec_cmd(\"noctalia msg panel-toggle control-center\"))\n"
+                        mod_keys+="hl.bind(mainMod .. \" + I\",     hl.dsp.exec_cmd(\"noctalia msg settings-toggle\"))\n"
                     fi
-                    hypr_lua_body+="hl.bind(\"SUPER\", \"Q\", function() hl.dispatch(\"killactive\") end)\n"
-                    hypr_lua_body+="hl.bind(\"SUPER\", \"M\", function() hl.dispatch(\"exit\") end)\n"
-                    hypr_lua_body+="hl.bind(\"SUPER\", \"E\", function() hl.exec_cmd(\"dolphin || thunar\") end)\n"
-                    hypr_lua_body+="hl.bind(\"SUPER\", \"V\", function() hl.dispatch(\"togglefloating\") end)\n"
-                    hypr_lua_body+="hl.bind(\"SUPER\", \"F\", function() hl.dispatch(\"fullscreen\") end)\n\n"
-                    hypr_lua_body+="-- Screenshots & Color Picker\n"
-                    hypr_lua_body+="hl.bind(\"\", \"Print\", function() hl.exec_cmd(\"noctalia msg screenshot-annotate\") end)\n"
-                    hypr_lua_body+="hl.bind(\"SUPER SHIFT\", \"S\", function() hl.exec_cmd(\"noctalia msg screenshot-annotate\") end)\n"
-                    hypr_lua_body+="hl.bind(\"SUPER SHIFT\", \"C\", function() hl.exec_cmd(\"hyprpicker -a\") end)\n"
-                    hypr_lua_body+="hl.bind(\"SUPER\", \"P\", function() hl.exec_cmd(\"hyprpicker -a\") end)\n"
-                    echo -e "${hypr_lua_body}" > "${hypr_lua}" 2>/dev/null || echo -e "${hypr_lua_body}" | sudo tee "${hypr_lua}" >/dev/null || true
+                    mod_keys+="hl.bind(mainMod .. \" + M\",     hl.dsp.exec_cmd(\"command -v hyprshutdown >/dev/null 2>&1 && hyprshutdown || hyprctl dispatch exit\"))\n"
+                    mod_keys+="hl.bind(mainMod .. \" + V\",     hl.dsp.window.float({ action = \"toggle\" }))\n"
+                    mod_keys+="hl.bind(mainMod .. \" + F\",     hl.dsp.window.fullscreen({ action = \"toggle\" }))\n\n"
+                    mod_keys+="-- Screenshots & Color Picker\n"
+                    mod_keys+="hl.bind(\"Print\",               hl.dsp.exec_cmd(\"noctalia msg screenshot-annotate && canberra-gtk-play -i screen-capture &\"))\n"
+                    mod_keys+="hl.bind(mainMod .. \" + SHIFT + S\", hl.dsp.exec_cmd(\"noctalia msg screenshot-annotate && canberra-gtk-play -i screen-capture &\"))\n"
+                    mod_keys+="hl.bind(mainMod .. \" + SHIFT + C\", hl.dsp.exec_cmd(\"hyprpicker -a\"))\n"
+                    mod_keys+="hl.bind(mainMod .. \" + P\",     hl.dsp.exec_cmd(\"hyprpicker -a\"))\n\n"
+                    mod_keys+="-- Media Keys\n"
+                    mod_keys+="hl.bind(\"XF86AudioRaiseVolume\", hl.dsp.exec_cmd(\"wpctl set-volume -l 1.5 @DEFAULT_AUDIO_SINK@ 5%+ && canberra-gtk-play -i audio-volume-change -d 'volume' &\"), { repeating = true })\n"
+                    mod_keys+="hl.bind(\"XF86AudioLowerVolume\", hl.dsp.exec_cmd(\"wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%- && canberra-gtk-play -i audio-volume-change -d 'volume' &\"),      { repeating = true })\n"
+                    mod_keys+="hl.bind(\"XF86AudioMute\",        hl.dsp.exec_cmd(\"wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle && canberra-gtk-play -i audio-volume-change -d 'volume' &\"),     { locked = true })\n"
+                    mod_keys+="hl.bind(\"XF86AudioPlay\",        hl.dsp.exec_cmd(\"playerctl play-pause 2>/dev/null || true\"), { locked = true })\n"
+                    mod_keys+="hl.bind(\"XF86AudioNext\",        hl.dsp.exec_cmd(\"playerctl next 2>/dev/null || true\"), { locked = true })\n"
+                    mod_keys+="hl.bind(\"XF86AudioPrev\",        hl.dsp.exec_cmd(\"playerctl previous 2>/dev/null || true\"), { locked = true })\n\n"
+                    mod_keys+="-- Mouse Window Control\n"
+                    mod_keys+="hl.bind(mainMod .. \" + mouse:272\", hl.dsp.window.drag(), { mouse = true })\n"
+                    mod_keys+="hl.bind(mainMod .. \" + mouse:273\", hl.dsp.window.resize(), { mouse = true })\n\n"
+                    mod_keys+="-- Resizing\n"
+                    mod_keys+="hl.bind(mainMod .. \" + CTRL + right\", hl.dsp.window.resize({ x = 30, y = 0, relative = true }), { repeating = true })\n"
+                    mod_keys+="hl.bind(mainMod .. \" + CTRL + left\",  hl.dsp.window.resize({ x = -30, y = 0, relative = true }), { repeating = true })\n"
+                    mod_keys+="hl.bind(mainMod .. \" + CTRL + up\",    hl.dsp.window.resize({ x = 0, y = -30, relative = true }), { repeating = true })\n"
+                    mod_keys+="hl.bind(mainMod .. \" + CTRL + down\",  hl.dsp.window.resize({ x = 0, y = 30, relative = true }), { repeating = true })\n\n"
+                    mod_keys+="-- Focus & Movement\n"
+                    mod_keys+="hl.bind(\"ALT + left\",  hl.dsp.focus({ direction = \"left\" }))\n"
+                    mod_keys+="hl.bind(\"ALT + right\", hl.dsp.focus({ direction = \"right\" }))\n"
+                    mod_keys+="hl.bind(\"ALT + up\",    hl.dsp.focus({ direction = \"up\" }))\n"
+                    mod_keys+="hl.bind(\"ALT + down\",  hl.dsp.focus({ direction = \"down\" }))\n\n"
+                    mod_keys+="-- Workspace Navigation\n"
+                    mod_keys+="for i = 1, 9 do\n"
+                    mod_keys+="    hl.bind(mainMod .. \" + \" .. i, hl.dsp.focus({ workspace = tostring(i) }))\n"
+                    mod_keys+="    hl.bind(mainMod .. \" + SHIFT + \" .. i, hl.dsp.window.move({ workspace = tostring(i) }))\n"
+                    mod_keys+="end\n"
+                    [ ! -f "${hypr_mods}/keybinds.lua" ] && echo -e "${mod_keys}" > "${hypr_mods}/keybinds.lua" 2>/dev/null || true
                 fi
 
                 local hypridle_conf="${hypr_dir}/hypridle.conf"
                 if [ ! -f "${hypridle_conf}" ]; then
-                    local idle_body="# --- [ Slacky-Update OLED Protection Hypridle Config ] ---\ngeneral {\n    after_sleep_cmd = hyprctl dispatch dpms on\n    ignore_dbus_inhibit = false\n    ignore_systemd_inhibit = false\n}\n\n# 1. Dim screens after 2 minutes (120 sec)\nlistener {\n    timeout = 120\n    on-timeout = hyprctl keyword decoration:dim_inactive true && hyprctl keyword decoration:dim_strength 0.75\n    on-resume = hyprctl keyword decoration:dim_inactive false\n}\n\n# 2. Turn off OLED screens completely (DPMS Standby / 0 nits, no password lock) after 3 minutes (180 sec)\nlistener {\n    timeout = 180\n    on-timeout = hyprctl dispatch dpms off\n    on-resume = hyprctl dispatch dpms on && hyprctl keyword decoration:dim_inactive false\n}\n"
+                    local idle_body="# --- [ Slacky-Update OLED Protection Hypridle Config ] ---\ngeneral {\n    after_sleep_cmd = hyprctl dispatch 'hl.dsp.dpms({ action = \"on\" })' || hyprctl dispatch dpms on\n    ignore_dbus_inhibit = false\n    ignore_systemd_inhibit = false\n}\n\n# Turn off OLED & secondary screens completely (DPMS Standby / 0 nits, no password lock) after 3 minutes (180 sec)\nlistener {\n    timeout = 180\n    on-timeout = hyprctl dispatch 'hl.dsp.dpms({ action = \"off\" })' || hyprctl dispatch dpms off\n    on-resume = hyprctl dispatch 'hl.dsp.dpms({ action = \"on\" })' || hyprctl dispatch dpms on\n}\n"
                     echo -e "${idle_body}" > "${hypridle_conf}" 2>/dev/null || echo -e "${idle_body}" | sudo tee "${hypridle_conf}" >/dev/null || true
                 fi
 
@@ -4946,7 +5293,7 @@ WAYLAND_SESSION_EOF
                         fi
                         local noct_body="[shell.panel]\ntransparency_mode = \"glass\"\n\n"
                         noct_body+="[bar.default]\nenabled = true\nposition = \"top\"\nbackground_opacity = 0.60\n\n"
-                        noct_body+="[dock]\nenabled = true\nposition = \"bottom\"\nbackground_opacity = 0.65\nlauncher_position = \"start\"\nlauncher_icon = \"grid-dots\"\nmagnification = true\nmagnification_scale = 1.35\nicon_size = 48\nmargin_edge = 8\nmargin_ends = 12\nradius = 16\npinned = [\"slacky-update\", \"${term_pinned}\", \"${fm_pinned}\", \"firefox\", \"steam\"]\n"
+                        noct_body+="[dock]\nenabled = true\nposition = \"bottom\"\nbackground_opacity = 0.65\nlauncher_position = \"start\"\nlauncher_icon = \"grid-dots\"\nmagnification = true\nmagnification_scale = 1.25\nicon_size = 48\nmargin_edge = 4\nmargin_ends = 8\nradius = 12\npinned = [\"slacky-update\", \"${term_pinned}\", \"${fm_pinned}\", \"firefox\", \"steam\"]\n"
                         echo -e "${noct_body}" > "${noct_conf}" 2>/dev/null || echo -e "${noct_body}" | sudo tee "${noct_conf}" >/dev/null || true
                     fi
                 fi
@@ -5162,25 +5509,16 @@ except Exception:
 sync_all_installed_cachyos_gaming_packages() {
     log_info "Auditing installed Underpants Gnomes Gaming packages for upstream updates..."
     local outdated_pids=()
-    
-    while IFS='|' read -r pkg_id name cat main_pat l32_pat ext_pat repos; do
-        [[ -z "${pkg_id}" || "${pkg_id}" =~ ^# ]] && continue
-        local cur_ver
-        cur_ver=$(get_installed_gaming_pkg_version "${pkg_id}")
-        [ "${cur_ver}" != "NONE" ] || continue
+    local fast_results
+    fast_results=$(check_all_installed_gaming_updates_fast 2>/dev/null || echo "")
 
-        local latest_ver main_u l32_u ext_u
-        read -r latest_ver main_u l32_u ext_u <<< "$(resolve_cachyos_gaming_upstream_metadata "${pkg_id}" || echo "NONE NONE NONE NONE")"
-        
-        if [ "${latest_ver}" != "NONE" ] && [ -n "${latest_ver}" ]; then
-            local is_newer
-            is_newer=$(compare_versions_strictly_greater "${latest_ver}" "${cur_ver}" 2>/dev/null || echo "false")
-            if [ "${is_newer}" = "true" ]; then
-                log_info "Upgrade available for ${name}: v${cur_ver} -> v${latest_ver}"
-                outdated_pids+=("${pkg_id}")
-            fi
-        fi
-    done <<< "$(get_gaming_catalog)"
+    if [ -n "${fast_results}" ]; then
+        while IFS='|' read -r pid name cur_ver latest_ver; do
+            [[ -z "${pid}" || "${pid}" =~ ^# ]] && continue
+            log_info "Upgrade available for ${name}: v${cur_ver} -> v${latest_ver}"
+            outdated_pids+=("${pid}")
+        done <<< "${fast_results}"
+    fi
 
     if [ ${#outdated_pids[@]} -gt 0 ]; then
         log_info "Deploying unified batch upgrade for ${#outdated_pids[@]} packages..."

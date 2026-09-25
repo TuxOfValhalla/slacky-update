@@ -3,8 +3,20 @@
 
 set -euo pipefail
 
-CURRENT_VERSION="0.16.0"
-RELEASE_CODENAME="Tubthumping"
+CURRENT_VERSION="0.17.0"
+RELEASE_CODENAME="I AM THE LAW!"
+
+# --- [ DYNAMIC HiDPI & MULTI-MONITOR DISPLAY SCALING ] ---
+# Transparently routes Qt, Wayland, and GTK interfaces across Hyprland, KDE Plasma, XFCE, and GNOME
+if [ "${XDG_SESSION_TYPE:-}" = "wayland" ] || [ -n "${WAYLAND_DISPLAY:-}" ] || [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+    [ -z "${QT_QPA_PLATFORM:-}" ] && export QT_QPA_PLATFORM="wayland;xcb"
+    [ -z "${GDK_BACKEND:-}" ] && export GDK_BACKEND="wayland,x11,*"
+    unset QT_AUTO_SCREEN_SCALE_FACTOR QT_ENABLE_HIGHDPI_SCALING 2>/dev/null || true
+else
+    [ -z "${QT_AUTO_SCREEN_SCALE_FACTOR:-}" ] && export QT_AUTO_SCREEN_SCALE_FACTOR=1
+    [ -z "${QT_ENABLE_HIGHDPI_SCALING:-}" ] && export QT_ENABLE_HIGHDPI_SCALING=1
+    [ -z "${QT_SCALE_FACTOR_ROUNDING_POLICY:-}" ] && export QT_SCALE_FACTOR_ROUNDING_POLICY=PassThrough
+fi
 
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 if [ -d "${SCRIPT_DIR}/../lib" ] && [ -f "${SCRIPT_DIR}/../lib/common.sh" ]; then
@@ -1013,6 +1025,10 @@ if [ "${1:-}" = "--non-interactive" ] || [ "${1:-}" = "-y" ]; then
 elif [ "${1:-}" = "--check" ]; then
     "${CHECK_BIN}"
     display_pending_status
+elif [ "${1:-}" = "--rank-mirrors" ] || [ "${1:-}" = "--mirrors" ] || [ "${1:-}" = "-M" ]; then
+    INTERACTIVE_SESSION=1
+    rank_slackware_mirrors_interactive
+    exit 0
 elif [ "${1:-}" = "--limine" ] || [ "${1:-}" = "-l" ]; then
     INTERACTIVE_SESSION=1
     manage_limine_interactive

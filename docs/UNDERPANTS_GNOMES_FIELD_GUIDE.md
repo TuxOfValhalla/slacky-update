@@ -1,11 +1,17 @@
 # 🧙 Underpants Gnomes Pacman Engine — Comprehensive Field Guide
 ### *Universal Arch & CachyOS Package Transmutation for Slackware Linux*
+#### `v0.17.0` — *"I AM THE LAW!"* (Security, Compliance & Hardening Milestone)
 
 ---
 
-> [!WARNING]
-> **EXPERIMENTAL FEATURE / UNDERPANTS LABS PREVIEW**  
-> The Underpants Gnomes Universal Pacman Transmutation Engine is an **experimental, bleeding-edge capability** introduced in `slacky-update` v0.15.0. It provides direct, host-sovereign access to over **31,800+** software packages from Arch Linux and CachyOS repositories without modifying or compromising your Slackware base system.
+> [!IMPORTANT]
+> **TARGET DISTRIBUTION REQUIREMENT & VERSION DISCLAIMER**  
+> **Underpants Gnomes and Slacky-Update are engineered strictly for Slackware 15+ (`slackware-current` / `Slackware 16 alpha`).**  
+> Legacy **Slackware 15.0 (stable)** is strictly unsupported due to older host glibc, toolchains, and sonames that cause conflicts that cannot be detected or resolved. Slackware 15.0 users must upgrade to `-current` before using this suite.
+
+> [!NOTE]
+> **PRODUCTION HARDENED / SYSTEM COMPLIANCE MILESTONE**  
+> The Underpants Gnomes Universal Pacman Transmutation Engine is a core capability of `slacky-update` v0.17.0. It provides direct, host-sovereign access to over **31,800+** software packages from Arch Linux and CachyOS repositories without modifying or compromising your Slackware base system.
 
 ---
 
@@ -60,6 +66,12 @@ For core gaming components such as **Steam, MangoHud, Gamescope, GOverlay, Proto
 **Do NOT attempt to install Linux kernels, kernel headers, or out-of-tree kernel modules via `gnomes -S` (e.g. `gnomes -S linux` or `gnomes -S linux-zen`).**  
 The pacman engine has built-in guardrails (`CORE_EXCLUDES`) that block kernel packages from transmuting to protect your bootloader.  
 👉 **Kernel lifecycle management (CachyOS, Arch vanilla `linux`, and Arch `linux-zen` kernels) must strictly be managed through `slacky-update --kernel` / `mod_kernel.sh`!**
+
+### 4. ⚡ Fast-Race Mirror Benchmarking Engine
+When fetching Chaotic-AUR packages (such as `hyprpicker`, `easyeffects`, or `coolercontrol`), the engine evaluates global mirrors concurrently via `concurrent.futures.as_completed`. A sub-55ms response triggers an instant win, returning the fastest node immediately and terminating slower mirror checks with a strict 750ms timeout.
+
+### 5. 🔄 Transparent 404 Self-Healing Auto-Sync
+If an upstream repository rolls out an update while local database manifests are cached, returning HTTP 404, Gnomes automatically traps the error, runs a silent forced resynchronization (`sync_repositories(force=True, verbose=False)`), updates the URL to the latest version, and retries the download seamlessly.
 
 ---
 

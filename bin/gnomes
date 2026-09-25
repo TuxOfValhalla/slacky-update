@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # --- [ UNDERPANTS GNOMES: UNIVERSAL PACMAN ENGINE & FACTORY ] ---
 # Engineered for Slackware Linux (-current / 15.0+)
-# Codename: "Tubthumping" (v0.16.0)
+# Codename: "I AM THE LAW!" (v0.17.0)
 #
 # Provides standalone, host-sovereign access to Arch Linux and CachyOS
 # software ecosystems transmuted into native Slackware .txz packages.
@@ -56,7 +56,7 @@ print_banner() {
                              |_|                                                                   
   [ 🩲 Phase 1: Collect Underpants  ➔  Phase 2: ?  ➔  Phase 3: Transmute Genuine Slackware .txz! ]
 EOF
-    echo -e "${MAGENTA}:: Underpants Gnomes Pacman Engine v0.16.0 ('Tubthumping')${RESET}"
+    echo -e "${MAGENTA}:: Underpants Gnomes Pacman Engine v0.17.0 ('I AM THE LAW!')${RESET}"
     echo -e "${CYAN}:: Multi-Repo Microarchitecture Engine for Slackware Linux (-current / 15.0+)${RESET}\n"
 }
 

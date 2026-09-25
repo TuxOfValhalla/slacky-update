@@ -1,12 +1,17 @@
 # 🛠️ Slacky-Update Technical Companion Guide: Under the Hood & Engine Architecture
 ### *A Deep-Dive Architectural Whitepaper & Technical Reference for Slackware Linux 15.0 & -current*
-#### `v0.14.0` — *"Coco Jambo"* (Release Edition)
+#### `v0.17.0` — *"I AM THE LAW!"* (Security, Compliance & Hardening Milestone)
 
 ---
 
+> [!IMPORTANT]
+> **TARGET DISTRIBUTION REQUIREMENT & VERSION DISCLAIMER**  
+> **Slacky-Update is engineered strictly for Slackware 15+ (`slackware-current` / `Slackware 16 alpha`).**  
+> It is **NOT** compatible with or supported on legacy **Slackware 15.0 (stable)**. Legacy 15.0 systems feature older core packages, toolchains, and shared libraries (such as older glibc, GCC, Wayland/Mesa, PipeWire, and kernel headers) that cause package and soname conflicts which cannot be safely detected or resolved. Running Slacky-Update on Slackware 15.0 is unsupported. Users on Slackware 15.0 must migrate to `slackware-current` before using this suite.
+
 > [!CAUTION]
 > **PRE-RELEASE / EARLY ACCESS DISCLAIMER & LIABILITY NOTICE — USE AT YOUR OWN RISK**  
-> Slacky-Update v0.14.0 is an active *Pre-Release / Early Access* edition. The software executes low-level system modifications, including Linux kernel deployments, proprietary NVIDIA drivers, Dracut initramfs generation, Btrfs subvolumes, and bootloader topologies (Limine/GRUB).  
+> Slacky-Update is an active *Pre-Release / Early Access* edition. The software executes low-level system modifications, including Linux kernel deployments, proprietary NVIDIA drivers, Dracut initramfs generation, Btrfs subvolumes, and bootloader topologies (Limine/GRUB).  
 > **All usage, upgrades, and system configurations are executed strictly at your own discretion and risk.** The developers and maintainers assume no liability or warranty for system malfunction, unbootable states, or data loss.  
 > **Pre-requisites:** Always maintain tested, current backups (`/home`, essential configuration files, and boot partitions) and keep a bootable Slackware Live-USB accessible before performing upgrades or modifying bootloader setups.
 
@@ -19,7 +24,7 @@
    - [Coexistence vs. Replacement](#coexistence-vs-replacement)
    - [Zero-Binary Policy & Transparent Source](#zero-binary-policy--transparent-source)
 2. [2. Master Architecture Overview](#2-master-architecture-overview)
-3. [3. The 12 Internal Engines: Detailed Breakdown](#3-the-12-internal-engines-detailed-breakdown)
+3. [3. The Master Internal Engines: Detailed Breakdown](#3-the-master-internal-engines-detailed-breakdown)
    - [Engine 1: Core Orchestration & Lifecycle Controller](#engine-1-core-orchestration--lifecycle-controller)
    - [Engine 2: 10-Worker Asynchronous Turbo Pre-Fetcher](#engine-2-10-worker-asynchronous-turbo-pre-fetcher)
    - [Engine 3: Sandboxed Transmutation & App-Bundle Engine](#engine-3-sandboxed-transmutation--app-bundle-engine)
@@ -32,6 +37,9 @@
    - [Engine 10: Real-Time System Tray Telemetry & Notifications](#engine-10-real-time-system-tray-telemetry--notifications)
    - [Engine 11: Internationalization & Fallback Engine (i18n)](#engine-11-internationalization--fallback-engine-i18n)
    - [Engine 12: Documentation & Groff PDF / QR Export Engine](#engine-12-documentation--groff-pdf--qr-export-engine)
+   - [Engine 13: Universal HiDPI & Wayland Scaling Engine](#engine-13-universal-hidpi--wayland-scaling-engine)
+   - [Engine 14: Fast-Race Chaotic-AUR Probing & Self-Healing 404 Engine](#engine-14-fast-race-chaotic-aur-probing--self-healing-404-engine)
+   - [Engine 15: Gaming Overlay TrueType Compatibility Mesh](#engine-15-gaming-overlay-truetype-compatibility-mesh)
 4. [4. Security, Sandboxing & Privilege Model](#4-security-sandboxing--privilege-model)
 5. [5. Data Layout & State Management](#5-data-layout--state-management)
 6. [6. Auditing, Transparency & Debugging](#6-auditing-transparency--debugging)
@@ -190,6 +198,28 @@ Slacky-Update was engineered with a strict guiding principle: **augment Slackwar
 ### Engine 12: Documentation & Groff PDF / QR Export Engine
 * **Source File**: `lib/mod_docs.sh`
 * **Role**: Compiles Markdown documentation into professional Groff/Troff PDFs in `~/Documents/` and starts an ephemeral Wi-Fi QR web server for mobile reading during BIOS setup.
+
+---
+
+### Engine 13: Universal HiDPI & Wayland Scaling Engine
+* **Source Files**: `assets/profile.d/slacky-hidpi.sh`, `assets/profile.d/slacky-hidpi.csh`, `desktop/slacky-update.desktop`, `bin/slacky-update`, `lib/slacky-update-tray`
+* **Role**: Configures system-wide Qt5, Qt6, and GTK environment defaults for modern high-resolution displays (4K/1440p) under Wayland and X11 sessions. Deploys `QT_ENABLE_HIGHDPI_SCALING=1`, `QT_AUTO_SCREEN_SCALE_FACTOR=1`, `QT_SCALE_FACTOR_ROUNDING_POLICY=PassThrough`, and routes Wayland compositor backends (`QT_QPA_PLATFORM="wayland;xcb"`, `GDK_BACKEND="wayland,x11,*"`). Initializes `QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)` in the PyQt tray monitor and ensures terminals and dialogs spawn with pixel-perfect integer/fractional scaling.
+
+---
+
+### Engine 14: Fast-Race Chaotic-AUR Probing & Self-Healing 404 Engine
+* **Source Files**: `lib/mod_gaming.sh`, `lib/gnomes_pacman.py`
+* **Role**: Parallel, non-blocking latency evaluator and repository integrity recovery engine. 
+  - **Fast-Race Mirror Benchmarking**: Evaluates Chaotic-AUR global mirrors simultaneously using `concurrent.futures.as_completed` with aggressive 750ms cutoffs. Employs an instant-win short-circuit mechanism (sub-55ms response) to select the fastest mirror immediately without stalling on dead or high-latency nodes.
+  - **Self-Healing 404 Recovery**: Dynamically intercepts upstream mirror 404 HTTP errors when package versions bump during database TTL intervals. Automatically triggers a silent resynchronization pass (`sync_repositories(force=True, verbose=False)`), updates target tarball URIs, and transparently retries the download in-flight without user intervention.
+
+---
+
+### Engine 15: Gaming Overlay TrueType Compatibility Mesh
+* **Source Files**: `lib/mod_gaming.sh`
+* **Role**: Dynamic font indexer, symlinking orchestrator, and parser validation mesh for Vulkan/OpenGL gaming overlays (MangoHud, GOverlay).
+  - **Hierarchical Font Mesh**: Automatically discovers all system-installed TTF and OTF fonts across `/usr/share/fonts/` and `/usr/local/share/fonts/` and constructs synchronized symlink trees in `~/.local/share/fonts/` and subdirectories (`TTF`, `OTF`, `truetype`, `opentype`).
+  - **stb_truetype Engine Compatibility**: Eliminates GOverlay absolute path rendering errors and ensures MangoHud's Dear ImGui `stb_truetype` font rasterizer loads custom TrueType fonts natively without bitmap fallbacks.
 
 ---
 

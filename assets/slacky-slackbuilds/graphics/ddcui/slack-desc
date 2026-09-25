@@ -1,0 +1,19 @@
+# HOW TO EDIT THIS FILE:
+# The "handy ruler" below makes it easier to edit a package description.  Line
+# up the first '|' above the ':' following the base package name, and the '|'
+# on the right side marks the last column you can put a character in.  You must
+# make exactly 11 lines for the formatting to be correct.  It's also
+# customary to leave one space after the ':' except on otherwise empty lines.
+
+     |-----handy-ruler------------------------------------------------------|
+ddcui: ddcui (graphical user interface for ddcutil)
+ddcui:
+ddcui: ddcui is a graphical user interface for ddcutil, a program for
+ddcui: querying and changing monitor settings such as brightness, contrast,
+ddcui: and color levels using DDC/CI (Display Data Channel Command
+ddcui: Interface).
+ddcui:
+ddcui: Homepage: https://www.ddcutil.com
+ddcui: GitHub: https://github.com/rockowitz/ddcui
+ddcui:
+ddcui:

@@ -1,7 +1,13 @@
 # ⚡ Limine Bootloader & Secure Boot Field Guide
-**Slackware Linux (Most Excellent Edition) & CachyOS Unified Boot Suite**
+### *Slackware Linux 15.0 & -current — Unified Boot, Cryptographic Sealing & Secure Boot Playbook*
+#### `v0.17.0` — *"I AM THE LAW!"* (Security, Compliance & Hardening Milestone)
 
 ---
+
+> [!IMPORTANT]
+> **TARGET DISTRIBUTION REQUIREMENT & VERSION DISCLAIMER**  
+> **Slacky-Update is engineered strictly for Slackware 15+ (`slackware-current` / `Slackware 16 alpha`).**  
+> Legacy **Slackware 15.0 (stable)** is strictly unsupported due to older core libraries, toolchains, and sonames that cause conflicts that cannot be detected or resolved. Slackware 15.0 users must upgrade to `-current` before using this suite.
 
 > [!CAUTION]
 > ### ⚠️ IMPORTANT DISCLAIMER & LIABILITY NOTICE

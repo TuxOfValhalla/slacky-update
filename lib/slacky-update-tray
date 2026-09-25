@@ -502,28 +502,41 @@ class SlackyUpdateTray(QSystemTrayIcon):
         self.launch_in_terminal([self._get_slacky_bin(), "--slackbuilds"], "Slacky-Update SlackBuilds")
 
     def launch_in_terminal(self, cmd, title):
+        env = os.environ.copy()
+        if env.get("XDG_SESSION_TYPE") == "wayland" or "WAYLAND_DISPLAY" in env:
+            env["QT_QPA_PLATFORM"] = "wayland;xcb"
+            env["GDK_BACKEND"] = "wayland,x11,*"
+            env.pop("QT_AUTO_SCREEN_SCALE_FACTOR", None)
+            env.pop("QT_ENABLE_HIGHDPI_SCALING", None)
+            env.pop("QT_SCALE_FACTOR_ROUNDING_POLICY", None)
+        else:
+            env.pop("QT_QPA_PLATFORM", None)
+            env["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
+            env["QT_ENABLE_HIGHDPI_SCALING"] = "1"
+            env["QT_SCALE_FACTOR_ROUNDING_POLICY"] = "PassThrough"
+
         term = os.environ.get("TERMINAL")
         if term and shutil.which(term):
             try:
-                subprocess.Popen([term, "-e"] + cmd)
+                subprocess.Popen([term, "-e"] + cmd, env=env)
                 return
             except Exception:
                 pass
 
         if shutil.which("konsole"):
             try:
-                subprocess.Popen(["konsole", "-p", f"tabtitle={title}", "-e"] + cmd)
+                subprocess.Popen(["konsole", "-p", f"tabtitle={title}", "-e"] + cmd, env=env)
                 return
             except Exception:
                 try:
-                    subprocess.Popen(["konsole", "-e"] + cmd)
+                    subprocess.Popen(["konsole", "-e"] + cmd, env=env)
                     return
                 except Exception:
                     pass
 
         if shutil.which("xfce4-terminal"):
             try:
-                subprocess.Popen(["xfce4-terminal", f"--title={title}", "-e", " ".join(cmd)])
+                subprocess.Popen(["xfce4-terminal", f"--title={title}", "-e", " ".join(cmd)], env=env)
                 return
             except Exception:
                 pass
@@ -531,13 +544,18 @@ class SlackyUpdateTray(QSystemTrayIcon):
         for fallback in ["gnome-terminal", "xterm"]:
             if shutil.which(fallback):
                 try:
-                    subprocess.Popen([fallback, "-T", title, "-e"] + cmd)
+                    subprocess.Popen([fallback, "-T", title, "-e"] + cmd, env=env)
                     return
                 except Exception:
                     continue
 
 # --- [ MAIN ENTRY POINT ] ---
 if __name__ == "__main__":
+    if hasattr(Qt, "AA_EnableHighDpiScaling"):
+        QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+    if hasattr(Qt, "AA_UseHighDpiPixmaps"):
+        QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
+
     app = QApplication(sys.argv)
     app.setApplicationName("slacky-update")
     app.setDesktopFileName("slacky-update-tray")

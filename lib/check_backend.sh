@@ -34,7 +34,26 @@ touch "${TMP_DIR}/slackpkgplus_status"
 touch "${TMP_DIR}/flatpak_status"
 touch "${TMP_DIR}/sbo_status"
 touch "${TMP_DIR}/cachy_status"
-touch "${TMP_DIR}/gaming_status"
+# --- [ 0. OPPORTUNISTIC LOW-PRIORITY WEEKLY MAINTENANCE (6d 22h) ] ---
+(
+    RANK_SCRIPT=""
+    for cand in "${SCRIPT_DIR:-}/rank_mirrors.py" \
+                "${APP_DIR:-}/rank_mirrors.py" \
+                "/usr/share/slacky-update/lib/rank_mirrors.py" \
+                "/usr/local/share/slacky-update/lib/rank_mirrors.py" \
+                "/usr/local/lib/slacky-update/rank_mirrors.py"; do
+        if [ -f "${cand}" ]; then
+            RANK_SCRIPT="${cand}"
+            break
+        fi
+    done
+
+    if [ -n "${RANK_SCRIPT}" ]; then
+        if python3 "${RANK_SCRIPT}" --check-due 2>/dev/null; then
+            nohup nice -n 19 ionice -c 3 python3 "${RANK_SCRIPT}" --auto </dev/null >/dev/null 2>&1 &
+        fi
+    fi
+) </dev/null >/dev/null 2>&1 &
 
 # --- [ 1. SLACKWARE REPOSITORY INSPECTION (UNPRIVILEGED) ] ---
 (
@@ -173,7 +192,7 @@ PYSLACK
     else
         echo "FAILED" > "${TMP_DIR}/slackware_status"
     fi
-) &
+) & PID_SLACK=$!
 
 # --- [ 1.5. SLACKPKGPLUS & MULTILIB REPOSITORY INSPECTION (UNPRIVILEGED) ] ---
 (
@@ -270,7 +289,7 @@ for u in sorted(updates):
     print(u)
 PYPLUS
     echo "SUCCESS" > "${TMP_DIR}/slackpkgplus_status"
-) &
+) & PID_PLUS=$!
 
 # --- [ 2. FLATPAK REPOSITORY INSPECTION ] ---
 (
@@ -282,7 +301,7 @@ PYPLUS
             echo "FAILED" > "${TMP_DIR}/flatpak_status"
         fi
     fi
-) &
+) & PID_FLATPAK=$!
 
 # --- [ 2.5. SBOTOOLS REPOSITORY INSPECTION ] ---
 (
@@ -294,16 +313,16 @@ PYPLUS
             diff_days=$(( (now_ts - repo_mtime) / 86400 ))
             if [ "${diff_days}" -ge 7 ]; then
                 if [ "$(id -u)" -eq 0 ]; then
-                    timeout 60s sbosnap fetch >/dev/null 2>&1 || true
+                    timeout 15s sbosnap fetch >/dev/null 2>&1 || true
                     touch /var/lib/sbotools/repo 2>/dev/null || true
                 elif sudo -n true 2>/dev/null; then
-                    sudo -n timeout 60s sbosnap fetch >/dev/null 2>&1 || true
+                    sudo -n timeout 15s sbosnap fetch >/dev/null 2>&1 || true
                     sudo -n touch /var/lib/sbotools/repo 2>/dev/null || true
                 fi
             fi
         fi
 
-        if raw_sbo=$(timeout 20s sbocheck -n -o --nocolor 2>/dev/null); then
+        if raw_sbo=$(timeout 15s sbocheck -n -o --nocolor 2>/dev/null); then
             echo "${raw_sbo}" | (grep -i "needs updating" || true) | awk '{print $1 " (" $2 " -> " substr($6, 2) ")"}' > "${TMP_DIR}/sbo_updates"
             echo "SUCCESS" > "${TMP_DIR}/sbo_status"
         else
@@ -312,7 +331,7 @@ PYPLUS
     else
         echo "SUCCESS" > "${TMP_DIR}/sbo_status"
     fi
-) &
+) & PID_SBO=$!
 
 # --- [ 3. CACHYOS KERNEL UPSTREAM CHECK ] ---
 check_cachyos_background() {
@@ -388,7 +407,7 @@ check_cachyos_background() {
         fi
     fi
 }
-check_cachyos_background &
+check_cachyos_background & PID_CACHY=$!
 
 # --- [ 3.5. CACHYOS GAMING SUITE UPDATE CHECK ] ---
 check_cachyos_gaming_background() {
@@ -427,7 +446,7 @@ check_cachyos_gaming_background() {
         echo "SUCCESS" > "${TMP_DIR}/gaming_status"
     fi
 }
-check_cachyos_gaming_background &
+check_cachyos_gaming_background & PID_GAMING=$!
 
 # --- [ 4. NVIDIA HARDWARE & DRIVER CHECK ] ---
 (
@@ -513,9 +532,9 @@ sys.exit(1)
     printf "%s\n" "${NVIDIA_UPDATES[@]:-}" > "${TMP_DIR}/nvidia_updates"
     echo "${NVIDIA_MISMATCH}" > "${TMP_DIR}/nvidia_mismatch"
     echo "${NVIDIA_ACTIVE_VER}" > "${TMP_DIR}/nvidia_active_ver"
-) &
+) & PID_NVIDIA=$!
 
-wait
+wait "${PID_SLACK:-}" "${PID_PLUS:-}" "${PID_FLATPAK:-}" "${PID_SBO:-}" "${PID_CACHY:-}" "${PID_GAMING:-}" "${PID_NVIDIA:-}" 2>/dev/null || true
 
 # --- [ 5. SECURE BOOT STATUS ] ---
 SB_STATE="disabled"

@@ -37,6 +37,23 @@ DEFAULT_ARCH_MIRROR = "https://geo.mirror.pkgbuild.com"
 DEFAULT_CACHYOS_MIRROR = "https://mirror.cachyos.org/repo"
 DEFAULT_CHAOTIC_MIRROR = "https://cdn-mirror.chaotic.cx/chaotic-aur"
 
+# Load fastest benchmarked mirrors if available
+for _ranked_path in [os.path.expanduser("~/.cache/slacky-update/ranked_mirrors.json"),
+                     "/var/cache/slacky-update/ranked_mirrors.json"]:
+    if os.path.exists(_ranked_path):
+        try:
+            with open(_ranked_path, "r", encoding="utf-8") as _rf:
+                _mdata = json.load(_rf)
+                if _mdata.get("arch_primary"):
+                    DEFAULT_ARCH_MIRROR = _mdata["arch_primary"]
+                if _mdata.get("cachyos_primary"):
+                    DEFAULT_CACHYOS_MIRROR = _mdata["cachyos_primary"]
+                if _mdata.get("chaotic_primary"):
+                    DEFAULT_CHAOTIC_MIRROR = _mdata["chaotic_primary"]
+                break
+        except Exception:
+            pass
+
 # Safety Guardrail: Strictly STABLE. Testing repos are permanently blacklisted.
 BLACKLISTED_REPOS = {
     "core-testing", "extra-testing", "multilib-testing",
@@ -877,7 +894,7 @@ class GnomesPacmanEngine:
     def sync_repositories(self, force: bool = False, verbose: bool = True) -> Dict[str, int]:
         """Download and cache all active repository sync databases."""
         results: Dict[str, int] = {}
-        headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) Slacky-Update/0.16.0 UnderpantsGnomes"}
+        headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) Slacky-Update/0.17.0 UnderpantsGnomes"}
 
         for repo in self.repositories:
             rname = repo["name"]
@@ -2127,7 +2144,7 @@ exec "${{TARGET_BIN}}" "$@"
         total_bytes_expected = sum(int(p.get("CSIZE", 15 * 1024 * 1024)) for p in pkgs)
         downloaded_results: List[Tuple[Dict[str, Any], str]] = []
 
-        headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) Slacky-Update/0.16.0 UnderpantsGnomes"}
+        headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) Slacky-Update/0.17.0 UnderpantsGnomes"}
         lock = threading.Lock()
         slot_lock = threading.Lock()
         print_lock = threading.Lock()
@@ -2483,10 +2500,88 @@ exec "${{TARGET_BIN}}" "$@"
 
         # Check for still-missing packages after recovery pass
         final_downloaded_names = {r[0].get("NAME") for r in downloaded_results}
-        missing_final = [p.get("NAME") for p in pkgs if p.get("NAME") not in final_downloaded_names]
+        missing_final = [p for p in needed_pkgs if p.get("NAME") not in final_downloaded_names]
+
+        # Third Pass: Self-Healing 404 Auto-Sync pass
         if missing_final:
             if verbose:
-                print(f"\n\033[1;31mThe following packages could not be downloaded:\033[0m {', '.join(missing_final)}\n")
+                print(f"  :: \033[1;33m⚡ Self-Healing:\033[0m Re-synchronizing repository index for {len(missing_final)} out-of-date payload(s)...")
+            try:
+                self.engine.sync_repositories(force=True, verbose=False)
+            except Exception as e:
+                if verbose:
+                    print(f"  :: Warning: Auto-sync failed: {e}")
+
+            for p in missing_final:
+                pname = p.get("NAME")
+                # Lookup refreshed package data from updated index
+                refreshed_pkg = self.engine.index.get(pname)
+                if not refreshed_pkg:
+                    continue
+
+                candidates = self.engine.get_download_urls_candidates(refreshed_pkg)
+                if not candidates:
+                    continue
+
+                filename = refreshed_pkg.get("FILENAME") or os.path.basename(candidates[0])
+                local_path = os.path.join(self.cache_pkg_dir, filename)
+                part_path = local_path + ".part"
+                expected_csize = int(refreshed_pkg.get("CSIZE", 0))
+                recov_success = False
+
+                for cand_url in candidates:
+                    for attempt in range(2):
+                        try:
+                            if attempt > 0:
+                                time.sleep(0.5 * attempt)
+                            req = urllib.request.Request(cand_url, headers=headers)
+                            with urllib.request.urlopen(req, timeout=45) as resp:
+                                first_chunk = resp.read(8192)
+                                if not first_chunk or first_chunk.startswith(b"<html") or first_chunk.startswith(b"<!DOCTYPE") or first_chunk.startswith(b"<!doctype") or b"<html" in first_chunk.lower() or b"<head" in first_chunk.lower():
+                                    continue
+                                if filename.endswith(".zst") and not first_chunk.startswith(b"\x28\xb5\x2f\xfd"):
+                                    continue
+                                if filename.endswith(".xz") and not first_chunk.startswith(b"\xfd7zXZ\x00"):
+                                    continue
+                                if filename.endswith(".gz") and not first_chunk.startswith(b"\x1f\x8b"):
+                                    continue
+
+                                with open(part_path, "wb") as f:
+                                    f.write(first_chunk)
+                                    while True:
+                                        chunk = resp.read(65536)
+                                        if not chunk:
+                                            break
+                                        f.write(chunk)
+                            if os.path.exists(part_path) and self.is_valid_pkg_archive(part_path, expected_csize):
+                                shutil.move(part_path, local_path)
+                                downloaded_results.append((refreshed_pkg, local_path))
+                                recov_success = True
+                                if verbose:
+                                    sz_mb = os.path.getsize(local_path) / (1024 * 1024)
+                                    print(f"  \033[1;32m✓\033[0m Self-healed & downloaded \033[1m{pname}\033[0m ({refreshed_pkg.get('VERSION', '')}) [{sz_mb:.1f} MB]")
+                                break
+                            else:
+                                if os.path.exists(part_path):
+                                    try:
+                                        os.remove(part_path)
+                                    except Exception:
+                                        pass
+                        except Exception:
+                            if os.path.exists(part_path):
+                                try:
+                                    os.remove(part_path)
+                                except Exception:
+                                    pass
+                    if recov_success:
+                        break
+
+        # Final check after all recovery and self-healing passes
+        final_downloaded_names = {r[0].get("NAME") for r in downloaded_results}
+        missing_final_names = [p.get("NAME") for p in pkgs if p.get("NAME") not in final_downloaded_names]
+        if missing_final_names:
+            if verbose:
+                print(f"\n\033[1;31mThe following packages could not be downloaded:\033[0m {', '.join(missing_final_names)}\n")
 
         return downloaded_results
 
@@ -3808,9 +3903,9 @@ class RuntimeManager:
         "graphics": ["vulkan-icd-loader", "openxr", "embree", "hwloc", "onetbb", "libsquish", "libwslay", "miniupnpc", "glm", "freeglut", "glew", "glfw", "openal"],
         "cad": ["opencascade", "vtk", "ngspice", "verdict", "pugixml", "jsoncpp", "poppler", "mpdecimal", "cblas", "lapack", "openblas"],
         "mobile": ["libimobiledevice", "libimobiledevice-glue", "libplist", "libtatsu", "libusbmuxd", "usbmuxd", "libgpod", "sg3_utils"],
-        "desktop": ["hyprland", "xdg-desktop-portal-hyprland", "hyprlock", "hypridle", "hyprpaper", "aquamarine", "hyprlang", "hyprcursor", "hyprgraphics", "hyprutils", "hyprpolkitagent"],
-        "hyprland": ["hyprland", "xdg-desktop-portal-hyprland", "hyprlock", "hypridle", "hyprpaper", "aquamarine", "hyprlang", "hyprcursor", "hyprgraphics", "hyprutils", "hyprpolkitagent"],
-        "noctalia": ["noctalia", "hyprland", "xdg-desktop-portal-hyprland", "hyprlock", "hypridle", "hyprpaper", "aquamarine", "hyprlang", "hyprcursor", "hyprgraphics", "hyprutils", "hyprpolkitagent"],
+        "desktop": ["hyprland", "xdg-desktop-portal-hyprland", "hyprlock", "hypridle", "hyprpaper", "aquamarine", "hyprlang", "hyprcursor", "hyprgraphics", "hyprutils", "hyprpolkitagent", "ddcui", "wlr-randr", "nwg-displays"],
+        "hyprland": ["hyprland", "xdg-desktop-portal-hyprland", "hyprlock", "hypridle", "hyprpaper", "aquamarine", "hyprlang", "hyprcursor", "hyprgraphics", "hyprutils", "hyprpolkitagent", "ddcui", "wlr-randr", "nwg-displays"],
+        "noctalia": ["noctalia", "hyprland", "xdg-desktop-portal-hyprland", "hyprlock", "hypridle", "hyprpaper", "aquamarine", "hyprlang", "hyprcursor", "hyprgraphics", "hyprutils", "hyprpolkitagent", "ddcui", "wlr-randr", "nwg-displays"],
         "all": [
             "python", "glib2", "sqlite", "openssl", "curl", "libxml2", "icu", "fmt", "onetbb",
             "gtk3", "gtk4", "libadwaita", "librsvg", "gdk-pixbuf2", "shared-mime-info", "adwaita-icon-theme", "hicolor-icon-theme", "qt5-base", "qt5-wayland", "qt5-svg", "qt6-base", "qt6-wayland", "qt6-declarative", "qt6-svg", "qt6-webengine", "wxwidgets-gtk3", "libnotify", "webkit2gtk-4.1", "libspnav", "libmanette",
@@ -3995,7 +4090,7 @@ class RuntimeManager:
 def main():
     """CLI dispatcher for shell integration and testing."""
     if len(sys.argv) < 2:
-        print("Underpants Gnomes Pacman Engine v0.16.0 ('Tubthumping')")
+        print("Underpants Gnomes Pacman Engine v0.17.0 ('I AM THE LAW!')")
         print("Usage: gnomes_pacman.py [sync|search|info|deps|transmute|runtime|url|check-host|list-repos|list-installed] [args...]")
         sys.exit(0)
 

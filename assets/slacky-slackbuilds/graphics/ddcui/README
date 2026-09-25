@@ -1,0 +1,2 @@
+ddcui is a graphical user interface for ddcutil.
+It controls monitor settings such as brightness, contrast, and color balance via DDC/CI.

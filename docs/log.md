@@ -4,6 +4,114 @@ Dette dokumentet sporer patch-utvikling, arkitekturforbedringer, feilrettinger o
 
 ---
 
+## 🚀 [v0.17.0] — 2026-09-25 ("I AM THE LAW!" — Security Hardening, Modular Lua & Display Suite Milestone)
+
+### 🎯 Hovedmål for v0.17.0
+Offisiell utgivelse av v0.17.0 ("I AM THE LAW!"). Innføre ren modulær Lua-arkitektur for Hyprland 0.55+ / 0.57+, 3-minutters OLED DPMS-skjermsparing via native Lua IPC, full skjermstyringssuite (`ddcui`, `nwg-displays`, `wlr-randr`), ny force-kill snarvei (`SUPER + SHIFT + K`), feilfri Wayland HiDPI-skalering for terminaler fra systemstatusfeltet, universell Cgroups v2-støtte på tvers av KDE Plasma og Hyprland, og ikke-destruktive oppdateringsrutiner.
+
+### 🛠️ Endringer og forbedringer i v0.17.0
+
+#### 1. Modulær Hyprland Lua-Arkitektur (`~/.config/hypr/modules/*.lua`, `lib/mod_gaming.sh`)
+* **Modulær Dekomponering:** Erstattet monolittisk `hyprland.lua` med en ren 7-modulers struktur:
+  * `modules/monitors.lua`: Skjermoppløsninger, oppfriskningsrater (240Hz/120Hz), skalering og workspace-ruting.
+  * `modules/env.lua`: Qt/GTK High-DPI, Wayland-overstyringer, Breeze-Dark og maskinvareakselerasjon.
+  * `modules/autostart.lua`: Portaler, Polkit, PipeWire/WirePlumber, Hypridle, Noctalia og Slacky-Update tray.
+  * `modules/general.lua`: Norsk tastaturoppsett (`no,us`), NumLock, Slackware cyan/blå rammer og `force_zero_scaling`.
+  * `modules/animations.lua`: 240Hz snappy bezier-kurver (200–250ms).
+  * `modules/rules.lua`: Ekte glass-blur, flyteregler for Battle.net/Faugus/DDCui/NWG, og lavlatens for spill.
+  * `modules/keybinds.lua`: Komplett snarveisett inkludert ny hurtiglukk/kill (`SUPER + SHIFT + K`).
+* **Kryssdistribusjons-kompatibilitet:** Standard `hl.*` og `hl.dsp.*` C-bindings med portabel `package.path`.
+
+#### 2. Skjermstyrings- og Maskinvaresuite (`lib/mod_gaming.sh`)
+* **Integrerte Skjermverktøy:** Utvidet både `hyprland-noctalia` og `hyprland-core` med `ddcui` (DDC/CI hardware GUI for lysstyrke/HDR/kontrast), `nwg-displays`, `wlr-randr` og `python-i3ipc`.
+* **Flytende Vindusregler:** Automatiske flyteregler for `ddcui` og `nwg-displays` integrert i `rules.lua`.
+
+#### 3. OLED Protection & Hypridle Lua IPC (`~/.config/hypr/hypridle.conf`, `lib/mod_gaming.sh`)
+* **3-Minutters Standby:** Konfigurert 180s timeout som kaller `hl.dsp.dpms({ action = "off" })` direkte, eliminerer flimring og beskytter OLED-paneler mot innbrenning.
+
+#### 4. Fiks for HiDPI og Wayland-Skalering fra Systemstatusfeltet (`lib/slacky-update-tray`)
+* **Wayland Overstyring:** Sikret at `launch_in_terminal` overstyrer `QT_QPA_PLATFORM="wayland;xcb"` når terminalvinduer åpnes, slik at Konsole alltid starter i native Wayland med skarp 1.5x skalering på 4K-skjermer.
+
+#### 5. Force-Kill Hurtigtast (`SUPER + SHIFT + K`)
+* **Umiddelbar Vindu-terminering:** Lagt inn snarvei for rask lukking/kill av aktive vinduer på tvers av live og kuraterte oppsett.
+
+#### 6. Universell Cgroups v2 & VRAM-beskyttelse (`lib/mod_gaming.sh`)
+* **Multi-DE Støtte:** Cgroups v2 (+memory +io) og slice-håndtering via `dmemcg-booster` og `ananicy-cpp` bekreftet og herdet for både KDE Plasma og Hyprland.
+
+---
+
+## 🚀 [v0.16.1] — 2026-09-24 ("I AM THE LAW!" — Security Hardening, Mirror Benchmark & Desktop Suite)
+
+### 🎯 Hovedmål for v0.16.1
+Utvikling og herding mot v0.17.0 ("I AM THE LAW!"). Innføre global parallell speil-benchmark med interaktiv rangering, maskinvare-differensierte nettleserflagg uten Vulkan-krasj, advarselsfrie Hyprland-oppstartsscript med full XDG-miljøsynkronisering, dynamisk MangoHud/GOverlay-fontspeiling og VRAM-booster beskyttelse for XFCE, KDE og Hyprland.
+
+### 🛠️ Endringer og forbedringer
+
+#### 1. Global Multitrådet Speil-Benchmark (`lib/mod_packages.sh`, `bin/slacky-update`)
+* **Parallell Latens & Ferskhet:** Pinger og parser ChangeLog-toppen på tvers av globale Tier-1 speil (Europa, Amerika, Asia/Stillehavet) i parallell via Python multithreading.
+* **Interaktiv Valgmeny:** Viser fargekodet tabell med responstid i millisekunder, ChangeLog-tidsstempel og aktivt speil. Lar brukeren oppdatere `/etc/slackpkg/mirrors` med ett tastetrykk.
+* **CLI-flagg:** Tilgjengelig via `slacky-update --rank-mirrors`, `--mirrors` eller `-M`.
+
+#### 2. Maskinvare-Differensierte Nettleserflagg (`lib/mod_gaming.sh`)
+* **GPU-differensiering:** NVIDIA-oppsett får automatisk VA-API NVDEC (`VaapiOnNvidiaGPUs`) og Wayland-flagg, mens AMD og Intel får rene native Wayland-flagg (`--ozone-platform=wayland`, `--enable-zero-copy`).
+* **Vulkan-fjerning:** Eksperimentell `--use-vulkan` er fjernet fullstendig for alle nettlesere (Chrome, Brave, Edge) for å eliminere renderer-frys og GPU-prosesskrasj.
+
+#### 3. Hyprland & Noctalia Suite Hardening (`lib/mod_gaming.sh`)
+* **XDG-miljøsynkronisering:** Sikret `XDG_CURRENT_DESKTOP=Hyprland` i `/usr/bin/start-hyprland`, `hyprland.conf` og `hyprland.lua.example`.
+* **Advarselsfri oppstart:** Undertrykker falske advarsler og nyhetsmas via `disable_xdg_env_checks = true`, `disable_hyprland_guiutils_check = true`, og `ecosystem { no_update_news = true, no_donation_nag = true }`.
+* **Slank Noctalia Dock Seed:** Raffinert standardoppsett (`icon_size = 48`, `magnification_scale = 1.25`, `margin_edge = 4`, `margin_ends = 8`, `radius = 12`).
+
+#### 4. Dynamisk MangoHud & GOverlay Fontspeiling (`lib/mod_gaming.sh`)
+* **Automatisk symlinking:** Alle skrifttyper fra `/usr/share/fonts/` og `/usr/local/share/fonts/` speiles automatisk inn i `~/.local/share/fonts/` og `/etc/skel/.local/share/fonts/`.
+* **GOverlay-kompatibilitet:** Løser GOverlays absolutte stioppslag, slik at egendefinerte fonter lastes direkte i MangoHud uten bitmap-fallback.
+
+#### 5. Multi-DE VRAM Booster Skjerming (`lib/mod_gaming.sh`)
+* **Skjerming av XFCE:** Lagt til `xfwm4`, `xfce4-panel` og `xfdesktop` i dmemcg-booster filteret sammen med KDE Plasma og Hyprland for å unngå VRAM-eviction av skrivebordskomponenter under tung spilling.
+
+#### 6. Underpants Gnomes Pacman Sidecar Engine v0.16.1 (`bin/gnomes`, `lib/gnomes_pacman.py`)
+* **Versjonssynkronisering:** Oppdatert User-Agent og headers til `v0.16.1` ("I AM THE LAW!").
+* **24 Språkpakker:** 100 % nøkkelkonsistens på tvers av alle `locales/*.json`.
+
+#### 7. Multi-Ecosystem Ukentlig Speil- og Vedlikeholdsmotor (`lib/rank_mirrors.py`, `lib/check_backend.sh`)
+* **Skuddsikker 6d 22h Tidsgrense:** Kjører automatisk kun når mer enn 6 dager og 22 timer (597 600 s) er passert siden forrige måling.
+* **Oppstartsfred (Grace Period):** Sjekker `/proc/uptime` og avventer oppstart i 120 sekunder slik at skrivebordsinnlogging aldri forsinkes.
+* **Lav-prioritet Bakgrunnsutførelse:** Kjøres frakoblet med `nice -n 19 ionice -c 3` og måler i parallell Slackware, Arch Linux (`geo.mirror.pkgbuild.com`), CachyOS og Chaotic-AUR.
+* **Strenge Slackware-regler for speil:** Sikrer at oppdatering av `/etc/slackpkg/mirrors` kun etterlater **nøyaktig ett** aktivt speil uten kollisjoner.
+* **Pakkebygg:** Oppdatert til `0.16.1-noarch-9_slacky` med Limine Suite Catalog Unification, Dynamic HiDPI Scaling, Fast-Race Chaotic-AUR Engine, Hypridle 3-min OLED DPMS Protection, og full dokumentasjonssynkronisering mot v0.17.0 ("I AM THE LAW!").
+
+#### 8. Selvhelbredende 404 Auto-Sync for Underpants Gnomes (`lib/gnomes_pacman.py`)
+* **Automatisk 404-Gjenoppretting:** Dersom oppstrøms-speil (Arch/CachyOS) ruller ut nye pakkeversjoner innenfor databasens 3-timers TTL slik at eldre tarballs returnerer 404 Not Found, fanger Gnomes feilen automatisk.
+* **Stille Bakgrunns-Sync:** Kjører en stille, tvungen resynkronisering av databasene (`sync_repositories(force=True, verbose=False)`), oppdaterer pakkenavn/URL til nyeste oppstrømsversjon, og laster ned på nytt i samme kjøring.
+* **Null Brukerintervensjon:** Eliminerer behovet for manuell `gnomes sync` etter oppstrøms oppdateringer.
+
+#### 9. Universell Multi-Path Font Mesh for MangoHud & GOverlay (`lib/mod_gaming.sh`)
+* **Hierarkisk Kompatibilitets-bro:** Genererer automatiske undermapper (`~/.local/share/fonts/TTF`, `OTF`, `truetype`, `opentype`) som krysslenker samtlige system- og brukerfonter.
+* **100 % Feilfrie Spill-Overlays:** Garanterer at uansett hvilken banestruktur GOverlay skriver til `MangoHud.conf` (f.eks. `.../fonts/TTF/Apple/...`), finner Vulkan-overlayet i Wine/Proton/Faugus filen direkte og rendrer den valgte fonten i stedet for å falle tilbake til standard bitmap-font.
+
+#### 10. Limine Suite Katalog-Harmonisering & Transparent Oppdatering (`lib/mod_gaming.sh`, `lib/mod_limine.sh`)
+* **Katalog-Harmonisering:** `limine`, `limine-entry-tool` og `limine-snapper-sync` er integrert i hovedkatalogen slik at `check_backend.sh` sjekker og viser oppdateringer i tabellen på forhånd.
+* **Fjerning av Tvungen Bundle-installasjon:** `install_unified_limine_suite` rører ikke allerede installerte pakker under oppstarts-sync.
+
+#### 11. Dynamisk & Universell HiDPI / Wayland Skalering (`assets/profile.d/`, `bin/slacky-update`, `desktop/`)
+* **Automatisk Qt- og GTK-skalering:** Etablert `/etc/profile.d/slacky-hidpi.sh` (og `.csh`) som setter `QT_ENABLE_HIGHDPI_SCALING=1`, `QT_AUTO_SCREEN_SCALE_FACTOR=1` og `QT_SCALE_FACTOR_ROUNDING_POLICY=PassThrough`.
+* **Full Skrivebordskompatibilitet:** Universell støtte på tvers av **Hyprland** (`wp-fractional-scale-v1`), **KDE Plasma** (Wayland & X11), **XFCE** og **GNOME**.
+* **Krystallklare Kontekstmenyer på 4K:** Retter mikroskopiske fonter og høyreklikkmenyer i Konsole og andre Qt-verktøy på 4K-skjermer og flerskjermsoppsett.
+
+#### 12. Fast-Race Speilmotor for Chaotic-AUR (`lib/mod_gaming.sh`)
+* **Instant-Win Racing:** Avbryter tregere noder umiddelbart når et europeisk lav-latens speil (< 55 ms) svarer via `concurrent.futures.as_completed`.
+* **Lav Timeout (750 ms):** Døde eller hengende speil forkastes proaktivt før de sinker oppdateringssjekken.
+
+#### 13. Hypridle 3-Minutters DPMS Skjermbeskyttelse & Løkkefiks (`~/.config/hypr/hypridle.conf`, `lib/mod_gaming.sh`)
+* **Fjerning av Egen-Nullstillende Løkke:** Fjernet `hyprctl keyword decoration:dim_inactive true` som utløste IPC konfigurasjons-reload og resatte Wayland `ext-idle-notify-v1` tidsuret hvert 120. sekund.
+* **Ren 3-Minutters Standby (DPMS):** Slår av skjermene fullstendig etter 180 sekunder (`hyprctl dispatch dpms off`) og vekker dem umiddelbart ved brukeraktivitet (`hyprctl dispatch dpms on`) for 100 % OLED-beskyttelse og strømsparing.
+
+#### 14. Dokumentasjons-Harmonisering & Whitepaper-Fullføring (`docs/`, `README.md`)
+* **100 % Versjonsparitet:** Alle manualer og field guides i `/docs` oppdatert til `v0.17.0` ("I AM THE LAW!").
+* **Teknisk Whitepaper:** Utvidet `TECHNICAL_COMPANION_GUIDE.md` med fullstendige spesifikasjoner for Motorene 13, 14 og 15.
+* **Nedlastings-Badge:** Integrert sanntids unike nedlastings-tellere fra GitHub Releases i `README.md`.
+
+---
+
 ## 🚀 [v0.16.0] — 2026-09-23 ("Tubthumping" — LTS Prep & Flimmerfri Pacman ILoveCandy Engine)
 
 ### 🎯 Hovedmål for v0.16.0

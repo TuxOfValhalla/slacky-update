@@ -433,10 +433,13 @@ install_unified_limine_suite() {
         return 1
     fi
 
-    log_info "Installing Unified Limine Suite (limine, limine-entry-tool, limine-snapper-sync, sbctl)..."
+    log_info "Verifying Unified Limine Suite components..."
     local suite_pkgs=("limine" "limine-entry-tool" "limine-snapper-sync" "sbctl")
     for pkg_id in "${suite_pkgs[@]}"; do
-        if command -v transmute_and_deploy_gaming_pkg >/dev/null 2>&1; then
+        local cur_ver
+        cur_ver=$(get_installed_gaming_pkg_version "${pkg_id}" 2>/dev/null || echo "NONE")
+        if [ "${cur_ver}" = "NONE" ] && command -v transmute_and_deploy_gaming_pkg >/dev/null 2>&1; then
+            log_info "Deploying missing suite component: ${pkg_id}..."
             transmute_and_deploy_gaming_pkg "${pkg_id}"
         fi
     done

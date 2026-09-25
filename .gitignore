@@ -11,4 +11,7 @@ __pycache__/
 *.pyc
 .DS_Store
 LOG.md
+log.md
+docs/log.md
+docs/RELEASE_NOTES*
 

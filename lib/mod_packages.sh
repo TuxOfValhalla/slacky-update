@@ -569,3 +569,63 @@ update_flatpaks() {
         log_success "Flatpak updates applied successfully."
     fi
 }
+
+rank_slackware_mirrors_interactive() {
+    validate_privileges
+    log_info "⚡ Probing and benchmarking official worldwide Slackware & Ecosystem mirrors..."
+
+    local rank_py=""
+    for cand in "${SCRIPT_DIR:-}/rank_mirrors.py" \
+                "${APP_DIR:-}/rank_mirrors.py" \
+                "/usr/share/slacky-update/lib/rank_mirrors.py" \
+                "/usr/local/share/slacky-update/lib/rank_mirrors.py" \
+                "/usr/local/lib/slacky-update/rank_mirrors.py"; do
+        if [ -f "${cand}" ]; then
+            rank_py="${cand}"
+            break
+        fi
+    done
+
+    if [ -n "${rank_py}" ]; then
+        python3 "${rank_py}"
+    fi
+
+    local ranked_json=""
+    if [ -f "${XDG_CACHE_HOME:-${HOME}/.cache}/slacky-update/ranked_mirrors.json" ]; then
+        ranked_json=$(cat "${XDG_CACHE_HOME:-${HOME}/.cache}/slacky-update/ranked_mirrors.json" 2>/dev/null || echo "")
+    elif [ -f "/var/cache/slacky-update/ranked_mirrors.json" ]; then
+        ranked_json=$(cat "/var/cache/slacky-update/ranked_mirrors.json" 2>/dev/null || echo "")
+    fi
+
+    echo -n "Select mirror to set as primary in /etc/slackpkg/mirrors [1-10 or Enter to cancel]: "
+    local sel
+    read -r sel || sel=""
+    if [ -n "${sel}" ] && [[ "${sel}" =~ ^[0-9]+$ ]] && [ "${sel}" -ge 1 ] && [ "${sel}" -le 10 ] && [ -n "${ranked_json}" ]; then
+        local chosen_url
+        chosen_url=$(python3 -c "import sys, json; data = json.loads(sys.argv[1]); print(data['slackware_ranked'][int(sys.argv[2])-1]['url'])" "${ranked_json}" "${sel}" 2>/dev/null || echo "")
+        if [ -n "${chosen_url}" ]; then
+            log_info "Updating /etc/slackpkg/mirrors with fastest mirror: ${chosen_url}..."
+            python3 -c "
+import sys, os
+mirrors_file = '/etc/slackpkg/mirrors'
+chosen = sys.argv[1].strip()
+if not chosen.endswith('/'): chosen += '/'
+lines = []
+if os.path.exists(mirrors_file):
+    with open(mirrors_file, 'r', encoding='utf-8', errors='ignore') as f:
+        for line in f:
+            sline = line.strip()
+            if sline and not sline.startswith('#') and (sline.startswith('http://') or sline.startswith('https://') or sline.startswith('ftp://')):
+                lines.append(f'# {line.rstrip()}\n')
+            else:
+                lines.append(line)
+lines.append(f'\n# Primary Slackware mirror set by Slacky-Update\n{chosen}\n')
+with open('/tmp/mirrors.tmp', 'w') as f:
+    f.writelines(lines)
+" "${chosen_url}"
+            sudo mv -f /tmp/mirrors.tmp /etc/slackpkg/mirrors 2>/dev/null || true
+            sudo chmod 0644 /etc/slackpkg/mirrors 2>/dev/null || true
+            log_success "Primary Slackware mirror updated! Exactly ONE active mirror is configured in /etc/slackpkg/mirrors."
+        fi
+    fi
+}

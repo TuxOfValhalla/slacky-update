@@ -1,12 +1,17 @@
 # 📖 Slacky-Update Survival Guide & System Manual
 ### *Slackware Linux 15.0 & -current — Complete Architecture, Deployment & Operational Manual*
-#### `v0.16.0` — *"Tubthumping"* (LTS Preparation Edition)
+#### `v0.17.0` — *"I AM THE LAW!"* (Security, Compliance & Hardening Milestone)
 
 ---
 
+> [!IMPORTANT]
+> **TARGET DISTRIBUTION REQUIREMENT & VERSION DISCLAIMER**  
+> **Slacky-Update is engineered strictly for Slackware 15+ (`slackware-current` / `Slackware 16 alpha`).**  
+> It is **NOT** compatible with or supported on legacy **Slackware 15.0 (stable)**. Legacy 15.0 systems feature older core packages, toolchains, and shared libraries (such as older glibc, GCC, Wayland/Mesa, PipeWire, and kernel headers) that cause package and soname conflicts which cannot be safely detected or resolved. Running Slacky-Update on Slackware 15.0 is unsupported. Users on Slackware 15.0 must migrate to `slackware-current` before using this suite.
+
 > [!CAUTION]
 > **PRE-RELEASE / EARLY ACCESS DISCLAIMER & LIABILITY NOTICE — USE AT YOUR OWN RISK**  
-> Slacky-Update v0.16.0 is an active *Pre-Release / Early Access* edition. The software executes deep low-level system modifications, including Linux kernel deployments, proprietary NVIDIA drivers, Dracut initramfs generation, Btrfs subvolumes, and bootloader topologies (Limine/GRUB).  
+> Slacky-Update is an active *Pre-Release / Early Access* edition. The software executes deep low-level system modifications, including Linux kernel deployments, proprietary NVIDIA drivers, Dracut initramfs generation, Btrfs subvolumes, and bootloader topologies (Limine/GRUB).  
 > **All usage, upgrades, and system configurations are executed strictly at your own discretion and risk.** The developers and maintainers assume no liability or warranty for system malfunction, unbootable states, or data loss.  
 > **Pre-requisites:** Always maintain tested, current backups (`/home`, essential configuration files, and boot partitions) and keep a bootable Slackware Live-USB accessible before performing upgrades or modifying bootloader setups.
 
@@ -57,7 +62,7 @@
 
 Before executing your first full system upgrade or modifying kernels and bootloaders, review this 1-page pre-flight checklist:
 
-- [ ] **1. Slackware Branch:** Are you running Slackware 15.0 or -current? (Verify via `cat /etc/slackware-version`).
+- [ ] **1. Slackware Branch:** Are you running Slackware 15+ (`-current` / `Slackware 16 alpha`)? (Verify via `cat /etc/slackware-version`. *Note: Slackware 15.0 stable is strictly unsupported*).
 - [ ] **2. Boot Mode:** Is your machine booted in UEFI or Legacy BIOS? (Verify via `[ -d /sys/firmware/efi ] && echo "UEFI" || echo "BIOS"`).
 - [ ] **3. ESP Capacity:** Is `/boot` (or `/boot/efi`) at least 3.5 GB if you plan to use Limine? (Verify via `df -h /boot` or `df -h /boot/efi`). See [docs/LIMINE_SECUREBOOT_FIELD_GUIDE.md](docs/LIMINE_SECUREBOOT_FIELD_GUIDE.md) for partitioning standards.
 - [ ] **4. Filesystem:** Are you running Btrfs (with Snapper subvolumes) or standard ext4? (Verify via `findmnt /`).
@@ -292,20 +297,26 @@ For creative professionals using AMD Radeon GPUs in DaVinci Resolve Studio:
 
 ---
 
-## 8. The Underpants Gnomes Workstation Suite (51 Components)
+## 8. The Underpants Gnomes Workstation Suite (52 Components) & `gnomes` CLI
 
 > [!NOTE]
 > ### 🧩 ELI5 — What does this module do and why do you care?
-> Want Steam, Discord, Chrome, OBS Studio with all pro streamer plugins, DKMS Wi-Fi/hardware drivers, or MangoHud on Slackware without having to compile 50 dependencies by hand? Our Underpants Gnomes fetch prebuilt packages, verify their cryptographic signatures, and package them into self-contained `/opt` folders that never mess up your system libraries.
+> Want Steam, Discord, Chrome, Curated Hyprland with Noctalia Shell, OBS Studio with all pro streamer plugins, DKMS Wi-Fi/hardware drivers, or MangoHud on Slackware without having to compile 50 dependencies by hand? Our Underpants Gnomes fetch prebuilt packages, verify their cryptographic signatures, and package them into self-contained `/opt` folders that never mess up your system libraries.
 
-### Unified Terminal Console Station (`slacky-update --gnomes`)
-* **2-Column Grid Layout**: High-performance console interface displaying all 51 components in a clean 2-by-2 column grid with compact version indicators (`[v1.8.2 ✓]` / `[Not Inst]`).
-* **Animated Gnome Download Progress**: Timestamp-paced (~350ms) animated Gnome transmutation (`🧙` <-> `🧙‍♂️`) consuming underpants along the parallel download track.
-* **1-Click Batch Hotkeys**: Fast-track presets for OBS Creator Suite (`O`), Complete Gaming Rig (`A`), and quick-selection shortcuts.
+### Pacman Command-Line Parity (`gnomes`)
+* Full CLI parity with Pacman: `gnomes -S <pkg>`, `gnomes -Ss <query>`, `gnomes -Syu`, `gnomes -R <pkg>`, `gnomes -Si <pkg>`, `gnomes -Q`, and `gnomes runtime install all`.
+* **Fast-Race Mirror Engine**: Instant-win (<55ms) sub-second benchmarking with 750ms cutoffs for Chaotic-AUR packages.
+* **Self-Healing 404 Engine**: Transparent background resync and auto-retry if upstream releases a new version during database TTL.
+
+### Curated Hyprland Desktop Suite (`hyprland-noctalia` & `hyprland-core`)
+* Turnkey Mac-like Wayland desktop with Noctalia Shell (top bar, dynamic bottom dock, launcher, control center).
+* **3-Minute OLED & Multi-Monitor DPMS**: Dedicated `hypridle` standby protection turning displays off at 180s without self-resetting config-change loops.
+* **Native Hyprland Lua (`hyprland.lua`)**: Pre-configured Lua configuration ready for Hyprland 0.57+ with complete keybindings, window rules, and snappy 200–250ms bezier curves.
+* **PipeWire AT_SECURE Protection**: Automatically strips conflicting file capabilities from `pipewire` (`setcap -r`), preventing Wayland session DBus drops.
 
 ### OBS Creator Suite & DKMS Hardware Driver Fleet
 * **OBS Streamer Pack (9 Components)**: `obs-studio`, `obs-vkcapture`, `obs-move-transition`, `obs-source-record`, `obs-pipewire-audio-capture`, `obs-advanced-scene-switcher`, `obs-multi-rtmp`, `obs-composite-blur`, `obs-teleport` with automatic dual-mode bridging into native Slackware and isolated `/opt/obs-studio`.
-* **Out-of-Tree DKMS Drivers**: `zenpower3-dkms`, `v4l2loopback-dkms`, `rtl8821cu-dkms-git`, `rtl88x2bu-dkms-git`, `rtl8812au-dkms-git`, `broadcom-wl-dkms`.
+* **Out-of-Tree DKMS Drivers**: `zenpower3-dkms`, `v4l2loopback-dkms`, `rtl8821cu-dkms-git`, `rtl88x2bu-dkms-git`, `rtl8812au-dkms-git`, `broadcom-wl-dkms`, `r8125`.
 
 ### Security, Polkit & SysVinit Services
 * **GPG Validation**: All upstream archives are strictly verified against official GPG signatures before transmutation.
@@ -339,6 +350,7 @@ Accessible via `slacky-update --tweaks`:
 3. **Transparent HugePages (`madvise + defer`)**: Eliminates allocation micro-stutter in modern game engines.
 4. **Google TCP BBR**: Minimizes bufferbloat and network latency during online gaming.
 5. **NTSYNC & Gamepad Udev Rules**: Prepares fast Windows NT synchronization primitives and includes udev rules for 28 gaming controllers.
+6. **Universal HiDPI & Wayland Scaling**: System-wide `/etc/profile.d/slacky-hidpi.sh` defaults for 4K/1440p displays.
 
 ---
 
@@ -371,9 +383,12 @@ Accessible via `slacky-update --tweaks`:
 | `slacky-update` | Launch interactive terminal command center |
 | `slacky-update -y` (or `--non-interactive`) | Full unattended system upgrade transaction |
 | `slacky-update --check` | Read-only scan for pending updates |
+| `slacky-update --rank-mirrors` (or `-M`) | Parallel latency & freshness benchmark for Slackware mirrors |
+| `slacky-update --hyprland` | Deploy Curated Hyprland Desktop Suite (Noctalia Shell & Portals) |
 | `slacky-update --limine` (or `-l`) | Open Limine Bootloader & Secure Boot Matrix |
 | `slacky-update --cmdline` (or `-c`) | Configure Kernel Boot Parameters (CMDLINE Hub) |
 | `slacky-update --sync-boot` (or `-b`) | Synchronize initramfs, Limine/GRUB, BLAKE2B hashes & Secure Boot |
+| `slacky-update --hash-check` (or `-H`) | Verify on-disk kernel/initramfs BLAKE2B hashes against Limine |
 | `slacky-update --sync-nvidia` | Synchronize NVIDIA driver suite, DKMS & build initramfs |
 | `slacky-update --clean` (or `--purge-kernels`) | Clean package caches, remove obsolete kernels & orphans |
 | `slacky-update --restore-limine` | Restore Limine bootloader from verified backup |
@@ -383,7 +398,7 @@ Accessible via `slacky-update --tweaks`:
 | `slacky-update --guide` (or `-d`) | Launch Master Field Guide & Multi-Format Export (PDF/QR) |
 
 ### Troubleshooting & Disaster Recovery
-For comprehensive step-by-step procedures covering the 8 most critical failure scenarios (black screen, NVRAM reset, hash mismatch, NVIDIA TTY crash, Live-USB chroot):
+For comprehensive step-by-step procedures covering all critical failure scenarios (black screen, NVRAM reset, hash mismatch, NVIDIA TTY crash, Hypridle DPMS, 4K scaling, Live-USB chroot):
 👉 **Consult [docs/TROUBLESHOOTING_GUIDE.md](docs/TROUBLESHOOTING_GUIDE.md)**
 
 ---

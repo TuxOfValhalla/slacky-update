@@ -2,10 +2,12 @@
 
 # ⚡ Slacky-Update
 ### *Enterprise-Grade System Maintenance, Kernel Lifecycle, Driver Orchestrator & Workstation Suite for Slackware Linux*
-#### `v0.16.0` — *"Tubthumping"* (LTS Preparation Edition)
+#### `v0.17.0` — *"I AM THE LAW!"* (Security, Compliance & Hardening Milestone)
 
 [![Slackware -current](https://img.shields.io/badge/Slackware--current-15.0%2B-blue?style=for-the-badge&logo=slackware&logoColor=white)](http://www.slackware.com/)
-[![Release](https://img.shields.io/badge/Release-v0.16.0-purple?style=for-the-badge)](https://github.com/TuxOfValhalla/slacky-update/releases)
+[![Release](https://img.shields.io/badge/Release-v0.17.0-purple?style=for-the-badge)](https://github.com/TuxOfValhalla/slacky-update/releases)
+[![Downloads (Total)](https://img.shields.io/github/downloads/TuxOfValhalla/slacky-update/total?style=for-the-badge&logo=github&color=3498db&label=DOWNLOADS)](https://github.com/TuxOfValhalla/slacky-update/releases)
+[![Downloads (Latest)](https://img.shields.io/github/downloads/TuxOfValhalla/slacky-update/latest/total?style=for-the-badge&logo=github&color=2ecc71&label=LATEST%20RELEASE)](https://github.com/TuxOfValhalla/slacky-update/releases/latest)
 [![Canonical: GitHub](https://img.shields.io/badge/Canonical-GitHub-black?style=for-the-badge&logo=github&logoColor=white)](https://github.com/TuxOfValhalla/slacky-update)
 [![Mirror: Codeberg](https://img.shields.io/badge/Mirror-Codeberg-2185d0?style=for-the-badge&logo=codeberg&logoColor=white)](https://codeberg.org/TuxOfValhalla/slacky-update)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-green.svg?style=for-the-badge)](LICENSE)
@@ -21,9 +23,14 @@
 
 *Canonical source: [GitHub](https://github.com/TuxOfValhalla/slacky-update) | Secondary mirror: [Codeberg](https://codeberg.org/TuxOfValhalla/slacky-update) | Master Manual: [docs/SLACKY_UPDATE_FIELD_GUIDE.md](docs/SLACKY_UPDATE_FIELD_GUIDE.md) | Gnomes Guide: [docs/UNDERPANTS_GNOMES_FIELD_GUIDE.md](docs/UNDERPANTS_GNOMES_FIELD_GUIDE.md) | Technical Architecture: [docs/TECHNICAL_COMPANION_GUIDE.md](docs/TECHNICAL_COMPANION_GUIDE.md) | Disaster Recovery: [docs/TROUBLESHOOTING_GUIDE.md](docs/TROUBLESHOOTING_GUIDE.md)*
 
+> [!IMPORTANT]
+> **TARGET DISTRIBUTION REQUIREMENT & VERSION DISCLAIMER**  
+> **Slacky-Update is engineered strictly for Slackware 15+ (`slackware-current` / `Slackware 16 alpha`).**  
+> It is **NOT** compatible with or supported on legacy **Slackware 15.0 (stable)**. Legacy 15.0 systems feature older core packages, toolchains, and shared libraries (such as older glibc, GCC, Wayland/Mesa, PipeWire, and kernel headers) that cause package and soname conflicts which cannot be safely detected or resolved. Running Slacky-Update on Slackware 15.0 is unsupported. Users on Slackware 15.0 must migrate to `slackware-current` before using this suite.
+
 > [!CAUTION]
 > **SYSTEM MODIFICATION & RECOVERY DISCLAIMER — USE AT YOUR OWN RISK**  
-> Slacky-Update v0.16.0 is a comprehensive system orchestrator and workstation modernization suite. The software performs low-level system modifications to core components, including Linux kernel deployments, proprietary NVIDIA drivers, Dracut initramfs generation, Btrfs subvolumes, and bootloader topologies (Limine/GRUB).  
+> Slacky-Update is a comprehensive system orchestrator and workstation modernization suite. The software performs low-level system modifications to core components, including Linux kernel deployments, proprietary NVIDIA drivers, Dracut initramfs generation, Btrfs subvolumes, and bootloader topologies (Limine/GRUB).  
 > **All usage and modifications are strictly at your own risk.** The authors and contributors assume no liability or warranty for system anomalies, unbootable states, or data loss.  
 > **Pre-requisites:** Always ensure you maintain current, tested backups (`/home`, essential configuration files, and boot partitions) and keep a bootable Slackware Live-USB accessible before executing upgrades or altering bootloader topologies.
 
@@ -115,17 +122,21 @@ Slacky-Update is designed around a non-destructive, modular layered architecture
 * **Hybrid & Laptop Support**: Detects mobile chassis types and forces Intel/AMD in-tree KMS drivers to load before NVIDIA in Dracut, ensuring flawless PRIME render offloading.
 * **AMD ROCm / HIP Creator Toolkit**: Full compute runtime deployment for DaVinci Resolve Studio with automatic Mesa OpenCL and Rusticl conflict resolution.
 
-### 6. ⚡ NVIDIA 615+ VRAM Booster & Memory Architecture
+### 6. ⚡ NVIDIA 615+ VRAM Booster & Cgroups Memory Architecture
 * **Video Memory Allocation Retention**: Deploys `NVreg_PreserveVideoMemoryAllocations=1` and `NVreg_TemporaryFilePath=/var/tmp` to eliminate VRAM fragmentation, power-state data drops, and Out-of-Memory crashes under Direct3D 12 (VKD3D-Proton).
 * **Direct DRM Modesetting**: Configures `nvidia_drm.modeset=1` and `nvidia_drm.fbdev=1` for tear-free, low-latency Wayland and X11 composition.
 * **Virtual Memory Tuning**: Configures `vm.max_map_count=2147483642`, Transparent HugePages to `madvise`, `vm.swappiness=10`, and `vm.vfs_cache_pressure=50`.
-* **KDE Plasma Dynamic VRAM Leak Guard & Memory Compaction**: Dedicated protection against KWin Wayland compositor and GPU memory leakage via Underpants Gnomes:
+* **Cgroups v2 & Process Slice Management (KDE Plasma & Hyprland)**: Full automatic cgroups management across both KDE Plasma and Hyprland desktops via:
+  * **`underpants-vram-booster`** (`dmemcg-booster`): Actively manages and mounts `cgroup2` `/sys/fs/cgroup/dmemcg-gaming` (+memory +io) slices, monitoring GPU utilization and buffer caches to trigger proactive memory compaction before Out-of-Memory limits are reached.
+  * **`underpants-ananicy-cpp`** (`ananicy-cpp` with CachyOS rules-cgroups): Automatically assigns nice, ionice, scheduler policies, and cgroup resource allocations to active game windows and desktop processes across KDE Plasma, XFCE, and Hyprland.
   * **`underpants-kwin-dynamic-vram-fix`** (KWin Wayland Dynamic VRAM Leak Guard & Buffer Manager): Actively monitors and manages unevicted compositor video memory buffers on KDE Plasma Wayland sessions, preventing runaway VRAM leakage and releasing stale surface allocations.
-  * **`underpants-vram-booster`** (Dynamic VRAM Booster & Memory Compaction Daemon): Actively monitors GPU utilization and system buffer caches, triggering proactive memory defragmentation before Out-of-Memory (OOM) limits are reached—dramatically stabilizing 1% low FPS, eliminating micro-stutters, and boosting Direct3D 12 (VKD3D-Proton) / heavy creative workstation performance.
 
 ### 7. 🩲 Underpants Gnomes Pacman Sidecar CLI (`gnomes`) & Desktop Suite
 * **Full Pacman Command-Line Parity (`/usr/bin/gnomes`)**: Native `gnomes install` / `-S`, `gnomes search` / `-Ss`, `gnomes remove` / `-R`, `gnomes sync` / `-Syu`, `gnomes info` / `-Si`, and `gnomes list` / `-Q`. Transmutes over 31,800+ upstream Arch Linux and CachyOS packages into native Slackware `.txz` packages without polluting host `glibc`, `init`, or system libraries.
-* **Curated Hyprland Desktop Suite (`hyprland-noctalia` & `hyprland-core`)**: Turnkey Mac-like Wayland desktop powered by Noctalia Shell (topbar, dock, spotlight launcher, control center) with dynamic hardware wrappers, PipeWire AT_SECURE protection (`setcap -r`), 200–250 ms bezier animations, OLED burn-in protection, and future-proof Hyprland Lua (`hyprland.lua`) support ready for Hyprland 0.57+.
+* **Mandatory Shared Runtime Installation**: Users must install the complete runtime pool (`gnomes runtime install all` or `slacky-update --gnomes`) before deploying individual standalone packages via the `gnomes` CLI sidecar, ensuring all shared runtimes (GTK4, Qt6, Python 3.14, Aquamarine, SDBus-C++, Lua) are present.
+* **Curated Hyprland Desktop Suite (`hyprland-noctalia` & `hyprland-core`)**: Turnkey Wayland desktop suite featuring modular Lua architecture (`hyprland.lua` + `modules/*.lua`), Noctalia Shell (topbar, dock, spotlight launcher, control center), PipeWire AT_SECURE protection (`setcap -r`), 200–250 ms bezier animations, 3-minute OLED burn-in standby, display management tools (`ddcui`, `nwg-displays`, `wlr-randr`), and force-kill keybinding (`SUPER + SHIFT + K`).
+* **Non-Destructive User Configurations**: Installing or updating Hyprland suites will **never overwrite existing user configurations** that have been modified or customized; new defaults are provided as non-invasive `.example` templates.
+* **Automated NVIDIA Hardware Probing**: Automatically detects NVIDIA GPUs during setup and provisions optimal environment variables (`LIBVA_DRIVER_NAME=nvidia`, `GBM_BACKEND=nvidia-drm`, `__GLX_VENDOR_LIBRARY_NAME=nvidia`, `NVD_BACKEND=direct`, `ELECTRON_OZONE_PLATFORM_HINT=auto`) directly into `/etc/hypr/hyprland.env` and session wrappers.
 * **Hyprpicker Integration**: Built-in Wayland eyedropper and color magnifier (`SUPER + P` / `SUPER + SHIFT + C`) with hex clipboard copying.
 * **Turnkey Browser GPU Acceleration**: Dynamic NVIDIA detection when installing `google-chrome`, `brave`, or `microsoft-edge`, automatically provisioning hardware-accelerated Wayland and VA-API flags (`--ozone-platform=wayland`, `VaapiOnNvidiaGPUs`, `--enable-gpu-rasterization`, `--enable-zero-copy`).
 * **Valve Steam & Storefront Fleet**: Native Valve Steam client (`underpants-steam`) with bundled controller udev rules (`60-steam-input.rules`), automatic multilib 32-bit validation, Heroic Games Launcher, Lutris, Faugus Launcher, and ProtonPlus.
@@ -156,7 +167,7 @@ cd slacky-update
 sudo bash slackbuild/slacky-update.SlackBuild
 
 # 3. Install or upgrade the package
-sudo upgradepkg --install-new --reinstall /tmp/slacky-update-*-noarch-1_slacky.txz
+sudo upgradepkg --install-new --reinstall /tmp/slacky-update-*-noarch-*_slacky.txz
 ```
 
 ### Method 2: Build from Source via Codeberg (European Mirror)
@@ -169,27 +180,27 @@ cd slacky-update
 sudo bash slackbuild/slacky-update.SlackBuild
 
 # 3. Install or upgrade the package
-sudo upgradepkg --install-new --reinstall /tmp/slacky-update-*-noarch-6_slacky.txz
+sudo upgradepkg --install-new --reinstall /tmp/slacky-update-*-noarch-*_slacky.txz
 ```
 
 ### Method 3: Direct Package Download (GitHub Releases)
 You can also download and install the pre-built Slackware `.txz` package directly from GitHub Releases:
 ```bash
 # Download latest release package
-curl -sLO https://github.com/TuxOfValhalla/slacky-update/releases/latest/download/slacky-update-0.16.0-noarch-6_slacky.txz
+curl -sLO https://github.com/TuxOfValhalla/slacky-update/releases/latest/download/slacky-update-0.17.0-noarch-1_slacky.txz
 
 # Install or upgrade
-sudo upgradepkg --install-new --reinstall slacky-update-0.16.0-noarch-6_slacky.txz
+sudo upgradepkg --install-new --reinstall slacky-update-0.17.0-noarch-1_slacky.txz
 ```
 
 #### Quick 1-Line Installer (GitHub)
 ```bash
-git clone https://github.com/TuxOfValhalla/slacky-update.git && cd slacky-update && sudo bash slackbuild/slacky-update.SlackBuild && sudo upgradepkg --install-new --reinstall /tmp/slacky-update-*-noarch-6_slacky.txz && slacky-update-tray &
+git clone https://github.com/TuxOfValhalla/slacky-update.git && cd slacky-update && sudo bash slackbuild/slacky-update.SlackBuild && sudo upgradepkg --install-new --reinstall /tmp/slacky-update-*-noarch-*_slacky.txz && slacky-update-tray &
 ```
 
 #### Quick 1-Line Installer (Codeberg Mirror)
 ```bash
-git clone https://codeberg.org/TuxOfValhalla/slacky-update.git && cd slacky-update && sudo bash slackbuild/slacky-update.SlackBuild && sudo upgradepkg --install-new --reinstall /tmp/slacky-update-*-noarch-6_slacky.txz && slacky-update-tray &
+git clone https://codeberg.org/TuxOfValhalla/slacky-update.git && cd slacky-update && sudo bash slackbuild/slacky-update.SlackBuild && sudo upgradepkg --install-new --reinstall /tmp/slacky-update-*-noarch-*_slacky.txz && slacky-update-tray &
 ```
 
 ---
