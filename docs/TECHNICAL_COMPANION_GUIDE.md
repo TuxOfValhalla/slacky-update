@@ -1,6 +1,6 @@
 # 🛠️ Slacky-Update Technical Companion Guide: Under the Hood & Engine Architecture
 ### *A Deep-Dive Architectural Whitepaper & Technical Reference for Slackware Linux 15.0 & -current*
-#### `v0.17.0` — *"I AM THE LAW!"* (Security, Compliance & Hardening Milestone)
+#### `v1.0_RC1` — *"Wonderwall"* (The Master Dress Rehearsal Release Candidate)
 
 ---
 

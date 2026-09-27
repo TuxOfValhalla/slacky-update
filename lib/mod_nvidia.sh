@@ -117,21 +117,113 @@ get_nvidia_download_url() {
     local ver=""
 
     case "${branch}" in
-        legacy|580)
-            ver=$(resolve_nvidia_branch_version "580" "580.95.05")
+        390)
+            ver="390.157"
+            echo "https://download.nvidia.com/XFree86/Linux-x86_64/${ver}/NVIDIA-Linux-x86_64-${ver}.run"
             ;;
-        production|595)
+        470)
+            ver=$(resolve_nvidia_branch_version "470" "470.256.02")
+            echo "https://download.nvidia.com/XFree86/Linux-x86_64/${ver}/NVIDIA-Linux-x86_64-${ver}.run"
+            ;;
+        535)
+            ver=$(resolve_nvidia_branch_version "535" "535.241.11")
+            echo "https://download.nvidia.com/XFree86/Linux-x86_64/${ver}/NVIDIA-Linux-x86_64-${ver}.run"
+            ;;
+        570|legacy)
+            ver=$(resolve_nvidia_branch_version "570" "570.124.04")
+            echo "https://download.nvidia.com/XFree86/Linux-x86_64/${ver}/NVIDIA-Linux-x86_64-${ver}.run"
+            ;;
+        595|production|feature|*)
             ver=$(resolve_nvidia_branch_version "595" "595.58.03")
-            ;;
-        feature|610)
-            ver=$(resolve_nvidia_branch_version "610" "610.57.04")
-            ;;
-        *)
-            ver=$(resolve_nvidia_branch_version "595" "595.58.03")
+            echo "https://download.nvidia.com/XFree86/Linux-x86_64/${ver}/NVIDIA-Linux-x86_64-${ver}.run"
             ;;
     esac
+}
 
-    echo "https://download.nvidia.com/XFree86/Linux-x86_64/${ver}/NVIDIA-Linux-x86_64-${ver}.run"
+manage_legacy_nvidia_run_interactive() {
+    while true; do
+        echo ""
+        echo -e "${BLUE}${BOLD}============================================================${RESET}"
+        echo -e "${BLUE}${BOLD}$(_ MENU_NVIDIA_LEGACY_TITLE)${RESET}"
+        echo -e "${BLUE}${BOLD}============================================================${RESET}"
+        echo -e "  \033[1;33m1.\033[0m $(_ NVIDIA_LEGACY_BRANCH_595)"
+        echo -e "  \033[1;33m2.\033[0m $(_ NVIDIA_LEGACY_BRANCH_570)"
+        echo -e "  \033[1;33m3.\033[0m $(_ NVIDIA_LEGACY_BRANCH_535)"
+        echo -e "  \033[1;33m4.\033[0m $(_ NVIDIA_LEGACY_BRANCH_470)"
+        echo -e "  \033[1;33m5.\033[0m $(_ NVIDIA_LEGACY_BRANCH_390)"
+        echo -e "  \033[1;33m6.\033[0m $(_ NVIDIA_LEGACY_RETURN)"
+        echo ""
+        echo -n "$(_ SELECT_OPERATION_RANGE range="1-6") "
+        local leg_choice
+        read -r leg_choice || leg_choice="6"
+
+        case "${leg_choice}" in
+            1)
+                validate_privileges
+                install_nvidia_run_driver "595"
+                echo ""
+                read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                ;;
+            2)
+                validate_privileges
+                install_nvidia_run_driver "570"
+                echo ""
+                read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                ;;
+            3)
+                validate_privileges
+                install_nvidia_run_driver "535"
+                echo ""
+                read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                ;;
+            4)
+                validate_privileges
+                install_nvidia_run_driver "470"
+                echo ""
+                read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                ;;
+            5)
+                validate_privileges
+                install_nvidia_run_driver "390"
+                echo ""
+                read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                ;;
+            6)
+                return 0
+                ;;
+            *)
+                log_warn "Invalid selection."
+                ;;
+        esac
+    done
+}
+
+transition_legacy_run_to_cachyos() {
+    local has_unmanaged_run=0
+    if [ -f "/var/log/nvidia-installer.log" ] || [ -x "/usr/bin/nvidia-uninstall" ]; then
+        has_unmanaged_run=1
+    elif command -v nvidia-smi >/dev/null 2>&1; then
+        if ! compgen -G "/var/log/packages/*nvidia*" >/dev/null 2>&1; then
+            has_unmanaged_run=1
+        fi
+    fi
+
+    [ "${has_unmanaged_run}" -eq 1 ] || return 0
+
+    log_info "Detected legacy unmanaged NVIDIA (.run) installation on system."
+    log_info "Executing clean transition: removing untracked .run artifacts and preparing clean system libraries..."
+    validate_privileges
+
+    if [ -x "/usr/bin/nvidia-uninstall" ]; then
+        sudo /usr/bin/nvidia-uninstall --silent 2>/dev/null || true
+    fi
+
+    sudo rm -f /var/log/nvidia-installer.log 2>/dev/null || true
+    sudo find /usr/lib64 /usr/lib -xtype l -name "*nvidia*" -delete 2>/dev/null || true
+    sudo find /usr/lib64 /usr/lib -xtype l -name "*cuda*" -delete 2>/dev/null || true
+    sudo find /usr/lib64 /usr/lib -xtype l -name "*nvcuvid*" -delete 2>/dev/null || true
+    sudo /sbin/ldconfig 2>/dev/null || true
+    log_success "Clean transition complete. System libraries prepared for CachyOS native suite."
 }
 
 # --- [ DRIVER INSTALLATION ] ---
@@ -176,7 +268,7 @@ sys.exit(0 if p('$req_ver') > p('$cachy_nv_ver') else 1)
 
     sudo mkdir -p "${dest_dir}" "/var/cache/slacky-update/backup/nvidia"
     log_info "Downloading NVIDIA driver installer (${branch} branch: ${filename})..."
-    sudo curl -sSL --connect-timeout 8 -m 180 -o "${target_file}" "${url}"
+    sudo curl -sSL --connect-timeout 10 --speed-limit 1024 --speed-time 25 -o "${target_file}" "${url}"
     sudo chmod +x "${target_file}"
     sudo cp -f "${target_file}" "/var/cache/slacky-update/backup/nvidia/${filename}" 2>/dev/null || true
 
@@ -356,15 +448,29 @@ get_cachyos_nvidia_repo_url() {
 }
 
 detect_cachyos_nvidia_upstream_version() {
+    local gpu_arch="MODERN"
+    if command -v detect_nvidia_gpu >/dev/null 2>&1; then
+        gpu_arch=$(detect_nvidia_gpu)
+    fi
+
     local cachy_repo
     cachy_repo=$(get_cachyos_nvidia_repo_url)
-    local ver
-    ver=$(curl -sSL -m 10 "${cachy_repo}" 2>/dev/null | grep -o -E 'nvidia-utils-[0-9]+\.[0-9]+(\.[0-9]+)?' | sed 's/nvidia-utils-//' | sort -V | tail -n 1 || echo "")
+    local ver=""
+    if [ "${gpu_arch}" = "PASCAL" ]; then
+        ver=$(curl -sSL -m 10 "${cachy_repo}" 2>/dev/null | grep -o -E 'nvidia-580xx-utils-[0-9]+\.[0-9]+(\.[0-9]+)?' | sed 's/nvidia-580xx-utils-//' | sort -V | tail -n 1 || echo "")
+        [ -z "${ver}" ] && ver="580.178.04"
+    else
+        ver=$(curl -sSL -m 10 "${cachy_repo}" 2>/dev/null | grep -o -E 'nvidia-utils-[0-9]+\.[0-9]+(\.[0-9]+)?' | sed 's/nvidia-utils-//' | sort -V | tail -n 1 || echo "")
+    fi
     echo "${ver}"
 }
 
 build_and_deploy_cachyos_nvidia_userspace() {
     local target_ver="$1"
+    local gpu_arch="MODERN"
+    if command -v detect_nvidia_gpu >/dev/null 2>&1; then
+        gpu_arch=$(detect_nvidia_gpu)
+    fi
 
     local cachy_repo
     cachy_repo=$(get_cachyos_nvidia_repo_url)
@@ -376,11 +482,19 @@ build_and_deploy_cachyos_nvidia_userspace() {
     fi
 
     local pkg_utils pkg_lib32 pkg_settings pkg_opencl pkg_lib32_opencl
-    pkg_utils=$(echo "${html}" | grep -o -E 'href="nvidia-utils-'${target_ver}'-[^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 || echo "")
-    pkg_lib32=$(echo "${html}" | grep -o -E 'href="lib32-nvidia-utils-'${target_ver}'-[^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 || echo "")
-    pkg_settings=$(echo "${html}" | grep -o -E 'href="nvidia-settings-'${target_ver}'-[^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 || echo "")
-    pkg_opencl=$(echo "${html}" | grep -o -E 'href="opencl-nvidia-'${target_ver}'-[^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 || echo "")
-    pkg_lib32_opencl=$(echo "${html}" | grep -o -E 'href="lib32-opencl-nvidia-'${target_ver}'-[^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 || echo "")
+    if [ "${gpu_arch}" = "PASCAL" ]; then
+        pkg_utils=$(echo "${html}" | grep -o -E 'href="nvidia-580xx-utils-'${target_ver}'-[^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 || echo "")
+        pkg_lib32=$(echo "${html}" | grep -o -E 'href="lib32-nvidia-580xx-utils-'${target_ver}'-[^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 || echo "")
+        pkg_settings=$(echo "${html}" | grep -o -E 'href="nvidia-settings-[^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 || echo "")
+        pkg_opencl=$(echo "${html}" | grep -o -E 'href="opencl-nvidia-580xx-'${target_ver}'-[^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 || echo "")
+        pkg_lib32_opencl=$(echo "${html}" | grep -o -E 'href="lib32-opencl-nvidia-580xx-'${target_ver}'-[^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 || echo "")
+    else
+        pkg_utils=$(echo "${html}" | grep -o -E 'href="nvidia-utils-'${target_ver}'-[^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 || echo "")
+        pkg_lib32=$(echo "${html}" | grep -o -E 'href="lib32-nvidia-utils-'${target_ver}'-[^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 || echo "")
+        pkg_settings=$(echo "${html}" | grep -o -E 'href="nvidia-settings-[^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 || echo "")
+        pkg_opencl=$(echo "${html}" | grep -o -E 'href="opencl-nvidia-'${target_ver}'-[^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 || echo "")
+        pkg_lib32_opencl=$(echo "${html}" | grep -o -E 'href="lib32-opencl-nvidia-'${target_ver}'-[^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 || echo "")
+    fi
 
     # Resolve libva-nvidia-driver (CachyOS mirror or Arch Linux official extra repository)
     local pkg_libva=""
@@ -398,8 +512,24 @@ build_and_deploy_cachyos_nvidia_userspace() {
         fi
     fi
 
+    # Resolve egl-gbm (NVIDIA GBM external platform bridge for Xwayland GLAMOR & KWin)
+    local pkg_egl_gbm=""
+    local egl_gbm_url=""
+    pkg_egl_gbm=$(echo "${html}" | grep -o -E 'href="egl-gbm-[^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 || echo "")
+    if [ -n "${pkg_egl_gbm}" ]; then
+        egl_gbm_url="${cachy_repo}/${pkg_egl_gbm}"
+    else
+        local arch_extra_repo="https://geo.mirror.pkgbuild.com/extra/os/x86_64"
+        local arch_html
+        arch_html=$(curl -sSL -m 15 "${arch_extra_repo}/" 2>/dev/null || echo "")
+        pkg_egl_gbm=$(echo "${arch_html}" | grep -o -E 'href="egl-gbm-[0-9][^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 || echo "")
+        if [ -n "${pkg_egl_gbm}" ]; then
+            egl_gbm_url="${arch_extra_repo}/${pkg_egl_gbm}"
+        fi
+    fi
+
     if [ -z "${pkg_utils}" ]; then
-        log_warn "Could not resolve nvidia-utils-${target_ver} from CachyOS repository."
+        log_warn "Could not resolve matching nvidia user-space (${target_ver}) from CachyOS repository."
         return 1
     fi
 
@@ -417,7 +547,8 @@ build_and_deploy_cachyos_nvidia_userspace() {
              "${tmp_extract}/settings" \
              "${tmp_extract}/opencl" \
              "${tmp_extract}/lib32_opencl" \
-             "${tmp_extract}/libva"
+             "${tmp_extract}/libva" \
+             "${tmp_extract}/egl_gbm"
 
     log_info "Downloading CachyOS NVIDIA Complete Suite components (${target_ver}) to user staging..."
     local download_list=("${pkg_utils}")
@@ -432,6 +563,9 @@ build_and_deploy_cachyos_nvidia_userspace() {
     done
     if [ -n "${pkg_libva}" ] && [ -n "${libva_url}" ]; then
         dl_items+=("${libva_url}|${cache_dir}/${pkg_libva}|${libva_url}.sig|${cache_dir}/${pkg_libva}.sig")
+    fi
+    if [ -n "${pkg_egl_gbm}" ] && [ -n "${egl_gbm_url}" ]; then
+        dl_items+=("${egl_gbm_url}|${cache_dir}/${pkg_egl_gbm}|${egl_gbm_url}.sig|${cache_dir}/${pkg_egl_gbm}.sig")
     fi
 
     if ! download_parallel_pacman "CachyOS NVIDIA Driver Suite (${target_ver})" "${dl_items[@]}"; then
@@ -459,6 +593,15 @@ build_and_deploy_cachyos_nvidia_userspace() {
         fi
     fi
 
+    if [ -n "${pkg_egl_gbm}" ] && [ -n "${egl_gbm_url}" ]; then
+        if ! verify_cachyos_gpg_signature "${cache_dir}/${pkg_egl_gbm}" "${cache_dir}/${pkg_egl_gbm}.sig"; then
+            log_error "GPG verification failed for ${pkg_egl_gbm}! Aborting."
+            rm -rf "${staging_base}"
+            trap - INT TERM
+            return 1
+        fi
+    fi
+
     log_info "Unpacking and mapping Complete Suite in user staging..."
     tar --zstd -xf "${cache_dir}/${pkg_utils}" -C "${tmp_extract}/utils" 2>/dev/null || true
     [ -n "${pkg_lib32}" ] && [ -f "${cache_dir}/${pkg_lib32}" ] && tar --zstd -xf "${cache_dir}/${pkg_lib32}" -C "${tmp_extract}/lib32" 2>/dev/null || true
@@ -466,6 +609,7 @@ build_and_deploy_cachyos_nvidia_userspace() {
     [ -n "${pkg_opencl}" ] && [ -f "${cache_dir}/${pkg_opencl}" ] && tar --zstd -xf "${cache_dir}/${pkg_opencl}" -C "${tmp_extract}/opencl" 2>/dev/null || true
     [ -n "${pkg_lib32_opencl}" ] && [ -f "${cache_dir}/${pkg_lib32_opencl}" ] && tar --zstd -xf "${cache_dir}/${pkg_lib32_opencl}" -C "${tmp_extract}/lib32_opencl" 2>/dev/null || true
     [ -n "${pkg_libva}" ] && [ -f "${cache_dir}/${pkg_libva}" ] && tar --zstd -xf "${cache_dir}/${pkg_libva}" -C "${tmp_extract}/libva" 2>/dev/null || true
+    [ -n "${pkg_egl_gbm}" ] && [ -f "${cache_dir}/${pkg_egl_gbm}" ] && tar --zstd -xf "${cache_dir}/${pkg_egl_gbm}" -C "${tmp_extract}/egl_gbm" 2>/dev/null || true
 
     # Prepare Slackware structure:
     # 64-bit -> /usr/lib64
@@ -542,7 +686,32 @@ build_and_deploy_cachyos_nvidia_userspace() {
         cp -a "${tmp_extract}/libva/usr/lib/dri/." "${staging_root}/usr/lib64/dri/"
     fi
 
-    # 7. Hardware video acceleration profile configuration
+    # 7. Map egl-gbm (NVIDIA GBM external platform bridge for Xwayland GLAMOR & KWin)
+    if [ -d "${tmp_extract}/egl_gbm/usr/lib" ]; then
+        cp -a "${tmp_extract}/egl_gbm/usr/lib/libnvidia-egl-gbm"* "${staging_root}/usr/lib64/" 2>/dev/null || true
+    fi
+    if [ -d "${tmp_extract}/egl_gbm/usr/share/egl/egl_external_platform.d" ]; then
+        mkdir -p "${staging_root}/usr/share/egl/egl_external_platform.d"
+        cp -a "${tmp_extract}/egl_gbm/usr/share/egl/egl_external_platform.d/." "${staging_root}/usr/share/egl/egl_external_platform.d/"
+    fi
+
+    # 8. Patch Arch paths to Slackware 64-bit in Xorg OutputClass
+    if [ -f "${staging_root}/usr/share/X11/xorg.conf.d/10-nvidia-drm-outputclass.conf" ]; then
+        sed -i 's|/usr/lib/|/usr/lib64/|g' "${staging_root}/usr/share/X11/xorg.conf.d/10-nvidia-drm-outputclass.conf"
+    fi
+
+    # 8. Ensure Xorg extensions symlinks for GLX Server
+    mkdir -p "${staging_root}/usr/lib64/xorg/modules/extensions"
+    (
+        cd "${staging_root}/usr/lib64/xorg/modules/extensions"
+        ln -sf /usr/lib64/nvidia/xorg/libglxserver_nvidia.so.${target_ver} libglxserver_nvidia.so 2>/dev/null || true
+        ln -sf /usr/lib64/nvidia/xorg/libglxserver_nvidia.so.${target_ver} libglxserver_nvidia.so.1 2>/dev/null || true
+    )
+
+    # 9. Remove Arch-specific throttling application profiles
+    rm -f "${staging_root}/etc/nvidia/nvidia-application-profiles-rc.d/limit-vram-usage" 2>/dev/null || true
+
+    # 10. Hardware video acceleration profile configuration
     cat << 'VA_SH_EOF' > "${staging_root}/etc/profile.d/nvidia-vaapi.sh"
 #!/bin/sh
 # NVIDIA VA-API hardware video acceleration configuration
@@ -609,6 +778,10 @@ DESC_EOF
 
     # Write doinst.sh
     cat << 'DOINST_EOF' > "${staging_root}/install/doinst.sh"
+mkdir -p /usr/lib64/xorg/modules/extensions
+( cd /usr/lib64/xorg/modules/extensions ; rm -f libglxserver_nvidia.so libglxserver_nvidia.so.1 )
+( cd /usr/lib64/xorg/modules/extensions ; ln -sf /usr/lib64/nvidia/xorg/libglxserver_nvidia.so libglxserver_nvidia.so )
+( cd /usr/lib64/xorg/modules/extensions ; ln -sf /usr/lib64/nvidia/xorg/libglxserver_nvidia.so libglxserver_nvidia.so.1 )
 if [ -x /sbin/ldconfig ]; then
   /sbin/ldconfig 2>/dev/null || true
 fi
@@ -629,7 +802,7 @@ DOINST_EOF
     rm -f "${txz_out}"
     (
         cd "${staging_root}"
-        "${PKG_MAKE_CMD}" -l y -c n "${txz_out}" >/dev/null 2>&1
+        find ./ | LC_COLLATE=C sort | sed '2,$s,^\./,,' | tar --no-recursion -T - -cf - | xz -T0 -1 > "${txz_out}" 2>/dev/null || true
     )
 
     if [ -f "${txz_out}" ]; then
@@ -869,7 +1042,7 @@ rollback_cachyos_to_slackware_nvidia() {
     log_info "Initiating rollback from CachyOS NVIDIA Suite to official Slackware standalone driver..."
 
     # 1. Clean up CachyOS NVIDIA user-space package from /var/log/packages
-    for pkg in /var/log/packages/cachyos-nvidia-utils-*; do
+    for pkg in /var/log/packages/cachyos-nvidia*utils-*; do
         [ -f "${pkg}" ] || continue
         local pbase
         pbase=$(basename "${pkg}")
@@ -877,15 +1050,17 @@ rollback_cachyos_to_slackware_nvidia() {
         sudo "${PKG_REMOVE_CMD}" "${pbase}" 2>/dev/null || true
     done
 
-    # 2. Determine appropriate branch (Pascal -> legacy/580, Modern -> production/595)
+    # 2. Determine appropriate branch (Pascal -> 570, Modern -> 595, Legacy -> 470)
     local gpu_arch="MODERN"
     if command -v detect_nvidia_gpu >/dev/null 2>&1; then
         gpu_arch=$(detect_nvidia_gpu)
     fi
 
-    local target_branch="production"
+    local target_branch="595"
     if [ "${gpu_arch}" = "PASCAL" ]; then
-        target_branch="legacy"
+        target_branch="570"
+    elif [ "${gpu_arch}" = "LEGACY" ]; then
+        target_branch="470"
     fi
 
     log_info "Installing official NVIDIA .run driver (${target_branch} branch) with DKMS..."
@@ -1103,7 +1278,12 @@ ensure_cachyos_nvidia_duties() {
 
     local has_cachy
     has_cachy=$(has_cachyos_kernels_installed)
-    [ "${has_cachy}" = "true" ] || return 0
+    if [ "${has_cachy}" != "true" ] && [ "${INTERACTIVE_NVIDIA:-0}" != "1" ]; then
+        return 0
+    fi
+
+    # Clean legacy unmanaged .run installations if present
+    transition_legacy_run_to_cachyos
 
     # Clean up obsolete kernels (including older RC kernels where only the latest is kept)
     if command -v purge_old_cachyos_kernels >/dev/null 2>&1; then
@@ -1155,13 +1335,13 @@ ensure_cachyos_nvidia_duties() {
 
     # 1. Verify or deploy CachyOS user-space package
     local installed_pkg
-    installed_pkg=$(ls /var/log/packages/cachyos-nvidia-utils-* 2>/dev/null | head -n 1 || true)
+    installed_pkg=$(ls /var/log/packages/cachyos-nvidia*utils-* 2>/dev/null | head -n 1 || true)
     local need_userspace="false"
     if [ -z "${installed_pkg}" ]; then
         need_userspace="true"
     else
         local cur_pkg_ver
-        cur_pkg_ver=$(basename "${installed_pkg}" | sed -E 's/cachyos-nvidia-utils-([0-9]+\.[0-9]+(\.[0-9]+)?).*/\1/')
+        cur_pkg_ver=$(basename "${installed_pkg}" | sed -E 's/.*utils-([0-9]+\.[0-9]+(\.[0-9]+)?).*/\1/')
         if [ "${cur_pkg_ver}" != "${cachy_nv_ver}" ]; then
             need_userspace="true"
         elif [ ! -f "/etc/OpenCL/vendors/nvidia.icd" ] || [ ! -f "/usr/lib64/dri/nvidia_drv_video.so" ]; then

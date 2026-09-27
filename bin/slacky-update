@@ -3,8 +3,8 @@
 
 set -euo pipefail
 
-CURRENT_VERSION="0.17.0"
-RELEASE_CODENAME="I AM THE LAW!"
+CURRENT_VERSION="1.0_RC1"
+RELEASE_CODENAME="Wonderwall"
 
 # --- [ DYNAMIC HiDPI & MULTI-MONITOR DISPLAY SCALING ] ---
 # Transparently routes Qt, Wayland, and GTK interfaces across Hyprland, KDE Plasma, XFCE, and GNOME
@@ -91,6 +91,13 @@ INTERACTIVE_SESSION=0
 
 cleanup_on_exit() {
     local exit_code=$?
+    if [ -f "/tmp/slacky-update-running.lock" ]; then
+        local lpid
+        lpid=$(cat "/tmp/slacky-update-running.lock" 2>/dev/null || echo "")
+        if [ "${lpid}" = "$$" ]; then
+            rm -f "/tmp/slacky-update-running.lock" 2>/dev/null || true
+        fi
+    fi
     if [ "${INTERACTIVE_SESSION}" -eq 1 ] && [ -t 0 ] && [ "${exit_code}" -ne 0 ]; then
         echo ""
         read -r -p "$(_ PRESS_ENTER_EXIT)" || true
@@ -282,9 +289,21 @@ run_full_update() {
     echo -e "\n${CYAN}$(_ VALIDATING_ADMIN)${RESET}"
     validate_privileges
 
+    local lock_file="/tmp/slacky-update-running.lock"
+    if [ -f "${lock_file}" ]; then
+        local lpid
+        lpid=$(cat "${lock_file}" 2>/dev/null || echo "")
+        if [ -n "${lpid}" ] && [[ "${lpid}" =~ ^[0-9]+$ ]] && kill -0 "${lpid}" 2>/dev/null && [ "${lpid}" -ne "$$" ]; then
+            log_warn "Another Slacky-Update process (PID: ${lpid}) is currently running. Please wait for it to finish."
+            return 1
+        else
+            rm -f "${lock_file}" 2>/dev/null || true
+        fi
+    fi
+    echo "$$" > "${lock_file}" 2>/dev/null || true
+
     export DEFER_BOOT_SYNC=1
     export SLACKY_UPDATE_RUNNING=1
-    touch /tmp/slacky-update-running.lock 2>/dev/null || true
 
     local snap_before_file snap_after_file
     snap_before_file=$(mktemp /tmp/slacky-snap-before.XXXXXX)
@@ -527,8 +546,7 @@ except Exception:
     unset DEFER_BOOT_SYNC || true
     unset SLACKY_UPDATE_RUNNING || true
 
-    echo -e "\n${CYAN}$(_ REFRESHING_CACHE)${RESET}"
-    "${CHECK_BIN}" 2>/dev/null || true
+    trigger_silent_background_refresh 2>/dev/null || true
 
     python3 -c "
 import os, json, time
@@ -683,102 +701,48 @@ manage_nvidia_interactive() {
     gpu_gen=$(detect_nvidia_gpu)
     log_info "Detected GPU Architecture: ${gpu_gen}"
 
-    local has_cachy
-    has_cachy=$(has_cachyos_kernels_installed 2>/dev/null || echo "false")
+    while true; do
+        echo ""
+        echo -e "${BLUE}${BOLD}============================================================${RESET}"
+        echo -e "${BLUE}${BOLD}$(_ MENU_NVIDIA_CACHY_TITLE)${RESET}"
+        echo -e "${BLUE}${BOLD}============================================================${RESET}"
+        echo -e "  \033[1;33m1.\033[0m $(_ NVIDIA_CACHYOS_MASTER_SYNC)"
+        echo -e "  \033[1;33m2.\033[0m $(_ NVIDIA_OPTION_REBUILD)"
+        echo -e "  \033[1;33m3.\033[0m $(_ NVIDIA_OPTION_LEGACY_RUN)"
+        echo -e "  \033[1;33m4.\033[0m $(_ NVIDIA_OPTION_RETURN)"
+        echo ""
+        echo -n "$(_ SELECT_OPERATION_RANGE range="1-4") "
+        local n_choice
+        read -r n_choice || n_choice="4"
 
-    if [ "${has_cachy}" = "true" ]; then
-        # CachyOS-managed system: show CachyOS NVIDIA Master Station
-        while true; do
-            echo ""
-            echo -e "${CYAN}============================================================${RESET}"
-            echo -e "${YELLOW}${BOLD}$(_ MENU_NVIDIA_CACHY_TITLE)${RESET}"
-            echo -e "${CYAN}============================================================${RESET}"
-            echo -e "  \033[1;33m1.\033[0m $(_ NVIDIA_CACHYOS_MASTER_SYNC)"
-            echo -e "  \033[1;33m2.\033[0m $(_ NVIDIA_OPTION_REBUILD)"
-            echo -e "  \033[1;33m3.\033[0m $(_ NVIDIA_OPTION_RETURN)"
-            echo ""
-            echo -n "$(_ SELECT_OPERATION_RANGE range="1-3") "
-            local n_choice
-            read -r n_choice || n_choice="3"
-
-            case "${n_choice}" in
-                1)
-                    validate_privileges
-                    INTERACTIVE_NVIDIA=1 ensure_cachyos_nvidia_duties
-                    echo ""
-                    read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
-                    ;;
-                2)
-                    validate_privileges
-                    build_nvidia_modules "ALL"
-                    generate_kernel_initramfs "ALL"
-                    enforce_secure_boot_armor
-                    sync_bootloader_configuration "$(uname -r)"
-                    register_flatpak_gl_sync
-                    echo ""
-                    read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
-                    ;;
-                3)
-                    return 0
-                    ;;
-                *)
-                    log_warn "Invalid selection."
-                    ;;
-            esac
-        done
-    else
-        # Pure Slackware system without CachyOS: show standalone .run branch selection
-        while true; do
-            echo ""
-            echo -e "${BOLD}$(_ NVIDIA_BRANCH_SELECT)${RESET}"
-            echo -e "  \033[1;33m1.\033[0m $(_ NVIDIA_BRANCH_LEGACY)"
-            echo -e "  \033[1;33m2.\033[0m $(_ NVIDIA_BRANCH_PRODUCTION)"
-            echo -e "  \033[1;33m3.\033[0m $(_ NVIDIA_BRANCH_FEATURE)"
-            echo -e "  \033[1;33m4.\033[0m $(_ NVIDIA_OPTION_REBUILD)"
-            echo -e "  \033[1;33m5.\033[0m $(_ NVIDIA_OPTION_RETURN)"
-            echo ""
-            echo -n "$(_ SELECT_OPERATION_RANGE range="1-5") "
-            local n_choice
-            read -r n_choice || n_choice="5"
-
-            case "${n_choice}" in
-                1)
-                    validate_privileges
-                    install_nvidia_run_driver "legacy"
-                    echo ""
-                    read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
-                    ;;
-                2)
-                    validate_privileges
-                    install_nvidia_run_driver "production"
-                    echo ""
-                    read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
-                    ;;
-                3)
-                    validate_privileges
-                    install_nvidia_run_driver "feature"
-                    echo ""
-                    read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
-                    ;;
-                4)
-                    validate_privileges
-                    build_nvidia_modules "ALL"
-                    generate_kernel_initramfs "ALL"
-                    enforce_secure_boot_armor
-                    sync_bootloader_configuration "$(uname -r)"
-                    register_flatpak_gl_sync
-                    echo ""
-                    read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
-                    ;;
-                5)
-                    return 0
-                    ;;
-                *)
-                    log_warn "Invalid selection."
-                    ;;
-            esac
-        done
-    fi
+        case "${n_choice}" in
+            1)
+                validate_privileges
+                INTERACTIVE_NVIDIA=1 ensure_cachyos_nvidia_duties
+                echo ""
+                read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                ;;
+            2)
+                validate_privileges
+                build_nvidia_modules "ALL"
+                generate_kernel_initramfs "ALL"
+                enforce_secure_boot_armor
+                sync_bootloader_configuration "$(uname -r)"
+                register_flatpak_gl_sync
+                echo ""
+                read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                ;;
+            3)
+                manage_legacy_nvidia_run_interactive
+                ;;
+            4)
+                return 0
+                ;;
+            *)
+                log_warn "Invalid selection."
+                ;;
+        esac
+    done
 }
 
 # --- [ UNDERPANTS GNOMES LAUNCHER ] ---
@@ -797,7 +761,7 @@ interactive_menu() {
 
         echo ""
         echo -e "${BLUE}${BOLD}Slacky-Update (v${CURRENT_VERSION} '${RELEASE_CODENAME}') [Pre-Release / Early Access]${RESET}"
-        echo -e "${YELLOW}⚡ Slackware Core Update & High-Performance Modernization Engine${RESET}"
+        echo -e "${BLUE}Slackware Core Update & High-Performance Modernization Engine${RESET}"
         check_slacky_update_self_update "${CURRENT_VERSION}"
         echo ""
         display_pending_status
@@ -1060,6 +1024,32 @@ elif [ "${1:-}" = "--hyprland-core" ] || [ "${1:-}" = "--hyprland-minimal" ]; th
     ensure_cache_dir
     probe_gpu_hardware
     transmute_and_deploy_gaming_pkg "hyprland-core"
+    exit 0
+elif [ "${1:-}" = "--hyprmod" ]; then
+    validate_privileges
+    ensure_cache_dir
+    probe_gpu_hardware
+    transmute_and_deploy_gaming_pkg "hyprmod"
+    exit 0
+elif [ "${1:-}" = "--mactahoe-icons" ] || [ "${1:-}" = "--tahoe-icons" ]; then
+    validate_privileges
+    ensure_cache_dir
+    transmute_and_deploy_gaming_pkg "mactahoe-icons"
+    exit 0
+elif [ "${1:-}" = "--mactahoe-cursors" ] || [ "${1:-}" = "--tahoe-cursors" ]; then
+    validate_privileges
+    ensure_cache_dir
+    transmute_and_deploy_gaming_pkg "mactahoe-cursors"
+    exit 0
+elif [ "${1:-}" = "--whitesur-icons" ]; then
+    validate_privileges
+    ensure_cache_dir
+    transmute_and_deploy_gaming_pkg "whitesur-icons"
+    exit 0
+elif [ "${1:-}" = "--whitesur-cursors" ]; then
+    validate_privileges
+    ensure_cache_dir
+    transmute_and_deploy_gaming_pkg "whitesur-cursors"
     exit 0
 elif [ "${1:-}" = "--gaming" ] || [ "${1:-}" = "-g" ] || [ "${1:-}" = "--gnomes" ] || [ "${1:-}" = "--gnomes-tui" ]; then
     INTERACTIVE_SESSION=1

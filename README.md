@@ -2,10 +2,10 @@
 
 # ⚡ Slacky-Update
 ### *Enterprise-Grade System Maintenance, Kernel Lifecycle, Driver Orchestrator & Workstation Suite for Slackware Linux*
-#### `v0.17.0` — *"I AM THE LAW!"* (Security, Compliance & Hardening Milestone)
+#### `v1.0_RC1` — *"Wonderwall"* (The Master Dress Rehearsal Release Candidate)
 
 [![Slackware -current](https://img.shields.io/badge/Slackware--current-15.0%2B-blue?style=for-the-badge&logo=slackware&logoColor=white)](http://www.slackware.com/)
-[![Release](https://img.shields.io/badge/Release-v0.17.0-purple?style=for-the-badge)](https://github.com/TuxOfValhalla/slacky-update/releases)
+[![Release](https://img.shields.io/badge/Release-v1.0_RC1-purple?style=for-the-badge)](https://github.com/TuxOfValhalla/slacky-update/releases)
 [![Downloads (Total)](https://img.shields.io/github/downloads/TuxOfValhalla/slacky-update/total?style=for-the-badge&logo=github&color=3498db&label=DOWNLOADS)](https://github.com/TuxOfValhalla/slacky-update/releases)
 [![Downloads (Latest)](https://img.shields.io/github/downloads/TuxOfValhalla/slacky-update/latest/total?style=for-the-badge&logo=github&color=2ecc71&label=LATEST%20RELEASE)](https://github.com/TuxOfValhalla/slacky-update/releases/latest)
 [![Canonical: GitHub](https://img.shields.io/badge/Canonical-GitHub-black?style=for-the-badge&logo=github&logoColor=white)](https://github.com/TuxOfValhalla/slacky-update)
@@ -135,8 +135,10 @@ Slacky-Update is designed around a non-destructive, modular layered architecture
 * **Full Pacman Command-Line Parity (`/usr/bin/gnomes`)**: Native `gnomes install` / `-S`, `gnomes search` / `-Ss`, `gnomes remove` / `-R`, `gnomes sync` / `-Syu`, `gnomes info` / `-Si`, and `gnomes list` / `-Q`. Transmutes over 31,800+ upstream Arch Linux and CachyOS packages into native Slackware `.txz` packages without polluting host `glibc`, `init`, or system libraries.
 * **Mandatory Shared Runtime Installation**: Users must install the complete runtime pool (`gnomes runtime install all` or `slacky-update --gnomes`) before deploying individual standalone packages via the `gnomes` CLI sidecar, ensuring all shared runtimes (GTK4, Qt6, Python 3.14, Aquamarine, SDBus-C++, Lua) are present.
 * **Curated Hyprland Desktop Suite (`hyprland-noctalia` & `hyprland-core`)**: Turnkey Wayland desktop suite featuring modular Lua architecture (`hyprland.lua` + `modules/*.lua`), Noctalia Shell (topbar, dock, spotlight launcher, control center), PipeWire AT_SECURE protection (`setcap -r`), 200–250 ms bezier animations, 3-minute OLED burn-in standby, display management tools (`ddcui`, `nwg-displays`, `wlr-randr`), and force-kill keybinding (`SUPER + SHIFT + K`).
+* **HyprMod Native Visual Settings Editor (`underpants-hyprmod`)**: GTK4 & Libadwaita visual settings and rules editor for Hyprland with live previews, 10-bit OLED color support (`bitdepth = 10`), named monitor layout configurations, and modular Lua (`hyprland-gui.lua`) overrides.
+* **AUR RPC v5 & GitHub Fast Update Engine**: Automated sub-100ms upstream tracking for curated AUR and GitHub packages, notifying users and tray monitors instantly of new releases.
 * **Non-Destructive User Configurations**: Installing or updating Hyprland suites will **never overwrite existing user configurations** that have been modified or customized; new defaults are provided as non-invasive `.example` templates.
-* **Automated NVIDIA Hardware Probing**: Automatically detects NVIDIA GPUs during setup and provisions optimal environment variables (`LIBVA_DRIVER_NAME=nvidia`, `GBM_BACKEND=nvidia-drm`, `__GLX_VENDOR_LIBRARY_NAME=nvidia`, `NVD_BACKEND=direct`, `ELECTRON_OZONE_PLATFORM_HINT=auto`) directly into `/etc/hypr/hyprland.env` and session wrappers.
+* **Automated NVIDIA Hardware Probing**: Automatically detects NVIDIA GPUs during setup and provisions optimal environment variables (`LIBVA_DRIVER_NAME=nvidia`, `__GLX_VENDOR_LIBRARY_NAME=nvidia`, `NVD_BACKEND=direct`, `ELECTRON_OZONE_PLATFORM_HINT=auto`) directly into `/etc/hypr/hyprland.env` and session wrappers.
 * **Hyprpicker Integration**: Built-in Wayland eyedropper and color magnifier (`SUPER + P` / `SUPER + SHIFT + C`) with hex clipboard copying.
 * **Turnkey Browser GPU Acceleration**: Dynamic NVIDIA detection when installing `google-chrome`, `brave`, or `microsoft-edge`, automatically provisioning hardware-accelerated Wayland and VA-API flags (`--ozone-platform=wayland`, `VaapiOnNvidiaGPUs`, `--enable-gpu-rasterization`, `--enable-zero-copy`).
 * **Valve Steam & Storefront Fleet**: Native Valve Steam client (`underpants-steam`) with bundled controller udev rules (`60-steam-input.rules`), automatic multilib 32-bit validation, Heroic Games Launcher, Lutris, Faugus Launcher, and ProtonPlus.
@@ -187,10 +189,10 @@ sudo upgradepkg --install-new --reinstall /tmp/slacky-update-*-noarch-*_slacky.t
 You can also download and install the pre-built Slackware `.txz` package directly from GitHub Releases:
 ```bash
 # Download latest release package
-curl -sLO https://github.com/TuxOfValhalla/slacky-update/releases/latest/download/slacky-update-0.17.0-noarch-1_slacky.txz
+curl -sLO https://github.com/TuxOfValhalla/slacky-update/releases/latest/download/slacky-update-1.0_RC1-noarch-1_slacky.txz
 
 # Install or upgrade
-sudo upgradepkg --install-new --reinstall slacky-update-0.17.0-noarch-1_slacky.txz
+sudo upgradepkg --install-new --reinstall slacky-update-1.0_RC1-noarch-1_slacky.txz
 ```
 
 #### Quick 1-Line Installer (GitHub)

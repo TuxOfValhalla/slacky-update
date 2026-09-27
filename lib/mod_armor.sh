@@ -499,10 +499,10 @@ fetch_official_signed_shim_interactive() {
     local grub_url="https://kojipkgs.fedoraproject.org/packages/grub2/2.12/9.fc41/x86_64/grub2-efi-x64-2.12-9.fc41.x86_64.rpm"
 
     local dl_ok=true
-    if ! curl -sSL --fail -o shim.rpm "${shim_url}"; then
+    if ! curl -sSL --fail --connect-timeout 10 --speed-limit 1024 --speed-time 25 -o shim.rpm "${shim_url}"; then
         dl_ok=false
     fi
-    if ! curl -sSL --fail -o grub.rpm "${grub_url}"; then
+    if ! curl -sSL --fail --connect-timeout 10 --speed-limit 1024 --speed-time 25 -o grub.rpm "${grub_url}"; then
         dl_ok=false
     fi
 

@@ -1,6 +1,6 @@
 # 🧙 Underpants Gnomes Pacman Engine — Comprehensive Field Guide
 ### *Universal Arch & CachyOS Package Transmutation for Slackware Linux*
-#### `v0.17.0` — *"I AM THE LAW!"* (Security, Compliance & Hardening Milestone)
+#### `v1.0_RC1` — *"Wonderwall"* (The Master Dress Rehearsal Release Candidate)
 
 ---
 
@@ -11,7 +11,7 @@
 
 > [!NOTE]
 > **PRODUCTION HARDENED / SYSTEM COMPLIANCE MILESTONE**  
-> The Underpants Gnomes Universal Pacman Transmutation Engine is a core capability of `slacky-update` v0.17.0. It provides direct, host-sovereign access to over **31,800+** software packages from Arch Linux and CachyOS repositories without modifying or compromising your Slackware base system.
+> The Underpants Gnomes Universal Pacman Transmutation Engine is a core capability of `slacky-update` v1.0_RC1. It provides direct, host-sovereign access to over **31,800+** software packages from Arch Linux and CachyOS repositories without modifying or compromising your Slackware base system.
 
 ---
 
@@ -57,8 +57,9 @@ gnomes runtime status
 Before installing a package via `gnomes -S`, always check if it is already provided natively by Slackware (`/var/log/packages`) or available via SlackBuilds (`sbopkg` / `slacky-update --sbo`). Native Slackware packages should always be your first choice.
 
 ### 2. 🎮 For Gaming Packages & Desktop Suites, Use Curated Modules!
-For core gaming components such as **Steam, MangoHud, Gamescope, GOverlay, ProtonPlus, Faugus Launcher, and Ananicy-Cpp**, or complete desktop environments like **`hyprland-noctalia`** (Mac-like Wayland desktop with Noctalia Shell) and **`hyprland-core`**, we strongly recommend installing them through `slacky-update --party-on`, `slacky-update --hyprland`, or the curated Underpants Gnomes menu (`gnomes -S hyprland-noctalia`). These curated packages are tuned and patched specifically for optimal Slackware desktop and gaming performance:
+For core gaming components such as **Steam, MangoHud, Gamescope, GOverlay, ProtonPlus, Faugus Launcher, and Ananicy-Cpp**, complete desktop environments like **`hyprland-noctalia`** (Mac-like Wayland desktop with Noctalia Shell) and **`hyprland-core`**, or settings suites like **`hyprmod`** (GTK4 visual settings editor for Hyprland), we strongly recommend installing them through `slacky-update --party-on`, `slacky-update --hyprland`, `slacky-update --hyprmod`, or the curated Underpants Gnomes menu (`gnomes -S hyprland-noctalia`). These curated packages are tuned and patched specifically for optimal Slackware desktop and gaming performance:
 * **PipeWire AT_SECURE Protection:** Automatically strips conflicting file capabilities from `pipewire` and `wireplumber` (`setcap -r`), preventing session DBus drops under Wayland.
+* **HyprMod Visual Configuration:** Visual GTK4/Libadwaita management for monitors, 10-bit OLED color modes, animations, and keybindings via modular `hyprland-gui.lua`.
 * **Systray Daemon Integration:** Built-in autostart and StatusNotifierItem registration for `slacky-update-tray`, `openrgb` (with automatic profile loading), and `easyeffects`.
 * **Hardware-Accelerated Browsers:** Installing `google-chrome`, `brave`, or `microsoft-edge` automatically detects NVIDIA hardware and provisions hardware-accelerated Wayland and VA-API flags (`--ozone-platform=wayland`, `VaapiOnNvidiaGPUs`, `--enable-gpu-rasterization`, `--enable-zero-copy`).
 

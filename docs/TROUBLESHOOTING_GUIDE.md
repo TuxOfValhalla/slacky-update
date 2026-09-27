@@ -1,6 +1,6 @@
 # 🚨 Slacky-Update Disaster Recovery & Troubleshooting Guide
 ### *The Symptom-Based Field Catalog for Emergency Recovery, Kernel Glitches, NVRAM Resets & Secure Boot Armor*
-#### `v0.17.0` — *"I AM THE LAW!"* (Security, Compliance & Hardening Milestone)
+#### `v1.0_RC1` — *"Wonderwall"* (The Master Dress Rehearsal Release Candidate)
 
 ---
 

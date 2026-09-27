@@ -15,12 +15,31 @@ for cand in "${SCRIPT_DIR}/common.sh" \
     fi
 done
 
+# --- [ MUTEX & CONCURRENCY GUARD ] ---
+# Defer immediately if an interactive slacky-update session is running
+if [ -f "/tmp/slacky-update-running.lock" ]; then
+    lpid=$(cat "/tmp/slacky-update-running.lock" 2>/dev/null || echo "")
+    if [ -n "${lpid}" ] && [[ "${lpid}" =~ ^[0-9]+$ ]] && kill -0 "${lpid}" 2>/dev/null; then
+        exit 0
+    fi
+fi
+
+# Prevent multiple background check workers from running simultaneously
+CHECK_LOCK="/tmp/slacky-update-check.lock"
+if [ -f "${CHECK_LOCK}" ]; then
+    cpid=$(cat "${CHECK_LOCK}" 2>/dev/null || echo "")
+    if [ -n "${cpid}" ] && [[ "${cpid}" =~ ^[0-9]+$ ]] && kill -0 "${cpid}" 2>/dev/null; then
+        exit 0
+    fi
+fi
+echo "$$" > "${CHECK_LOCK}" 2>/dev/null || true
+
 USER_CACHE_DIR="${XDG_CACHE_HOME:-${HOME:-/tmp}/.cache}/slacky-update"
 mkdir -p "${USER_CACHE_DIR}" 2>/dev/null || true
 STATUS_FILE="${USER_CACHE_DIR}/status.json"
 
 TMP_DIR=$(mktemp -d /tmp/slacky-update-check.XXXXXX)
-trap 'rm -rf "${TMP_DIR}"' EXIT
+trap 'rm -rf "${TMP_DIR}" "${CHECK_LOCK}" 2>/dev/null || true' EXIT
 
 touch "${TMP_DIR}/slackware_updates"
 touch "${TMP_DIR}/slackpkgplus_updates"
@@ -421,7 +440,16 @@ check_cachyos_gaming_background() {
     fi
 
     if command -v check_all_installed_gaming_updates_fast >/dev/null 2>&1; then
-        check_all_installed_gaming_updates_fast > "${TMP_DIR}/gaming_updates" 2>/dev/null || true
+        local raw_g_updates
+        raw_g_updates=$(check_all_installed_gaming_updates_fast 2>/dev/null || echo "")
+        if [ -n "${raw_g_updates}" ]; then
+            while IFS='|' read -r pid name cur_ver latest_ver; do
+                [ -n "${pid}" ] || continue
+                GAMING_UPDATES+=("${name} ${latest_ver} (Installed: ${cur_ver})")
+            done <<< "${raw_g_updates}"
+        fi
+        printf "%s\n" "${GAMING_UPDATES[@]:-}" > "${TMP_DIR}/gaming_updates"
+        echo "${raw_g_updates}" > "${TMP_DIR}/gaming_updates_raw"
         echo "SUCCESS" > "${TMP_DIR}/gaming_status"
     elif command -v get_gaming_catalog >/dev/null 2>&1; then
         while IFS='|' read -r pkg_id name cat main_pat l32_pat ext_pat repos; do
@@ -629,6 +657,7 @@ flatpak_updates = get_persisted_list("flatpak_updates", "flatpak_status", "flatp
 sbo_updates = get_persisted_list("sbo_updates", "sbo_status", "sbo_updates")
 cachy_updates = get_persisted_list("cachy_updates", "cachy_status", "cachyos_kernel_updates")
 gaming_updates = get_persisted_list("gaming_updates", "gaming_status", "cachyos_gaming_updates")
+gaming_updates_raw = get_persisted_list("gaming_updates_raw", "gaming_status", "cachyos_gaming_updates_raw")
 nvidia_updates = read_file_lines("nvidia_updates")
 nvidia_mismatch = read_file_content("nvidia_mismatch", "false").lower() == "true"
 nvidia_active_ver = read_file_content("nvidia_active_ver", "")
@@ -642,6 +671,7 @@ data = {
     "sbo_updates": sbo_updates,
     "cachyos_kernel_updates": cachy_updates,
     "cachyos_gaming_updates": gaming_updates,
+    "cachyos_gaming_updates_raw": gaming_updates_raw,
     "nvidia_driver_updates": nvidia_updates,
     "reboot_required": False,
     "nvidia_gl_mismatch": nvidia_mismatch,

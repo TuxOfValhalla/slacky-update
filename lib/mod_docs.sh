@@ -951,10 +951,10 @@ PYNET
 manage_field_guide_interactive() {
     while true; do
         clear || true
-        echo -e "${CYAN}${BOLD}============================================================${RESET}"
-        echo -e "${YELLOW}${BOLD}⚡ SLACKY-UPDATE MASTER FIELD GUIDE & MOBILE EXPORT ⚡${RESET}"
-        echo -e "${CYAN}${BOLD}============================================================${RESET}"
-        echo -e "  • ${BOLD}Document:${RESET}    Slackware 15.0 & -current Complete System Manuals"
+        echo -e "${BLUE}${BOLD}============================================================${RESET}"
+        echo -e "${BLUE}${BOLD}SLACKY-UPDATE MASTER FIELD GUIDE & MOBILE EXPORT${RESET}"
+        echo -e "${BLUE}${BOLD}============================================================${RESET}"
+        echo -e "  • ${BOLD}Document:${RESET}    Slackware -current / 15+ & 16 Alpha Complete System Manuals"
         echo -e "  • ${BOLD}Language:${RESET}    English (Easy-to-Read Edition)"
         echo -e "  • ${BOLD}Format:${RESET}      Terminal / PDF / HTML / Mobile QR / Email"
         echo ""

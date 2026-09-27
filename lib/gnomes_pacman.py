@@ -894,7 +894,7 @@ class GnomesPacmanEngine:
     def sync_repositories(self, force: bool = False, verbose: bool = True) -> Dict[str, int]:
         """Download and cache all active repository sync databases."""
         results: Dict[str, int] = {}
-        headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) Slacky-Update/0.17.0 UnderpantsGnomes"}
+        headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) Slacky-Update/1.0_RC1 UnderpantsGnomes"}
 
         for repo in self.repositories:
             rname = repo["name"]
@@ -2113,7 +2113,6 @@ exec "${{TARGET_BIN}}" "$@"
             return f"{bytes_per_sec / (1024.0 * 1024.0):.2f} MiB/s"
 
     @classmethod
-    @classmethod
     def render_gnome_bar(cls, pct: float, width: int = 28, chomp_state: int = 0) -> str:
         """Pacman S/s progress bar eating small 'o' pellets (ILoveCandy style)."""
         pct = max(0.0, min(100.0, pct))
@@ -2127,8 +2126,7 @@ exec "${{TARGET_BIN}}" "$@"
         mouth_open = (chomp_state % 2 == 0)
         eater = "\033[1;34mS\033[0m" if mouth_open else "\033[1;34ms\033[0m"
         rem_len = max(0, width - pos - 1)
-        food_chars = ["o" if (i % 2 == 0) else " " for i in range(rem_len)]
-        food = "".join(food_chars)
+        food = "".join("o" if (j % 2 == 0) else " " for j in range(pos + 1, width))
         return f"[{eaten}{eater}{food}] {pct_str}"
 
     @classmethod
@@ -2144,7 +2142,7 @@ exec "${{TARGET_BIN}}" "$@"
         total_bytes_expected = sum(int(p.get("CSIZE", 15 * 1024 * 1024)) for p in pkgs)
         downloaded_results: List[Tuple[Dict[str, Any], str]] = []
 
-        headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) Slacky-Update/0.17.0 UnderpantsGnomes"}
+        headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) Slacky-Update/1.0_RC1 UnderpantsGnomes"}
         lock = threading.Lock()
         slot_lock = threading.Lock()
         print_lock = threading.Lock()
@@ -4090,7 +4088,7 @@ class RuntimeManager:
 def main():
     """CLI dispatcher for shell integration and testing."""
     if len(sys.argv) < 2:
-        print("Underpants Gnomes Pacman Engine v0.17.0 ('I AM THE LAW!')")
+        print("Underpants Gnomes Pacman Engine v1.0_RC1 ('Wonderwall')")
         print("Usage: gnomes_pacman.py [sync|search|info|deps|transmute|runtime|url|check-host|list-repos|list-installed] [args...]")
         sys.exit(0)
 

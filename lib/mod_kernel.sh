@@ -540,7 +540,11 @@ deploy_cachyos_kernel_flavor() {
     log_info "Deploying CachyOS ${flavor} kernel (v${latest_ver})..."
     deploy_cachyos_kernel_packages "${latest_ver}" "${k_url}" "${h_url}" "${flavor}" "${nv_url}" "${target_r8125}"
     if command -v purge_old_cachyos_kernels >/dev/null 2>&1; then
-        purge_old_cachyos_kernels
+        if [ "${DEFER_BOOT_SYNC:-0}" = "1" ]; then
+            purge_old_cachyos_kernels --no-sync
+        else
+            purge_old_cachyos_kernels
+        fi
     fi
 
     # Smart Prompt: Check if system is eligible for pure CachyOS transition
@@ -618,7 +622,6 @@ update_cachyos_kernels() {
     for flv in "${flavors_to_update[@]}"; do
         deploy_cachyos_kernel_flavor "${flv}"
     done
-    unset DEFER_BOOT_SYNC || true
 
     log_info "⚡ Running Single-Pass Post-Installation Pipeline (DKMS, Dracut, MOK & Limine)..."
     if command -v dkms >/dev/null 2>&1; then
@@ -630,6 +633,7 @@ update_cachyos_kernels() {
             ensure_cachyos_nvidia_duties
         fi
     fi
+    unset DEFER_BOOT_SYNC || true
 
     # Generate initramfs for all active installed kernels
     local all_installed_cachyos
@@ -1472,7 +1476,7 @@ sync_grub_configuration() {
 
 # --- [ BOOTLOADER SYNCHRONIZATION & CMDLINE INJECTION ] ---
 sync_bootloader_configuration() {
-    local kver_full="$1"
+    local kver_full="${1:-$(uname -r 2>/dev/null || echo "")}"
     validate_privileges
     probe_gpu_hardware
 
@@ -1932,7 +1936,7 @@ deploy_cachyos_kernel_packages() {
             if [ -n "${dkms_pkg}" ]; then
                 local dkms_file="${staging_dir}/${dkms_pkg}"
                 log_info "Downloading ${dkms_pkg}..."
-                sudo curl -sSL -o "${dkms_file}" "${cachy_base}/${dkms_pkg}"
+                sudo curl -sSL --connect-timeout 10 --speed-limit 1024 --speed-time 25 -o "${dkms_file}" "${cachy_base}/${dkms_pkg}"
                 if ! verify_cachyos_package_integrity "${dkms_file}"; then
                     log_error "DKMS package integrity verification failed! Skipping extraction."
                     sudo rm -f "${dkms_file}" 2>/dev/null || true
@@ -1956,7 +1960,7 @@ deploy_cachyos_kernel_packages() {
                 local nv_file="${staging_dir}/${nv_filename}"
                 if [ ! -f "${nv_file}" ]; then
                     log_info "Modern NVIDIA GPU detected. Downloading prebuilt matching CachyOS NVIDIA Open driver (${nv_filename})..."
-                    curl -sSL -o "${nv_file}" "${nv_url}" 2>/dev/null || sudo curl -sSL -o "${nv_file}" "${nv_url}"
+                    curl -sSL --connect-timeout 10 --speed-limit 1024 --speed-time 25 -o "${nv_file}" "${nv_url}" 2>/dev/null || sudo curl -sSL --connect-timeout 10 --speed-limit 1024 --speed-time 25 -o "${nv_file}" "${nv_url}"
                 fi
                 if ! verify_cachyos_package_integrity "${nv_file}"; then
                     log_error "NVIDIA driver package integrity verification failed! Skipping extraction."

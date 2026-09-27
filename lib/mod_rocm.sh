@@ -214,7 +214,7 @@ DOINST_EOF
     log_info "Assembling Slackware txz package: ${target_pkg}..."
     (
         cd "${staging_root}"
-        sudo "${PKG_MAKE_CMD}" -l y -c n "${target_pkg}" >/dev/null 2>&1
+        sudo find ./ | LC_COLLATE=C sort | sed '2,$s,^\./,,' | tar --no-recursion -T - -cf - | xz -T0 -1 > "${target_pkg}" 2>/dev/null || true
     )
 
     if [ -f "${target_pkg}" ] && [ -s "${target_pkg}" ]; then

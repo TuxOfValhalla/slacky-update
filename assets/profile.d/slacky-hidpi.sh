@@ -14,9 +14,6 @@ if [ "${XDG_SESSION_TYPE:-}" = "wayland" ] || [ -n "${WAYLAND_DISPLAY:-}" ] || [
     if [ -z "${CLUTTER_BACKEND+x}" ]; then
         export CLUTTER_BACKEND="wayland"
     fi
-    if [ -z "${SDL_VIDEODRIVER+x}" ]; then
-        export SDL_VIDEODRIVER="wayland,x11"
-    fi
     unset QT_AUTO_SCREEN_SCALE_FACTOR QT_ENABLE_HIGHDPI_SCALING 2>/dev/null || true
 else
     # X11 HiDPI scaling

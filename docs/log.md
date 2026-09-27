@@ -2,6 +2,130 @@
 
 Dette dokumentet sporer patch-utvikling, arkitekturforbedringer, feilrettinger og endringer på vei mot Slacky-Update LTS.
 
+## 🚀 [v1.0_RC1] — 2026-09-25 ("Wonderwall" — Generalprøve & Systemherding)
+
+### 🎯 Hovedmål for v1.0_RC1
+Offisiell utgivelse av v1.0 RC1 ("Wonderwall" — Generalprøven før 1.0 LTS).
+Full eliminering av maskinvarefeilkonfigurasjoner (NVIDIA vs AMD vs Intel), dedikert hybrid-bærbar/PRIME-differensiering, ikke-blokkerende uprivilegert rettighetshåndtering, robust nettverks- og nedlastningsherding uten kunstige timeouts på store filer, og optimalisert ressursbruk i bakgrunnen.
+
+### 🛠️ Endringer og forbedringer i v1.0_RC1
+
+#### 1. Hybrid GPU & Bærbar Støtte (`lib/common.sh`, `lib/mod_gaming.sh`)
+* **Chassis & DMI Deteksjon:** Utvidet `is_laptop_chassis()` og `probe_gpu_hardware()` til å detektere multi-GPU/Optimus-laptoper (`IS_HYBRID_GPU=true`).
+* **Wayland Compositor Sikring:** På hybride laptoper settes ikke `GBM_BACKEND=nvidia-drm` globalt i `/etc/hypr/hyprland.env`. Dette forhindrer frys og krasj på integrerte skjermer som drives av Intel/AMD KMS `/dev/dri/card0`, mens spill og tunge apper offloades problemfritt via PRIME (`__NV_PRIME_RENDER_OFFLOAD=1`).
+* **Korrekt VA-API Ruting:** På hybrid-systemer rutes `LIBVA_DRIVER_NAME` automatisk til iGPU (`iHD` for Intel, `radeonsi` for AMD) for energieffektiv videoavspilling.
+
+#### 2. Ikke-Blokkerende Uprivilegerte Operasjoner (`lib/common.sh`)
+* **Privilegieminimering:** `init_storage()` forsøker ikke lenger å tvinge gjennom interaktive `sudo`-forespørsler ved uprivilegerte kjøringer (f.eks. ved menylesing, statussjekk eller fra bakgrunnsprosesser), men benytter passordløs `sudo -n` eller brukerens lokale cache.
+
+#### 3. Herdet Nettverks- og Nedlastingsarkitektur (`lib/mod_*.sh`, `lib/common.sh`)
+* **Ingen Premature Timeouts:** Fjernet harde tidsbegrensninger (som `-m 180` / `-m 120`) på store nedlastinger (NVIDIA-drivere, kjerner, multilib-pakker).
+* **Adaptiv Feilhåndtering:** Innført `--connect-timeout 10 --speed-limit 1024 --speed-time 25` slik at nedlastinger tillates å bruke den tiden de trenger så lenge data overføres, samtidig som hengende forbindelser fanges opp og termineres raskt.
+
+#### 5. Feilretting for Underpants Gnomes Batch-oppgraderinger (`lib/mod_gaming.sh`, `lib/check_backend.sh`)
+* **Strukturert Oppgraderings-Payload:** Rettet formatmismatch i `check_all_installed_gaming_updates_fast` slik at den leverer strukturerte data (`pid|name|cur_ver|latest_ver`).
+* **Sømløs Pakkeoppløsning:** `sync_all_installed_cachyos_gaming_packages` fanger nå opp den faktiske pakke-ID-en (`microsoft-edge`) i stedet for hele den formaterte strengen, slik at enkelt- og batch-oppgraderinger installeres og bygges uten avvisninger.
+
+#### 6. Privilegiesanering & Modent Designdirektiv (Build 2 / noarch-2)
+* **Limine Sudo-Fjerning:** Fjernet tidlig `validate_privileges` og `sudo test -f` ved inngang til `manage_limine_interactive()` – statusvisning og lesing forblir 100 % uprivilegert, og `sudo` kreves kun ved faktiske skrivehandlinger.
+* **Typografisk Sanering & Rensede menyer:** Fjernet hardkodede prefiks-tall (`0.`, `4.`, `5.`) i NVIDIA-menyen på tvers av 24 språk (`locales/*.json`), renset bort lynikoner og ASCII-pynt til fordel for faste overskrifter i Slackware-blått, og oppdatert referanser til kun å dekke `Slackware -current / 15+ & 16 Alpha`.
+
+#### 7. Autentisk ILoveCandy Pacman-Gomling (Build 4 / noarch-4)
+* **Stasjonære Mat-Pellets (`lib/pacman_candy.py`, `lib/gnomes_pacman.py`, `lib/common.sh`):** Fikset relativ indeksfeil i mat-generatoren hvor indeksen restartet på 0 foran snuten til S. Erstatter relativ looping med den globale skjermindeksen `j` i sporet (`range(pos + 1, width)`).
+* **Ingen Dytte-Effekt:** Alle `o`-er står nå 100 % stasjonære på faste partallskolonner på skjermen og blir slukt én etter én etter hvert som `S` ruller over dem og etterlater seg `--`.
+
+#### 8. Sanering av ILoveCandy Fargepalett (Build 5 / noarch-5)
+* **Krystallren Monokrom Layout (`lib/common.sh`):** Fjernet alle overflødige ANSI-farger (gult, grønt, magenta, cyan) fra fremdriftslinjene.
+* **Fokus på S/s Gomleren:** Kun `S` og `s` rendres i fet Slackware-blå (`\033[1;34m`). All annen tekst (prosent, hastighet, filnavn, tellere og ETA) forblir i ren hvit/standard terminalfarge.
+
+#### 9. 100% Autentisk Pacman ILoveCandy Kolonnelayout (Build 6 / noarch-6)
+* **Universal Kolonnestruktur (`lib/common.sh`, `lib/pacman_candy.py`, `lib/gnomes_pacman.py`):** Samkjørt kolonneoppsettet i hele systemet til ekte Arch/Pacman-standard: `[Filnavn] [Størrelse] [Hastighet] [ETA] [Fremdriftslinje] [Prosent]`.
+* **Perfekt Venstreflanke-Justering:** All numerisk telemetri (KiB/MiB, MiB/s, ETA) er fast plassert til venstre for sporet, slik at fremdriftslinjene starter på samme vertikale kolonne og avsluttes med en høyrejustert prosentindikator.
+
+#### 10. Rullende Pacman Nedlastingsmotor & Transmutasjonsrensking (Build 7 / noarch-7)
+* **Rullende Terminal-Rendring (`lib/common.sh`):** Ferdignedlastede filer låses umiddelbart som permanente linjer med `[--------------------] 100%` i terminalhistorikken uten flimring eller ANSI-markørfeil. Aktive tråder oppdateres dynamisk under de ferdige filene, og `Total (x/N)` holdes låst på bunnen.
+* **Eksakte Størrelsesberegninger:** Fjernet den kunstige `+ 15 MB` ekspansjonshacket i `lib/common.sh`. Total og filstørrelser beregnes nøyaktig fra faktiske overførte bytes og HTTP Content-Length, med naturlig over-100% telling ved dynamisk kompresjonsavvik.
+* **Minimalistisk & Sømløs Transmutasjons-Typografi (`lib/mod_gaming.sh`):** Fjernet tunge ASCII-bokser (`====`) og overflødige tellere (`[1/1]`). Erstattet med ren Slackware Cyan tittel (`🧙 Transmuting & Deploying: ${pkg}`) og strukturerte innrykkede kulepunkter (`  • `) uten repeterende kolon-spam.
+
+#### 11. NVIDIA Arkitektur-Frakobling, Pascal CachyOS-Ruting & Nettleserakselerasjon (Build 8 / noarch-8)
+* **Eliminering av .run Split-Brain:** Fjernet usikre og kolliderende 615/580 `.run`-alternativer fra hovedrutene for å forhindre filkollisjoner på `/usr/lib64/libGL.so*` og brutte symlenker.
+* **CachyOS Native Suite som 100% Standard:** Turing+ (RTX 20/30/40/50, GTX 16xx) rutes utelukkende til `nvidia-open-dkms` med full 64-bit og 32-bit multilib-pakke, OpenCL, VA-API og settings.
+* **Automatisk Pascal-Ruting til CachyOS 580xx:** Pascal (GTX 10-serien, GP100–GP108) detekteres automatisk og rutes til `nvidia-580xx-dkms` med 100 % matchende userspace (`nvidia-580xx-utils`, `lib32-nvidia-580xx-utils`, `opencl-nvidia-580xx`, `lib32-opencl-nvidia-580xx`, `libva-nvidia-driver`), og skjermes strengt mot uforenlig 600+ userspace.
+* **Dedikert Frittstående Legacy .run-Undermeny:** Tilbyr offisielle eldre NVIDIA-grener (**595**, **570**, **535**, **470**, **390**) i en isolert undermeny for eldre systemer og spesialtilpassede arbeidsstasjoner.
+* **Automatisk .run til CachyOS-Overgang (`transition_legacy_run_to_cachyos`):** Renser automatisk bort uadministrerte `.run`-installasjoner, foreldede symlenker og gjenoppretter rene Mesa GL-tilstander før CachyOS-pakker rulles ut.
+* **Maskinvaretilpasset Nettleserakselerasjon (`lib/mod_gaming.sh`):** Moderne GPU-er (Turing+) aktiverer full VA-API NVDEC (`VaapiOnNvidiaGPUs,AcceleratedVideoDecodeLinuxGL`), mens Pascal/Legacy-GPU-er tildeles trygge Wayland- og GPU-rasteriseringsflagg for å forhindre nettleserkrasj.
+* **Modulær Hyprland Lua GUI-Hook:** Lagt inn `pcall(dofile, os.getenv("HOME") .. "/.config/hypr/hyprland-gui.lua")` i `hyprland.lua` slik at eksterne GUI-konfigurasjonsverktøy (som HyprMod) kan overstyre innstillinger dynamisk uten å røre de 7 kjerne-modulene.
+
+#### 12. HyprMod First-Class Integrasjon, AUR RPC Oppdateringsmotor & 10-Bit OLED Støtte (Build 9 / noarch-9)
+* **HyprMod First-Class Curation (`underpants-hyprmod`):** Integrert BlueManCZs `hyprmod` (v0.4.0) – en visuell innstillings- og regeleditor for Hyprland bygget med GTK4 og Libadwaita. Pakkemotoren bygger og pakker alle 6 rene Python-moduler (`hyprland-config`, `hyprland-monitors`, `hyprland-schema`, `hyprland-socket`, `hyprland-state`, `hyprmod`) samt `.desktop` launcher, SVG-ikoner og AppStream metainfo inn i en frittstående Slackware `.txz`-pakke.
+* **Lynrask AUR RPC v5 & GitHub API Oppdateringsmotor (`lib/mod_gaming.sh`):** Implementert dedikert AUR RPC v5 API-oppslag (`https://aur.archlinux.org/rpc/v5/info?arg[]=<pkg>`) og GitHub Release query med lokal caching (TTL 1800s). `slacky-update-tray`, `slacky-update` CLI og `gnomes` sjekker automatisk etter nye versjoner og varsler brukeren umiddelbart ved oppdateringer.
+* **Sømløs Modulær Lua & 10-Bit HDR/OLED Støtte:** `hyprland.lua`-malen inkluderer `require("hyprland-gui")` og oppretter automatisk en ren `~/.config/hypr/hyprland-gui.lua`. HyprMod skriver direkte til denne filen, støtter 10-bits farger (`bitdepth = 10` for OLED som ASUS ROG Swift PG32UCDM), tilpassede skjermoppsett og rammer med øyeblikkelig hot-reload uten å berøre kjernekonfigurasjonen.
+* **Dedikert CLI-Snarvei:** Lagt til `--hyprmod` i `bin/slacky-update` for direkte installasjon og vedlikehold.
+
+#### 13. Strømlinjeformet Single-Pass Pipeline, Mac Tahoe & WhiteSur Ricing Suite (Build 10 / noarch-10)
+* **Retting av Unbound Variable i `sync_bootloader_configuration` (`lib/mod_kernel.sh`):** Sikret funksjonsparametere (`local kver_full="${1:-$(uname -r 2>/dev/null || echo "")}"`) slik at batch-oppgraderinger under `set -euo pipefail` aldri krasjer når funksjonen kalles uten eksplisitt argument.
+* **Ekte Atomisk Single-Pass Pipeline (`lib/mod_kernel.sh`, `lib/mod_clean.sh`):** `DEFER_BOOT_SYNC=1` beholdes nå aktiv gjennom hele transaksjonen (kjerneekstrahering, `--no-sync` kjernefjerning og NVIDIA-suite). Dracut, MOK-signering og Limine BLAKE2B-forsegling kjøres nå nøyaktig **én gang samlet** helt til slutt.
+* **Renset Typografi & Slutt på Cyan-Firkantene (`lib/common.sh`):** `log_info` er oppgradert fra to fete cyan-kolon (`::`) til et rent og ryddig innrykket kulepunkt (`  • `), som fjerner den massive 4-prikkers firkantstøyen i Konsole og gir en moden terminalopplevelse.
+* **Lynrask Multithreaded NVIDIA-Pakkebygging (`lib/mod_nvidia.sh`):** Satt `XZ_OPT="-T0 -1"` under `makepkg`-pakkingen av `cachyos-nvidia-utils`, som utnytter alle CPU-kjerner og reduserer pakke- og komprimeringstiden fra ~60 sekunder til ~1.5 sekunder.
+* **Mac Tahoe & WhiteSur Ricing Suite i Underpants Gnomes (`lib/mod_gaming.sh`):**
+  * Ny kuratert kategori: `ricing` (Ricing & Desktop Customization).
+  * `mactahoe-icons`: 27 macOS Tahoe-vektorvarianter for KDE Plasma, XFCE og GTK.
+  * `mactahoe-cursors`: macOS Tahoe-pekere for X11 & Wayland (lyse og mørke varianter).
+  * `whitesur-icons`: Klassisk macOS Big Sur / Sonoma stil ikonpakke.
+  * `whitesur-cursors`: WhiteSur macOS-pekere med animerte spinnere.
+* **Dedikerte CLI-Snarveier:** Lagt til `--mactahoe-icons`, `--mactahoe-cursors`, `--whitesur-icons` og `--whitesur-cursors` i `bin/slacky-update`.
+* **SlackBuild Oppgradering:** SlackBuild bumpet til `1.0_RC1-noarch-10_slacky`.
+
+#### 14. Batch-Oppløser for Ricing Themes & TUI Menysynkronisering (Build 11 / noarch-11)
+* **Parallell Batch-Oppløser for GitHub/AUR Ricing Pakker (`lib/mod_gaming.sh`):**
+  * Registrert `mactahoe-icons`, `mactahoe-cursors`, `whitesur-icons` og `whitesur-cursors` i `resolve_multiple_gaming_upstreams_batch` katalogen og `resolve_single(pid)` oppslaget.
+  * Batch-oppløseren returnerer nå live AUR RPC v5 metadata og merker pakkene med `GITHUB_THEME` i stedet for `NONE`, slik at parallelle flervalg i TUI-menyen (f.eks. `50 51`) aldri feilaktig avvises med `⚠ Skipping unresolved package`.
+  * Forhåndsnedlastingssløyfen (`deploy_gaming_packages_batch`) gjenkjenner nå `GITHUB_THEME` på lik linje med `BUNDLED` og ruter pakkene direkte til transmutasjons- og byggemotoren.
+* **TUI Konsollmenysynkronisering (`interactive_cachyos_gaming_menu`):**
+  * Lagt til `"ricing"` i `CAT_KEYS` og `CAT_TITLES` samt filbane-deteksjon i `BINARY_MAP`, slik at **💎 Ricing & Desktop Aesthetics** vises fullstendig i konsollmenyen når den startes fra terminal eller tray-applet.
+  * Automatisk generering av `.icon-theme.cache` via `gtk-update-icon-cache` for alle undermapper under `/usr/share/icons/` ved installasjon.
+* **Lynrask Multithreaded Pakkebygging for Gaming & Ricing (`lib/mod_gaming.sh`, `lib/mod_rocm.sh`):**
+  * Satt `XZ_OPT="-T0 -1"` under `makepkg`-pakkingen i `mod_gaming.sh` og `mod_rocm.sh` på samme måte som i `mod_nvidia.sh`. Dette utnytter alle tilgjengelige CPU-tråder og kutter komprimeringstiden til en brøkdel av et sekund.
+* **SlackBuild Oppgradering:** SlackBuild bumpet til `1.0_RC1-noarch-11_slacky`.
+
+#### 15. Direkte Parallell Tar-XZ Pakkemotor & Eliminering av Makepkg Flaskehals (Build 12 / noarch-12)
+* **Eliminering av Makepkg Flaskehals (`lib/mod_gaming.sh`, `lib/mod_nvidia.sh`, `lib/mod_rocm.sh`):**
+  * Slackwares tradisjonelle `/sbin/makepkg -l y` kjører en enkelttrådet `find . -type l -exec rm -v {} \;` som starter en ny `rm`-prosess for hver eneste symbolske lenke (over 50 000 ganger for store ikontemaer), samt en langsom sjekk av gzip- og ELF-integritet. Dette skapte en 2–3 minutters frys under `Assembling Slackware package...`.
+  * Erstattet `/sbin/makepkg`-kallet med den moderne, direkte parallelle rørledningen: `find ./ | LC_COLLATE=C sort | sed '2,$s,^\./,,' | tar --no-recursion -T - -cf - | xz -T0 -1 > "${txz_out}"`.
+  * Pakkingen av massive pakker med 100 000+ filer og symlenker (som MacTahoe med 27 temaer) tar nå **under 1 sekund** over alle tilgjengelige CPU-tråder.
+* **SlackBuild Oppgradering:** SlackBuild bumpet til `1.0_RC1-noarch-12_slacky`.
+
+#### 16. AUR Git Versjonssymmetri & Fjerning av Falske Oppdateringsvarsler (Build 13 / noarch-13)
+* **Symmetrisk AUR RPC Versjonshåndtering (`lib/mod_gaming.sh`):**
+  * Fjernet asymmetrisk `.replace("r", "")` i `resolve_cachyos_gaming_upstream_metadata` og `resolve_multiple_gaming_upstreams_batch`.
+  * Versjonsstrengen fra AUR RPC v5 bevares nå i sin kanoniske form (`2025.10.16.r1.9669dfee`) under både enkelt- og batch-transmutasjon, nøyaktig slik `check_all_installed_gaming_updates_fast` leser den.
+  * Eliminerer falske oppdateringsvarsler og forhindrer at MacTahoe- og WhiteSur-temaene havner i en evig oppdateringsløkke etter vellykket installasjon.
+* **SlackBuild Oppgradering:** SlackBuild bumpet til `1.0_RC1-noarch-13_slacky`.
+
+#### 17. Null-Vent Oppgraderingsmotor & Asynkron Bakgrunns-Cache (Build 14 / noarch-14)
+* **Gjenbruk av Kjente Utdaterte Pakker (`lib/mod_gaming.sh`, `lib/check_backend.sh`):**
+  * `check_backend.sh` lagrer nå strukturerte oppdateringsdata (`cachyos_gaming_updates_raw`) i `status.json`.
+  * `sync_all_installed_cachyos_gaming_packages` leser de kjente oppdateringene direkte fra `status.json` i stedet for å tvinge gjennom en ny 25-sekunders online-skanning mot 8 repositories og AUR.
+  * Kutter oppstartstiden for underpants-oppgraderinger under Full System Upgrade fra **25 sekunder til 0,0 sekunder**.
+* **Lydløs Asynkron Status-Oppfrisking (`bin/slacky-update`):**
+  * Fjernet den synkrone 20-sekunders blokkeringen av `slacky-update-check` på slutten av oppgraderingstransaksjoner (`Refreshing package cache...`).
+  * Oppfrisking av `status.json` og systemstatusfeltet sendes nå automatisk til en frakoblet bakgrunnsprosess (`trigger_silent_background_refresh &`).
+  * Brukeren får terminalprompten tilbake på mikrosekundet idet oppgraderingen er ferdig.
+* **SlackBuild Oppgradering:** SlackBuild bumpet til `1.0_RC1-noarch-14_slacky`.
+
+#### 18. NVIDIA egl-gbm Xwayland & KWin DRM Bridge Fix (Build 17 / noarch-17)
+* **NVIDIA egl-gbm Integrasjon i CachyOS Driver Suite (`lib/mod_nvidia.sh`):**
+  * **Rotårsak Løst:** Løst alvorlig ytelsesfall (10–12 FPS og 100 % CPU software-rendering med `llvmpipe/swrast`) i spill under Xwayland (som World of Warcraft / Battle.net) og oppstartskrasj i KDE Plasma Wayland (KWin) tilbake til SDDM.
+  * **Arkitekturfiksen:** Slackware current leverer standardpakken `egl-wayland`, men mangler `egl-gbm`. Da `.run`-driveren ble fjernet til fordel for CachyOS-pakker, manglet GBM external platform (`15_nvidia_gbm.json` og `libnvidia-egl-gbm.so.1`), som førte til at `eglInitialize()` på GBM feilet og Xwayland deaktiverte GLAMOR maskinvareakselerasjon.
+  * **Automatisert Pakking:** `build_and_deploy_cachyos_nvidia_userspace` laster nå automatisk ned og GPG-verifiserer `egl-gbm` fra upstream og pakker både 64-bit biblioteket (`/usr/lib64/libnvidia-egl-gbm.so*`) og JSON-plattformfilen (`/usr/share/egl/egl_external_platform.d/15_nvidia_gbm.json`) direkte inn i `cachyos-nvidia-utils`.
+  * **64-bit Xorg OutputClass & GLX Symlinker:** Patchet `10-nvidia-drm-outputclass.conf` for 64-bit Slackware `/usr/lib64/` paths og opprettet korrekte symlenker for `libglxserver_nvidia.so`.
+  * **Sanering av Minnestruping:** Fjernet Arch-spesifikke strupeprofiler som `limit-vram-usage`.
+* **Maskinvaretilpasset Hyprland Lua Miljø (`lib/mod_gaming.sh`):**
+  * `modules/env.lua` og `/etc/hypr/hyprland.env` genereres nå dynamisk basert på maskinvare-probering (NVIDIA vs AMD vs Intel vs Hybrid PRIME laptoper).
+  * Fjernet foreldet og potensielt forstyrrende `GBM_BACKEND=nvidia-drm`.
+  * Lagt til vindus- og tearing-regler i `modules/rules.lua` for Battle.net, World of Warcraft, Wine og Proton.
+* **SlackBuild Oppgradering:** SlackBuild bumpet til `1.0_RC1-noarch-17_slacky`.
+
 ---
 
 ## 🚀 [v0.17.0] — 2026-09-25 ("I AM THE LAW!" — Security Hardening, Modular Lua & Display Suite Milestone)

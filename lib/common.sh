@@ -62,12 +62,29 @@ MOK_KEY=""
 HAS_NVIDIA=false
 HAS_AMD=false
 HAS_INTEL=false
+IS_LAPTOP=false
+IS_HYBRID_GPU=false
 
-CURRENT_VERSION="0.17.0"
-RELEASE_CODENAME="I AM THE LAW!"
+CURRENT_VERSION="1.0_RC1"
+RELEASE_CODENAME="Wonderwall"
 
-CURL_CONNECT_TIMEOUT=15
-CURL_MAX_TIME=60
+CURL_CONNECT_TIMEOUT=10
+CURL_SPEED_LIMIT=1024
+CURL_SPEED_TIME=25
+
+is_laptop_chassis() {
+    local chassis
+    chassis=$(cat /sys/class/dmi/id/chassis_type 2>/dev/null || echo "")
+    if [[ "${chassis}" =~ ^(8|9|10|14|30|31|32)$ ]]; then
+        return 0
+    fi
+    if [ -d /sys/class/power_supply ]; then
+        if ls /sys/class/power_supply/BAT* 1>/dev/null 2>&1; then
+            return 0
+        fi
+    fi
+    return 1
+}
 
 compare_versions_strictly_greater() {
     local v1="$1"
@@ -357,7 +374,7 @@ verify_microsoft_uefi_authenticode() {
 
 log_info() {
     local msg="$1"
-    echo -e "${CYAN}::${RESET} ${msg}"
+    echo -e "  ${CYAN}•${RESET} ${msg}"
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] [INFO] ${msg}" >> "${LOG_FILE}" 2>/dev/null || true
 }
 
@@ -461,24 +478,34 @@ trigger_silent_background_refresh() {
         fi
     done
     if [ -n "${chk_bin}" ]; then
-        nohup "${chk_bin}" >/dev/null 2>&1 &
+        nohup "${chk_bin}" </dev/null >/dev/null 2>&1 &
     fi
 }
 
 init_storage() {
-    if [ ! -d "${CACHE_DIR}" ]; then
-        mkdir -p "${CACHE_DIR}" 2>/dev/null || sudo mkdir -p "${CACHE_DIR}" 2>/dev/null || true
+    # If running as root, enforce strict storage permissions and directory layout
+    if [ "$(id -u)" -eq 0 ]; then
+        mkdir -p "${CACHE_DIR}/kernel" "${CACHE_DIR}/nvidia" "${CACHE_DIR}/slacky-slackbuilds" 2>/dev/null || true
+        chmod 1777 "${CACHE_DIR}" 2>/dev/null || true
+        chmod 0755 "${CACHE_DIR}/kernel" "${CACHE_DIR}/nvidia" "${CACHE_DIR}/slacky-slackbuilds" 2>/dev/null || true
+        touch "${LOG_FILE}" 2>/dev/null || true
+        chmod 0666 "${LOG_FILE}" 2>/dev/null || true
+    else
+        # Unprivileged caller: attempt local user cache or silent non-blocking sudo if passwordless
+        mkdir -p "${CACHE_DIR}" 2>/dev/null || {
+            if sudo -n true 2>/dev/null; then
+                sudo mkdir -p "${CACHE_DIR}/kernel" "${CACHE_DIR}/nvidia" "${CACHE_DIR}/slacky-slackbuilds" 2>/dev/null || true
+                sudo chmod 1777 "${CACHE_DIR}" 2>/dev/null || true
+                sudo chmod 0755 "${CACHE_DIR}/kernel" "${CACHE_DIR}/nvidia" "${CACHE_DIR}/slacky-slackbuilds" 2>/dev/null || true
+            fi
+        }
+        touch "${LOG_FILE}" 2>/dev/null || {
+            if sudo -n true 2>/dev/null; then
+                sudo touch "${LOG_FILE}" 2>/dev/null || true
+                sudo chmod 0666 "${LOG_FILE}" 2>/dev/null || true
+            fi
+        }
     fi
-    # Set 1777 (sticky-bit world-writable like /tmp) so unprivileged check_backend / tray can update status.json
-    # while preventing unprivileged users from deleting or modifying root's cached packages.
-    chmod 1777 "${CACHE_DIR}" 2>/dev/null || sudo chmod 1777 "${CACHE_DIR}" 2>/dev/null || true
-
-    # Sensitive root payload subdirectories are restricted to 0755
-    sudo mkdir -p "${CACHE_DIR}/kernel" "${CACHE_DIR}/nvidia" "${CACHE_DIR}/slacky-slackbuilds" 2>/dev/null || true
-    sudo chmod 0755 "${CACHE_DIR}/kernel" "${CACHE_DIR}/nvidia" "${CACHE_DIR}/slacky-slackbuilds" 2>/dev/null || true
-
-    touch "${LOG_FILE}" 2>/dev/null || sudo touch "${LOG_FILE}" 2>/dev/null || true
-    chmod 0666 "${LOG_FILE}" 2>/dev/null || sudo chmod 0666 "${LOG_FILE}" 2>/dev/null || true
 }
 
 validate_privileges() {
@@ -495,6 +522,12 @@ probe_gpu_hardware() {
     HAS_NVIDIA=false
     HAS_AMD=false
     HAS_INTEL=false
+    IS_LAPTOP=false
+    IS_HYBRID_GPU=false
+
+    if is_laptop_chassis; then
+        IS_LAPTOP=true
+    fi
 
     local pci_devs
     pci_devs=$(lspci -nn 2>/dev/null | grep -iE 'vga|3d|display' || true)
@@ -526,6 +559,19 @@ probe_gpu_hardware() {
         if [ -d /proc/driver/nvidia ] || [ -f /sys/module/nvidia/version ]; then
             HAS_NVIDIA=true
         fi
+    fi
+
+    # Hybrid GPU calculation:
+    # If multiple GPU vendors are detected, or if it is a laptop with NVIDIA dGPU
+    local gpu_count=0
+    [ "${HAS_NVIDIA}" = "true" ] && ((gpu_count++)) || true
+    [ "${HAS_AMD}" = "true" ] && ((gpu_count++)) || true
+    [ "${HAS_INTEL}" = "true" ] && ((gpu_count++)) || true
+
+    if [ "${gpu_count}" -ge 2 ]; then
+        IS_HYBRID_GPU=true
+    elif [ "${IS_LAPTOP}" = "true" ] && [ "${HAS_NVIDIA}" = "true" ]; then
+        IS_HYBRID_GPU=true
     fi
 }
 
@@ -754,11 +800,25 @@ try:
 except Exception:
     num_workers = 10
 
-def format_size(bytes_val):
-    mb = bytes_val / (1024 * 1024)
-    if mb >= 1024:
-        return f"{mb / 1024:.2f} GB"
-    return f"{mb:.1f} MB"
+def format_size(num_bytes):
+    if num_bytes <= 0:
+        return "  0.0 B"
+    elif num_bytes < 1024:
+        return f"{int(num_bytes)} B"
+    elif num_bytes < 1024 * 1024:
+        return f"{num_bytes / 1024.0:.1f} KiB"
+    elif num_bytes < 1024 * 1024 * 1024:
+        return f"{num_bytes / (1024.0 * 1024.0):.1f} MiB"
+    else:
+        return f"{num_bytes / (1024.0 * 1024.0 * 1024.0):.1f} GiB"
+
+def format_speed(bytes_per_sec):
+    if bytes_per_sec <= 0:
+        return "  0.0 B/s"
+    elif bytes_per_sec < 1024 * 1024:
+        return f"{bytes_per_sec / 1024.0:.1f} KiB/s"
+    else:
+        return f"{bytes_per_sec / (1024.0 * 1024.0):.1f} MiB/s"
 
 def format_eta(seconds):
     if seconds < 0 or seconds > 36000:
@@ -793,19 +853,18 @@ try:
 except Exception:
     pass
 
-def render_pacman_bar(pct, width=16, chomp_state=0):
-    pct = max(0.0, min(100.0, pct))
-    if pct >= 100.0:
-        return f"[{'-' * width}]"
-    pos = int((pct / 100.0) * width)
+def render_pacman_bar(pct, width=28, chomp_state=0):
+    pct_val = max(0.0, pct)
+    pct_str = f"{int(pct_val):>3d}%"
+    if pct_val >= 100.0:
+        return f"[{'-' * width}] {pct_str}"
+    pos = int((pct_val / 100.0) * width)
     pos = min(width - 1, max(0, pos))
     eaten = "-" * pos
     mouth_open = (chomp_state % 2 == 0)
     eater = "\033[1;34mS\033[0m" if mouth_open else "\033[1;34ms\033[0m"
-    rem_len = max(0, width - pos - 1)
-    food_chars = ["o" if (i % 2 == 0) else " " for i in range(rem_len)]
-    food = "".join(food_chars)
-    return f"[{eaten}{eater}{food}]"
+    food = "".join("o" if (j % 2 == 0) else " " for j in range(pos + 1, width))
+    return f"[{eaten}{eater}{food}] {pct_str}"
 
 size_map = {}
 def probe_size(item):
@@ -891,10 +950,10 @@ except Exception:
     term_width = 80
     term_height = 24
 
+name_len = 28 if term_width < 100 else 32
+bar_width = 18 if term_width < 100 else 24
 max_allowed_slots = max(4, min(16, term_height - 6))
 max_display_slots = min(num_workers, total_items, max_allowed_slots)
-slot_bar_width = 14 if term_width < 100 else 18
-total_bar_width = 18 if term_width < 100 else 24
 
 tot_sz_str = format_size(total_bytes_expected)
 print(f"\033[1;36m🚀 Turbo Parallel Pre-fetch: {label} [{total_items} files • ~{tot_sz_str}]\033[0m")
@@ -903,6 +962,7 @@ sys.stdout.flush()
 state_lock = threading.Lock()
 available_slots = list(range(max_display_slots))
 slot_data = {}
+completed_queue = []
 completed_bytes = 0
 success_count = 0
 fail_count = 0
@@ -910,17 +970,16 @@ active_part_files = {}
 stop_monitor = threading.Event()
 start_time = time.time()
 rate_history = []
-first_render = True
-num_lines_rendered = 0
+num_dynamic_lines = 0
 
 def monitor_thread():
-    global first_render, num_lines_rendered, total_bytes_expected
+    global num_dynamic_lines, total_bytes_expected
     hide_cursor()
     chomp_step = 0
     last_reported_pct = -1
 
     while not stop_monitor.is_set():
-        time.sleep(0.14)
+        time.sleep(0.12)
         now = time.time()
         chomp_step = int(now / 0.35)
 
@@ -928,25 +987,9 @@ def monitor_thread():
             cur_completed = completed_bytes
             cur_parts = list(active_part_files.keys())
             c_count = success_count + fail_count
-            slots_snapshot = []
-            
-            # Check for active slots needing dynamic size expansion
-            for s_id in range(max_display_slots):
-                if s_id in slot_data:
-                    d = dict(slot_data[s_id])
-                    p_file = d['part_file']
-                    try:
-                        if os.path.exists(p_file):
-                            cur_p_sz = os.path.getsize(p_file)
-                            if cur_p_sz > d['exp_sz']:
-                                diff = cur_p_sz - d['exp_sz'] + (15 * 1024 * 1024)
-                                slot_data[s_id]['exp_sz'] += diff
-                                d['exp_sz'] += diff
-                    except Exception:
-                        pass
-                    slots_snapshot.append((s_id, d))
-                else:
-                    slots_snapshot.append((s_id, None))
+            slots_snapshot = [(s_id, dict(d)) for s_id, d in sorted(slot_data.items())]
+            new_completed = list(completed_queue)
+            completed_queue.clear()
 
         part_bytes = 0
         for p in cur_parts:
@@ -958,22 +1001,8 @@ def monitor_thread():
 
         total_dl = cur_completed + part_bytes
 
-        # Dynamically ensure total_bytes_expected accommodates actual downloaded bytes
-        with state_lock:
-            dyn_expected = 0
-            for u, _, _, _ in needed:
-                found = False
-                for _, s_d in slots_snapshot:
-                    if s_d and s_d.get('url') == u:
-                        dyn_expected += s_d.get('exp_sz', 15 * 1024 * 1024)
-                        found = True
-                        break
-                if not found:
-                    dyn_expected += size_map.get(u, 15 * 1024 * 1024)
-            if total_dl >= total_bytes_expected and c_count < total_items:
-                total_bytes_expected = max(total_bytes_expected, dyn_expected, total_dl + (10 * 1024 * 1024))
-            else:
-                total_bytes_expected = max(total_bytes_expected, dyn_expected, total_dl)
+        if total_dl > total_bytes_expected:
+            total_bytes_expected = total_dl
 
         rate_history.append((now, total_dl))
         while rate_history and (now - rate_history[0][0] > 1.5):
@@ -985,8 +1014,6 @@ def monitor_thread():
             speed_bps = max(0.0, db / dt) if dt > 0.05 else 0.0
         else:
             speed_bps = 0.0
-
-        speed_mb = speed_bps / (1024 * 1024)
 
         if total_bytes_expected > 0:
             if c_count < total_items:
@@ -1000,69 +1027,80 @@ def monitor_thread():
         eta_sec = (rem_bytes / speed_bps) if speed_bps > 1024 else 0
 
         if is_tty:
-            lines = []
-            name_len = 24 if term_width < 100 else 30
+            out_buf = []
+            if num_dynamic_lines > 0:
+                out_buf.append(f"\033[{num_dynamic_lines}A")
+
+            # 1. Permanently commit completed lines to terminal
+            for comp_fn, comp_sz, comp_spd in new_completed:
+                comp_fn_disp = comp_fn[:name_len-3] + "..." if len(comp_fn) > name_len else comp_fn
+                comp_sz_str = format_size(comp_sz)
+                comp_spd_str = format_speed(comp_spd)
+                comp_bar = f"[{'-' * bar_width}] 100%"
+                out_buf.append(f"\r\033[2K{comp_fn_disp:<{name_len}s} {comp_sz_str:>10} {comp_spd_str:>11}  00:00 {comp_bar}\n")
+
+            # 2. Render active dynamic slots
+            dynamic_lines = []
             for s_id, s_info in slots_snapshot:
-                if s_info:
-                    item_num = s_info['item_idx']
-                    fn = s_info['filename']
-                    if len(fn) > name_len:
-                        fn = fn[:name_len-3] + "..."
-                    exp_sz = s_info['exp_sz']
-                    p_file = s_info['part_file']
-                    cur_sz = 0
-                    try:
-                        if os.path.exists(p_file):
-                            cur_sz = os.path.getsize(p_file)
-                    except Exception:
-                        pass
-                    
-                    s_pct = min(99.0, (cur_sz / exp_sz * 100.0)) if exp_sz > 0 else 50.0
-                    
-                    s_hist = s_info.get('history', [])
-                    s_hist.append((now, cur_sz))
-                    while s_hist and (now - s_hist[0][0] > 1.2):
-                        s_hist.pop(0)
-                    s_info['history'] = s_hist
-                    if len(s_hist) >= 2:
-                        s_dt = s_hist[-1][0] - s_hist[0][0]
-                        s_db = s_hist[-1][1] - s_hist[0][1]
-                        s_spd = max(0.0, (s_db / s_dt) / (1024 * 1024)) if s_dt > 0.05 else 0.0
-                    else:
-                        s_spd = 0.0
+                fn = s_info['filename']
+                fn_disp = fn[:name_len-3] + "..." if len(fn) > name_len else fn
+                exp_sz = s_info['exp_sz']
+                p_file = s_info['part_file']
+                cur_sz = 0
+                try:
+                    if os.path.exists(p_file):
+                        cur_sz = os.path.getsize(p_file)
+                except Exception:
+                    pass
 
-                    s_bar = render_pacman_bar(s_pct, width=slot_bar_width, chomp_state=chomp_step + s_id)
-                    lines.append(f"  [\033[1;36m{item_num:2d}/{total_items:<2d}\033[0m] \033[1;37m{fn:<{name_len}s}\033[0m {s_bar} \033[1;33m{int(s_pct):3d}%\033[0m • \033[1;32m{s_spd:4.1f} MB/s\033[0m")
+                s_pct = (cur_sz / exp_sz * 100.0) if exp_sz > 0 else 50.0
+                s_hist = s_info.get('history', [])
+                s_hist.append((now, cur_sz))
+                while s_hist and (now - s_hist[0][0] > 1.2):
+                    s_hist.pop(0)
+                s_info['history'] = s_hist
+
+                if len(s_hist) >= 2:
+                    s_dt = s_hist[-1][0] - s_hist[0][0]
+                    s_db = s_hist[-1][1] - s_hist[0][1]
+                    s_spd_bps = max(0.0, s_db / s_dt) if s_dt > 0.05 else 0.0
                 else:
-                    if total_items > max_display_slots:
-                        lines.append(f"  [\033[1;30m--/{total_items:<2d}\033[0m] \033[1;30m{'(idle / queued)':<{name_len}s}\033[0m \033[1;30m[{' ':>{slot_bar_width}s}]\033[0m \033[1;30m --% •  0.0 MB/s\033[0m")
-                    else:
-                        lines.append(f"  [\033[1;30m--/{total_items:<2d}\033[0m] \033[1;30m{'(standby)':<{name_len}s}\033[0m \033[1;30m[{' ':>{slot_bar_width}s}]\033[0m \033[1;30m --% •  0.0 MB/s\033[0m")
+                    s_spd_bps = 0.0
 
-            if max_display_slots > 1:
-                div_len = min(term_width - 4, 76)
-                lines.append("  \033[1;30m" + "─" * div_len + "\033[0m")
+                s_spd_str = format_speed(s_spd_bps)
+                rem_s_bytes = max(0, exp_sz - cur_sz)
+                if s_spd_bps > 1024 and rem_s_bytes > 0:
+                    s_eta_sec = int(rem_s_bytes / s_spd_bps)
+                    s_eta = f"{s_eta_sec // 60:02d}:{s_eta_sec % 60:02d}"
+                else:
+                    s_eta = "00:00" if s_pct >= 99.0 else "--:--"
 
-            tot_bar = render_pacman_bar(pct, width=total_bar_width, chomp_state=chomp_step)
-            cur_sz_str = format_size(total_dl)
+                s_sz_str = format_size(cur_sz if cur_sz > exp_sz else exp_sz)
+                s_bar = render_pacman_bar(s_pct, width=bar_width, chomp_state=chomp_step + s_id)
+                dynamic_lines.append(f"{fn_disp:<{name_len}s} {s_sz_str:>10} {s_spd_str:>11} {s_eta:>5} {s_bar}")
+
+            # 3. Render Total line
+            tot_bar = render_pacman_bar(pct, width=bar_width, chomp_state=chomp_step)
             tot_sz_str = format_size(total_bytes_expected)
-            eta_str = format_eta(eta_sec)
-            lines.append(f"  [\033[1;36m⚡ Total: {c_count:2d}/{total_items:<2d}\033[0m] [\033[1;37m{cur_sz_str:>8s} / ~{tot_sz_str}\033[0m] {tot_bar} \033[1;33m{int(pct):3d}%\033[0m • \033[1;32m{speed_mb:4.1f} MB/s\033[0m • ETA: \033[1;35m{eta_str}\033[0m")
+            tot_spd_str = format_speed(speed_bps)
+            tot_eta_str = format_eta(eta_sec)
+            tot_label = f"Total ({c_count}/{total_items})"
+            dynamic_lines.append(f"{tot_label:<{name_len}s} {tot_sz_str:>10} {tot_spd_str:>11} {tot_eta_str:>5} {tot_bar}")
 
-            out_block = "\n".join(f"\r\033[2K{l}" for l in lines)
-            if first_render:
-                sys.stdout.write(out_block + "\n")
-                first_render = False
-                num_lines_rendered = len(lines)
-            else:
-                sys.stdout.write(f"\033[{num_lines_rendered}A" + out_block + "\n")
+            for d_line in dynamic_lines:
+                out_buf.append(f"\r\033[2K{d_line}\n")
+
+            sys.stdout.write("".join(out_buf))
             sys.stdout.flush()
+            num_dynamic_lines = len(dynamic_lines)
         else:
             int_pct = int(pct)
             if int_pct >= last_reported_pct + 25:
                 last_reported_pct = (int_pct // 25) * 25
                 tot_sz_str = format_size(total_bytes_expected)
-                print(f"  [⚡ {c_count:3d}/{total_items} files] {format_size(total_dl)} / ~{tot_sz_str} ({int_pct}%) • {speed_mb:.1f} MB/s")
+                tot_spd_str = format_speed(speed_bps)
+                tot_eta_str = format_eta(eta_sec)
+                print(f"Total ({c_count}/{total_items}) {tot_sz_str:>10} {tot_spd_str:>11} {tot_eta_str:>5} ({int_pct}%)")
                 sys.stdout.flush()
 
 def download_item_wrapper(args):
@@ -1075,6 +1113,7 @@ def download_item_wrapper(args):
     part_sig = f"{sig_dest}.part.{idx}" if sig_dest else ""
     exp_sz = size_map.get(url, 15 * 1024 * 1024)
     fn = os.path.basename(dest)
+    item_start_time = time.time()
 
     slot_id = -1
     while slot_id == -1 and not stop_monitor.is_set():
@@ -1087,6 +1126,7 @@ def download_item_wrapper(args):
                     'filename': fn,
                     'exp_sz': exp_sz,
                     'part_file': part_file,
+                    'start_time': item_start_time,
                     'history': []
                 }
                 active_part_files[part_file] = True
@@ -1118,9 +1158,12 @@ def download_item_wrapper(args):
                         except Exception: pass
             actual_sz = os.path.getsize(part_file)
             os.replace(part_file, dest)
+            duration = max(0.05, time.time() - item_start_time)
+            avg_item_speed = actual_sz / duration
             with state_lock:
                 completed_bytes += actual_sz
                 success_count += 1
+                completed_queue.append((fn, actual_sz, avg_item_speed))
             return
     except Exception:
         pass
@@ -1145,17 +1188,35 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
 
 stop_monitor.set()
 mon.join(timeout=1.0)
-show_cursor()
 
 total_elapsed = max(time.time() - start_time, 0.1)
+avg_speed_bps = completed_bytes / total_elapsed
 avg_speed_mb = (completed_bytes / (1024 * 1024)) / total_elapsed
 
-if is_tty and num_lines_rendered > 0:
-    sys.stdout.write(f"\033[{num_lines_rendered}A")
-    for _ in range(num_lines_rendered):
-        sys.stdout.write("\r\033[2K\n")
-    sys.stdout.write(f"\033[{num_lines_rendered}A")
+if is_tty:
+    out_buf = []
+    if num_dynamic_lines > 0:
+        out_buf.append(f"\033[{num_dynamic_lines}A")
+    with state_lock:
+        rem_completed = list(completed_queue)
+        completed_queue.clear()
+    for comp_fn, comp_sz, comp_spd in rem_completed:
+        comp_fn_disp = comp_fn[:name_len-3] + "..." if len(comp_fn) > name_len else comp_fn
+        comp_sz_str = format_size(comp_sz)
+        comp_spd_str = format_speed(comp_spd)
+        comp_bar = f"[{'-' * bar_width}] 100%"
+        out_buf.append(f"\r\033[2K{comp_fn_disp:<{name_len}s} {comp_sz_str:>10} {comp_spd_str:>11}  00:00 {comp_bar}\n")
+
+    tot_label = f"Total ({success_count}/{total_items})"
+    tot_sz_str = format_size(completed_bytes)
+    tot_spd_str = format_speed(avg_speed_bps)
+    tot_eta_str = "00:00"
+    tot_bar = render_pacman_bar(100.0, width=bar_width, chomp_state=0)
+    out_buf.append(f"\r\033[2K{tot_label:<{name_len}s} {tot_sz_str:>10} {tot_spd_str:>11} {tot_eta_str:>5} {tot_bar}\n")
+    sys.stdout.write("".join(out_buf))
     sys.stdout.flush()
+
+show_cursor()
 
 if fail_count > 0:
     print(f"\033[1;33m⚠️ Turbo Parallel Pre-fetch finished: {success_count}/{total_items} files ({format_size(completed_bytes)}) cached in {int(total_elapsed)}s ({fail_count} failed).\033[0m\n")

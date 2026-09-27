@@ -16,7 +16,7 @@ done
 STATUS_FILE="/var/cache/slacky-update/status.json"
 
 if [ -n "${CHECK_BIN}" ]; then
-    "${CHECK_BIN}" >/dev/null 2>&1 || true
+    "${CHECK_BIN}" </dev/null >/dev/null 2>&1 || true
 fi
 
 if [ -f "${STATUS_FILE}" ] && command -v notify-send >/dev/null 2>&1; then

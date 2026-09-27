@@ -50,10 +50,10 @@ is_limine_installed() {
     local esp_path
     esp_path=$(detect_limine_esp_path)
 
-    if sudo test -f "${esp_path}/EFI/limine/limine_x64.efi" || \
-       sudo test -f "${esp_path}/EFI/limine/BOOTX64.EFI" || \
-       sudo test -f "${esp_path}/limine.conf" || \
-       sudo test -f "/boot/limine.conf" || \
+    if [ -f "${esp_path}/EFI/limine/limine_x64.efi" ] || \
+       [ -f "${esp_path}/EFI/limine/BOOTX64.EFI" ] || \
+       [ -f "${esp_path}/limine.conf" ] || \
+       [ -f "/boot/limine.conf" ] || \
        [ -f "/etc/default/limine" ]; then
         echo "true"
         return 0
@@ -2487,8 +2487,6 @@ else:
 
 # --- [ INTERACTIVE LIMINE MANAGEMENT MENU ] ---
 manage_limine_interactive() {
-    validate_privileges
-
     while true; do
         local esp_path
         esp_path=$(detect_limine_esp_path)
@@ -2498,9 +2496,9 @@ manage_limine_interactive() {
         fi
 
         echo ""
-        echo -e "${CYAN}============================================================${RESET}"
-        echo -e "${YELLOW}${BOLD}⚡ LIMINE BOOTLOADER & SECURE BOOT MATRIX ⚡${RESET}"
-        echo -e "${CYAN}============================================================${RESET}"
+        echo -e "${BLUE}${BOLD}============================================================${RESET}"
+        echo -e "${BLUE}${BOLD}LIMINE BOOTLOADER & SECURE BOOT MATRIX${RESET}"
+        echo -e "${BLUE}${BOLD}============================================================${RESET}"
         echo -e "  • ${BOLD}Status:${RESET}      ${lim_status}"
         echo -e "  • ${BOLD}ESP Path:${RESET}    ${esp_path}"
         echo ""

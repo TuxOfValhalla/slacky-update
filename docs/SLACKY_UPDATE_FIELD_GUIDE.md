@@ -1,6 +1,6 @@
 # 📖 Slacky-Update Survival Guide & System Manual
 ### *Slackware Linux 15.0 & -current — Complete Architecture, Deployment & Operational Manual*
-#### `v0.17.0` — *"I AM THE LAW!"* (Security, Compliance & Hardening Milestone)
+#### `v1.0_RC1` — *"Wonderwall"* (The Master Dress Rehearsal Release Candidate)
 
 ---
 
@@ -312,6 +312,7 @@ For creative professionals using AMD Radeon GPUs in DaVinci Resolve Studio:
 * Turnkey Mac-like Wayland desktop with Noctalia Shell (top bar, dynamic bottom dock, launcher, control center).
 * **3-Minute OLED & Multi-Monitor DPMS**: Dedicated `hypridle` standby protection turning displays off at 180s without self-resetting config-change loops.
 * **Native Hyprland Lua (`hyprland.lua`)**: Pre-configured Lua configuration ready for Hyprland 0.57+ with complete keybindings, window rules, and snappy 200–250ms bezier curves.
+* **HyprMod Visual Settings Editor (`hyprmod`)**: GTK4 & Libadwaita settings manager supporting named monitor layouts, 10-bit OLED color modes (`bitdepth = 10`), custom active/inactive borders, and non-destructive modular Lua (`hyprland-gui.lua`) overrides.
 * **PipeWire AT_SECURE Protection**: Automatically strips conflicting file capabilities from `pipewire` (`setcap -r`), preventing Wayland session DBus drops.
 
 ### OBS Creator Suite & DKMS Hardware Driver Fleet
@@ -385,6 +386,7 @@ Accessible via `slacky-update --tweaks`:
 | `slacky-update --check` | Read-only scan for pending updates |
 | `slacky-update --rank-mirrors` (or `-M`) | Parallel latency & freshness benchmark for Slackware mirrors |
 | `slacky-update --hyprland` | Deploy Curated Hyprland Desktop Suite (Noctalia Shell & Portals) |
+| `slacky-update --hyprmod` | Deploy or update HyprMod GTK4 visual settings editor |
 | `slacky-update --limine` (or `-l`) | Open Limine Bootloader & Secure Boot Matrix |
 | `slacky-update --cmdline` (or `-c`) | Configure Kernel Boot Parameters (CMDLINE Hub) |
 | `slacky-update --sync-boot` (or `-b`) | Synchronize initramfs, Limine/GRUB, BLAKE2B hashes & Secure Boot |

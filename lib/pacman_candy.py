@@ -51,30 +51,28 @@ except Exception:
     pass
 
 
-def format_size(bytes_val: float) -> str:
-    """Format bytes into standard human-readable size."""
-    if bytes_val < 0:
-        return "0.0 MB"
-    mb = bytes_val / (1024 * 1024)
-    if mb >= 1024:
-        return f"{mb / 1024:.2f} GB"
-    elif mb >= 1.0:
-        return f"{mb:.1f} MB"
-    elif bytes_val >= 1024:
-        return f"{bytes_val / 1024:.1f} KB"
-    return f"{int(bytes_val)} B"
+def format_size(num_bytes: float) -> str:
+    """Format bytes into standard Pacman human-readable size."""
+    if num_bytes <= 0:
+        return "  0.0 B"
+    elif num_bytes < 1024:
+        return f"{int(num_bytes)} B"
+    elif num_bytes < 1024 * 1024:
+        return f"{num_bytes / 1024.0:.1f} KiB"
+    elif num_bytes < 1024 * 1024 * 1024:
+        return f"{num_bytes / (1024.0 * 1024.0):.1f} MiB"
+    else:
+        return f"{num_bytes / (1024.0 * 1024.0 * 1024.0):.1f} GiB"
 
 
 def format_speed(bytes_per_sec: float) -> str:
-    """Format download speed into human-readable string."""
-    if bytes_per_sec < 0:
-        return "  0.0 MB/s"
-    mb = bytes_per_sec / (1024 * 1024)
-    if mb >= 1.0:
-        return f"{mb:4.1f} MB/s"
-    elif bytes_per_sec >= 1024:
-        return f"{bytes_per_sec / 1024:4.1f} KB/s"
-    return f"{int(bytes_per_sec):4d} B/s"
+    """Format download speed into standard Pacman human-readable string."""
+    if bytes_per_sec <= 0:
+        return "  0.0 B/s"
+    elif bytes_per_sec < 1024 * 1024:
+        return f"{bytes_per_sec / 1024.0:.1f} KiB/s"
+    else:
+        return f"{bytes_per_sec / (1024.0 * 1024.0):.1f} MiB/s"
 
 
 def format_eta(seconds: float) -> str:
@@ -90,14 +88,14 @@ def format_eta(seconds: float) -> str:
 
 def render_pacman_bar(
     pct: float,
-    width: int = 24,
+    width: int = 28,
     chomp_state: int = 0,
-    show_pct: bool = False,
+    show_pct: bool = True,
     custom_eater: Optional[str] = None
 ) -> str:
     """
     Render 100% authentic Pacman ILoveCandy progress bar.
-    Pellets follow authentic i % 2 == 0 pattern ('o o o o').
+    Pellets follow authentic stationary track coordinates.
     Eater alternates between Slackware Bold Blue 'S' (mouth open) and 's' (mouth closed).
     """
     pct = max(0.0, min(100.0, pct))
@@ -117,7 +115,6 @@ def render_pacman_bar(
         eater = "\033[1;34mS\033[0m" if mouth_open else "\033[1;34ms\033[0m"
 
     rem_len = max(0, width - pos - 1)
-    food_chars = ["o" if (i % 2 == 0) else " " for i in range(rem_len)]
-    food = "".join(food_chars)
+    food = "".join("o" if (j % 2 == 0) else " " for j in range(pos + 1, width))
 
     return f"[{eaten}{eater}{food}]{pct_str}"

@@ -168,7 +168,7 @@ class SlackyUpdateTray(QSystemTrayIcon):
 
         self.poll_timer = QTimer()
         self.poll_timer.timeout.connect(self.update_status)
-        self.poll_timer.start(15000)
+        self.poll_timer.start(60000)
 
         self.check_timer = QTimer()
         self.check_timer.timeout.connect(self.trigger_check)

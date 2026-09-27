@@ -80,6 +80,11 @@ limine-snapper-sync|Limine Snapper Sync (Btrfs Snapshot Integrator)|bootloader|l
 hyprland-noctalia|Hyprland Mac-like Desktop Suite (Noctalia Shell, Portals & Display Tools)|desktop|hyprland-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||noctalia-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,xdg-desktop-portal-hyprland-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprlock-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hypridle-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpaper-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpicker-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprland-guiutils-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,aquamarine-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprlang-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprcursor-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprgraphics-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprutils-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpolkitagent-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprwire-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprtoolkit-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,sdbus-cpp-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,tomlplusplus-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,muparser-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,re2-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,md4c-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,lua-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libical-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,ddcui-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,wlr-randr-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,nwg-displays-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,python-i3ipc-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos-extra-v3,cachyos-v3,cachyos,arch-extra,chaotic-aur
 hyprland-core|Hyprland Minimal Core Compositor (+ Wayland Portals, Lock & Display Tools)|desktop|hyprland-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||xdg-desktop-portal-hyprland-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprlock-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hypridle-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpaper-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpicker-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprland-guiutils-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,aquamarine-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprlang-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprcursor-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprgraphics-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprutils-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpolkitagent-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprwire-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprtoolkit-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,sdbus-cpp-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,tomlplusplus-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,muparser-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,re2-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,lua-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,ddcui-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,wlr-randr-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,nwg-displays-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,python-i3ipc-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos-extra-v3,cachyos-v3,cachyos,arch-extra
 hyprpicker|Hyprpicker (Wayland Eyedropper & Color Picker)|desktop|hyprpicker-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos-extra-v3,cachyos-v3,cachyos,arch-extra
+hyprmod|HyprMod (GTK4/Libadwaita Hyprland Visual Settings & Rules Editor)|desktop||||aur,github
+mactahoe-icons|Mac Tahoe Icon Theme (27 macOS Tahoe Variants for KDE/GTK)|ricing||||aur,github
+mactahoe-cursors|Mac Tahoe Cursor Theme (macOS Tahoe Cursors for X11 & Wayland)|ricing||||aur,github
+whitesur-icons|WhiteSur Icon Theme (macOS Big Sur & Sonoma Icon Suite)|ricing||||aur,github
+whitesur-cursors|WhiteSur Cursor Theme (macOS Cursors with Animated Spinners)|ricing||||aur,github
 CATALOG_EOF
 }
 
@@ -111,7 +116,8 @@ is_gaming_pkg_whitelisted() {
         obs-pipewire-audio-capture|obs-advanced-scene-switcher|obs-multi-rtmp|\
         obs-composite-blur|obs-teleport|discord|vesktop|sunshine|\
         google-chrome|microsoft-edge|brave|zen-browser|sbctl|limine|limine-entry-tool|limine-snapper-sync|\
-        hyprland-noctalia|hyprland-core)
+        hyprland-noctalia|hyprland-core|hyprmod|\
+        mactahoe-icons|mactahoe-cursors|whitesur-icons|whitesur-cursors)
             return 0
             ;;
         *)
@@ -235,7 +241,12 @@ BINARY_MAP = {
     "zen-browser": ["zen-browser", "zen"],
     "sbctl": ["sbctl"],
     "hyprland-noctalia": ["hyprland", "noctalia", "/usr/bin/Hyprland", "noctalia-shell"],
-    "hyprland-core": ["hyprland", "/usr/bin/Hyprland"]
+    "hyprland-core": ["hyprland", "/usr/bin/Hyprland"],
+    "hyprmod": ["hyprmod", "/usr/bin/hyprmod"],
+    "mactahoe-icons": ["/usr/share/icons/MacTahoe", "/usr/share/icons/MacTahoe-dark"],
+    "mactahoe-cursors": ["/usr/share/icons/MacTahoe-cursors", "/usr/share/icons/MacTahoe-dark-cursors"],
+    "whitesur-icons": ["/usr/share/icons/WhiteSur", "/usr/share/icons/WhiteSur-dark"],
+    "whitesur-cursors": ["/usr/share/icons/WhiteSur-cursors", "/usr/share/icons/WhiteSur-dark-cursors"]
 }
 
 for pid, cands in BINARY_MAP.items():
@@ -262,6 +273,7 @@ for pid, cands in BINARY_MAP.items():
 
 CATEGORY_TITLES = {
     "desktop": "Desktop Environments & Wayland Shells",
+    "ricing": "Ricing & Desktop Customization (Icons & Cursors)",
     "engine": "The Engine: Performance, HUD & Schedulers",
     "launcher": "Storefronts & Launcher Managers",
     "hardware": "Hardware Control, Tuning & DKMS Drivers",
@@ -276,6 +288,7 @@ CATEGORY_TITLES = {
 
 CATEGORY_ICONS = {
     "desktop": "preferences-desktop-display",
+    "ricing": "preferences-desktop-theme",
     "engine": "utilities-system-monitor",
     "launcher": "applications-games",
     "hardware": "preferences-system",
@@ -291,6 +304,11 @@ CATEGORY_ICONS = {
 PKG_DESCRIPTIONS = {
     "hyprland-noctalia": "Curated Mac-like Wayland desktop suite powered by Noctalia Shell (topbar, dock, launcher, control center) and Hyprland.",
     "hyprland-core": "Minimalist Hyprland Wayland compositor with core portals, lock daemons, and Slacky environment wrapper.",
+    "hyprmod": "Native GTK4/Libadwaita visual settings editor for Hyprland (monitors, animations, keybindings, rules, live preview, modular Lua config support).",
+    "mactahoe-icons": "Complete macOS Tahoe style vector icon theme for KDE Plasma, XFCE, and GTK desktops (27 variants).",
+    "mactahoe-cursors": "macOS Tahoe cursor theme for X11 and Wayland desktops (light and dark variants).",
+    "whitesur-icons": "macOS Big Sur, Monterey and Sonoma style icon theme with extensive application coverage.",
+    "whitesur-cursors": "Classic macOS cursor theme with animated spinning beachball and dark/light variants.",
     "mangohud": "High-performance Vulkan/OpenGL overlay with hardware telemetry and mangoapp integration.",
     "gamemode": "Feral GameMode auto-governor prioritizing games and multilib 32-bit processes.",
     "goverlay": "Graphical Qt6 configurator for MangoHud, vkBasalt, and ReplaySorcery.",
@@ -516,7 +534,8 @@ BINARY_MAP = {
     "zen-browser": ["zen-browser", "zen"],
     "sbctl": ["sbctl"],
     "hyprland-noctalia": ["hyprland", "noctalia", "/usr/bin/Hyprland", "noctalia-shell"],
-    "hyprland-core": ["hyprland", "/usr/bin/Hyprland"]
+    "hyprland-core": ["hyprland", "/usr/bin/Hyprland"],
+    "hyprmod": ["hyprmod", "/usr/bin/hyprmod"]
 }
 
 if target_id in BINARY_MAP:
@@ -579,14 +598,71 @@ def get_chaotic_fastest_mirror(cdir):
             cached_m = d.get('mirror')
             last_ts = d.get('timestamp', 0)
             last_day = d.get('date', '')
-            if last_day == today_str and cached_m:
-                return cached_m
-            elif not is_thursday and (now - last_ts) < (7 * 86400) and cached_m:
-                return cached_m
+            if cached_m and not cached_m.startswith('https://cdn-mirror'):
+                if last_day == today_str:
+                    return cached_m
+                elif not is_thursday and (now - last_ts) < (7 * 86400):
+                    return cached_m
         except Exception:
             pass
 
-    return 'https://cdn-mirror.chaotic.cx/chaotic-aur/x86_64/'
+    mirrors = [
+        'https://de-1-mirror.chaotic.cx/chaotic-aur/x86_64/',
+        'https://de-2-mirror.chaotic.cx/chaotic-aur/x86_64/',
+        'https://nl-1-mirror.chaotic.cx/chaotic-aur/x86_64/',
+        'https://fr-1-mirror.chaotic.cx/chaotic-aur/x86_64/',
+        'https://de-4-mirror.chaotic.cx/chaotic-aur/x86_64/',
+        'https://geo-mirror.chaotic.cx/chaotic-aur/x86_64/',
+        'https://es-mirror.chaotic.cx/chaotic-aur/x86_64/',
+        'https://bg-mirror.chaotic.cx/chaotic-aur/x86_64/',
+        'https://ca-mirror.chaotic.cx/chaotic-aur/x86_64/',
+        'https://us-mi-mirror.chaotic.cx/chaotic-aur/x86_64/',
+        'https://us-ut-mirror.chaotic.cx/chaotic-aur/x86_64/'
+    ]
+
+    def ping_m(u):
+        t0 = time.time()
+        try:
+            req = urllib.request.Request(u + 'chaotic-mirrorlist.pkg.tar.zst', headers={'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64)', 'Range': 'bytes=0-256'})
+            with urllib.request.urlopen(req, timeout=0.75) as resp:
+                resp.read(256)
+                return ((time.time() - t0) * 1000, u)
+        except Exception:
+            return (999999, u)
+
+    best_url = 'https://geo-mirror.chaotic.cx/chaotic-aur/x86_64/'
+    best_lat = 999999
+    completed_valid = []
+    try:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(mirrors)) as ex:
+            futures = {ex.submit(ping_m, m): m for m in mirrors}
+            for fut in concurrent.futures.as_completed(futures, timeout=0.85):
+                try:
+                    lat, u = fut.result()
+                    if lat < 90000:
+                        completed_valid.append((lat, u))
+                        if lat < 55:
+                            best_lat, best_url = lat, u
+                            break
+                        if len(completed_valid) >= 3:
+                            completed_valid.sort(key=lambda x: x[0])
+                            best_lat, best_url = completed_valid[0]
+                            break
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
+    if best_lat >= 90000 and completed_valid:
+        completed_valid.sort(key=lambda x: x[0])
+        best_lat, best_url = completed_valid[0]
+
+    try:
+        with open(m_file, 'w', encoding='utf-8') as f:
+            json.dump({'mirror': best_url, 'timestamp': now, 'date': today_str, 'latency_ms': best_lat}, f)
+    except Exception:
+        pass
+    return best_url
 
 chaotic_fastest = get_chaotic_fastest_mirror(cache_dir)
 
@@ -596,7 +672,7 @@ repos = {
     "cachyos-extra": "https://mirror.cachyos.org/repo/x86_64/cachyos-extra/",
     "cachyos-extra-v3": "https://mirror.cachyos.org/repo/x86_64_v3/cachyos-extra-v3/",
     "chaotic-aur": chaotic_fastest,
-    "chaotic-cdn": "https://cdn-mirror.chaotic.cx/chaotic-aur/x86_64/",
+    "chaotic-cdn": chaotic_fastest,
     "arch-core": "https://geo.mirror.pkgbuild.com/core/os/x86_64/",
     "arch-extra": "https://geo.mirror.pkgbuild.com/extra/os/x86_64/",
     "arch-multilib": "https://geo.mirror.pkgbuild.com/multilib/os/x86_64/"
@@ -711,9 +787,33 @@ def check_single_package(pid, cur_ver):
     if pid not in catalog:
         return None
     name, pat, r_list = catalog[pid]
-    if not pat or pid == "steam-devices":
+    if pid == "steam-devices":
         return None
     all_candidates = []
+
+    # Fast AUR RPC API check for AUR / GitHub packages (e.g. hyprmod, themes)
+    if any(r in ("aur", "aur-rpc", "github") for r in r_list) or pid in ("hyprmod", "mactahoe-icons", "mactahoe-cursors", "whitesur-icons", "whitesur-cursors"):
+        try:
+            aur_map = {
+                "mactahoe-icons": "mactahoe-icon-theme-git",
+                "mactahoe-cursors": "mactahoe-cursor-theme-git",
+                "whitesur-icons": "whitesur-icon-theme",
+                "whitesur-cursors": "whitesur-cursor-theme-git"
+            }
+            aur_id = aur_map.get(pid, pid)
+            aur_url = f"https://aur.archlinux.org/rpc/v5/info?arg[]={aur_id}"
+            raw_json = fetch_url_cached(aur_url, cache_dir, ttl=1800)
+            if raw_json:
+                data = json.loads(raw_json)
+                results = data.get("results", [])
+                if results:
+                    v = results[0].get("Version")
+                    if v:
+                        cv = clean_pkg_version(pid, v)
+                        if cv:
+                            all_candidates.append(cv)
+        except Exception:
+            pass
 
     # Fast Arch Linux JSON API check for Arch Extra / Multilib packages
     if any(r in ("arch-extra", "arch-core", "arch-multilib") for r in r_list):
@@ -732,11 +832,12 @@ def check_single_package(pid, cur_ver):
             except Exception:
                 pass
 
-    for rk in r_list:
-        base_u = repos.get(rk, "")
-        html = repo_contents.get(base_u, "")
-        if not html:
-            continue
+    if pat:
+        for rk in r_list:
+            base_u = repos.get(rk, "")
+            html = repo_contents.get(base_u, "")
+            if not html:
+                continue
         try:
             matches = re.findall(pat, html)
         except Exception:
@@ -751,7 +852,7 @@ def check_single_package(pid, cur_ver):
         all_candidates.sort(key=parse_version_key)
         best_ver = all_candidates[-1]
         if is_strictly_greater(best_ver, cur_ver):
-            return f"{name} {best_ver} (Installed: {cur_ver})"
+            return f"{pid}|{name}|{cur_ver}|{best_ver}"
     return None
 
 updates = []
@@ -777,6 +878,50 @@ pkg_id = sys.argv[1]
 
 if pkg_id == "steam-devices":
     print("1.0.0.61 BUNDLED NONE NONE")
+    sys.exit(0)
+
+if pkg_id == "hyprmod":
+    try:
+        aur_url = "https://aur.archlinux.org/rpc/v5/info?arg[]=hyprmod"
+        req = urllib.request.Request(aur_url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64)"})
+        with urllib.request.urlopen(req, timeout=6) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            results = data.get("results", [])
+            if results:
+                v = results[0].get("Version", "0.4.0").split("-")[0]
+                print(f"{v} GITHUB_WHEELS NONE NONE")
+                sys.exit(0)
+    except Exception:
+        pass
+    print("0.4.0 GITHUB_WHEELS NONE NONE")
+    sys.exit(0)
+
+if pkg_id in ("mactahoe-icons", "mactahoe-cursors", "whitesur-icons", "whitesur-cursors"):
+    aur_name_map = {
+        "mactahoe-icons": "mactahoe-icon-theme-git",
+        "mactahoe-cursors": "mactahoe-cursor-theme-git",
+        "whitesur-icons": "whitesur-icon-theme",
+        "whitesur-cursors": "whitesur-cursor-theme-git"
+    }
+    aur_pkg = aur_name_map.get(pkg_id, pkg_id)
+    default_vers = {
+        "mactahoe-icons": "2025.10.16",
+        "mactahoe-cursors": "2025.10.16",
+        "whitesur-icons": "2026.09.10",
+        "whitesur-cursors": "2026.01.01"
+    }
+    ver = default_vers.get(pkg_id, "1.0.0")
+    try:
+        aur_url = f"https://aur.archlinux.org/rpc/v5/info?arg[]={aur_pkg}"
+        req = urllib.request.Request(aur_url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64)"})
+        with urllib.request.urlopen(req, timeout=6) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            results = data.get("results", [])
+            if results:
+                ver = results[0].get("Version", ver).split("-")[0]
+    except Exception:
+        pass
+    print(f"{ver} GITHUB_THEME NONE NONE")
     sys.exit(0)
 
 def get_cache_dir():
@@ -888,7 +1033,7 @@ repos = {
     "cachyos-extra": "https://mirror.cachyos.org/repo/x86_64/cachyos-extra/",
     "cachyos-extra-v3": "https://mirror.cachyos.org/repo/x86_64_v3/cachyos-extra-v3/",
     "chaotic-aur": chaotic_fastest,
-    "chaotic-cdn": "https://cdn-mirror.chaotic.cx/chaotic-aur/x86_64/",
+    "chaotic-cdn": chaotic_fastest,
     "arch-core": "https://geo.mirror.pkgbuild.com/core/os/x86_64/",
     "arch-extra": "https://geo.mirror.pkgbuild.com/extra/os/x86_64/",
     "arch-multilib": "https://geo.mirror.pkgbuild.com/multilib/os/x86_64/"
@@ -1443,7 +1588,7 @@ repos = {
     "cachyos-extra": "https://mirror.cachyos.org/repo/x86_64/cachyos-extra/",
     "cachyos-extra-v3": "https://mirror.cachyos.org/repo/x86_64_v3/cachyos-extra-v3/",
     "chaotic-aur": chaotic_fastest,
-    "chaotic-cdn": "https://cdn-mirror.chaotic.cx/chaotic-aur/x86_64/",
+    "chaotic-cdn": chaotic_fastest,
     "arch-core": "https://geo.mirror.pkgbuild.com/core/os/x86_64/",
     "arch-extra": "https://geo.mirror.pkgbuild.com/extra/os/x86_64/",
     "arch-multilib": "https://geo.mirror.pkgbuild.com/multilib/os/x86_64/"
@@ -1663,7 +1808,11 @@ catalog = {
         r'href=[\'\"]?(nwg-displays-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(python-i3ipc-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["cachyos-extra-v3", "cachyos-v3", "cachyos", "arch-extra"], []),
-    "hyprpicker": (r'href=[\'\"]?(hyprpicker-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos-extra-v3", "cachyos-v3", "cachyos", "arch-extra"], [])
+    "hyprpicker": (r'href=[\'\"]?(hyprpicker-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos-extra-v3", "cachyos-v3", "cachyos", "arch-extra"], []),
+    "mactahoe-icons": (None, None, None, [], []),
+    "mactahoe-cursors": (None, None, None, [], []),
+    "whitesur-icons": (None, None, None, [], []),
+    "whitesur-cursors": (None, None, None, [], [])
 }
 
 def fetch_url_cached(url, cdir, ttl=1800):
@@ -1796,6 +1945,32 @@ github_and_direct_pkgs = {
 def resolve_single(pid):
     if pid == "steam-devices":
         return pid, "1.0.0.61", "BUNDLED", "NONE", "NONE"
+    if pid in ("mactahoe-icons", "mactahoe-cursors", "whitesur-icons", "whitesur-cursors"):
+        aur_name_map = {
+            "mactahoe-icons": "mactahoe-icon-theme-git",
+            "mactahoe-cursors": "mactahoe-cursor-theme-git",
+            "whitesur-icons": "whitesur-icon-theme",
+            "whitesur-cursors": "whitesur-cursor-theme-git"
+        }
+        aur_pkg = aur_name_map.get(pid, pid)
+        default_vers = {
+            "mactahoe-icons": "2025.10.16",
+            "mactahoe-cursors": "2025.10.16",
+            "whitesur-icons": "2026.09.10",
+            "whitesur-cursors": "2026.01.01"
+        }
+        ver = default_vers.get(pid, "1.0.0")
+        try:
+            aur_url = f"https://aur.archlinux.org/rpc/v5/info?arg[]={aur_pkg}"
+            raw = fetch_url_cached(aur_url, cache_dir, ttl=1800)
+            if raw:
+                data = json.loads(raw)
+                results = data.get("results", [])
+                if results:
+                    ver = results[0].get("Version", ver).split("-")[0]
+        except Exception:
+            pass
+        return pid, ver, "GITHUB_THEME", "NONE", "NONE"
     if pid not in catalog:
         return pid, "NONE", "NONE", "NONE", "NONE"
 
@@ -2146,7 +2321,7 @@ transmute_and_deploy_gaming_pkg() {
     local extra_url="${pre_extra_url}"
 
     if [ -z "${ver}" ] || [ "${ver}" = "NONE" ]; then
-        log_info "Resolving upstream package metadata for ${pkg_id}..."
+        echo -e "${CYAN}${BOLD}🧙 Transmuting & Deploying: ${pkg_id}${RESET}"
         read -r ver main_url lib32_url extra_url <<< "$(resolve_cachyos_gaming_upstream_metadata "${pkg_id}" || echo "NONE NONE NONE NONE")"
     fi
 
@@ -2154,8 +2329,6 @@ transmute_and_deploy_gaming_pkg() {
         log_error "Failed to resolve CachyOS upstream package for: ${pkg_id}"
         return 1
     fi
-
-    log_info "Transmuting ${pkg_id} (v${ver}) to native Slackware txz package..."
 
     local staging_base
     staging_base=$(mktemp -d "$(get_user_staging_dir)/gnome-${pkg_id}-${ver}.XXXXXX" 2>/dev/null || mktemp -d /tmp/slacky-gnome.XXXXXX)
@@ -2187,6 +2360,85 @@ transmute_and_deploy_gaming_pkg() {
                 cp -a "${udev_dir}"/*.rules "${staging_root}/lib/udev/rules.d/" 2>/dev/null || true
             fi
         fi
+    elif [ "${main_url}" = "GITHUB_WHEELS" ] || [ "${pkg_id}" = "hyprmod" ]; then
+        log_info "Transmuting and building ${pkg_id} (${ver}) from GitHub / PyPI wheel ecosystem..."
+        python3 - "${staging_root}" "${ver}" << 'PYBUILD_HYPRMOD'
+import sys, os, urllib.request, tarfile, tempfile, subprocess, glob, shutil
+
+staging_root = sys.argv[1]
+ver = sys.argv[2]
+headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36'}
+
+with tempfile.TemporaryDirectory() as tmpdir:
+    dist_dir = os.path.join(tmpdir, 'dist')
+    os.makedirs(dist_dir, exist_ok=True)
+    repos = ['hyprland-config', 'hyprland-monitors', 'hyprland-schema', 'hyprland-socket', 'hyprland-state', 'hyprmod']
+    for repo in repos:
+        tar_url = f'https://github.com/BlueManCZ/{repo}/archive/refs/heads/main.tar.gz'
+        tar_path = os.path.join(tmpdir, f'{repo}.tar.gz')
+        req = urllib.request.Request(tar_url, headers=headers)
+        with urllib.request.urlopen(req, timeout=25) as resp, open(tar_path, 'wb') as f:
+            f.write(resp.read())
+        with tarfile.open(tar_path, 'r:gz') as tf:
+            tf.extractall(tmpdir)
+        extracted_dir = os.path.join(tmpdir, f'{repo}-main')
+        subprocess.run(['python3', '-m', 'build', '--wheel', '--no-isolation', '--outdir', dist_dir], cwd=extracted_dir, check=True)
+
+    for w in glob.glob(os.path.join(dist_dir, '*.whl')):
+        subprocess.run(['python3', '-m', 'installer', '--destdir', staging_root, w], check=True)
+
+    hyprmod_src = os.path.join(tmpdir, 'hyprmod-main')
+    os.makedirs(os.path.join(staging_root, 'usr/share/applications'), exist_ok=True)
+    os.makedirs(os.path.join(staging_root, 'usr/share/icons/hicolor/scalable/apps'), exist_ok=True)
+    os.makedirs(os.path.join(staging_root, 'usr/share/metainfo'), exist_ok=True)
+
+    if os.path.exists(os.path.join(hyprmod_src, 'data/applications/io.github.bluemancz.hyprmod.desktop')):
+        shutil.copy(os.path.join(hyprmod_src, 'data/applications/io.github.bluemancz.hyprmod.desktop'), os.path.join(staging_root, 'usr/share/applications/'))
+    if os.path.exists(os.path.join(hyprmod_src, 'data/icons/hicolor/scalable/apps/io.github.bluemancz.hyprmod.svg')):
+        shutil.copy(os.path.join(hyprmod_src, 'data/icons/hicolor/scalable/apps/io.github.bluemancz.hyprmod.svg'), os.path.join(staging_root, 'usr/share/icons/hicolor/scalable/apps/'))
+    if os.path.exists(os.path.join(hyprmod_src, 'data/metainfo/io.github.bluemancz.hyprmod.metainfo.xml')):
+        shutil.copy(os.path.join(hyprmod_src, 'data/metainfo/io.github.bluemancz.hyprmod.metainfo.xml'), os.path.join(staging_root, 'usr/share/metainfo/'))
+PYBUILD_HYPRMOD
+    elif [ "${main_url}" = "GITHUB_THEME" ] || [ "${pkg_id}" = "mactahoe-icons" ] || [ "${pkg_id}" = "mactahoe-cursors" ] || [ "${pkg_id}" = "whitesur-icons" ] || [ "${pkg_id}" = "whitesur-cursors" ]; then
+        log_info "Transmuting and building ${pkg_id} (${ver}) from GitHub / AUR theme source..."
+        python3 - "${staging_root}" "${pkg_id}" "${ver}" << 'PYBUILD_THEME'
+import sys, os, tempfile, subprocess, shutil
+
+staging_root = sys.argv[1]
+pkg_id = sys.argv[2]
+ver = sys.argv[3]
+
+with tempfile.TemporaryDirectory() as tmpdir:
+    icons_dest = os.path.join(staging_root, "usr/share/icons")
+    os.makedirs(icons_dest, exist_ok=True)
+    env = os.environ.copy()
+    env["GIT_TERMINAL_PROMPT"] = "0"
+
+    if pkg_id == "mactahoe-icons":
+        repo_dir = os.path.join(tmpdir, "mactahoe")
+        subprocess.run(["git", "clone", "--depth", "1", "https://github.com/vinceliuice/MacTahoe-icon-theme.git", repo_dir], env=env, check=True)
+        subprocess.run(["sed", "-i", "/gtk-update-icon-cache/d", "install.sh"], cwd=repo_dir, check=True)
+        subprocess.run(["./install.sh", "-d", icons_dest, "-t", "all"], cwd=repo_dir, check=True)
+    elif pkg_id == "mactahoe-cursors":
+        repo_dir = os.path.join(tmpdir, "mactahoe")
+        subprocess.run(["git", "clone", "--depth", "1", "https://github.com/vinceliuice/MacTahoe-icon-theme.git", repo_dir], env=env, check=True)
+        if os.path.exists(os.path.join(repo_dir, "cursors/dist")):
+            shutil.copytree(os.path.join(repo_dir, "cursors/dist"), os.path.join(icons_dest, "MacTahoe-cursors"), dirs_exist_ok=True)
+        if os.path.exists(os.path.join(repo_dir, "cursors/dist-dark")):
+            shutil.copytree(os.path.join(repo_dir, "cursors/dist-dark"), os.path.join(icons_dest, "MacTahoe-dark-cursors"), dirs_exist_ok=True)
+    elif pkg_id == "whitesur-icons":
+        repo_dir = os.path.join(tmpdir, "whitesur")
+        subprocess.run(["git", "clone", "--depth", "1", "https://github.com/vinceliuice/WhiteSur-icon-theme.git", repo_dir], env=env, check=True)
+        subprocess.run(["sed", "-i", "/gtk-update-icon-cache/d", "install.sh"], cwd=repo_dir, check=True)
+        subprocess.run(["./install.sh", "-d", icons_dest, "-t", "all"], cwd=repo_dir, check=True)
+    elif pkg_id == "whitesur-cursors":
+        repo_dir = os.path.join(tmpdir, "whitesur-cur")
+        subprocess.run(["git", "clone", "--depth", "1", "https://github.com/vinceliuice/WhiteSur-cursors.git", repo_dir], env=env, check=True)
+        if os.path.exists(os.path.join(repo_dir, "dist")):
+            shutil.copytree(os.path.join(repo_dir, "dist"), os.path.join(icons_dest, "WhiteSur-cursors"), dirs_exist_ok=True)
+        if os.path.exists(os.path.join(repo_dir, "dist-dark")):
+            shutil.copytree(os.path.join(repo_dir, "dist-dark"), os.path.join(icons_dest, "WhiteSur-dark-cursors"), dirs_exist_ok=True)
+PYBUILD_THEME
     else
         local main_file="${cache_dir}/$(basename "${main_url}")"
         local dl_items=()
@@ -2875,7 +3127,7 @@ PEAR_WRAPPER_EOF
         for pydir in "${staging_root}/usr/lib64"/python3.* "${staging_root}/usr/lib"/python3.*; do
             [ -d "${pydir}/site-packages" ] || continue
             if [ "${pydir}" != "${staging_root}/usr/lib64/python${py_sys_ver}" ]; then
-                log_info "Remapping Python site-packages ($(basename "${pydir}")) -> python${py_sys_ver}..."
+                echo -e "  ${CYAN}•${RESET} Remapping Python site-packages ($(basename "${pydir}")) -> python${py_sys_ver}..."
                 find "${pydir}/site-packages" -type f -name "*.so" 2>/dev/null | while read -r so_file; do
                     local bso
                     bso=$(basename "${so_file}")
@@ -3791,6 +4043,9 @@ AUDACITY_WRAPPER_EOF
         cat << 'STEAM_BIN_EOF' > "${staging_root}/usr/bin/steam"
 #!/bin/sh
 # Steam launcher wrapper for Slackware Linux
+export XCURSOR_SIZE="${XCURSOR_SIZE:-30}"
+export XCURSOR_THEME="${XCURSOR_THEME:-MacTahoe-cursors}"
+
 if [ -x /usr/lib64/steam/steam ]; then
     exec /usr/lib64/steam/steam "$@"
 elif [ -x /usr/lib/steam/steam ]; then
@@ -4244,6 +4499,11 @@ if [ -x /usr/bin/update-desktop-database ]; then
 fi
 if [ -x /usr/bin/gtk-update-icon-cache ]; then
   /usr/bin/gtk-update-icon-cache -f -t /usr/share/icons/hicolor 2>/dev/null || true
+  for d in /usr/share/icons/MacTahoe* /usr/share/icons/WhiteSur*; do
+    if [ -d "$d" ] && [ -f "$d/index.theme" ]; then
+      /usr/bin/gtk-update-icon-cache -f -q "$d" 2>/dev/null || true
+    fi
+  done
 fi
 if [ -x /usr/bin/glib-compile-schemas ]; then
   /usr/bin/glib-compile-schemas /usr/share/glib-2.0/schemas 2>/dev/null || true
@@ -4590,25 +4850,25 @@ V4L2_DOINST_EOF
     chmod -R u=rwX,go=rX "${staging_root}"
     [ -d "${staging_root}/etc/rc.d" ] && chmod 755 "${staging_root}/etc/rc.d/"* 2>/dev/null || true
 
-    log_info "Assembling Slackware package: ${pkg_name}-${ver}-x86_64-1_slacky.txz..."
+    echo -e "  ${CYAN}•${RESET} Assembling Slackware package: ${pkg_name}-${ver}-x86_64-1_slacky.txz..."
     local txz_out="${staging_base}/${pkg_name}-${ver}-x86_64-1_slacky.txz"
     rm -f "${txz_out}"
     (
         cd "${staging_root}"
-        "${PKG_MAKE_CMD}" -l y -c n --compress -1 "${txz_out}" >/dev/null 2>&1
+        find ./ | LC_COLLATE=C sort | sed '2,$s,^\./,,' | tar --no-recursion -T - -cf - | xz -T0 -1 > "${txz_out}" 2>/dev/null || true
     )
 
     if [ -f "${txz_out}" ]; then
         chmod 644 "${txz_out}"
         cleanup_foreign_gaming_pkgs "${pkg_id}"
         validate_privileges
-        log_info "Installing ${pkg_name} to system..."
+        echo -e "  ${CYAN}•${RESET} Installing ${pkg_name} to system..."
         sudo "${PKG_UPGRADE_CMD}" --install-new --reinstall "${txz_out}"
 
-        log_info "[1/4] Updating dynamic linker cache (ldconfig)..."
+        echo -e "  ${CYAN}•${RESET} [1/4] Updating dynamic linker cache (ldconfig)..."
         sudo /sbin/ldconfig 2>/dev/null || true
 
-        log_info "[2/4] Registering desktop application entries & GSettings..."
+        echo -e "  ${CYAN}•${RESET} [2/4] Registering desktop application entries & GSettings..."
         if [ -x /usr/bin/update-desktop-database ]; then
             sudo /usr/bin/update-desktop-database /usr/share/applications 2>/dev/null || true
         fi
@@ -4616,11 +4876,14 @@ V4L2_DOINST_EOF
             sudo /usr/bin/glib-compile-schemas /usr/share/glib-2.0/schemas 2>/dev/null || true
         fi
 
-        log_info "[3/4] Rebuilding GTK/KDE icon theme cache & MIME database..."
+        echo -e "  ${CYAN}•${RESET} [3/4] Rebuilding GTK/KDE icon theme cache & MIME database..."
         if [ -x /usr/bin/gtk-update-icon-cache ]; then
             sudo /usr/bin/gtk-update-icon-cache -f -t /usr/share/icons/hicolor 2>/dev/null || true
             [ -d /usr/share/icons/breeze ] && sudo /usr/bin/gtk-update-icon-cache -f -t /usr/share/icons/breeze 2>/dev/null || true
             [ -d /usr/share/icons/breeze-dark ] && sudo /usr/bin/gtk-update-icon-cache -f -t /usr/share/icons/breeze-dark 2>/dev/null || true
+            for d in /usr/share/icons/MacTahoe* /usr/share/icons/WhiteSur*; do
+                [ -d "$d" ] && [ -f "$d/index.theme" ] && sudo /usr/bin/gtk-update-icon-cache -f -q "$d" 2>/dev/null || true
+            done
         fi
         if [ -x /usr/bin/update-mime-database ]; then
             sudo /usr/bin/update-mime-database /usr/share/mime 2>/dev/null || true
@@ -4628,7 +4891,7 @@ V4L2_DOINST_EOF
 
         # Conditional hardware device udev trigger
         if [ "${has_udev_rules}" -eq 1 ]; then
-            log_info "[*] Reloading hardware device udev rules..."
+            echo -e "  ${CYAN}•${RESET} Reloading hardware device udev rules..."
             if [ -x /sbin/udevadm ]; then
                 sudo /sbin/udevadm control --reload-rules 2>/dev/null || true
                 sudo /sbin/udevadm trigger 2>/dev/null || true
@@ -4716,8 +4979,17 @@ EERC_EOF
 
             local flags_content=""
             if [ "${HAS_NVIDIA}" = "true" ]; then
-                log_info "[*] NVIDIA GPU detected: Configuring hardware-accelerated Wayland & VA-API flags for ${pkg_id}..."
-                flags_content="--ozone-platform-hint=auto\n--ozone-platform=wayland\n--enable-features=AcceleratedVideoDecodeLinuxGL,AcceleratedVideoDecodeLinuxZeroCopyGL,VaapiOnNvidiaGPUs\n--enable-gpu-rasterization\n--enable-zero-copy\n--ignore-gpu-blocklist\n"
+                local gpu_gen="MODERN"
+                if command -v detect_nvidia_gpu >/dev/null 2>&1; then
+                    gpu_gen=$(detect_nvidia_gpu)
+                fi
+                if [ "${gpu_gen}" = "MODERN" ]; then
+                    log_info "[*] Modern NVIDIA GPU (Turing+) detected: Configuring hardware-accelerated Wayland & VA-API flags for ${pkg_id}..."
+                    flags_content="--ozone-platform-hint=auto\n--ozone-platform=wayland\n--enable-features=AcceleratedVideoDecodeLinuxGL,AcceleratedVideoDecodeLinuxZeroCopyGL,VaapiOnNvidiaGPUs\n--enable-gpu-rasterization\n--enable-zero-copy\n--ignore-gpu-blocklist\n"
+                else
+                    log_info "[*] Legacy/Pascal NVIDIA GPU detected: Configuring safe Wayland & GPU rasterization flags for ${pkg_id}..."
+                    flags_content="--ozone-platform-hint=auto\n--ozone-platform=wayland\n--enable-gpu-rasterization\n--ignore-gpu-blocklist\n"
+                fi
             else
                 log_info "[*] AMD/Intel GPU detected: Configuring native Wayland flags for ${pkg_id}..."
                 flags_content="--ozone-platform-hint=auto\n--ozone-platform=wayland\n--enable-gpu-rasterization\n--enable-zero-copy\n--ignore-gpu-blocklist\n"
@@ -4932,9 +5204,23 @@ for uhome in user_homes:
             # 1. Hardware-adaptive GPU environment (/etc/hypr/hyprland.env)
             sudo mkdir -p /etc/hypr /usr/share/wayland-sessions /usr/bin
             local env_content="# Auto-generated by slacky-update probe_gpu_hardware\n"
-            if [ "${HAS_NVIDIA}" = "true" ]; then
+            if [ "${IS_HYBRID_GPU}" = "true" ]; then
+                # Hybrid / Optimus / PRIME Laptop or Multi-GPU desktop
+                # Compositor renders on iGPU KMS; apps/games offload via PRIME
+                env_content+="# Hybrid / PRIME Multi-GPU configuration\n"
+                env_content+="export __GLX_VENDOR_LIBRARY_NAME=nvidia\n"
+                env_content+="export ELECTRON_OZONE_PLATFORM_HINT=auto\n"
+                env_content+="export NVD_BACKEND=direct\n"
+                if [ "${HAS_INTEL}" = "true" ]; then
+                    env_content+="export LIBVA_DRIVER_NAME=iHD\n"
+                elif [ "${HAS_AMD}" = "true" ]; then
+                    env_content+="export LIBVA_DRIVER_NAME=radeonsi\n"
+                else
+                    env_content+="export LIBVA_DRIVER_NAME=nvidia\n"
+                fi
+            elif [ "${HAS_NVIDIA}" = "true" ]; then
+                # Dedicated NVIDIA desktop / single-GPU
                 env_content+="export LIBVA_DRIVER_NAME=nvidia\n"
-                env_content+="export GBM_BACKEND=nvidia-drm\n"
                 env_content+="export __GLX_VENDOR_LIBRARY_NAME=nvidia\n"
                 env_content+="export NVD_BACKEND=direct\n"
                 env_content+="export ELECTRON_OZONE_PLATFORM_HINT=auto\n"
@@ -4963,7 +5249,6 @@ export GTK_THEME="Breeze-Dark"
 export QT_WAYLAND_DISABLE_WINDOWDECORATION="0"
 export GDK_BACKEND="wayland,x11,*"
 export CLUTTER_BACKEND=wayland
-export SDL_VIDEODRIVER=wayland
 
 if [ -f /etc/hypr/hyprland.env ]; then
     # shellcheck source=/dev/null
@@ -5164,14 +5449,33 @@ WAYLAND_SESSION_EOF
                     hypr_lua_body+="require(\"modules.general\")\n"
                     hypr_lua_body+="require(\"modules.animations\")\n"
                     hypr_lua_body+="require(\"modules.rules\")\n"
-                    hypr_lua_body+="require(\"modules.keybinds\")\n"
+                    hypr_lua_body+="require(\"modules.keybinds\")\n\n"
+                    hypr_lua_body+="-- Optional GUI override configuration (HyprMod / Dynamic Settings)\n"
+                    hypr_lua_body+="require(\"hyprland-gui\")\n"
                     [ ! -f "${hypr_lua}" ] && echo -e "${hypr_lua_body}" > "${hypr_lua}" 2>/dev/null || true
                     echo -e "${hypr_lua_body}" > "${hypr_lua_example}" 2>/dev/null || echo -e "${hypr_lua_body}" | sudo tee "${hypr_lua_example}" >/dev/null || true
+
+                    local hypr_gui_lua="${hypr_dir}/hyprland-gui.lua"
+                    [ ! -f "${hypr_gui_lua}" ] && echo -e "-- --- [ HyprMod Managed Settings ] ---\n" > "${hypr_gui_lua}" 2>/dev/null || true
 
                     local mod_mon="-- Monitors & Workspaces\nhl.monitor({ output = \"\", mode = \"preferred\", position = \"auto\", scale = 1.0 })\n"
                     [ ! -f "${hypr_mods}/monitors.lua" ] && echo -e "${mod_mon}" > "${hypr_mods}/monitors.lua" 2>/dev/null || true
 
                     local mod_env="-- Environment Variables\nhl.env(\"QT_QPA_PLATFORM\", \"wayland;xcb\")\nhl.env(\"GDK_BACKEND\", \"wayland,x11,*\")\nhl.env(\"QT_QPA_PLATFORMTHEME\", \"kde\")\nhl.env(\"QT_STYLE_OVERRIDE\", \"Breeze\")\nhl.env(\"GTK_THEME\", \"Breeze-Dark\")\nhl.env(\"QT_WAYLAND_DISABLE_WINDOWDECORATION\", \"0\")\nhl.env(\"XDG_CURRENT_DESKTOP\", \"Hyprland\")\n"
+                    if [ "${IS_HYBRID_GPU}" = "true" ]; then
+                        mod_env+="-- Hybrid Multi-GPU / PRIME Offload\nhl.env(\"__GLX_VENDOR_LIBRARY_NAME\", \"nvidia\")\nhl.env(\"NVD_BACKEND\", \"direct\")\nhl.env(\"ELECTRON_OZONE_PLATFORM_HINT\", \"auto\")\n"
+                        if [ "${HAS_INTEL}" = "true" ]; then
+                            mod_env+="hl.env(\"LIBVA_DRIVER_NAME\", \"iHD\")\n"
+                        elif [ "${HAS_AMD}" = "true" ]; then
+                            mod_env+="hl.env(\"LIBVA_DRIVER_NAME\", \"radeonsi\")\n"
+                        fi
+                    elif [ "${HAS_NVIDIA}" = "true" ]; then
+                        mod_env+="-- NVIDIA Hardware Acceleration\nhl.env(\"LIBVA_DRIVER_NAME\", \"nvidia\")\nhl.env(\"__GLX_VENDOR_LIBRARY_NAME\", \"nvidia\")\nhl.env(\"NVD_BACKEND\", \"direct\")\nhl.env(\"ELECTRON_OZONE_PLATFORM_HINT\", \"auto\")\n"
+                    elif [ "${HAS_AMD}" = "true" ]; then
+                        mod_env+="-- AMD Mesa Acceleration\nhl.env(\"LIBVA_DRIVER_NAME\", \"radeonsi\")\nhl.env(\"VDPAU_DRIVER\", \"radeonsi\")\n"
+                    elif [ "${HAS_INTEL}" = "true" ]; then
+                        mod_env+="-- Intel Mesa Acceleration\nhl.env(\"LIBVA_DRIVER_NAME\", \"iHD\")\n"
+                    fi
                     [ ! -f "${hypr_mods}/env.lua" ] && echo -e "${mod_env}" > "${hypr_mods}/env.lua" 2>/dev/null || true
 
                     local mod_auto="-- Autostart Daemons\nhl.on(\"hyprland.start\", function()\n"
@@ -5224,6 +5528,8 @@ WAYLAND_SESSION_EOF
                     mod_rules+="hl.window_rule({ name = \"goverlay-floating\", match = { class = \"^(goverlay.*)$\" }, float = true })\n"
                     mod_rules+="hl.window_rule({ name = \"steam-games-fullscreen\", match = { class = \"^(steam_app_[0-9]+)$\" }, fullscreen = true, immediate = true })\n"
                     mod_rules+="hl.window_rule({ name = \"gamescope-fullscreen\", match = { class = \"^(gamescope.*)$\" }, fullscreen = true })\n"
+                    mod_rules+="hl.window_rule({ name = \"wow-gaming-tearing\", match = { class = \"^(.*wow.*|.*worldofwarcraft.*)$\" }, immediate = true })\n"
+                    mod_rules+="hl.window_rule({ name = \"wine-games-tearing\", match = { class = \"^(wine|proton)$\" }, immediate = true })\n"
                     [ ! -f "${hypr_mods}/rules.lua" ] && echo -e "${mod_rules}" > "${hypr_mods}/rules.lua" 2>/dev/null || true
 
                     local mod_keys="-- Keybindings\nlocal terminal = \"${terminal_cand}\"\nlocal fileManager = \"dolphin\"\nlocal mainMod = \"SUPER\"\n\n"
@@ -5308,10 +5614,10 @@ WAYLAND_SESSION_EOF
             done
         fi
 
-        log_info "[4/4] Synchronizing system status & background registry..."
+        echo -e "  ${CYAN}•${RESET} [4/4] Synchronizing system status & background registry..."
         sleep 0.5
         trigger_silent_background_refresh 2>/dev/null || true
-        log_success "${pkg_name} (v${ver}) deployed successfully!"
+        echo -e "${GREEN}${BOLD}✓ ${pkg_name} (v${ver}) deployed successfully!${RESET}"
     else
         log_error "Failed to create ${pkg_name} txz package."
         rm -rf "${staging_base}"
@@ -5351,7 +5657,7 @@ deploy_gaming_packages_batch() {
         fi
         valid_entries+=("${pid}|${ver}|${main_url}|${lib32_url}|${extra_url}")
 
-        if [ "${main_url}" != "BUNDLED" ]; then
+        if [ "${main_url}" != "BUNDLED" ] && [ "${main_url}" != "GITHUB_THEME" ]; then
             local mf="${batch_cache}/$(basename "${main_url}")"
             if [[ "${main_url}" =~ (cachyos\.org|pkgbuild\.com|archlinux\.org|chaotic\.cx) ]] && [[ "${main_url}" =~ \.pkg\.tar\.zst$ ]]; then
                 dl_items+=("${main_url}|${mf}|${main_url}.sig|${mf}.sig")
@@ -5408,9 +5714,7 @@ deploy_gaming_packages_batch() {
     for entry in "${valid_entries[@]}"; do
         IFS='|' read -r pid ver main_url lib32_url extra_url <<< "${entry}"
         echo ""
-        echo -e "${CYAN}${BOLD}================================================================================${RESET}"
-        echo -e "${YELLOW}${BOLD} 🧙 [${current_idx}/${total_pkgs}] Transmuting & Deploying: ${pid} (v${ver}) ${RESET}"
-        echo -e "${CYAN}${BOLD}================================================================================${RESET}"
+        echo -e "${CYAN}${BOLD}🧙 Transmuting & Deploying: ${pid} (v${ver})${RESET}"
         if transmute_and_deploy_gaming_pkg "${pid}" "${batch_cache}" "${ver}" "${main_url}" "${lib32_url}" "${extra_url}"; then
             success_count=$((success_count + 1))
         else
@@ -5507,10 +5811,32 @@ except Exception:
 }
 
 sync_all_installed_cachyos_gaming_packages() {
-    log_info "Auditing installed Underpants Gnomes Gaming packages for upstream updates..."
     local outdated_pids=()
-    local fast_results
-    fast_results=$(check_all_installed_gaming_updates_fast 2>/dev/null || echo "")
+    local fast_results=""
+
+    # 1. Check if status cache already contains detected outdated packages
+    fast_results=$(python3 -c "
+import os, json
+for p in ['/var/cache/slacky-update/status.json', os.path.expanduser('~/.cache/slacky-update/status.json'), '/tmp/slacky-update-status.json']:
+    if os.path.exists(p):
+        try:
+            with open(p, 'r', encoding='utf-8') as f:
+                d = json.load(f)
+            raw = d.get('cachyos_gaming_updates_raw', [])
+            if raw:
+                for line in raw:
+                    if line.strip():
+                        print(line.strip())
+                break
+        except Exception:
+            pass
+" 2>/dev/null || echo "")
+
+    # 2. If status cache did not contain raw updates or was empty, perform fresh audit
+    if [ -z "${fast_results}" ]; then
+        log_info "Auditing installed Underpants Gnomes Gaming packages for upstream updates..."
+        fast_results=$(check_all_installed_gaming_updates_fast 2>/dev/null || echo "")
+    fi
 
     if [ -n "${fast_results}" ]; then
         while IFS='|' read -r pid name cur_ver latest_ver; do
@@ -5534,7 +5860,7 @@ interactive_cachyos_gaming_menu() {
     set_terminal_title "slacky-update: Underpants Gnomes Gaming Master Suite"
 
     # Category keys and human labels
-    local CAT_KEYS=("desktop" "engine" "launcher" "hardware" "streaming" "social" "audio" "creative" "tools" "browser" "bootloader")
+    local CAT_KEYS=("desktop" "engine" "launcher" "hardware" "streaming" "social" "audio" "creative" "ricing" "tools" "browser" "bootloader")
     local CAT_TITLES=(
         "🪟 Wayland Desktops & Shells (Hyprland / Noctalia)"
         "⚡ The Engine: Performance, HUD & Schedulers"
@@ -5544,6 +5870,7 @@ interactive_cachyos_gaming_menu() {
         "💬 Voice Chat, Social & Game Streaming"
         "🎧 Studio Audio DSP & Acoustic Processing"
         "🎨 Creative, 3D & Photography Studio"
+        "💎 Ricing & Desktop Aesthetics (Mac Tahoe & WhiteSur)"
         "🛠️ Power Tools & Media Sync"
         "🌐 Web Navigators & Browsers"
         "🛡️ Secure Boot & UEFI Utilities"
@@ -5638,7 +5965,11 @@ BINARY_MAP = {
     "microsoft-edge": ["microsoft-edge", "microsoft-edge-stable"],
     "brave": ["brave", "brave-browser"],
     "zen-browser": ["zen-browser", "zen"],
-    "sbctl": ["sbctl"]
+    "sbctl": ["sbctl"],
+    "mactahoe-icons": ["/usr/share/icons/MacTahoe*", "/usr/share/icons/MacTahoe"],
+    "mactahoe-cursors": ["/usr/share/icons/MacTahoe-cursors", "/usr/share/icons/MacTahoe-dark-cursors"],
+    "whitesur-icons": ["/usr/share/icons/WhiteSur*", "/usr/share/icons/WhiteSur"],
+    "whitesur-cursors": ["/usr/share/icons/WhiteSur-cursors", "/usr/share/icons/WhiteSur-dark-cursors"]
 }
 
 for pid, cands in BINARY_MAP.items():

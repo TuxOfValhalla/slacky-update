@@ -265,9 +265,10 @@ update_slackware_core() {
     fi
 
     log_info "Synchronizing Slackware repository indexes..."
-    sudo "${slackpkg_bin}" update || {
+    sudo "${slackpkg_bin}" -batch=on -default_answer=y update || {
         log_warn "slackpkg update completed with non-zero exit code."
     }
+    echo ""
 
     # Engage Turbo Parallel Pre-fetch before install-new and upgrade-all
     parallel_prefetch_packages
@@ -275,9 +276,10 @@ update_slackware_core() {
     clear_stale_slackpkg_locks
 
     log_info "Installing newly added distribution packages (install-new)..."
-    sudo "${slackpkg_bin}" -postinst=off install-new || {
+    sudo "${slackpkg_bin}" -batch=on -default_answer=y -postinst=off install-new || {
         log_warn "slackpkg install-new completed."
     }
+    echo ""
 
     log_info "Upgrading existing distribution packages (upgrade-all)..."
 
@@ -288,9 +290,10 @@ update_slackware_core() {
         local tools_before tools_after
         tools_before=$(get_slackpkg_tools_snapshot)
 
-        sudo "${slackpkg_bin}" -postinst=off upgrade-all || {
+        sudo "${slackpkg_bin}" -batch=on -default_answer=y -postinst=off upgrade-all || {
             log_warn "slackpkg upgrade-all completed pass ${current_pass}."
         }
+        echo ""
 
         tools_after=$(get_slackpkg_tools_snapshot)
 
@@ -301,16 +304,19 @@ update_slackware_core() {
             reply_resume=${reply_resume:-Y}
             if [[ "$reply_resume" =~ ^[YyJjSsOo]$ ]]; then
                 current_pass=$((current_pass + 1))
+                echo ""
                 log_info "Resuming full system upgrade with newly upgraded package tools (Pass ${current_pass})..."
                 # CRITICAL MULTI-PASS RESUME CHAIN:
                 # 1. Auto-reconcile slackpkg.conf.new so slackpkg does not abort on version check
                 auto_reconcile_slackpkg_conf
                 # 2. Refresh repository indexes so slackpkg+ re-initializes
                 log_info "Refreshing package indexes to initialize updated package tools..."
-                sudo "${slackpkg_bin}" update || true
+                sudo "${slackpkg_bin}" -batch=on -default_answer=y update || true
+                echo ""
                 # 3. Re-check for any newly added distribution packages
                 log_info "Checking for newly added packages (install-new)..."
-                sudo "${slackpkg_bin}" -postinst=off install-new || true
+                sudo "${slackpkg_bin}" -batch=on -default_answer=y -postinst=off install-new || true
+                echo ""
                 # 4. Pre-fetch remaining packages for the next pass
                 parallel_prefetch_packages
                 continue
@@ -480,6 +486,7 @@ def safe_prompt(prompt_text, default_val='Y'):
         print(f'{prompt_text}{default_val} (non-interactive default)')
         return default_val
     try:
+        sys.stdout.flush()
         val = input(prompt_text).strip()
         return val if val else default_val
     except (EOFError, KeyboardInterrupt):

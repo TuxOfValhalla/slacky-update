@@ -53,7 +53,7 @@ $(_ SBO_SETUP_HEADER)"
         local dl_url
         dl_url=$(grep "^DOWNLOAD=" sbotools.info 2>/dev/null | cut -d'"' -f2 || true)
         dl_url=${dl_url:-https://github.com/duganchen/sbotools/archive/v3.6/sbotools-3.6.tar.gz}
-        curl -sSL --connect-timeout 8 -m 60 "${dl_url}" -o "${sbotools_tar}" || true
+        curl -sSL --connect-timeout 10 --speed-limit 1024 --speed-time 25 "${dl_url}" -o "${sbotools_tar}" || true
 
         chmod +x sbotools.SlackBuild
         sudo ./sbotools.SlackBuild
@@ -159,8 +159,8 @@ ${BOLD}${CYAN}$(_ MULTILIB_SETUP_HEADER)${RESET}"
     local multi_url="http://bear.alienbase.nl/mirrors/people/alien/multilib/${slack_ver}"
     lftp -c "open ${multi_url}; mirror -c -e -n -v --include-glob='*.txz' ." 2>/dev/null || {
         log_info "Falling back to HTTP package sync..."
-        curl -sSL --connect-timeout 8 -m 20 "${multi_url}/" | grep -o 'href="[^"]*\.txz"' | cut -d'"' -f2 | while read -r pkg_file; do
-            [ -n "${pkg_file}" ] && curl -sSL --connect-timeout 8 -m 120 -O "${multi_url}/${pkg_file}"
+        curl -sSL --connect-timeout 10 -m 30 "${multi_url}/" | grep -o 'href="[^"]*\.txz"' | cut -d'"' -f2 | while read -r pkg_file; do
+            [ -n "${pkg_file}" ] && curl -sSL --connect-timeout 10 --speed-limit 1024 --speed-time 25 -O "${multi_url}/${pkg_file}"
         done
     }
 
@@ -203,7 +203,7 @@ manage_recommended_gaming_interactive() {
                     log_info "Downloading AlienBOB's native Steam package..."
                     local steam_txz="/tmp/steam-latest.txz"
                     sudo rm -f "${steam_txz}"
-                    if curl -sSLf --connect-timeout 8 -m 120 "https://bear.alienbase.nl/mirrors/people/alien/slackbuilds/steam/pkg64/current/steam-1.0.0.82-x86_64-1alien.txz" -o "${steam_txz}" 2>/dev/null; then
+                    if curl -sSLf --connect-timeout 10 --speed-limit 1024 --speed-time 25 "https://bear.alienbase.nl/mirrors/people/alien/slackbuilds/steam/pkg64/current/steam-1.0.0.82-x86_64-1alien.txz" -o "${steam_txz}" 2>/dev/null; then
                         local sz=0
                         [ -f "${steam_txz}" ] && sz=$(stat -c%s "${steam_txz}" 2>/dev/null || echo 0)
                         if [ "${sz}" -gt 1000000 ]; then
