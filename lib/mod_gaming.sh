@@ -40,6 +40,7 @@ steam-devices|Steam Controller & Gamepad Udev Rules|launcher|game-devices-udev-[
 lact|LACT (AMD/Intel GPU Overclocking & Fans)|hardware|lact-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||arch-extra,cachyos
 openrgb|OpenRGB (Hardware RGB Lighting Control)|hardware|openrgb(?:-git)?-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos,arch-extra
 solaar|Solaar (Logitech Wireless Device Manager)|hardware|solaar-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||python-pyudev-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,python-typing_extensions-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,python-xlib-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|arch-extra,cachyos-extra-v3,cachyos
+openghub|OpenGHub (Logitech G HUB Native Linux Companion)|hardware|openghub(?:-bin|-git)?-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||webkit2gtk-4\.1-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libsoup3-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libmanette-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|aur,chaotic-aur,github,cachyos,arch-extra|hidden
 coolercontrol|CoolerControl (All-in-One Liquid & Fan Control)|hardware|coolercontrol-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||coolercontrold-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos,arch-extra
 asusctl|ASUS ROG Laptop Control Daemon & CLI|hardware|asusctl-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||arch-extra,cachyos
 zenpower3|ZenPower AMD Ryzen Telemetry Driver (DKMS)|hardware|zenpower3-dkms-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|||chaotic-aur,cachyos,arch-extra
@@ -108,7 +109,7 @@ is_gaming_pkg_whitelisted() {
     case "${pkg_id}" in
         mangohud|gamemode|goverlay|vram-booster|scx|ananicy|gamescope|retroarch|\
         heroic|lutris|faugus|protonplus|steam-devices|steam|\
-        lact|openrgb|solaar|coolercontrol|asusctl|\
+        lact|openrgb|solaar|openghub|coolercontrol|asusctl|\
         zenpower3|v4l2loopback|rtl8821cu|rtl88x2bu|rtl8812au|broadcom-wl|r8125|\
         easyeffects|pear-desktop|audacity|spotify|yabridge|\
         inkscape|darktable|syncthing|\
@@ -206,6 +207,7 @@ BINARY_MAP = {
     "lact": ["lact", "lactd"],
     "openrgb": ["openrgb"],
     "solaar": ["solaar"],
+    "openghub": ["openghub", "/usr/bin/openghub"],
     "coolercontrol": ["coolercontrol", "coolercontrold"],
     "asusctl": ["asusctl", "supergfxd"],
     "zenpower3": ["/var/lib/dkms/zenpower*", "/usr/src/zenpower3*"],
@@ -326,6 +328,7 @@ PKG_DESCRIPTIONS = {
     "lact": "AMD & Intel Linux GPU overclocking, fan curve, and power state manager.",
     "openrgb": "Universal RGB lighting control suite supporting hundreds of hardware devices.",
     "solaar": "Logitech Unifying and Lightspeed receiver and device configuration utility.",
+    "openghub": "Native Linux reimplementation of Logitech G HUB (HID++ 2.0, DPI, profiles, LIGHTSYNC, macros, force feedback wheels).",
     "coolercontrol": "Liquid cooling, fan speed curves, and AIO pump control daemon & GUI.",
     "asusctl": "ASUS ROG and TUF laptop performance profile, fan, and aura LED control CLI & daemon.",
     "zenpower3": "AMD Ryzen Zen 1-5 voltage, current, and core telemetry driver for MangoHud (DKMS).",
@@ -371,6 +374,8 @@ for line in raw_catalog.strip().split("\n"):
     if len(parts) < 3:
         continue
     pkg_id, name, cat = parts[0], parts[1], parts[2]
+    if len(parts) > 7 and parts[7].strip() == "hidden":
+        continue
     
     inst_ver = "NONE"
     for cand in (pkg_id, f"underpants-{pkg_id}", f"cachyos-gnome-{pkg_id}"):
@@ -499,6 +504,7 @@ BINARY_MAP = {
     "lact": ["lact", "lactd"],
     "openrgb": ["openrgb"],
     "solaar": ["solaar"],
+    "openghub": ["openghub", "/usr/bin/openghub"],
     "coolercontrol": ["coolercontrol", "coolercontrold"],
     "asusctl": ["asusctl", "supergfxd"],
     "zenpower3": ["/var/lib/dkms/zenpower*", "/usr/src/zenpower3*"],
@@ -682,6 +688,9 @@ catalog = {}
 for line in raw_catalog_lines:
     if not line.strip() or line.strip().startswith('#'):
         continue
+    parts_all = line.split("|")
+    if len(parts_all) > 7 and parts_all[7].strip() == "hidden":
+        continue
     left_parts = line.split("|", 3)
     if len(left_parts) >= 4:
         pid, name, cat, remainder = left_parts
@@ -690,7 +699,8 @@ for line in raw_catalog_lines:
             main_pat, l32_pat, ext_pat, repos_str = right_parts
             r_list = [r.strip() for r in repos_str.split(",") if r.strip()]
             href_pat = rf'href=[\'\"]?({main_pat})[\'\"]?' if main_pat else None
-            catalog[pid] = (name, href_pat, r_list)
+            l32_href_pat = rf'href=[\'\"]?({l32_pat})[\'\"]?' if l32_pat else None
+            catalog[pid] = (name, href_pat, l32_href_pat, r_list)
 
 def fetch_url_cached(url, cdir, ttl=1800):
     url_hash = hashlib.sha256(url.encode('utf-8')).hexdigest()[:16]
@@ -771,11 +781,16 @@ for pkg in installed_pkgs:
 needed_repos = set()
 for pid in detected_installed:
     if pid in catalog:
-        _, pat, r_list = catalog[pid]
+        _, pat, l32_pat, r_list = catalog[pid]
         if pat:
             for rk in r_list:
                 if rk in ("arch-extra", "arch-core", "arch-multilib"):
                     continue
+                u = repos.get(rk)
+                if u:
+                    needed_repos.add(u)
+        if l32_pat:
+            for rk in ("cachyos", "cachyos-v3", "arch-multilib", "cachyos-extra", "cachyos-extra-v3"):
                 u = repos.get(rk)
                 if u:
                     needed_repos.add(u)
@@ -786,15 +801,16 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=min(max(len(needed_repos)
 def check_single_package(pid, cur_ver):
     if pid not in catalog:
         return None
-    name, pat, r_list = catalog[pid]
+    name, pat, l32_pat, r_list = catalog[pid]
     if pid == "steam-devices":
         return None
-    all_candidates = []
+    main_candidates = []
 
     # Fast AUR RPC API check for AUR / GitHub packages (e.g. hyprmod, themes)
     if any(r in ("aur", "aur-rpc", "github") for r in r_list) or pid in ("hyprmod", "mactahoe-icons", "mactahoe-cursors", "whitesur-icons", "whitesur-cursors"):
         try:
             aur_map = {
+                "openghub": "openghub-bin",
                 "mactahoe-icons": "mactahoe-icon-theme-git",
                 "mactahoe-cursors": "mactahoe-cursor-theme-git",
                 "whitesur-icons": "whitesur-icon-theme",
@@ -811,7 +827,7 @@ def check_single_package(pid, cur_ver):
                     if v:
                         cv = clean_pkg_version(pid, v)
                         if cv:
-                            all_candidates.append(cv)
+                            main_candidates.append(cv)
         except Exception:
             pass
 
@@ -827,7 +843,7 @@ def check_single_package(pid, cur_ver):
                     if v:
                         cv = clean_pkg_version(pid, v)
                         if cv:
-                            all_candidates.append(cv)
+                            main_candidates.append(cv)
                             break
             except Exception:
                 pass
@@ -838,21 +854,69 @@ def check_single_package(pid, cur_ver):
             html = repo_contents.get(base_u, "")
             if not html:
                 continue
-        try:
-            matches = re.findall(pat, html)
-        except Exception:
-            matches = []
-        if matches:
-            for m in matches:
-                raw_pkg = m[0] if isinstance(m, tuple) else m
-                cv = clean_pkg_version(pid, raw_pkg)
-                if cv:
-                    all_candidates.append(cv)
-    if all_candidates:
-        all_candidates.sort(key=parse_version_key)
-        best_ver = all_candidates[-1]
+            try:
+                matches = re.findall(pat, html)
+            except Exception:
+                matches = []
+            if matches:
+                for m in matches:
+                    raw_pkg = m[0] if isinstance(m, tuple) else m
+                    cv = clean_pkg_version(pid, raw_pkg)
+                    if cv:
+                        main_candidates.append(cv)
+
+    if not main_candidates:
+        return None
+
+    # Multilib Version Intersection: Packages with 32-bit components must have matching 32-bit versions
+    if l32_pat:
+        l32_candidates = []
+        for l32_name in (f"lib32-{pid}", f"lib32-{pid.replace('-bin', '')}"):
+            try:
+                api_url = f"https://archlinux.org/packages/multilib/x86_64/{l32_name}/json/"
+                raw_json = fetch_url_cached(api_url, cache_dir, ttl=1800)
+                if raw_json:
+                    data = json.loads(raw_json)
+                    v = data.get("pkgver")
+                    if v:
+                        cv = clean_pkg_version(l32_name, v)
+                        if cv:
+                            l32_candidates.append(cv)
+                            break
+            except Exception:
+                pass
+
+        multilib_rkeys = ["cachyos", "cachyos-v3", "arch-multilib", "cachyos-extra", "cachyos-extra-v3"]
+        for rk in multilib_rkeys:
+            base_u = repos.get(rk, "")
+            html = repo_contents.get(base_u, "")
+            if not html:
+                continue
+            try:
+                matches = re.findall(l32_pat, html)
+            except Exception:
+                matches = []
+            if matches:
+                for m in matches:
+                    raw_pkg = m[0] if isinstance(m, tuple) else m
+                    cv = clean_pkg_version(f"lib32-{pid}", raw_pkg)
+                    if cv:
+                        l32_candidates.append(cv)
+
+        # Intersection: only accept versions present in BOTH 64-bit and 32-bit
+        intersected = [v for v in set(main_candidates) if v in set(l32_candidates)]
+        if not intersected:
+            return None
+        intersected.sort(key=parse_version_key)
+        best_ver = intersected[-1]
         if is_strictly_greater(best_ver, cur_ver):
             return f"{pid}|{name}|{cur_ver}|{best_ver}"
+        return None
+
+    main_candidates.sort(key=parse_version_key)
+    best_ver = main_candidates[-1]
+    if is_strictly_greater(best_ver, cur_ver):
+        return f"{pid}|{name}|{cur_ver}|{best_ver}"
     return None
 
 updates = []
@@ -1155,6 +1219,11 @@ catalog = {
         r'href=[\'\"]?(python-typing_extensions-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(python-xlib-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["arch-extra", "cachyos-extra-v3", "cachyos"], []),
+    "openghub": (r'href=[\'\"]?(openghub(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(webkit2gtk-4\.1-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libsoup3-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libmanette-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    ], ["arch-extra", "cachyos", "chaotic-aur"], []),
     "coolercontrol": (r'href=[\'\"]?(coolercontrol-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(coolercontrold-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["cachyos", "arch-extra"], []),
     "asusctl": (r'href=[\'\"]?(asusctl-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
     "brave": (r'href=[\'\"]?(brave-bin-(?:1%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "chaotic-aur", "chaotic-cdn"], []),
@@ -1343,6 +1412,34 @@ def fetch_match(pat, r_list, pid=''):
         return best[2], best[1]
     return None, None
 
+def fetch_all_matches(pat, r_list, pid=''):
+    if not pat:
+        return {}
+    res = {}
+    for r_key in r_list:
+        base_url = repos.get(r_key, "")
+        if not base_url:
+            continue
+        html = fetch_url_cached(base_url, cache_dir)
+        if not html:
+            continue
+        try:
+            matches = re.findall(pat, html)
+        except Exception:
+            matches = []
+        for m in matches:
+            if isinstance(m, tuple):
+                fn = m[0]
+                ver = m[1] if len(m) > 1 else m[0]
+            else:
+                fn = m
+                ver = m
+            clean_v = clean_pkg_version(pid, ver)
+            url = base_url.rstrip("/") + "/" + fn
+            if clean_v not in res:
+                res[clean_v] = (url, ver)
+    return res
+
 aur_pkg_names = {
     "google-chrome": ("google-chrome", "google-chrome-{ver}-x86_64.pkg.tar.zst"),
     "microsoft-edge": ("microsoft-edge-stable-bin", "microsoft-edge-stable-bin-{ver}-x86_64.pkg.tar.zst"),
@@ -1386,57 +1483,20 @@ github_and_direct_pkgs = {
         "type": "github_release",
         "repo": "fzwoch/obs-teleport",
         "asset_pattern": r"obs-teleport\.zip"
+    },
+    "openghub": {
+        "type": "github_release",
+        "repo": "Slyvan25/OpenGHub",
+        "asset_pattern": r"OpenGHub_([0-9\.]+)_amd64\.deb",
+        "fallback_version": "0.1.4",
+        "fallback_url": "https://github.com/Slyvan25/OpenGHub/releases/download/v0.1.4/OpenGHub_0.1.4_amd64.deb"
     }
 }
 
-main_ver, main_url = None, None
+main_ver, main_url, lib32_url = None, None, "NONE"
 
-if pkg_id in github_and_direct_pkgs:
-    meta = github_and_direct_pkgs[pkg_id]
-    if meta["type"] == "direct_url":
-        main_ver = meta["version"]
-        main_url = meta["url"]
-    elif meta["type"] == "github_release":
-        try:
-            gh_url = f"https://api.github.com/repos/{meta['repo']}/releases"
-            raw = fetch_url_cached(gh_url, cache_dir, ttl=1800)
-            if raw:
-                releases = json.loads(raw)
-                for rel in releases:
-                    tag = rel.get("tag_name", "").lstrip("v")
-                    for asset in rel.get("assets", []):
-                        aname = asset.get("name", "")
-                        m = re.search(meta["asset_pattern"], aname)
-                        if m:
-                            main_ver = m.group(1) if m.groups() else tag
-                            main_url = asset.get("browser_download_url")
-                            break
-                    if main_ver and main_url:
-                        break
-        except Exception:
-            pass
-
-if not main_ver or not main_url:
-    main_ver, main_url = fetch_match(main_pat, main_repos, pkg_id)
-
-if (not main_ver or not main_url) and pkg_id in aur_pkg_names:
-    aur_name, filename_tmpl = aur_pkg_names[pkg_id]
-    try:
-        rpc_url = f"https://aur.archlinux.org/rpc/v5/info?arg[]={aur_name}"
-        rpc_raw = fetch_url_cached(rpc_url, cache_dir, ttl=1800)
-        if rpc_raw:
-            data = json.loads(rpc_raw)
-            for r in data.get("results", []):
-                if r.get("Name") == aur_name:
-                    v = r.get("Version")
-                    main_ver = v
-                    fn = filename_tmpl.format(ver=v)
-                    main_url = f"{chaotic_fastest.rstrip('/')}/{fn}"
-                    break
-    except Exception:
-        pass
-
-if not main_ver or not main_url:
+if lib32_pat:
+    main_matches = fetch_all_matches(main_pat, main_repos, pkg_id)
     for repo_cand in ("multilib", "extra", "core"):
         try:
             api_url = f"https://archlinux.org/packages/{repo_cand}/x86_64/{pkg_id}/json/"
@@ -1446,21 +1506,106 @@ if not main_ver or not main_url:
                 fn = data.get("filename")
                 v = data.get("pkgver")
                 if fn and v:
-                    main_ver = v
-                    main_url = f"https://geo.mirror.pkgbuild.com/{repo_cand}/os/x86_64/{fn}"
+                    cv = clean_pkg_version(pkg_id, v)
+                    url = f"https://geo.mirror.pkgbuild.com/{repo_cand}/os/x86_64/{fn}"
+                    if cv not in main_matches:
+                        main_matches[cv] = (url, v)
                     break
         except Exception:
             pass
 
+    lib32_matches = fetch_all_matches(lib32_pat, lib32_repos or main_repos, f"lib32-{pkg_id}")
+    for l32_name in (f"lib32-{pkg_id}", f"lib32-{pkg_id.replace('-bin', '')}"):
+        try:
+            api_url = f"https://archlinux.org/packages/multilib/x86_64/{l32_name}/json/"
+            raw_json = fetch_url_cached(api_url, cache_dir, ttl=1800)
+            if raw_json:
+                data = json.loads(raw_json)
+                fn = data.get("filename")
+                v = data.get("pkgver")
+                if fn and v:
+                    cv = clean_pkg_version(f"lib32-{pkg_id}", v)
+                    url = f"https://geo.mirror.pkgbuild.com/multilib/os/x86_64/{fn}"
+                    if cv not in lib32_matches:
+                        lib32_matches[cv] = (url, v)
+                    break
+        except Exception:
+            pass
+
+    common_vers = [v for v in main_matches if v in lib32_matches]
+    if common_vers:
+        common_vers.sort(key=parse_version_key)
+        best_v = common_vers[-1]
+        main_url, main_ver = main_matches[best_v]
+        lib32_url, _ = lib32_matches[best_v]
+else:
+    if pkg_id in github_and_direct_pkgs:
+        meta = github_and_direct_pkgs[pkg_id]
+        if meta["type"] == "direct_url":
+            main_ver = meta["version"]
+            main_url = meta["url"]
+        elif meta["type"] == "github_release":
+            try:
+                gh_url = f"https://api.github.com/repos/{meta['repo']}/releases"
+                raw = fetch_url_cached(gh_url, cache_dir, ttl=1800)
+                if raw:
+                    releases = json.loads(raw)
+                    for rel in releases:
+                        tag = rel.get("tag_name", "").lstrip("v")
+                        for asset in rel.get("assets", []):
+                            aname = asset.get("name", "")
+                            m = re.search(meta["asset_pattern"], aname)
+                            if m:
+                                main_ver = m.group(1) if m.groups() else tag
+                                main_url = asset.get("browser_download_url")
+                                break
+                        if main_ver and main_url:
+                            break
+            except Exception:
+                pass
+            if (not main_ver or not main_url) and "fallback_url" in meta:
+                main_ver = meta.get("fallback_version", "0.1.4")
+                main_url = meta.get("fallback_url")
+
+    if not main_ver or not main_url:
+        main_ver, main_url = fetch_match(main_pat, main_repos, pkg_id)
+
+    if (not main_ver or not main_url) and pkg_id in aur_pkg_names:
+        aur_name, filename_tmpl = aur_pkg_names[pkg_id]
+        try:
+            rpc_url = f"https://aur.archlinux.org/rpc/v5/info?arg[]={aur_name}"
+            rpc_raw = fetch_url_cached(rpc_url, cache_dir, ttl=1800)
+            if rpc_raw:
+                data = json.loads(rpc_raw)
+                for r in data.get("results", []):
+                    if r.get("Name") == aur_name:
+                        v = r.get("Version")
+                        main_ver = v
+                        fn = filename_tmpl.format(ver=v)
+                        main_url = f"{chaotic_fastest.rstrip('/')}/{fn}"
+                        break
+        except Exception:
+            pass
+
+    if not main_ver or not main_url:
+        for repo_cand in ("multilib", "extra", "core"):
+            try:
+                api_url = f"https://archlinux.org/packages/{repo_cand}/x86_64/{pkg_id}/json/"
+                raw_json = fetch_url_cached(api_url, cache_dir, ttl=1800)
+                if raw_json:
+                    data = json.loads(raw_json)
+                    fn = data.get("filename")
+                    v = data.get("pkgver")
+                    if fn and v:
+                        main_ver = v
+                        main_url = f"https://geo.mirror.pkgbuild.com/{repo_cand}/os/x86_64/{fn}"
+                        break
+            except Exception:
+                pass
+
 if not main_ver or not main_url:
     print("NONE NONE NONE NONE")
     sys.exit(0)
-
-lib32_url = "NONE"
-if lib32_pat:
-    _, l32_u = fetch_match(lib32_pat, lib32_repos or main_repos, pkg_id)
-    if l32_u:
-        lib32_url = l32_u
 
 extra_url = "NONE"
 if extra_pat:
@@ -1710,6 +1855,11 @@ catalog = {
         r'href=[\'\"]?(python-typing_extensions-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(python-xlib-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["arch-extra", "cachyos-extra-v3", "cachyos"], []),
+    "openghub": (r'href=[\'\"]?(openghub(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(webkit2gtk-4\.1-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libsoup3-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libmanette-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    ], ["arch-extra", "cachyos", "chaotic-aur"], []),
     "coolercontrol": (r'href=[\'\"]?(coolercontrol-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(coolercontrold-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["cachyos", "arch-extra"], []),
     "asusctl": (r'href=[\'\"]?(asusctl-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
     "brave": (r'href=[\'\"]?(brave-bin-(?:1%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "chaotic-aur", "chaotic-cdn"], []),
@@ -1896,6 +2046,34 @@ def fetch_match(pat, r_list, pid=''):
         return best[2], best[1]
     return None, None
 
+def fetch_all_matches(pat, r_list, pid=''):
+    if not pat:
+        return {}
+    res = {}
+    for r_key in r_list:
+        base_url = repos.get(r_key, "")
+        if not base_url:
+            continue
+        html = fetch_url_cached(base_url, cache_dir)
+        if not html:
+            continue
+        try:
+            matches = re.findall(pat, html)
+        except Exception:
+            matches = []
+        for m in matches:
+            if isinstance(m, tuple):
+                fn = m[0]
+                ver = m[1] if len(m) > 1 else m[0]
+            else:
+                fn = m
+                ver = m
+            clean_v = clean_pkg_version(pid, ver)
+            url = base_url.rstrip("/") + "/" + fn
+            if clean_v not in res:
+                res[clean_v] = (url, ver)
+    return res
+
 aur_pkg_names = {
     "google-chrome": ("google-chrome", "google-chrome-{ver}-x86_64.pkg.tar.zst"),
     "microsoft-edge": ("microsoft-edge-stable-bin", "microsoft-edge-stable-bin-{ver}-x86_64.pkg.tar.zst"),
@@ -1939,6 +2117,13 @@ github_and_direct_pkgs = {
         "type": "github_release",
         "repo": "fzwoch/obs-teleport",
         "asset_pattern": r"obs-teleport\.zip"
+    },
+    "openghub": {
+        "type": "github_release",
+        "repo": "Slyvan25/OpenGHub",
+        "asset_pattern": r"OpenGHub_([0-9\.]+)_amd64\.deb",
+        "fallback_version": "0.1.4",
+        "fallback_url": "https://github.com/Slyvan25/OpenGHub/releases/download/v0.1.4/OpenGHub_0.1.4_amd64.deb"
     }
 }
 
@@ -1974,56 +2159,11 @@ def resolve_single(pid):
     if pid not in catalog:
         return pid, "NONE", "NONE", "NONE", "NONE"
 
-    main_ver, main_url = None, None
-
-    if pid in github_and_direct_pkgs:
-        meta = github_and_direct_pkgs[pid]
-        if meta["type"] == "direct_url":
-            main_ver = meta["version"]
-            main_url = meta["url"]
-        elif meta["type"] == "github_release":
-            try:
-                gh_url = f"https://api.github.com/repos/{meta['repo']}/releases"
-                raw = fetch_url_cached(gh_url, cache_dir, ttl=1800)
-                if raw:
-                    releases = json.loads(raw)
-                    for rel in releases:
-                        tag = rel.get("tag_name", "").lstrip("v")
-                        for asset in rel.get("assets", []):
-                            aname = asset.get("name", "")
-                            m = re.search(meta["asset_pattern"], aname)
-                            if m:
-                                main_ver = m.group(1) if m.groups() else tag
-                                main_url = asset.get("browser_download_url")
-                                break
-                        if main_ver and main_url:
-                            break
-            except Exception:
-                pass
-
+    main_ver, main_url, lib32_url = None, None, "NONE"
     main_pat, lib32_pat, extra_pat, main_repos, lib32_repos = catalog[pid]
 
-    if not main_ver or not main_url:
-        main_ver, main_url = fetch_match(main_pat, main_repos, pid)
-
-    if (not main_ver or not main_url) and pid in aur_pkg_names:
-        aur_name, filename_tmpl = aur_pkg_names[pid]
-        try:
-            rpc_url = f"https://aur.archlinux.org/rpc/v5/info?arg[]={aur_name}"
-            rpc_raw = fetch_url_cached(rpc_url, cache_dir, ttl=1800)
-            if rpc_raw:
-                data = json.loads(rpc_raw)
-                for r in data.get("results", []):
-                    if r.get("Name") == aur_name:
-                        v = r.get("Version")
-                        main_ver = v
-                        fn = filename_tmpl.format(ver=v)
-                        main_url = f"{chaotic_fastest.rstrip('/')}/{fn}"
-                        break
-        except Exception:
-            pass
-
-    if not main_ver or not main_url:
+    if lib32_pat:
+        main_matches = fetch_all_matches(main_pat, main_repos, pid)
         for repo_cand in ("multilib", "extra", "core"):
             try:
                 api_url = f"https://archlinux.org/packages/{repo_cand}/x86_64/{pid}/json/"
@@ -2033,20 +2173,105 @@ def resolve_single(pid):
                     fn = data.get("filename")
                     v = data.get("pkgver")
                     if fn and v:
-                        main_ver = v
-                        main_url = f"https://geo.mirror.pkgbuild.com/{repo_cand}/os/x86_64/{fn}"
+                        cv = clean_pkg_version(pid, v)
+                        url = f"https://geo.mirror.pkgbuild.com/{repo_cand}/os/x86_64/{fn}"
+                        if cv not in main_matches:
+                            main_matches[cv] = (url, v)
                         break
             except Exception:
                 pass
 
+        lib32_matches = fetch_all_matches(lib32_pat, lib32_repos or main_repos, f"lib32-{pid}")
+        for l32_name in (f"lib32-{pid}", f"lib32-{pid.replace('-bin', '')}"):
+            try:
+                api_url = f"https://archlinux.org/packages/multilib/x86_64/{l32_name}/json/"
+                raw_json = fetch_url_cached(api_url, cache_dir, ttl=1800)
+                if raw_json:
+                    data = json.loads(raw_json)
+                    fn = data.get("filename")
+                    v = data.get("pkgver")
+                    if fn and v:
+                        cv = clean_pkg_version(f"lib32-{pid}", v)
+                        url = f"https://geo.mirror.pkgbuild.com/multilib/os/x86_64/{fn}"
+                        if cv not in lib32_matches:
+                            lib32_matches[cv] = (url, v)
+                        break
+            except Exception:
+                pass
+
+        common_vers = [v for v in main_matches if v in lib32_matches]
+        if common_vers:
+            common_vers.sort(key=parse_version_key)
+            best_v = common_vers[-1]
+            main_url, main_ver = main_matches[best_v]
+            lib32_url, _ = lib32_matches[best_v]
+    else:
+        if pid in github_and_direct_pkgs:
+            meta = github_and_direct_pkgs[pid]
+            if meta["type"] == "direct_url":
+                main_ver = meta["version"]
+                main_url = meta["url"]
+            elif meta["type"] == "github_release":
+                try:
+                    gh_url = f"https://api.github.com/repos/{meta['repo']}/releases"
+                    raw = fetch_url_cached(gh_url, cache_dir, ttl=1800)
+                    if raw:
+                        releases = json.loads(raw)
+                        for rel in releases:
+                            tag = rel.get("tag_name", "").lstrip("v")
+                            for asset in rel.get("assets", []):
+                                aname = asset.get("name", "")
+                                m = re.search(meta["asset_pattern"], aname)
+                                if m:
+                                    main_ver = m.group(1) if m.groups() else tag
+                                    main_url = asset.get("browser_download_url")
+                                    break
+                            if main_ver and main_url:
+                                break
+                except Exception:
+                    pass
+                if (not main_ver or not main_url) and "fallback_url" in meta:
+                    main_ver = meta.get("fallback_version", "0.1.4")
+                    main_url = meta.get("fallback_url")
+
+        if not main_ver or not main_url:
+            main_ver, main_url = fetch_match(main_pat, main_repos, pid)
+
+        if (not main_ver or not main_url) and pid in aur_pkg_names:
+            aur_name, filename_tmpl = aur_pkg_names[pid]
+            try:
+                rpc_url = f"https://aur.archlinux.org/rpc/v5/info?arg[]={aur_name}"
+                rpc_raw = fetch_url_cached(rpc_url, cache_dir, ttl=1800)
+                if rpc_raw:
+                    data = json.loads(rpc_raw)
+                    for r in data.get("results", []):
+                        if r.get("Name") == aur_name:
+                            v = r.get("Version")
+                            main_ver = v
+                            fn = filename_tmpl.format(ver=v)
+                            main_url = f"{chaotic_fastest.rstrip('/')}/{fn}"
+                            break
+            except Exception:
+                pass
+
+        if not main_ver or not main_url:
+            for repo_cand in ("multilib", "extra", "core"):
+                try:
+                    api_url = f"https://archlinux.org/packages/{repo_cand}/x86_64/{pid}/json/"
+                    raw_json = fetch_url_cached(api_url, cache_dir, ttl=1800)
+                    if raw_json:
+                        data = json.loads(raw_json)
+                        fn = data.get("filename")
+                        v = data.get("pkgver")
+                        if fn and v:
+                            main_ver = v
+                            main_url = f"https://geo.mirror.pkgbuild.com/{repo_cand}/os/x86_64/{fn}"
+                            break
+                except Exception:
+                    pass
+
     if not main_ver or not main_url:
         return pid, "NONE", "NONE", "NONE", "NONE"
-
-    lib32_url = "NONE"
-    if lib32_pat:
-        _, l32_u = fetch_match(lib32_pat, lib32_repos or main_repos, pid)
-        if l32_u:
-            lib32_url = l32_u
 
     extra_url = "NONE"
     if extra_pat:
@@ -2137,6 +2362,12 @@ cleanup_foreign_gaming_pkgs() {
             ;;
         openrgb)
             patterns=("openrgb-[0-9]*" "openrgb-r[0-9]*" "cachyos-gnome-openrgb-r[0-9]*")
+            ;;
+        solaar)
+            patterns=("solaar-[0-9]*" "cachyos-gnome-solaar-[0-9]*")
+            ;;
+        openghub)
+            patterns=("openghub-[0-9]*" "openghub-bin-[0-9]*" "openghub-git-[0-9]*" "cachyos-gnome-openghub-[0-9]*")
             ;;
         brave)
             patterns=("brave-bin-[0-9]*" "brave-browser-[0-9]*" "brave-[0-9]*")
@@ -2283,7 +2514,7 @@ transmute_and_deploy_gaming_pkg() {
     
     # Pre-flight readiness checks
     audit_multilib_readiness "${pkg_id}"
-    if [ "${pkg_id}" = "solaar" ] || [ "${pkg_id}" = "steam-devices" ] || [ "${pkg_id}" = "openrgb" ] || [ "${pkg_id}" = "coolercontrol" ] || [ "${pkg_id}" = "sunshine" ] || [ "${pkg_id}" = "steam" ]; then
+    if [ "${pkg_id}" = "solaar" ] || [ "${pkg_id}" = "openghub" ] || [ "${pkg_id}" = "steam-devices" ] || [ "${pkg_id}" = "openrgb" ] || [ "${pkg_id}" = "coolercontrol" ] || [ "${pkg_id}" = "sunshine" ] || [ "${pkg_id}" = "steam" ]; then
         audit_user_hardware_groups
     fi
 
@@ -2979,6 +3210,63 @@ PEAR_WRAPPER_EOF
             [ -f "${df}" ] || continue
             sed -i 's|^Exec=.*|Exec=/usr/bin/pear-desktop %U|g; s|^TryExec=.*|TryExec=/usr/bin/pear-desktop|g' "${df}"
         done
+    elif [ "${pkg_id}" = "openghub" ]; then
+        log_info "Packaging OpenGHub as isolated App-Bundle in /opt/openghub..."
+        mkdir -p "${staging_root}/opt/openghub/bin" \
+                 "${staging_root}/opt/openghub/lib" \
+                 "${staging_root}/usr/bin" \
+                 "${staging_root}/usr/share" \
+                 "${staging_root}/lib/udev/rules.d" \
+                 "${staging_root}/install"
+
+        # Copy main package into /opt/openghub
+        if [ -d "${tmp_extract}/main/usr/bin" ]; then
+            cp -a "${tmp_extract}/main/usr/bin/." "${staging_root}/opt/openghub/bin/"
+        elif [ -d "${tmp_extract}/main/opt" ]; then
+            cp -a "${tmp_extract}/main/opt/." "${staging_root}/opt/"
+        fi
+        if [ -d "${tmp_extract}/main/usr/lib" ]; then
+            cp -a "${tmp_extract}/main/usr/lib/." "${staging_root}/opt/openghub/lib/"
+        fi
+        if [ -d "${tmp_extract}/main/usr/share" ]; then
+            cp -a "${tmp_extract}/main/usr/share/." "${staging_root}/usr/share/"
+        fi
+
+        # Copy auxiliary packages (webkit2gtk-4.1, libsoup3, libmanette) into /opt/openghub/lib
+        for extra_dir in "${tmp_extract}"/extra*; do
+            [ -d "${extra_dir}" ] || continue
+            if [ -d "${extra_dir}/usr/lib" ]; then
+                cp -a "${extra_dir}/usr/lib/." "${staging_root}/opt/openghub/lib/"
+            fi
+            if [ -d "${extra_dir}/usr/lib64" ]; then
+                cp -a "${extra_dir}/usr/lib64/." "${staging_root}/opt/openghub/lib/"
+            fi
+        done
+
+        # Create isolated launcher wrapper
+        cat << 'OPENGHUB_WRAPPER_EOF' > "${staging_root}/usr/bin/openghub"
+#!/bin/sh
+# OpenGHub Native Linux Companion Launcher for Slackware
+export OPEN_GHUB_DIR="/opt/openghub"
+export LD_LIBRARY_PATH="${OPEN_GHUB_DIR}/lib:${LD_LIBRARY_PATH:-}"
+export WEBKIT_EXEC_PATH="${OPEN_GHUB_DIR}/lib/webkit2gtk-4.1:/usr/lib64/webkit2gtk-4.1:/usr/lib/webkit2gtk-4.1"
+export WEBKIT_INJECTED_BUNDLE_PATH="${OPEN_GHUB_DIR}/lib/webkit2gtk-4.1/injected-bundle:/usr/lib64/webkit2gtk-4.1/injected-bundle:/usr/lib/webkit2gtk-4.1/injected-bundle"
+export WEBKIT_DISABLE_DMABUF_RENDERER=1
+export WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1
+
+REAL_BIN="${OPEN_GHUB_DIR}/bin/OpenGHub"
+if [ ! -x "${REAL_BIN}" ]; then
+  REAL_BIN="${OPEN_GHUB_DIR}/bin/openghub"
+fi
+if [ ! -x "${REAL_BIN}" ]; then
+  REAL_BIN="${OPEN_GHUB_DIR}/openghub"
+fi
+
+exec "${REAL_BIN}" "$@"
+OPENGHUB_WRAPPER_EOF
+        chmod 755 "${staging_root}/usr/bin/openghub"
+        ln -sf openghub "${staging_root}/usr/bin/OpenGHub"
+        ln -sf openghub "${staging_root}/usr/bin/open-g-hub"
     else
         # Standard native package transmutation:
         mkdir -p "${staging_root}/usr/bin" \
@@ -3724,6 +4012,86 @@ OPENRGB_UDEV_EOF
             cp -a "${staging_root}/usr/share/icons/hicolor/scalable/apps/org.openrgb.OpenRGB.svg" "${staging_root}/usr/share/pixmaps/openrgb.svg" 2>/dev/null || true
             cp -a "${staging_root}/usr/share/icons/hicolor/scalable/apps/org.openrgb.OpenRGB.svg" "${staging_root}/usr/share/pixmaps/org.openrgb.OpenRGB.svg" 2>/dev/null || true
         fi
+    fi
+
+    if [ "${pkg_id}" = "openghub" ]; then
+        mkdir -p "${staging_root}/lib/udev/rules.d"
+        cat << 'OPENGHUB_UDEV_EOF' > "${staging_root}/lib/udev/rules.d/70-openghub.rules"
+# OpenGHub — grant desktop user access to Logitech HID++ endpoints
+KERNEL=="hidraw*", ATTRS{idVendor}=="046d", MODE="0660", TAG+="uaccess"
+KERNEL=="uinput", SUBSYSTEM=="misc", MODE="0660", TAG+="uaccess"
+OPENGHUB_UDEV_EOF
+
+        # Ensure cross-desktop icon compatibility (KDE Plasma, XFCE, GNOME)
+        mkdir -p "${staging_root}/usr/share/pixmaps" "${staging_root}/usr/share/icons/hicolor/scalable/apps"
+        if [ -d "${staging_root}/usr/share/icons" ]; then
+            find "${staging_root}/usr/share/icons" -type f \( -name "*.png" -o -name "*.svg" \) | while read -r icon_file; do
+                [ -f "${icon_file}" ] || continue
+                icon_dir="$(dirname "${icon_file}")"
+                icon_base="$(basename "${icon_file}")"
+                icon_ext="${icon_base##*.}"
+                if [ "${icon_base}" != "openghub.${icon_ext}" ]; then
+                    cp -a "${icon_file}" "${icon_dir}/openghub.${icon_ext}" 2>/dev/null || true
+                fi
+                if [ "${icon_base}" != "OpenGHub.${icon_ext}" ]; then
+                    cp -a "${icon_file}" "${icon_dir}/OpenGHub.${icon_ext}" 2>/dev/null || true
+                fi
+                if [[ "${icon_file}" =~ 128x128|256x256|512x512|scalable ]]; then
+                    cp -a "${icon_file}" "${staging_root}/usr/share/pixmaps/openghub.${icon_ext}" 2>/dev/null || true
+                    cp -a "${icon_file}" "${staging_root}/usr/share/pixmaps/OpenGHub.${icon_ext}" 2>/dev/null || true
+                fi
+            done
+        fi
+
+        # If pixmap or scalable icon is missing, install the embedded OpenGHub vector icon
+        if [ ! -f "${staging_root}/usr/share/pixmaps/openghub.png" ] && [ ! -f "${staging_root}/usr/share/pixmaps/openghub.svg" ]; then
+            cat << 'OPENGHUB_SVG_EOF' > "${staging_root}/usr/share/icons/hicolor/scalable/apps/openghub.svg"
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="ghubGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00e5ff"/>
+      <stop offset="100%" stop-color="#0077ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="56" fill="#12151a"/>
+  <path d="M 128 44 C 81.6 44 44 81.6 44 128 C 44 174.4 81.6 212 128 212 C 174.4 212 212 174.4 212 128 L 212 124 L 128 124 L 128 148 L 186.5 148 C 179.5 171.5 156 188 128 188 C 94.9 188 68 161.1 68 128 C 68 94.9 94.9 68 128 68 C 143.5 68 157.6 73.9 168.3 83.7 L 185.5 66.5 C 170.2 52.4 150.1 44 128 44 Z" fill="url(#ghubGrad)"/>
+</svg>
+OPENGHUB_SVG_EOF
+            cp -a "${staging_root}/usr/share/icons/hicolor/scalable/apps/openghub.svg" "${staging_root}/usr/share/icons/hicolor/scalable/apps/OpenGHub.svg" 2>/dev/null || true
+            cp -a "${staging_root}/usr/share/icons/hicolor/scalable/apps/openghub.svg" "${staging_root}/usr/share/pixmaps/openghub.svg" 2>/dev/null || true
+            cp -a "${staging_root}/usr/share/icons/hicolor/scalable/apps/openghub.svg" "${staging_root}/usr/share/pixmaps/OpenGHub.svg" 2>/dev/null || true
+            cp -a "${staging_root}/usr/share/icons/hicolor/scalable/apps/openghub.svg" "${staging_root}/usr/share/pixmaps/openghub.png" 2>/dev/null || true
+            cp -a "${staging_root}/usr/share/icons/hicolor/scalable/apps/openghub.svg" "${staging_root}/usr/share/pixmaps/OpenGHub.png" 2>/dev/null || true
+        fi
+
+        # Ensure desktop entry exists and is properly formatted
+        mkdir -p "${staging_root}/usr/share/applications"
+        if [ ! -f "${staging_root}/usr/share/applications/openghub.desktop" ]; then
+            cat << 'OPENGHUB_DESKTOP_EOF' > "${staging_root}/usr/share/applications/openghub.desktop"
+[Desktop Entry]
+Name=OpenGHub
+GenericName=Logitech Gaming Software
+Comment=Logitech G HUB Native Linux Companion (HID++ 2.0, DPI, profiles, LIGHTSYNC)
+Exec=/usr/bin/openghub %U
+Icon=openghub
+Terminal=false
+Type=Application
+Categories=Settings;HardwareSettings;Utility;Game;
+Keywords=logitech;ghub;mouse;keyboard;headset;rgb;lightsync;dpi;
+StartupNotify=true
+StartupWMClass=openghub
+OPENGHUB_DESKTOP_EOF
+        fi
+
+        for df in "${staging_root}/usr/share/applications"/*.desktop; do
+            [ -f "${df}" ] || continue
+            sed -i 's|^Icon=.*|Icon=openghub|g; s|^Exec=.*|Exec=/usr/bin/openghub %U|g' "${df}" 2>/dev/null || true
+            local bdf
+            bdf=$(basename "${df}")
+            if [ "${bdf}" != "openghub.desktop" ]; then
+                ln -sf "${bdf}" "${staging_root}/usr/share/applications/openghub.desktop" 2>/dev/null || true
+            fi
+        done
     fi
 
     if [ "${pkg_id}" = "gamemode" ]; then
@@ -5306,6 +5674,55 @@ WAYLAND_SESSION_EOF
                 fi
             done
 
+            # Auto-detect host keyboard layout (Slackware rc.keymap, vconsole.conf, or LANG)
+            local detected_kblayout=""
+            if [ -f /etc/rc.d/rc.keymap ]; then
+                local raw_kmap
+                raw_kmap=$(grep -E '^[[:space:]]*(/usr/bin/)?loadkeys[[:space:]]+' /etc/rc.d/rc.keymap 2>/dev/null | awk '{print $NF}' | sed 's/\.map.*//' || echo "")
+                case "${raw_kmap}" in
+                    no*)     detected_kblayout="no" ;;
+                    de*)     detected_kblayout="de" ;;
+                    fr*)     detected_kblayout="fr" ;;
+                    es*)     detected_kblayout="es" ;;
+                    it*)     detected_kblayout="it" ;;
+                    sv*|se*) detected_kblayout="se" ;;
+                    da*|dk*) detected_kblayout="da" ;;
+                    fi*)     detected_kblayout="fi" ;;
+                    uk*)     detected_kblayout="gb" ;;
+                    pl*)     detected_kblayout="pl" ;;
+                    pt*)     detected_kblayout="pt" ;;
+                    us*)     detected_kblayout="us" ;;
+                esac
+            fi
+            if [ -z "${detected_kblayout}" ] && [ -f /etc/vconsole.conf ]; then
+                local vckeymap
+                vckeymap=$(grep -E '^[[:space:]]*KEYMAP=' /etc/vconsole.conf 2>/dev/null | cut -d'=' -f2 | tr -d '"'\'' ' | sed -E 's/(-latin[0-9]*|-pc|-nordic|-utf8|\.map.*)//g' || echo "")
+                [ -n "${vckeymap}" ] && detected_kblayout="${vckeymap}"
+            fi
+            if [ -z "${detected_kblayout}" ] && [ -n "${LANG:-}" ]; then
+                case "${LANG}" in
+                    nb_*|nn_*|no_*) detected_kblayout="no" ;;
+                    da_*)           detected_kblayout="da" ;;
+                    sv_*)           detected_kblayout="se" ;;
+                    de_*)           detected_kblayout="de" ;;
+                    fr_*)           detected_kblayout="fr" ;;
+                    es_*)           detected_kblayout="es" ;;
+                    it_*)           detected_kblayout="it" ;;
+                    fi_*)           detected_kblayout="fi" ;;
+                    pl_*)           detected_kblayout="pl" ;;
+                    pt_*)           detected_kblayout="pt" ;;
+                esac
+            fi
+
+            local final_kblayout="us,no"
+            if [ -n "${detected_kblayout}" ]; then
+                if [ "${detected_kblayout}" != "us" ]; then
+                    final_kblayout="${detected_kblayout},us"
+                else
+                    final_kblayout="us,no"
+                fi
+            fi
+
             for target_dir in "${target_dirs[@]}"; do
                 [ -d "${target_dir}" ] || continue
                 local hypr_dir="${target_dir}/.config/hypr"
@@ -5345,7 +5762,7 @@ WAYLAND_SESSION_EOF
                     fi
                     if command -v openrgb >/dev/null 2>&1 || [ -x /usr/bin/openrgb ]; then
                         hypr_body+="# OpenRGB Lighting Controller\n"
-                        hypr_body+="exec-once = openrgb --startminimized --profile slackware1 || openrgb --startminimized\n"
+                        hypr_body+="exec-once = openrgb --startminimized\n"
                     fi
                     if command -v syncthing >/dev/null 2>&1 || [ -x /usr/bin/syncthing ]; then
                         hypr_body+="# Syncthing File Synchronization Daemon\n"
@@ -5353,7 +5770,7 @@ WAYLAND_SESSION_EOF
                     fi
                     hypr_body+="\n"
                     hypr_body+="# Input & General Settings\n"
-                    hypr_body+="input {\n    kb_layout = no,us\n    numlock_by_default = true\n    follow_mouse = 1\n    touchpad {\n        natural_scroll = true\n    }\n}\n\n"
+                    hypr_body+="input {\n    kb_layout = ${final_kblayout}\n    numlock_by_default = true\n    follow_mouse = 1\n    touchpad {\n        natural_scroll = true\n    }\n}\n\n"
                     hypr_body+="general {\n    gaps_in = 6\n    gaps_out = 12\n    border_size = 2\n    col.active_border = rgba(00b4d8ee) rgba(0e3c61ee) 45deg\n    col.inactive_border = rgba(1c2833aa)\n    layout = dwindle\n}\n\n"
                     hypr_body+="decoration {\n    rounding = 12\n    blur {\n        enabled = true\n        size = 8\n        passes = 3\n        new_optimizations = true\n    }\n}\n\n"
                     hypr_body+="# Real Glass Blur on Noctalia UI\n"
@@ -5495,7 +5912,7 @@ WAYLAND_SESSION_EOF
                     [ ! -f "${hypr_mods}/autostart.lua" ] && echo -e "${mod_auto}" > "${hypr_mods}/autostart.lua" 2>/dev/null || true
 
                     local mod_gen="-- Core Configuration\nhl.config({\n"
-                    mod_gen+="    input = {\n        kb_layout = \"no,us\",\n        numlock_by_default = true,\n        follow_mouse = 1,\n        touchpad = { natural_scroll = true },\n    },\n"
+                    mod_gen+="    input = {\n        kb_layout = \"${final_kblayout}\",\n        numlock_by_default = true,\n        follow_mouse = 1,\n        touchpad = { natural_scroll = true },\n    },\n"
                     mod_gen+="    general = {\n        gaps_in = 6,\n        gaps_out = 12,\n        border_size = 2,\n        col = {\n            active_border = { colors = {\"rgba(00b4d8ee)\", \"rgba(0e3c61ee)\"}, angle = 45 },\n            inactive_border = \"rgba(1c2833aa)\",\n        },\n        layout = \"dwindle\",\n        allow_tearing = false,\n    },\n"
                     mod_gen+="    decoration = {\n        rounding = 12,\n        active_opacity = 1.0,\n        inactive_opacity = 1.0,\n        blur = { enabled = true, size = 6, passes = 2, new_optimizations = true, xray = false },\n    },\n"
                     mod_gen+="    misc = {\n        disable_hyprland_logo = true,\n        disable_splash_rendering = true,\n        force_default_wallpaper = 0,\n        background_color = 0x11111b,\n        vrr = 0,\n        disable_watchdog_warning = true,\n        disable_hyprland_guiutils_check = true,\n        disable_xdg_env_checks = true,\n    },\n"
@@ -5932,6 +6349,7 @@ BINARY_MAP = {
     "lact": ["lact", "lactd"],
     "openrgb": ["openrgb"],
     "solaar": ["solaar"],
+    "openghub": ["openghub", "/usr/bin/openghub"],
     "coolercontrol": ["coolercontrol", "coolercontrold"],
     "asusctl": ["asusctl", "supergfxd"],
     "zenpower3": ["/var/lib/dkms/zenpower*", "/usr/src/zenpower3*", "/usr/src/zenpower*"],
@@ -6009,8 +6427,9 @@ PYTUIFASTMAP
             local cat_installed=0
             local cat_entries=()
 
-            while IFS='|' read -r pkg_id name cat main_pat l32_pat ext_pat repos; do
+            while IFS='|' read -r pkg_id name cat main_pat l32_pat ext_pat repos hidden_flag; do
                 [[ -z "${pkg_id}" || "${pkg_id}" =~ ^# ]] && continue
+                [ "${hidden_flag:-}" = "hidden" ] && continue
                 [ "${cat}" = "${ckey}" ] || continue
                 if ! is_gaming_pkg_whitelisted "${pkg_id}"; then
                     continue

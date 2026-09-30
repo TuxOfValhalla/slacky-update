@@ -1,6 +1,6 @@
 # ⚡ Limine Bootloader & Secure Boot Field Guide
 ### *Slackware Linux 15.0 & -current — Unified Boot, Cryptographic Sealing & Secure Boot Playbook*
-#### `v1.0_RC1` — *"Wonderwall"* (The Master Dress Rehearsal Release Candidate)
+#### `v1.0_RC2` — *"Dark Star"* (Stability & Hardware Release Candidate)
 
 ---
 

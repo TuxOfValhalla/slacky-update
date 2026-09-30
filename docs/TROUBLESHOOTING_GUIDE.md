@@ -1,6 +1,6 @@
 # 🚨 Slacky-Update Disaster Recovery & Troubleshooting Guide
 ### *The Symptom-Based Field Catalog for Emergency Recovery, Kernel Glitches, NVRAM Resets & Secure Boot Armor*
-#### `v1.0_RC1` — *"Wonderwall"* (The Master Dress Rehearsal Release Candidate)
+#### `v1.0_RC2` — *"Dark Star"* (Stability & Hardware Release Candidate)
 
 ---
 
@@ -42,13 +42,14 @@ flowchart TD
     MatchSymptom -->|"No sound / PipeWire or Wine audio silent"| S11["Symptom 11: Audio Silence / PipeWire Session Hiccup"]
     MatchSymptom -->|"OLED screens dim but never power off / DPMS resets"| S12["Symptom 12: Hypridle 120s Self-Resetting Loop"]
     MatchSymptom -->|"Tiny UI fonts / blurry scaling on 4K display"| S13["Symptom 13: 4K HiDPI Scaling Glitches under Wayland/Qt"]
+    MatchSymptom -->|"Screen flickers / duplicate text during update"| S14["Symptom 14: Terminal Screen Duplicate Text / VT100 Glitch"]
 
-    S1 & S2 & S3 & S4 & S5 & S6 & S7 & S8 & S9 & S10 & S11 & S12 & S13 --> Recovered["✓ System Restored to 100% Normal Operation"]
+    S1 & S2 & S3 & S4 & S5 & S6 & S7 & S8 & S9 & S10 & S11 & S12 & S13 & S14 --> Recovered["✓ System Restored to 100% Normal Operation"]
 ```
 
 ---
 
-## 🛠️ The 13 Critical Failure Scenarios
+## 🛠️ The 14 Critical Failure Scenarios
 
 ---
 
@@ -619,6 +620,36 @@ echo "QT_SCALE_FACTOR_ROUNDING_POLICY=$QT_SCALE_FACTOR_ROUNDING_POLICY"
 
 #### E. Stop-Line
 Do not force static `GDK_SCALE=2` globally across all sessions if using mixed-DPI multi-monitor setups; allow Wayland compositors to manage fractional scaling dynamically.
+
+---
+
+### 14. 📺 Terminal Screen Duplicate Text, Missing Scrollback, or Artifacts During Updates
+
+#### A. ELI5 Explanation
+> *When your computer is downloading packages, the terminal program is trying to draw little spinning wheels and progress bars. If the program doesn't know how to cleanly clear the line before drawing the next one, it paints new words on top of old words like messy graffiti, causing lines to duplicate or jump around. Updating Slacky-Update to the latest version installs a stream cleaner that makes sure every line is wiped neat and tidy before new text appears.*
+
+#### B. The Incident / Symptom
+While running system updates, `slackpkg`, or package installations, the terminal screen (Konsole, Foot, Alacritty, or Kitty) flickers, duplicates output lines, overwrites previous messages, drops scrollback history, or leaves orphaned spinner characters (`|`, `/`, `-`, `\`) on screen.
+
+#### C. Root Cause
+Legacy or unpatched releases of the package runner execute `slackpkg` and `wget` directly without VT100/CSI/DEC escape-code stream normalization. Because `slackpkg` outputs raw carriage returns (`\r`), DEC cursor save/restore codes (`\x1b7`, `\x1b8`, `\x1b[s`, `\x1b[u`), and background `wget` redirection notices (`Redirecting output to 'wget-log.N'`), terminal emulators running in modern Wayland environments encounter scrollback tearing and line duplication.
+
+#### D. Fast Remediation
+1. **Update Slacky-Update to the latest version:**
+   ```bash
+   cd /home/tux/development/slacky-update/slackbuild
+   ./slacky-update.SlackBuild
+   sudo upgradepkg --install-new --reinstall /tmp/slacky-update-*.txz
+   ```
+2. **Verify Stream Normalization:**
+   Run an update check:
+   ```bash
+   slacky-update --check
+   ```
+   The output should stream cleanly with preserved scrollback and zero screen tearing.
+
+#### E. Stop-Line
+Never pipe `slackpkg` into raw unbuffered `tee` or complex terminal wrappers without escape sequence normalization; rely on Slacky-Update's native `run_slackpkg()` filter pipeline.
 
 ---
 

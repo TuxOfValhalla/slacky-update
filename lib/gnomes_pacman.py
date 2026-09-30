@@ -235,20 +235,20 @@ def get_default_repositories(cpu_tier: Optional[str] = None) -> List[Dict[str, A
     if tier == "znver4":
         repos.append({
             "name": "cachyos-znver4",
-            "url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_znver4/cachyos-znver4/cachyos-znver4.db.tar.zst",
-            "base_url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_znver4/cachyos-znver4",
+            "url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_v4/cachyos-znver4/cachyos-znver4.db.tar.zst",
+            "base_url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_v4/cachyos-znver4",
             "priority": 100
         })
         repos.append({
             "name": "cachyos-extra-znver4",
-            "url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_znver4/cachyos-extra-znver4/cachyos-extra-znver4.db.tar.zst",
-            "base_url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_znver4/cachyos-extra-znver4",
+            "url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_v4/cachyos-extra-znver4/cachyos-extra-znver4.db.tar.zst",
+            "base_url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_v4/cachyos-extra-znver4",
             "priority": 98
         })
         repos.append({
             "name": "cachyos-core-znver4",
-            "url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_znver4/cachyos-core-znver4/cachyos-core-znver4.db.tar.zst",
-            "base_url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_znver4/cachyos-core-znver4",
+            "url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_v4/cachyos-core-znver4/cachyos-core-znver4.db.tar.zst",
+            "base_url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_v4/cachyos-core-znver4",
             "priority": 96
         })
         repos.append({
@@ -894,7 +894,7 @@ class GnomesPacmanEngine:
     def sync_repositories(self, force: bool = False, verbose: bool = True) -> Dict[str, int]:
         """Download and cache all active repository sync databases."""
         results: Dict[str, int] = {}
-        headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) Slacky-Update/1.0_RC1 UnderpantsGnomes"}
+        headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) Slacky-Update/1.0_RC2 UnderpantsGnomes"}
 
         for repo in self.repositories:
             rname = repo["name"]
@@ -1104,14 +1104,12 @@ class GnomesPacmanEngine:
         # CachyOS repo specific architecture routing
         if "cachyos" in (base_url or "") or repo.startswith("cachyos"):
             # znver4 -> v4 fallback
-            if "znver4" in (base_url or "") and "_v4" in filename:
-                candidates.append(f"{base_url.replace('x86_64_znver4', 'x86_64_v4').replace('-znver4', '-v4').rstrip('/')}/{filename}")
-            # znver4 -> base x86_64 fallback
             if "znver4" in (base_url or ""):
-                candidates.append(f"{base_url.replace('x86_64_znver4', 'x86_64').replace('-znver4', '').rstrip('/')}/{filename}")
+                candidates.append(f"{base_url.replace('-znver4', '-v4').rstrip('/')}/{filename}")
+                candidates.append(f"{base_url.replace('/x86_64_v4/', '/x86_64/').replace('-znver4', '').rstrip('/')}/{filename}")
             # v4 -> base x86_64 fallback
             if "v4" in (base_url or "") and "znver4" not in (base_url or ""):
-                candidates.append(f"{base_url.replace('x86_64_v4', 'x86_64').replace('-v4', '').rstrip('/')}/{filename}")
+                candidates.append(f"{base_url.replace('/x86_64_v4/', '/x86_64/').replace('-v4', '').rstrip('/')}/{filename}")
 
             # CachyOS clean package fallbacks
             clean_fn = re.sub(r'-([0-9]+)\.[0-9]+-x86_64(_v[0-9]+|_znver[0-9]+|)', r'-\1-x86_64', filename)
@@ -1775,6 +1773,13 @@ ulimit -l unlimited 2>/dev/null || ulimit -l 1048576 2>/dev/null || true
 # Dynamic library isolation (Prefer app root, then isolated runtime, then common, then host with private subsystem dirs - 64-bit Multilib clean)
 export LD_LIBRARY_PATH="${{APP_ROOT}}/lib:${{APP_ROOT}}/lib64:/opt/underpants/runtime/lib:/opt/underpants/runtime/lib64:/opt/underpants/common/lib:/usr/lib64/libproxy:/usr/lib64/pulseaudio:/usr/lib64/pipewire-0.3:/usr/lib64/samba:${{LD_LIBRARY_PATH:-/usr/lib64}}"
 
+# Deep nested language runtime library search (GHC/Haskell, Lua, app private subdirs)
+for _nested_lib in "${{APP_ROOT}}/lib"/ghc-*/lib/* "${{APP_ROOT}}/lib"/ghc-* "${{APP_ROOT}}/lib"/lua/* "${{APP_ROOT}}/lib"/*/ /opt/underpants/runtime/lib/ghc-*/lib/*; do
+  if [ -d "${{_nested_lib}}" ]; then
+    export LD_LIBRARY_PATH="${{_nested_lib}}:${{LD_LIBRARY_PATH}}"
+  fi
+done
+
 # XDG data & resources (Preserve host /usr/local/share:/usr/share)
 export XDG_DATA_DIRS="${{APP_ROOT}}/share:/opt/underpants/runtime/share:/opt/underpants/common/share:${{XDG_DATA_DIRS:-/usr/local/share:/usr/share}}"
 
@@ -2142,7 +2147,7 @@ exec "${{TARGET_BIN}}" "$@"
         total_bytes_expected = sum(int(p.get("CSIZE", 15 * 1024 * 1024)) for p in pkgs)
         downloaded_results: List[Tuple[Dict[str, Any], str]] = []
 
-        headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) Slacky-Update/1.0_RC1 UnderpantsGnomes"}
+        headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) Slacky-Update/1.0_RC2 UnderpantsGnomes"}
         lock = threading.Lock()
         slot_lock = threading.Lock()
         print_lock = threading.Lock()
@@ -2192,31 +2197,47 @@ exec "${{TARGET_BIN}}" "$@"
                 "pkg_index": 0,
                 "name": "",
                 "ver": "",
-                "repo": "",
+                "filename": "",
                 "cur": 0,
                 "total": 0,
                 "speed": 0.0,
+                "history": [],
                 "start_t": 0.0
             }
             for i in range(num_workers)
         }
+        pkgs_with_404 = set()
         is_tty = sys.stdout.isatty()
-        lines_printed = [0]
         start_t = time.time()
         bar_width = 28
+        term_cols = shutil.get_terminal_size((100, 24)).columns
+        name_len = max(20, min(36, term_cols - 58))
+        num_dynamic_lines = [0]
+        completed_queue: List[Tuple[str, int, float]] = []
+        completed_lock = threading.Lock()
 
         for idx, p in enumerate(pkgs):
             p["_INDEX"] = idx + 1
 
         def monitor():
-            first_draw = True
             if is_tty:
                 sys.stdout.write("\033[?25l")
                 sys.stdout.flush()
             while not stop_event.is_set():
-                time.sleep(0.14)
+                time.sleep(0.12)
                 now = time.time()
                 chomp_step = int(now / 0.35)
+
+                with completed_lock:
+                    new_completed = list(completed_queue)
+                    completed_queue.clear()
+
+                with slot_lock:
+                    active_slots = [
+                        (s_id, dict(s_info))
+                        for s_id, s_info in worker_status.items()
+                        if s_info.get("active")
+                    ]
 
                 with lock:
                     cur_comp = completed_bytes[0]
@@ -2225,7 +2246,6 @@ exec "${{TARGET_BIN}}" "$@"
                     c_cnt = completed_count[0]
 
                 pct = (cur_comp / total_bytes_expected * 100.0) if total_bytes_expected > 0 else 0.0
-                bar = self.render_gnome_bar(pct, width=bar_width, chomp_state=chomp_step)
                 elapsed = max(0.001, now - start_t)
                 speed_bps = cur_comp / elapsed
                 spd_str_tot = self._format_speed(speed_bps)
@@ -2241,47 +2261,55 @@ exec "${{TARGET_BIN}}" "$@"
                 tot_size_str = self._format_size(total_bytes_expected)
 
                 if is_tty:
-                    with slot_lock:
-                        slots_snapshot = [dict(worker_status[i]) for i in range(num_workers)]
+                    out_buf = []
+                    if num_dynamic_lines[0] > 0:
+                        out_buf.append(f"\r\033[{num_dynamic_lines[0]}A")
 
-                    with print_lock:
-                        if not first_draw and lines_printed[0] > 0:
-                            sys.stdout.write(f"\033[{lines_printed[0]}A")
+                    # 1. Permanently commit completed lines to terminal
+                    for comp_fn, comp_sz, comp_spd in new_completed:
+                        comp_disp = comp_fn[:name_len-3] + "..." if len(comp_fn) > name_len else comp_fn
+                        comp_sz_str = self._format_size(comp_sz)
+                        comp_spd_str = self._format_speed(comp_spd)
+                        comp_bar = f"[{'-' * bar_width}] 100%"
+                        out_buf.append(f"\r\033[2K{comp_disp:<{name_len}s} {comp_sz_str:>10} {comp_spd_str:>11}  00:00 {comp_bar}\n")
 
-                        output_lines = []
-                        for sid, sinfo in enumerate(slots_snapshot):
-                            if sinfo["active"] and sinfo["name"]:
-                                w_cur = sinfo["cur"]
-                                w_tot = sinfo["total"]
-                                w_pct = (w_cur / w_tot * 100.0) if w_tot > 0 else 0.0
-                                w_spd = sinfo.get("speed", 0.0)
-                                w_spd_str = self._format_speed(w_spd * 1024 * 1024)
-                                rem_w_bytes = max(0, w_tot - w_cur)
-                                if w_spd > 0.001 and rem_w_bytes > 0:
-                                    w_eta_sec = int((rem_w_bytes / (1024 * 1024)) / w_spd)
-                                    w_eta = f"{w_eta_sec // 60:02d}:{w_eta_sec % 60:02d}"
-                                else:
-                                    w_eta = "00:00" if w_pct >= 100 else "--:--"
+                    # 2. Render active dynamic slots
+                    dynamic_lines = []
+                    for s_id, s_info in active_slots:
+                        fn = s_info.get("filename", "")
+                        fn_disp = fn[:name_len-3] + "..." if len(fn) > name_len else fn
+                        s_exp = s_info.get("total", 0)
+                        s_cur = s_info.get("cur", 0)
+                        s_pct = (s_cur / s_exp * 100.0) if s_exp > 0 else 50.0
+                        s_spd = s_info.get("speed", 0.0)
+                        s_spd_str = self._format_speed(s_spd)
+                        s_rem = max(0, s_exp - s_cur)
+                        if s_spd > 1024 and s_rem > 0:
+                            s_eta_sec = int(s_rem / s_spd)
+                            s_eta = f"{s_eta_sec // 60:02d}:{s_eta_sec % 60:02d}"
+                        else:
+                            s_eta = "00:00" if s_pct >= 99.0 else "--:--"
 
-                                w_bar = self.render_gnome_bar(w_pct, width=bar_width, chomp_state=chomp_step + sid)
-                                pname = sinfo["name"]
-                                pver = sinfo.get("ver", "")
-                                full_n = f"{pname}-{pver}" if pver else pname
-                                disp_n = (full_n[:30] + "...") if len(full_n) > 32 else full_n
-                                w_sz_str = self._format_size(w_tot if w_tot > 0 else w_cur)
-                                output_lines.append(f"{disp_n:<32} {w_sz_str:>10} {w_spd_str:>11} {w_eta:>5} {w_bar}")
+                        s_sz_str = self._format_size(s_cur if s_cur > s_exp else s_exp)
+                        s_bar = self.render_gnome_bar(s_pct, width=bar_width, chomp_state=chomp_step + s_id)
+                        dynamic_lines.append(f"{fn_disp:<{name_len}s} {s_sz_str:>10} {s_spd_str:>11} {s_eta:>5} {s_bar}")
 
-                        # Total summary line matching Pacman style
-                        tot_label = f"Total ({c_cnt}/{total_pkgs})"
-                        output_lines.append(f"{tot_label:<32} {tot_size_str:>10} {spd_str_tot:>11} {eta_str:>5} {bar}")
+                    # 3. Render Total line
+                    tot_bar = self.render_gnome_bar(pct, width=bar_width, chomp_state=chomp_step)
+                    tot_label = f"Total ({c_cnt}/{total_pkgs})"
+                    dynamic_lines.append(f"{tot_label:<{name_len}s} {tot_size_str:>10} {spd_str_tot:>11} {eta_str:>5} {tot_bar}")
 
-                        out_block = "".join(f"\033[2K\r{l}\n" for l in output_lines)
-                        sys.stdout.write(out_block)
-                        sys.stdout.flush()
-                        lines_printed[0] = len(output_lines)
-                        first_draw = False
+                    for d_line in dynamic_lines:
+                        out_buf.append(f"\r\033[2K{d_line}\n")
+
+                    out_buf.append("\033[J")
+                    sys.stdout.write("".join(out_buf))
+                    sys.stdout.flush()
+                    num_dynamic_lines[0] = len(dynamic_lines)
                 else:
-                    line = f"\rTotal: {bar} [{tot_size_str}] ({c_cnt}/{total_pkgs} pkgs) [{spd_str_tot} | ETA: {eta_str}] "
+                    tot_label = f"Total ({c_cnt}/{total_pkgs})"
+                    tot_bar = self.render_gnome_bar(pct, width=bar_width, chomp_state=chomp_step)
+                    line = f"\r{tot_label} {tot_size_str} {spd_str_tot} {eta_str} {tot_bar} "
                     sys.stdout.write(line)
                     sys.stdout.flush()
 
@@ -2310,10 +2338,11 @@ exec "${{TARGET_BIN}}" "$@"
                         "pkg_index": p_idx,
                         "name": pkg_data.get("NAME", "pkg"),
                         "ver": pkg_data.get("VERSION", ""),
-                        "repo": pkg_data.get("_REPO", "upstream"),
+                        "filename": filename,
                         "cur": 0,
                         "total": expected_csize,
                         "speed": 0.0,
+                        "history": [(time.time(), 0)],
                         "start_t": time.time()
                     }
 
@@ -2321,17 +2350,17 @@ exec "${{TARGET_BIN}}" "$@"
                 active_parts[part_path] = 0
 
             download_success = False
+            got_404_all = True
+
             for cand_url in candidates:
-                for attempt in range(3):
+                for attempt in range(2):
                     try:
                         if attempt > 0:
-                            time.sleep(0.3 * attempt)
+                            time.sleep(0.2 * attempt)
                         req = urllib.request.Request(cand_url, headers=headers)
-                        with urllib.request.urlopen(req, timeout=35) as resp:
+                        with urllib.request.urlopen(req, timeout=25) as resp:
                             first_chunk = resp.read(8192)
-                            if not first_chunk:
-                                continue
-                            if first_chunk.startswith(b"<html") or first_chunk.startswith(b"<!DOCTYPE") or first_chunk.startswith(b"<!doctype") or b"<html" in first_chunk.lower() or b"<head" in first_chunk.lower():
+                            if not first_chunk or first_chunk.startswith(b"<html") or b"<head" in first_chunk.lower():
                                 continue
                             if filename.endswith(".zst") and not first_chunk.startswith(b"\x28\xb5\x2f\xfd"):
                                 continue
@@ -2343,40 +2372,58 @@ exec "${{TARGET_BIN}}" "$@"
                             with open(part_path, "wb") as f:
                                 f.write(first_chunk)
                                 dl_cur = len(first_chunk)
-                                w_start = time.time()
                                 while True:
                                     chunk = resp.read(65536)
                                     if not chunk:
                                         break
                                     f.write(chunk)
                                     dl_cur += len(chunk)
-                                    w_elapsed = max(0.001, time.time() - w_start)
+                                    now_c = time.time()
                                     if slot_id is not None:
                                         with slot_lock:
-                                            worker_status[slot_id]["cur"] = dl_cur
-                                            worker_status[slot_id]["speed"] = (dl_cur / (1024 * 1024)) / w_elapsed
+                                            s_info = worker_status[slot_id]
+                                            s_info["cur"] = dl_cur
+                                            hist = s_info.get("history", [])
+                                            hist.append((now_c, dl_cur))
+                                            while hist and (now_c - hist[0][0] > 1.2):
+                                                hist.pop(0)
+                                            s_info["history"] = hist
+                                            if len(hist) >= 2:
+                                                dt = hist[-1][0] - hist[0][0]
+                                                db = hist[-1][1] - hist[0][1]
+                                                s_info["speed"] = max(0.0, db / dt) if dt > 0.05 else 0.0
                                     with lock:
                                         active_parts[part_path] = dl_cur
 
                         if os.path.exists(part_path) and self.is_valid_pkg_archive(part_path, expected_csize):
                             shutil.move(part_path, local_path)
                             download_success = True
+                            got_404_all = False
                             break
                         else:
                             if os.path.exists(part_path):
-                                try:
-                                    os.remove(part_path)
-                                except Exception:
-                                    pass
-                    except Exception:
+                                try: os.remove(part_path)
+                                except Exception: pass
+                    except urllib.error.HTTPError as e:
+                        if e.code == 404:
+                            pass
+                        else:
+                            got_404_all = False
                         if os.path.exists(part_path):
-                            try:
-                                os.remove(part_path)
-                            except Exception:
-                                pass
-                        continue
+                            try: os.remove(part_path)
+                            except Exception: pass
+                    except Exception:
+                        got_404_all = False
+                        if os.path.exists(part_path):
+                            try: os.remove(part_path)
+                            except Exception: pass
+
                 if download_success:
                     break
+
+            if not download_success and got_404_all:
+                with lock:
+                    pkgs_with_404.add(pkg_data.get("NAME"))
 
             with lock:
                 if part_path in active_parts:
@@ -2387,58 +2434,127 @@ exec "${{TARGET_BIN}}" "$@"
 
             if download_success and os.path.exists(local_path):
                 sz_bytes = os.path.getsize(local_path)
-                sz_str = self._format_size(sz_bytes)
-                spd_str = self._format_speed(worker_status[slot_id]["speed"] * 1024 * 1024) if slot_id is not None else "  -- B/s"
-                pname = pkg_data.get("NAME", "pkg")
-                pver = pkg_data.get("VERSION", "")
-                full_name = f"{pname}-{pver}" if pver else pname
-                disp_name = (full_name[:30] + "...") if len(full_name) > 32 else full_name
+                spd_val = worker_status[slot_id]["speed"] if slot_id is not None else 0.0
+                with completed_lock:
+                    completed_queue.append((filename, sz_bytes, spd_val))
 
             if slot_id is not None:
                 with slot_lock:
                     worker_status[slot_id]["active"] = False
                     worker_status[slot_id]["name"] = ""
+                    worker_status[slot_id]["filename"] = ""
+                    worker_status[slot_id]["history"] = []
                     available_slots.append(slot_id)
 
             if download_success:
                 return (pkg_data, local_path)
             return None
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
-            future_to_pkg = {executor.submit(fetch_one, p): p for p in needed_pkgs}
-            for future in concurrent.futures.as_completed(future_to_pkg):
-                res = future.result()
-                if res:
-                    downloaded_results.append(res)
-
-        stop_event.set()
-        if mon_t:
-            mon_t.join(timeout=1.0)
-            if verbose and is_tty:
+        try:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
+                future_to_pkg = {executor.submit(fetch_one, p): p for p in needed_pkgs}
+                for future in concurrent.futures.as_completed(future_to_pkg):
+                    res = future.result()
+                    if res:
+                        downloaded_results.append(res)
+        finally:
+            stop_event.set()
+            if mon_t:
+                mon_t.join(timeout=1.0)
+            if is_tty:
                 sys.stdout.write("\033[?25h")
-                with print_lock:
-                    if lines_printed[0] > 0:
-                        sys.stdout.write(f"\033[{lines_printed[0]}A")
-                        for _ in range(lines_printed[0]):
-                            sys.stdout.write("\033[2K\r\n")
-                        sys.stdout.write(f"\033[{lines_printed[0]}A")
-                    elapsed = max(0.001, time.time() - start_t)
-                    avg_speed_bps = total_bytes_expected / elapsed
-                    tot_bar = f"[{'-' * bar_width}] 100%"
-                    tot_sz_str = self._format_size(total_bytes_expected)
-                    tot_spd_str = self._format_speed(avg_speed_bps)
-                    tot_label = f"Total ({total_pkgs}/{total_pkgs})"
-                    tot_time_str = f"{int(elapsed) // 60:02d}:{int(elapsed) % 60:02d}"
-                    sys.stdout.write(f"\033[2K\r{tot_label:<32} {tot_sz_str:>10} {tot_spd_str:>11} {tot_time_str:>5} {tot_bar}\n\n")
-                    sys.stdout.flush()
+                sys.stdout.flush()
 
-        # Second Pass: Sequential recovery pass for any transiently missed packages
+        if verbose and is_tty:
+            out_buf = []
+            if num_dynamic_lines[0] > 0:
+                out_buf.append(f"\r\033[{num_dynamic_lines[0]}A")
+            with completed_lock:
+                final_completed = list(completed_queue)
+                completed_queue.clear()
+            for comp_fn, comp_sz, comp_spd in final_completed:
+                comp_disp = comp_fn[:name_len-3] + "..." if len(comp_fn) > name_len else comp_fn
+                comp_sz_str = self._format_size(comp_sz)
+                comp_spd_str = self._format_speed(comp_spd)
+                comp_bar = f"[{'-' * bar_width}] 100%"
+                out_buf.append(f"\r\033[2K{comp_disp:<{name_len}s} {comp_sz_str:>10} {comp_spd_str:>11}  00:00 {comp_bar}\n")
+
+            elapsed = max(0.001, time.time() - start_t)
+            avg_speed_bps = completed_bytes[0] / elapsed
+            tot_bar = f"[{'-' * bar_width}] 100%"
+            tot_sz_str = self._format_size(completed_bytes[0])
+            tot_spd_str = self._format_speed(avg_speed_bps)
+            tot_label = f"Total ({completed_count[0]}/{total_pkgs})"
+            tot_time_str = f"{int(elapsed) // 60:02d}:{int(elapsed) % 60:02d}"
+            out_buf.append(f"\r\033[2K{tot_label:<{name_len}s} {tot_sz_str:>10} {tot_spd_str:>11} {tot_time_str:>5} {tot_bar}\n\n")
+            out_buf.append("\033[J")
+            sys.stdout.write("".join(out_buf))
+            sys.stdout.flush()
+
+        # Check for missed packages
         downloaded_names = {r[0].get("NAME") for r in downloaded_results}
         missing_pkgs = [p for p in needed_pkgs if p.get("NAME") not in downloaded_names]
-        if missing_pkgs:
+
+
+        # Immediate Self-Healing if packages failed due to 404
+        if missing_pkgs and pkgs_with_404:
             if verbose:
-                print(f"  :: Retrying {len(missing_pkgs)} missed payload(s) in sequential recovery pass...")
-            for p in missing_pkgs:
+                print(f"  :: \033[1;33m⚡ Self-Healing:\033[0m Detected {len(pkgs_with_404)} outdated package URL(s) (HTTP 404). Resynchronizing repository databases...")
+            try:
+                self.engine.sync_repositories(force=True, verbose=False)
+            except Exception as e:
+                if verbose:
+                    print(f"  :: Warning: Auto-sync failed: {e}")
+
+            for p in list(missing_pkgs):
+                pname = p.get("NAME")
+                if pname in pkgs_with_404:
+                    refreshed = self.engine.index.get(pname)
+                    if not refreshed:
+                        continue
+                    candidates = self.engine.get_download_urls_candidates(refreshed)
+                    if not candidates:
+                        continue
+                    recov_ok = False
+                    for cand_url in candidates:
+                        fn = refreshed.get("FILENAME") or os.path.basename(cand_url)
+                        lp = os.path.join(self.cache_pkg_dir, fn)
+                        pp = lp + ".part"
+                        exp_sz = int(refreshed.get("CSIZE", 0))
+                        try:
+                            req = urllib.request.Request(cand_url, headers=headers)
+                            with urllib.request.urlopen(req, timeout=25) as resp:
+                                first_chunk = resp.read(8192)
+                                if not first_chunk or first_chunk.startswith(b"<html") or b"<head" in first_chunk.lower():
+                                    continue
+                                with open(pp, "wb") as f:
+                                    f.write(first_chunk)
+                                    while True:
+                                        chunk = resp.read(65536)
+                                        if not chunk:
+                                            break
+                                        f.write(chunk)
+                            if os.path.exists(pp) and self.is_valid_pkg_archive(pp, exp_sz):
+                                shutil.move(pp, lp)
+                                downloaded_results.append((refreshed, lp))
+                                recov_ok = True
+                                if verbose:
+                                    sz_mb = os.path.getsize(lp) / (1024 * 1024)
+                                    print(f"  :: Self-healed \033[1m{pname}\033[0m ({refreshed.get('VERSION', '')}) [{sz_mb:.1f} MB]")
+                                break
+                        except Exception:
+                            if os.path.exists(pp):
+                                try: os.remove(pp)
+                                except Exception: pass
+                    if recov_ok:
+                        missing_pkgs = [x for x in missing_pkgs if x.get("NAME") != pname]
+
+        # Second Pass: Sequential recovery pass ONLY for non-404 transient dropouts
+        transient_missing = [p for p in missing_pkgs if p.get("NAME") not in pkgs_with_404]
+        if transient_missing:
+            if verbose:
+                print(f"  :: Retrying {len(transient_missing)} transiently missed payload(s) in sequential recovery pass...")
+            for p in transient_missing:
                 candidates = self.engine.get_download_urls_candidates(p)
                 if not candidates:
                     continue
@@ -2449,22 +2565,15 @@ exec "${{TARGET_BIN}}" "$@"
                 recov_success = False
 
                 for cand_url in candidates:
-                    for attempt in range(3):
+                    for attempt in range(2):
                         try:
                             if attempt > 0:
-                                time.sleep(0.5 * attempt)
+                                time.sleep(0.3 * attempt)
                             req = urllib.request.Request(cand_url, headers=headers)
-                            with urllib.request.urlopen(req, timeout=45) as resp:
+                            with urllib.request.urlopen(req, timeout=20) as resp:
                                 first_chunk = resp.read(8192)
-                                if not first_chunk or first_chunk.startswith(b"<html") or first_chunk.startswith(b"<!DOCTYPE") or first_chunk.startswith(b"<!doctype") or b"<html" in first_chunk.lower() or b"<head" in first_chunk.lower():
+                                if not first_chunk or first_chunk.startswith(b"<html") or b"<head" in first_chunk.lower():
                                     continue
-                                if filename.endswith(".zst") and not first_chunk.startswith(b"\x28\xb5\x2f\xfd"):
-                                    continue
-                                if filename.endswith(".xz") and not first_chunk.startswith(b"\xfd7zXZ\x00"):
-                                    continue
-                                if filename.endswith(".gz") and not first_chunk.startswith(b"\x1f\x8b"):
-                                    continue
-
                                 with open(part_path, "wb") as f:
                                     f.write(first_chunk)
                                     while True:
@@ -2479,98 +2588,12 @@ exec "${{TARGET_BIN}}" "$@"
                                 if verbose:
                                     pname = p.get("NAME", "pkg")
                                     sz_mb = os.path.getsize(local_path) / (1024 * 1024)
-                                    print(f"  \033[1;32m✓\033[0m Recovered \033[1m{pname}\033[0m [{sz_mb:.1f} MB]")
+                                    print(f"  :: Recovered \033[1m{pname}\033[0m [{sz_mb:.1f} MB]")
                                 break
-                            else:
-                                if os.path.exists(part_path):
-                                    try:
-                                        os.remove(part_path)
-                                    except Exception:
-                                        pass
                         except Exception:
                             if os.path.exists(part_path):
-                                try:
-                                    os.remove(part_path)
-                                except Exception:
-                                    pass
-                    if recov_success:
-                        break
-
-        # Check for still-missing packages after recovery pass
-        final_downloaded_names = {r[0].get("NAME") for r in downloaded_results}
-        missing_final = [p for p in needed_pkgs if p.get("NAME") not in final_downloaded_names]
-
-        # Third Pass: Self-Healing 404 Auto-Sync pass
-        if missing_final:
-            if verbose:
-                print(f"  :: \033[1;33m⚡ Self-Healing:\033[0m Re-synchronizing repository index for {len(missing_final)} out-of-date payload(s)...")
-            try:
-                self.engine.sync_repositories(force=True, verbose=False)
-            except Exception as e:
-                if verbose:
-                    print(f"  :: Warning: Auto-sync failed: {e}")
-
-            for p in missing_final:
-                pname = p.get("NAME")
-                # Lookup refreshed package data from updated index
-                refreshed_pkg = self.engine.index.get(pname)
-                if not refreshed_pkg:
-                    continue
-
-                candidates = self.engine.get_download_urls_candidates(refreshed_pkg)
-                if not candidates:
-                    continue
-
-                filename = refreshed_pkg.get("FILENAME") or os.path.basename(candidates[0])
-                local_path = os.path.join(self.cache_pkg_dir, filename)
-                part_path = local_path + ".part"
-                expected_csize = int(refreshed_pkg.get("CSIZE", 0))
-                recov_success = False
-
-                for cand_url in candidates:
-                    for attempt in range(2):
-                        try:
-                            if attempt > 0:
-                                time.sleep(0.5 * attempt)
-                            req = urllib.request.Request(cand_url, headers=headers)
-                            with urllib.request.urlopen(req, timeout=45) as resp:
-                                first_chunk = resp.read(8192)
-                                if not first_chunk or first_chunk.startswith(b"<html") or first_chunk.startswith(b"<!DOCTYPE") or first_chunk.startswith(b"<!doctype") or b"<html" in first_chunk.lower() or b"<head" in first_chunk.lower():
-                                    continue
-                                if filename.endswith(".zst") and not first_chunk.startswith(b"\x28\xb5\x2f\xfd"):
-                                    continue
-                                if filename.endswith(".xz") and not first_chunk.startswith(b"\xfd7zXZ\x00"):
-                                    continue
-                                if filename.endswith(".gz") and not first_chunk.startswith(b"\x1f\x8b"):
-                                    continue
-
-                                with open(part_path, "wb") as f:
-                                    f.write(first_chunk)
-                                    while True:
-                                        chunk = resp.read(65536)
-                                        if not chunk:
-                                            break
-                                        f.write(chunk)
-                            if os.path.exists(part_path) and self.is_valid_pkg_archive(part_path, expected_csize):
-                                shutil.move(part_path, local_path)
-                                downloaded_results.append((refreshed_pkg, local_path))
-                                recov_success = True
-                                if verbose:
-                                    sz_mb = os.path.getsize(local_path) / (1024 * 1024)
-                                    print(f"  \033[1;32m✓\033[0m Self-healed & downloaded \033[1m{pname}\033[0m ({refreshed_pkg.get('VERSION', '')}) [{sz_mb:.1f} MB]")
-                                break
-                            else:
-                                if os.path.exists(part_path):
-                                    try:
-                                        os.remove(part_path)
-                                    except Exception:
-                                        pass
-                        except Exception:
-                            if os.path.exists(part_path):
-                                try:
-                                    os.remove(part_path)
-                                except Exception:
-                                    pass
+                                try: os.remove(part_path)
+                                except Exception: pass
                     if recov_success:
                         break
 
@@ -4088,7 +4111,7 @@ class RuntimeManager:
 def main():
     """CLI dispatcher for shell integration and testing."""
     if len(sys.argv) < 2:
-        print("Underpants Gnomes Pacman Engine v1.0_RC1 ('Wonderwall')")
+        print("Underpants Gnomes Pacman Engine v1.0_RC2 ('Dark Star')")
         print("Usage: gnomes_pacman.py [sync|search|info|deps|transmute|runtime|url|check-host|list-repos|list-installed] [args...]")
         sys.exit(0)
 
@@ -4385,4 +4408,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        sys.stdout.write("\n\033[?25h:: Operation cancelled by user.\n")
+        sys.stdout.flush()
+        sys.exit(130)

@@ -116,7 +116,7 @@ def is_maintenance_due() -> bool:
 def probe_single_endpoint(url: str, headers: Optional[Dict[str, str]] = None, timeout: float = 3.5) -> Tuple[bool, int, str]:
     """Test HTTP endpoint latency and return (success, latency_ms, content_snippet)."""
     t0 = time.time()
-    req_headers = {"User-Agent": "Slacky-Update-Mirror-Benchmark/1.0_RC1"}
+    req_headers = {"User-Agent": "Slacky-Update-Mirror-Benchmark/1.0_RC2"}
     if headers:
         req_headers.update(headers)
     req = urllib.request.Request(url, headers=req_headers)

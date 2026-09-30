@@ -756,15 +756,11 @@ restore_stock_slackware_kernels() {
         log_info "Un-blacklisted stock kernels in ${blacklist_file}."
     fi
 
-    local slackpkg_bin
-    slackpkg_bin=$(command -v slackpkg 2>/dev/null || echo "/usr/sbin/slackpkg")
-    if [ -x "${slackpkg_bin}" ]; then
-        log_info "Updating slackpkg repository index..."
-        sudo "${slackpkg_bin}" update || true
+    log_info "Updating slackpkg repository index..."
+    run_slackpkg update || true
 
-        log_info "Installing official Slackware kernel-generic and kernel-modules..."
-        sudo "${slackpkg_bin}" -batch=on -default_answer=y install kernel-generic kernel-modules || true
-    fi
+    log_info "Installing official Slackware kernel-generic and kernel-modules..."
+    run_slackpkg -batch=on -default_answer=y install kernel-generic kernel-modules || true
 
     local stock_kver=""
     for mod_d in /lib/modules/*; do

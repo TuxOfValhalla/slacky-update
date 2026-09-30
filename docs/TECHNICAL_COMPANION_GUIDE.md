@@ -1,6 +1,6 @@
 # 🛠️ Slacky-Update Technical Companion Guide: Under the Hood & Engine Architecture
 ### *A Deep-Dive Architectural Whitepaper & Technical Reference for Slackware Linux 15.0 & -current*
-#### `v1.0_RC1` — *"Wonderwall"* (The Master Dress Rehearsal Release Candidate)
+#### `v1.0_RC2` — *"Dark Star"* (Stability & Hardware Release Candidate)
 
 ---
 
@@ -10,10 +10,12 @@
 > It is **NOT** compatible with or supported on legacy **Slackware 15.0 (stable)**. Legacy 15.0 systems feature older core packages, toolchains, and shared libraries (such as older glibc, GCC, Wayland/Mesa, PipeWire, and kernel headers) that cause package and soname conflicts which cannot be safely detected or resolved. Running Slacky-Update on Slackware 15.0 is unsupported. Users on Slackware 15.0 must migrate to `slackware-current` before using this suite.
 
 > [!CAUTION]
-> **PRE-RELEASE / EARLY ACCESS DISCLAIMER & LIABILITY NOTICE — USE AT YOUR OWN RISK**  
-> Slacky-Update is an active *Pre-Release / Early Access* edition. The software executes low-level system modifications, including Linux kernel deployments, proprietary NVIDIA drivers, Dracut initramfs generation, Btrfs subvolumes, and bootloader topologies (Limine/GRUB).  
-> **All usage, upgrades, and system configurations are executed strictly at your own discretion and risk.** The developers and maintainers assume no liability or warranty for system malfunction, unbootable states, or data loss.  
-> **Pre-requisites:** Always maintain tested, current backups (`/home`, essential configuration files, and boot partitions) and keep a bootable Slackware Live-USB accessible before performing upgrades or modifying bootloader setups.
+> **COMPREHENSIVE TESTING, LIABILITY & USE-AT-YOUR-OWN-RISK DISCLAIMER**  
+> * **Hardware Testing & Verification:** Slacky-Update has been extensively verified and field-tested on bare-metal workstations with dry-run/simulated test passes across diverse build environments. However, **this in no way guarantees that it will operate seamlessly or without anomalies on your specific hardware configuration.**
+> * **100% User Responsibility:** Slacky-Update executes deep, low-level modifications to foundational system components. **All installation, upgrades, and system modifications are performed 100% at your own discretion and risk.**
+> * **No Liability for Data Loss:** The authors, maintainers, and contributors assume **no liability, warranty, or responsibility** for system malfunctions, unbootable states, hardware quirks, or loss of personal data.
+> * **Mandatory Backups:** Always maintain current, tested backups of your personal data (`/home`, configuration files, and boot partitions) and keep a bootable Slackware Live-USB accessible before performing upgrades or modifying bootloaders.
+> * **Bug Reporting & Support Policy:** If you encounter bugs, regressions, or hardware edge-cases, please report them on [GitHub Issues](https://github.com/TuxOfValhalla/slacky-update/issues) so they can be addressed. Beyond this documentation, no individual customer support, warranties, or service level agreements are offered.
 
 ---
 

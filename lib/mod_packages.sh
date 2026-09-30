@@ -265,10 +265,9 @@ update_slackware_core() {
     fi
 
     log_info "Synchronizing Slackware repository indexes..."
-    sudo "${slackpkg_bin}" -batch=on -default_answer=y update || {
+    run_slackpkg -batch=on -default_answer=y update || {
         log_warn "slackpkg update completed with non-zero exit code."
     }
-    echo ""
 
     # Engage Turbo Parallel Pre-fetch before install-new and upgrade-all
     parallel_prefetch_packages
@@ -276,10 +275,9 @@ update_slackware_core() {
     clear_stale_slackpkg_locks
 
     log_info "Installing newly added distribution packages (install-new)..."
-    sudo "${slackpkg_bin}" -batch=on -default_answer=y -postinst=off install-new || {
+    run_slackpkg -batch=on -default_answer=y -postinst=off install-new || {
         log_warn "slackpkg install-new completed."
     }
-    echo ""
 
     log_info "Upgrading existing distribution packages (upgrade-all)..."
 
@@ -290,10 +288,9 @@ update_slackware_core() {
         local tools_before tools_after
         tools_before=$(get_slackpkg_tools_snapshot)
 
-        sudo "${slackpkg_bin}" -batch=on -default_answer=y -postinst=off upgrade-all || {
+        run_slackpkg -batch=on -default_answer=y -postinst=off upgrade-all || {
             log_warn "slackpkg upgrade-all completed pass ${current_pass}."
         }
-        echo ""
 
         tools_after=$(get_slackpkg_tools_snapshot)
 
@@ -311,12 +308,10 @@ update_slackware_core() {
                 auto_reconcile_slackpkg_conf
                 # 2. Refresh repository indexes so slackpkg+ re-initializes
                 log_info "Refreshing package indexes to initialize updated package tools..."
-                sudo "${slackpkg_bin}" -batch=on -default_answer=y update || true
-                echo ""
+                run_slackpkg -batch=on -default_answer=y update || true
                 # 3. Re-check for any newly added distribution packages
                 log_info "Checking for newly added packages (install-new)..."
-                sudo "${slackpkg_bin}" -batch=on -default_answer=y -postinst=off install-new || true
-                echo ""
+                run_slackpkg -batch=on -default_answer=y -postinst=off install-new || true
                 # 4. Pre-fetch remaining packages for the next pass
                 parallel_prefetch_packages
                 continue

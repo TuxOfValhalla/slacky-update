@@ -1,6 +1,6 @@
 # 🧙 Underpants Gnomes Pacman Engine — Comprehensive Field Guide
 ### *Universal Arch & CachyOS Package Transmutation for Slackware Linux*
-#### `v1.0_RC1` — *"Wonderwall"* (The Master Dress Rehearsal Release Candidate)
+#### `v1.0_RC2` — *"Dark Star"* (Stability & Hardware Release Candidate)
 
 ---
 
@@ -9,9 +9,10 @@
 > **Underpants Gnomes and Slacky-Update are engineered strictly for Slackware 15+ (`slackware-current` / `Slackware 16 alpha`).**  
 > Legacy **Slackware 15.0 (stable)** is strictly unsupported due to older host glibc, toolchains, and sonames that cause conflicts that cannot be detected or resolved. Slackware 15.0 users must upgrade to `-current` before using this suite.
 
-> [!NOTE]
-> **PRODUCTION HARDENED / SYSTEM COMPLIANCE MILESTONE**  
-> The Underpants Gnomes Universal Pacman Transmutation Engine is a core capability of `slacky-update` v1.0_RC1. It provides direct, host-sovereign access to over **31,800+** software packages from Arch Linux and CachyOS repositories without modifying or compromising your Slackware base system.
+> [!WARNING]
+> **EXPERIMENTAL STATUS & HOST-SOVEREIGN SAFETY NOTICE**  
+> The Underpants Gnomes Universal Pacman Transmutation Engine is an **Experimental** feature. Because upstream repositories contain over **31,800+ packages**, we cannot manually audit every possible application.  
+> **Host Safety Guarantee:** Underpants Gnomes is a completely benign addition that **never modifies host system libraries (`/lib64`, `/usr/lib64`, `glibc`, `/etc/pam.d`)**. Packages run isolated in `/opt/underpants/pkgs/`. If a package fails to run due to unmet deep runtime dependencies, you can safely remove it via `gnomes -R <pkg>`. Please report broken packages on GitHub!
 
 ---
 

@@ -65,8 +65,8 @@ HAS_INTEL=false
 IS_LAPTOP=false
 IS_HYBRID_GPU=false
 
-CURRENT_VERSION="1.0_RC1"
-RELEASE_CODENAME="Wonderwall"
+CURRENT_VERSION="1.0_RC2"
+RELEASE_CODENAME="Dark Star"
 
 CURL_CONNECT_TIMEOUT=10
 CURL_SPEED_LIMIT=1024
@@ -399,12 +399,8 @@ log_error() {
 check_slacky_update_self_update() {
     local current_ver="${1:-${CURRENT_VERSION:-0.10}}"
     local rel_json=""
-    # 1. Try GitHub API first (canonical source)
-    rel_json=$(curl -sSL -m 3 -H "User-Agent: slacky-update" "https://api.github.com/repos/TuxOfValhalla/slacky-update/releases/latest" 2>/dev/null || true)
-    # 2. Fallback to Codeberg API if GitHub is unavailable or rate-limited
-    if [ -z "${rel_json}" ] || ! echo "${rel_json}" | grep -q '"tag_name"'; then
-        rel_json=$(curl -sSL -m 3 -H "User-Agent: slacky-update" "https://codeberg.org/api/v1/repos/TuxOfValhalla/slacky-update/releases/latest" 2>/dev/null || true)
-    fi
+    # 1. Query GitHub API (canonical release source)
+    rel_json=$(curl -sSL -m 4 -H "User-Agent: slacky-update" "https://api.github.com/repos/TuxOfValhalla/slacky-update/releases/latest" 2>/dev/null || true)
 
     local update_info
     update_info=$(echo "${rel_json}" | python3 -c "
@@ -704,6 +700,112 @@ check_and_shield_mirror_freshness() {
             fi
         fi
     fi
+}
+
+run_slackpkg() {
+    local slackpkg_bin="${SLACKPKG_CMD:-$(command -v slackpkg 2>/dev/null || echo "/usr/sbin/slackpkg")}"
+    if [ ! -x "${slackpkg_bin}" ]; then
+        log_error "slackpkg binary not found on this system."
+        return 1
+    fi
+
+    # Terminal anchor: ensure clean newline boundary before starting slackpkg
+    if [ -t 1 ] || [ "${TERM:-}" != "dumb" ]; then
+        printf "\n"
+    else
+        echo ""
+    fi
+
+    # Run slackpkg from a throw-away temp dir so that wget-log.N files never
+    # land in $HOME or whatever the caller's CWD happens to be.
+    local _sp_tmpdir
+    _sp_tmpdir=$(mktemp -d /tmp/slacky-slackpkg-XXXXXX)
+
+    local rc=0
+    # Full-spectrum stream normalizer:
+    #   1. Pre-converts DEC/CSI restore-cursor (\x1b8, \x1b[u) to \r so tput rc
+    #      is treated as a line-boundary (prevents spinner overwriting scrollback).
+    #   2. Strips ALL VT100/ANSI/DEC/OSC escape sequences — not just cursor-up.
+    #   3. Filters spinner-only lines (|/-\ and whitespace).
+    #   4. Filters intermediate progress percentages; keeps 100% and real output.
+    (cd "${_sp_tmpdir}" && sudo "${slackpkg_bin}" "$@" 2>&1) | python3 -u -c '
+import sys, re
+
+if hasattr(sys.stdin, "reconfigure"):
+    sys.stdin.reconfigure(errors="replace")
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(errors="replace")
+
+# Pre-convert restore-cursor sequences to \r (they rewind the cursor like \r does)
+# \x1b8 = DEC Restore Cursor (tput rc); \x1b[u = CSI Restore Cursor
+restore_cursor_re = re.compile(r"\x1b8|\x1b\[u")
+
+# Full VT100/ANSI/DEC/OSC escape sequence stripper:
+#   [0-9@-Z\\-_]        2-char ESC seqs: Fp (0-9 incl. ESC7/8) + Fe (@-Z, \\, [-_)
+#   \[[\x20-\x3f]*[\x40-\x7e]   CSI: ESC [ ... params ... final byte
+#   \][^\x07\x1b]*(?:\x07|\x1b\\)  OSC: ESC ] ... BEL or ST
+ansi_re = re.compile(
+    r"\x1b(?:"
+    r"[0-9@-Z\\\\-_]"
+    r"|\[[\x20-\x3f]*[\x40-\x7e]"
+    r"|\][^\x07\x1b]*(?:\x07|\x1b\\\\)"
+    r")"
+)
+
+# Progress percentage filter (keep 100% and final; drop 1-99%)
+prog_re = re.compile(r"(\d{1,2}%|\[\s*={1,10}>\s*\]|\[\s*\])")
+
+# Spinner-only lines: nothing but |, /, -, \ and whitespace
+spinner_re = re.compile(r"^[|/\\\\\-\s]*$")
+
+# wget background-mode plumbing noise: "Redirecting output to 'wget-log.N'."
+wget_redirect_re = re.compile(r"^Redirecting output to ")
+
+buf = []
+while True:
+    try:
+        chunk = sys.stdin.read(1024)
+    except Exception:
+        break
+    if not chunk:
+        break
+    # Convert restore-cursor to \r before char-by-char parsing
+    chunk = restore_cursor_re.sub("\r", chunk)
+    for ch in chunk:
+        if ch in ("\r", "\n"):
+            line = "".join(buf)
+            buf.clear()
+            clean = ansi_re.sub("", line).strip()
+            if not clean:
+                continue
+            if spinner_re.match(clean):
+                continue
+            if wget_redirect_re.match(clean):
+                continue
+            if ch == "\r" and prog_re.search(clean) and "100%" not in clean:
+                continue
+            sys.stdout.write(clean + "\n")
+            sys.stdout.flush()
+        else:
+            buf.append(ch)
+
+if buf:
+    clean = ansi_re.sub("", "".join(buf)).strip()
+    if clean and not spinner_re.match(clean):
+        sys.stdout.write(clean + "\n")
+        sys.stdout.flush()
+' || rc=$?
+
+    rm -rf "${_sp_tmpdir}"
+
+    # Terminal anchor: flush newline after slackpkg completes
+    if [ -t 1 ] || [ "${TERM:-}" != "dumb" ]; then
+        printf "\n"
+    else
+        echo ""
+    fi
+
+    return ${rc}
 }
 
 run_post_update_smoke_test() {
@@ -1029,7 +1131,7 @@ def monitor_thread():
         if is_tty:
             out_buf = []
             if num_dynamic_lines > 0:
-                out_buf.append(f"\033[{num_dynamic_lines}A")
+                out_buf.append(f"\r\033[{num_dynamic_lines}A")
 
             # 1. Permanently commit completed lines to terminal
             for comp_fn, comp_sz, comp_spd in new_completed:
@@ -1090,6 +1192,7 @@ def monitor_thread():
             for d_line in dynamic_lines:
                 out_buf.append(f"\r\033[2K{d_line}\n")
 
+            out_buf.append("\033[J")
             sys.stdout.write("".join(out_buf))
             sys.stdout.flush()
             num_dynamic_lines = len(dynamic_lines)
@@ -1196,7 +1299,7 @@ avg_speed_mb = (completed_bytes / (1024 * 1024)) / total_elapsed
 if is_tty:
     out_buf = []
     if num_dynamic_lines > 0:
-        out_buf.append(f"\033[{num_dynamic_lines}A")
+        out_buf.append(f"\r\033[{num_dynamic_lines}A")
     with state_lock:
         rem_completed = list(completed_queue)
         completed_queue.clear()
@@ -1213,8 +1316,10 @@ if is_tty:
     tot_eta_str = "00:00"
     tot_bar = render_pacman_bar(100.0, width=bar_width, chomp_state=0)
     out_buf.append(f"\r\033[2K{tot_label:<{name_len}s} {tot_sz_str:>10} {tot_spd_str:>11} {tot_eta_str:>5} {tot_bar}\n")
+    out_buf.append("\033[J")
     sys.stdout.write("".join(out_buf))
     sys.stdout.flush()
+    num_dynamic_lines = 0
 
 show_cursor()
 

@@ -3,13 +3,12 @@
 
 export BAMBU_STUDIO_DIR="/opt/bambu-studio"
 export LD_LIBRARY_PATH="${BAMBU_STUDIO_DIR}/lib:${BAMBU_STUDIO_DIR}/bin:${LD_LIBRARY_PATH:-}"
-export WEBKIT_EXEC_PATH="${BAMBU_STUDIO_DIR}/lib/webkit2gtk-4.1"
-export WEBKIT_INJECTED_BUNDLE_PATH="${BAMBU_STUDIO_DIR}/lib/webkit2gtk-4.1/injected-bundle"
+export WEBKIT_EXEC_PATH="${BAMBU_STUDIO_DIR}/lib/webkit2gtk-4.1:/usr/lib64/webkit2gtk-4.1:/usr/lib/webkit2gtk-4.1"
+export WEBKIT_INJECTED_BUNDLE_PATH="${BAMBU_STUDIO_DIR}/lib/webkit2gtk-4.1/injected-bundle:/usr/lib64/webkit2gtk-4.1/injected-bundle:/usr/lib/webkit2gtk-4.1/injected-bundle"
 
-# WebKitGTK sandbox controls
-if [ -z "${WEBKIT_FORCE_SANDBOX:-}" ]; then
-  export WEBKIT_FORCE_SANDBOX=0
-fi
+# Modern WebKitGTK sandbox and Wayland/NVIDIA DMA-BUF controls
+export WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1
+export WEBKIT_DISABLE_DMABUF_RENDERER=1
 
 # Prefer system GIO / D-Bus and correct Wayland / X11 rendering flags
 if [ -z "${GSETTINGS_SCHEMA_DIR:-}" ]; then

@@ -1,6 +1,6 @@
-# 📖 Slacky-Update Survival Guide & System Manual
+# 📖 Slacky-Update Field Guide & System Manual
 ### *Slackware Linux 15.0 & -current — Complete Architecture, Deployment & Operational Manual*
-#### `v1.0_RC1` — *"Wonderwall"* (The Master Dress Rehearsal Release Candidate)
+#### `v1.0_RC2` — *"Dark Star"* (Stability & Hardware Release Candidate)
 
 ---
 
@@ -10,10 +10,12 @@
 > It is **NOT** compatible with or supported on legacy **Slackware 15.0 (stable)**. Legacy 15.0 systems feature older core packages, toolchains, and shared libraries (such as older glibc, GCC, Wayland/Mesa, PipeWire, and kernel headers) that cause package and soname conflicts which cannot be safely detected or resolved. Running Slacky-Update on Slackware 15.0 is unsupported. Users on Slackware 15.0 must migrate to `slackware-current` before using this suite.
 
 > [!CAUTION]
-> **PRE-RELEASE / EARLY ACCESS DISCLAIMER & LIABILITY NOTICE — USE AT YOUR OWN RISK**  
-> Slacky-Update is an active *Pre-Release / Early Access* edition. The software executes deep low-level system modifications, including Linux kernel deployments, proprietary NVIDIA drivers, Dracut initramfs generation, Btrfs subvolumes, and bootloader topologies (Limine/GRUB).  
-> **All usage, upgrades, and system configurations are executed strictly at your own discretion and risk.** The developers and maintainers assume no liability or warranty for system malfunction, unbootable states, or data loss.  
-> **Pre-requisites:** Always maintain tested, current backups (`/home`, essential configuration files, and boot partitions) and keep a bootable Slackware Live-USB accessible before performing upgrades or modifying bootloader setups.
+> **COMPREHENSIVE TESTING, LIABILITY & USE-AT-YOUR-OWN-RISK DISCLAIMER**  
+> * **Hardware Testing & Verification:** Slacky-Update has been extensively verified and field-tested on bare-metal workstations with dry-run/simulated test passes across diverse build environments. However, **this in no way guarantees that it will operate seamlessly or without anomalies on your specific hardware configuration.**
+> * **100% User Responsibility:** Slacky-Update executes deep, low-level modifications to foundational system components. **All installation, upgrades, and system modifications are performed 100% at your own discretion and risk.**
+> * **No Liability for Data Loss:** The authors, maintainers, and contributors assume **no liability, warranty, or responsibility** for system malfunctions, unbootable states, hardware quirks, or loss of personal data.
+> * **Mandatory Backups:** Always maintain current, tested backups of your personal data (`/home`, configuration files, and boot partitions) and keep a bootable Slackware Live-USB accessible before performing upgrades or modifying bootloaders.
+> * **Bug Reporting & Support Policy:** If you encounter bugs, regressions, or hardware edge-cases, please report them on [GitHub Issues](https://github.com/TuxOfValhalla/slacky-update/issues) so they can be addressed. Beyond this documentation, no individual customer support, warranties, or service level agreements are offered.
 
 ---
 
@@ -114,19 +116,32 @@ Before executing your first full system upgrade or modifying kernels and bootloa
 > ### 🧩 ELI5 — What does this module do and why do you care?
 > Here we build the application from source the pure Slackware way: creating a clean `.txz` package. No shady binary installers or foreign package managers—everything is 100% auditable source code properly tracked in system package logs.
 
-### Building the Slackware Package (`.txz`)
-Slacky-Update is built natively using the standard Slackware build methodology:
+### Automated One-Liner Deployment (GitHub & Codeberg)
+To build and install in a single automated pass without leaving lingering build directories:
+
+**GitHub One-Liner:**
+```bash
+git clone https://github.com/TuxOfValhalla/slacky-update.git /tmp/slacky-update && (cd /tmp/slacky-update/slackbuild && sudo ./slacky-update.SlackBuild && sudo upgradepkg --install-new --reinstall /tmp/slacky-update.txz) && rm -rf /tmp/slacky-update
+```
+
+**Codeberg One-Liner:**
+```bash
+git clone https://codeberg.org/TuxOfValhalla/slacky-update.git /tmp/slacky-update && (cd /tmp/slacky-update/slackbuild && sudo ./slacky-update.SlackBuild && sudo upgradepkg --install-new --reinstall /tmp/slacky-update.txz) && rm -rf /tmp/slacky-update
+```
+
+### Manual Source Build (`.txz`)
+If you prefer building from a persistent local repository:
 
 ```bash
-# 1. Clone the repository (GitHub Canonical)
+# 1. Clone repository
 git clone https://github.com/TuxOfValhalla/slacky-update.git
-cd slacky-update
+cd slacky-update/slackbuild
 
 # 2. Build the package via SlackBuild
-sudo bash slackbuild/slacky-update.SlackBuild
+sudo ./slacky-update.SlackBuild
 
 # 3. Install or upgrade the package
-sudo upgradepkg --install-new --reinstall /tmp/slacky-update-*-noarch-1_slacky.txz
+sudo upgradepkg --install-new --reinstall /tmp/slacky-update.txz
 ```
 
 ### Starting the Background System Monitor
@@ -312,7 +327,7 @@ For creative professionals using AMD Radeon GPUs in DaVinci Resolve Studio:
 * Turnkey Mac-like Wayland desktop with Noctalia Shell (top bar, dynamic bottom dock, launcher, control center).
 * **3-Minute OLED & Multi-Monitor DPMS**: Dedicated `hypridle` standby protection turning displays off at 180s without self-resetting config-change loops.
 * **Native Hyprland Lua (`hyprland.lua`)**: Pre-configured Lua configuration ready for Hyprland 0.57+ with complete keybindings, window rules, and snappy 200–250ms bezier curves.
-* **HyprMod Visual Settings Editor (`hyprmod`)**: GTK4 & Libadwaita settings manager supporting named monitor layouts, 10-bit OLED color modes (`bitdepth = 10`), custom active/inactive borders, and non-destructive modular Lua (`hyprland-gui.lua`) overrides.
+* **HyprMod Visual Settings Editor (`hyprmod`)**: GTK4 & Libadwaita settings manager supporting named monitor layouts, optional 10-bit OLED color modes, custom active/inactive borders, and non-destructive modular Lua (`hyprland-gui.lua`) overrides.
 * **PipeWire AT_SECURE Protection**: Automatically strips conflicting file capabilities from `pipewire` (`setcap -r`), preventing Wayland session DBus drops.
 
 ### OBS Creator Suite & DKMS Hardware Driver Fleet

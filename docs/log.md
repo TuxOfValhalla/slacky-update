@@ -2,6 +2,22 @@
 
 Dette dokumentet sporer patch-utvikling, arkitekturforbedringer, feilrettinger og endringer på vei mot Slacky-Update LTS.
 
+## 🚀 [v1.0_RC2] — 2026-09-30 ("Dark Star" — Build 26 / noarch-26)
+
+### 🎯 Hovedmål for v1.0_RC2
+Kritisk arkitekturstabilisering, flimmerfri terminalstrømming og maskinvare-rettelser oppdaget under felttesting av v1.0_RC1:
+1. **Full-Spectrum Stream Normalizer & Scrollback-Bevaring:** Sanntids streaming-normalisering i `run_slackpkg()` som oversetter `\r` og DEC Restore Cursor (`\x1b8`, `\x1b[u`) til ekte linjeskift, stripper samtlige VT100/CSI/DEC/OSC escape-koder, filtrerer ut spinner-linjer (`|/-\`), fjerner `wget`-bakgrunnsomdirigeringsstøy (`Redirecting output to 'wget-log.N'`), og kjører fra midlertidige mapper for å eliminere filforsøpling i `$HOME`.
+2. **Isolert App-Bundle Arkitektur:** GUI-apper som krever eksterne/uoffisielle runtimes (som `openghub` med WebKitGTK 4.1, `lutris`, `obs-studio`, `pear-desktop`, `bambu-studio`) pakkes nå som 100 % isolerte App-Bundles i `/opt/<app>/` med egne private biblioteker i `/opt/<app>/lib/`. Dette forhindrer at avinstallasjon (`removepkg`) eller oppgradering av én app sletter eller forstyrrer felles system-runtimes i `/usr/lib64/` eller krasjer andre apper. (OpenGHub er midlertidig skjult fra spillmenyen via `|hidden`-flagget inntil ekstern perifer-atferd er ferdig kartlagt).
+3. **Flimmerfri Terminal-Markør & 10-Linjers ILoveCandy:** Full harmonisering av `gnomes_pacman.py` med `lib/common.sh` og `lib/pacman_candy.py`. Opptil 10 parallelle spor gomler synkront med Slackware-blå `S`/`s` og stasjonære pellets. Grønne hakker er fjernet til fordel for ekte Pacman 100%-historikk og låst Total-linje på bunnen.
+4. **Maskinvaretilpasset Hyprland Lua-miljø:** Dynamisk GPU-deteksjon (NVIDIA vs AMD vs Intel vs PRIME) i `~/.config/hypr/modules/env.lua` og `/etc/hypr/hyprland.env`, sanert `GBM_BACKEND` og `immediate = true` tearing-regler for spill.
+5. **Multilib Version Intersection Engine:** Matematisk versjonssnitt for ledsagerpakker (`gamescope`, `mangohud`, `gamemode`, `obs-vkcapture`, `yabridge`) slik at oppdateringsvarsler kun trigges når 64-bit og 32-bit pakker er synkront tilgjengelige på speil.
+6. **Helhetlig Dokumentasjonsgjennomgang & Overhaling:** Utarbeidelse av *The Ultimate Slacky-Update Survival Guide* og *Oh My Hyprland Guide*, opprydding i README.md og sentralisering av historiske release notes i `/home/tux/development/docs/slacky-update_releasenotes/`.
+7. **CachyOS Zen 4/5 (znver4) & 404 Self-Healing:** Korrigert CachyOS speil-URL-er for Zen 4/5 mikrostier (`x86_64_v4/cachyos-*-znver4`) og kortsluttet 404-feil direkte til automatisk database-synkronisering ved nye oppstrøms revisjoner.
+8. **Dyp Runtime Bibliotek-Oppdager & Typst/Pandoc Kompatibilitet:** Automatisk oppdagelse av dypt nøstede kjørebiblioteker (GHC Haskell, Lua, Python, Qt6) i applikasjonswrappers, og sanering av innholdsfortegnelse-ankre for 100 % feilfri Typst PDF-kompilering.
+
+
+---
+
 ## 🚀 [v1.0_RC1] — 2026-09-25 ("Wonderwall" — Generalprøve & Systemherding)
 
 ### 🎯 Hovedmål for v1.0_RC1
@@ -125,6 +141,14 @@ Full eliminering av maskinvarefeilkonfigurasjoner (NVIDIA vs AMD vs Intel), dedi
   * Fjernet foreldet og potensielt forstyrrende `GBM_BACKEND=nvidia-drm`.
   * Lagt til vindus- og tearing-regler i `modules/rules.lua` for Battle.net, World of Warcraft, Wine og Proton.
 * **SlackBuild Oppgradering:** SlackBuild bumpet til `1.0_RC1-noarch-17_slacky`.
+
+#### 19. Flimmerfri Terminalmarkør & ANSI Overskrivingssanering (Build 18 / noarch-18)
+* **Eliminering av Terminaloverskriving (`lib/common.sh`, `lib/mod_packages.sh`):**
+  * **Rotårsak Løst:** Fikset overskriving av terminalmenyen under pakkenedlasting forårsaket av at `\033[NA` (*Cursor Up*) i `download_parallel_pacman` heiste markøren for høyt opp i terminalhistorikken under nettverksfeil eller asymmetriske linjetellinger.
+  * **Presis Markøraritmetikk:** Innført obligatorisk `\r` før markøroppheising (`\r\033[NA`), full linjerens med `\033[2K`, og skjermvisking under aktivt spor med `\033[J` (*Erase Display Below*) ved dynamiske linjeendringer og avsluttende buffer-flush.
+  * **Sikker Linjeskille mot Slackpkg:** Sikret rene linjeskift og buffer-flushing før `slackpkg` overtar terminalen, slik at `slackpkg` sine `\r`-linjer (`Looking for packages...`) aldri skriver over tidligere menylinjer eller etterlater datostempel-fragmenter.
+* **Release Notes for v1.0_RC2:** Opprettet `docs/RELEASE_NOTES_v1.0_RC2.md` som dokumenterer Build 18-forbedringene i detalj.
+* **SlackBuild Oppgradering:** SlackBuild bumpet til `1.0_RC1-noarch-18_slacky`.
 
 ---
 
