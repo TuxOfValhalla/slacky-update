@@ -265,6 +265,193 @@ else:
 " "${key}" 2>/dev/null || echo "0"
 }
 
+resolve_check_bin() {
+    if [ -n "${CHECK_BIN:-}" ] && [ -x "${CHECK_BIN}" ]; then
+        echo "${CHECK_BIN}"
+        return 0
+    fi
+    for cand in "${SCRIPT_DIR:-}/../lib/check_backend.sh" \
+                "${SCRIPT_DIR:-}/check_backend.sh" \
+                "${APP_DIR:-}/check_backend.sh" \
+                "/usr/share/slacky-update/lib/check_backend.sh" \
+                "/usr/local/lib/slacky-update/check_backend.sh"; do
+        if [ -x "${cand}" ]; then
+            echo "${cand}"
+            return 0
+        fi
+    done
+    echo ""
+}
+
+run_preflight_check() {
+    local force="${1:-0}"
+    local chk_bin
+    chk_bin=$(resolve_check_bin)
+
+    local should_check=0
+    if [ "${force}" -eq 1 ]; then
+        should_check=1
+    else
+        local status_f
+        status_f=$(get_status_json_path 2>/dev/null || echo "")
+        if [ -z "${status_f}" ] || [ ! -f "${status_f}" ]; then
+            should_check=1
+        else
+            local age
+            age=$(python3 -c "
+import os, json, time, sys
+try:
+    with open('${status_f}', 'r', encoding='utf-8') as f:
+        d = json.load(f)
+        ts = float(d.get('last_check_ts', os.path.getmtime('${status_f}')))
+        print(int(time.time() - ts))
+except Exception:
+    print('999999')
+" 2>/dev/null || echo "999999")
+            if [ "${age}" -gt 120 ]; then
+                should_check=1
+            fi
+        fi
+    fi
+
+    if [ "${should_check}" -eq 1 ] && [ -n "${chk_bin}" ]; then
+        if [ -t 1 ]; then
+            echo -ne "\033[1;36m$(_ PREFLIGHT_SCOUTING)\033[0m"
+            if "${chk_bin}" >/dev/null 2>&1; then
+                echo -e "\r\033[K\033[1;32m✓ $(_ PREFLIGHT_DONE)\033[0m"
+            else
+                echo -e "\r\033[K"
+            fi
+        else
+            echo "$(_ PREFLIGHT_SCOUTING)"
+            "${chk_bin}" >/dev/null 2>&1 || true
+        fi
+    fi
+}
+
+reconcile_post_update_status() {
+    local slack_done="${1:-0}"
+    local cachy_done="${2:-0}"
+    local flatpak_done="${3:-0}"
+    local sbo_done="${4:-0}"
+    local gaming_done="${5:-0}"
+    local gnomes_done="${6:-0}"
+    local nvidia_done="${7:-0}"
+
+    python3 - "${slack_done}" "${cachy_done}" "${flatpak_done}" "${sbo_done}" "${gaming_done}" "${gnomes_done}" "${nvidia_done}" << 'PYRECON'
+import sys, os, json, time, pwd
+
+slack_done, cachy_done, flatpak_done, sbo_done, gaming_done, gnomes_done, nvidia_done = sys.argv[1:8]
+
+candidates = []
+xdg = os.environ.get("XDG_CACHE_HOME")
+candidates.append(os.path.join(xdg, "slacky-update", "status.json") if xdg else os.path.expanduser("~/.cache/slacky-update/status.json"))
+
+sudo_u = os.environ.get("SUDO_USER")
+sudo_path = None
+sudo_uid = None
+sudo_gid = None
+if sudo_u:
+    try:
+        pw = pwd.getpwnam(sudo_u)
+        sudo_path = os.path.join(pw.pw_dir, ".cache", "slacky-update", "status.json")
+        sudo_uid = pw.pw_uid
+        sudo_gid = pw.pw_gid
+        if sudo_path not in candidates:
+            candidates.append(sudo_path)
+    except Exception:
+        pass
+
+candidates.append("/var/cache/slacky-update/status.json")
+
+base_data = None
+best_ts = -1
+for c in candidates:
+    if os.path.exists(c):
+        try:
+            with open(c, "r", encoding="utf-8") as f:
+                d = json.load(f)
+                ts = float(d.get("last_check_ts", os.path.getmtime(c)))
+                if ts > best_ts:
+                    best_ts = ts
+                    base_data = d
+        except Exception:
+            pass
+
+if not base_data:
+    base_data = {
+        "slackware_updates": [],
+        "slackpkgplus_updates": [],
+        "flatpak_updates": [],
+        "sbo_updates": [],
+        "cachyos_kernel_updates": [],
+        "cachyos_gaming_updates": [],
+        "cachyos_gaming_updates_raw": [],
+        "gnomes_updates": [],
+        "gnomes_updates_raw": [],
+        "nvidia_driver_updates": [],
+        "reboot_required": False,
+        "nvidia_gl_mismatch": False,
+        "nvidia_driver_version": "",
+        "secure_boot": {"state": "unknown", "warnings": []},
+        "last_check": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "last_check_ts": int(time.time())
+    }
+
+# Clear updated sections based on completed steps
+if slack_done == "1":
+    base_data["slackware_updates"] = []
+    base_data["slackpkgplus_updates"] = []
+if cachy_done == "1":
+    base_data["cachyos_kernel_updates"] = []
+if flatpak_done == "1":
+    base_data["flatpak_updates"] = []
+    base_data["nvidia_gl_mismatch"] = False
+if sbo_done == "1":
+    base_data["sbo_updates"] = []
+if gaming_done == "1":
+    base_data["cachyos_gaming_updates"] = []
+    base_data["cachyos_gaming_updates_raw"] = []
+if gnomes_done == "1":
+    base_data["gnomes_updates"] = []
+    base_data["gnomes_updates_raw"] = []
+if nvidia_done == "1":
+    base_data["nvidia_driver_updates"] = []
+    base_data["nvidia_gl_mismatch"] = False
+
+base_data["last_check_ts"] = int(time.time())
+base_data["last_check"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+def write_in_place(path, uid=None, gid=None):
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(base_data, f, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+        if uid is not None and gid is not None:
+            try:
+                os.chown(path, uid, gid)
+            except Exception:
+                pass
+        try:
+            os.chmod(path, 0o666 if "/var/cache" in path else 0o644)
+        except Exception:
+            pass
+    except Exception:
+        pass
+
+for c in set(candidates):
+    u = sudo_uid if (sudo_path and c == sudo_path) else None
+    g = sudo_gid if (sudo_path and c == sudo_path) else None
+    write_in_place(c, u, g)
+PYRECON
+
+    for sp in "/var/cache/slacky-update/status.json" "${HOME:-/tmp}/.cache/slacky-update/status.json"; do
+        [ -f "${sp}" ] && touch "${sp}" 2>/dev/null || true
+    done
+}
+
 resolve_cachyos_keyring() {
     local candidates=(
         "/usr/share/slacky-update/keys/trusted-keyrings.gpg"
@@ -415,16 +602,35 @@ try:
     if content:
         data = json.loads(content)
         tag = data.get('tag_name', '').lstrip('v')
-        if tag and parse_v(tag) > parse_v(cur):
-            dl_url = ''
-            for asset in data.get('assets', []):
-                name = asset.get('name', '')
-                if name.endswith(('.txz', '.tgz')):
-                    dl_url = asset.get('browser_download_url', '')
+        tag_newer = bool(tag and parse_v(tag) > parse_v(cur))
+        
+        dl_url = ''
+        asset_newer = False
+        asset_display_tag = tag
+        pkg_pattern = re.compile(r'slacky-update-([0-9a-zA-Z._]+)-noarch-(\d+)')
+        for asset in data.get('assets', []):
+            name = asset.get('name', '')
+            if name.endswith(('.txz', '.tgz')):
+                dl_url = asset.get('browser_download_url', '')
+                m = pkg_pattern.search(name)
+                if m:
+                    a_ver, a_build = m.group(1), int(m.group(2))
+                    if parse_v(a_ver) == parse_v(cur):
+                        import glob
+                        local_pkgs = glob.glob('/var/log/packages/slacky-update-*')
+                        if local_pkgs:
+                            local_name = os.path.basename(local_pkgs[0])
+                            lm = pkg_pattern.search(local_name)
+                            if lm and int(lm.group(2)) < a_build:
+                                asset_newer = True
+                                asset_display_tag = f"{tag}-build{a_build}"
+                if dl_url:
                     break
-            if not dl_url:
-                dl_url = data.get('tarball_url', '')
-            print(f'UPDATE|{tag}|{dl_url}')
+        if not dl_url:
+            dl_url = data.get('tarball_url', '')
+
+        if tag_newer or asset_newer:
+            print(f'UPDATE|{asset_display_tag}|{dl_url}')
             sys.exit(0)
 except Exception:
     pass
@@ -464,6 +670,7 @@ print(f'UP_TO_DATE|{cur}')
 }
 
 trigger_silent_background_refresh() {
+    [ "${SLACKY_UPDATE_RUNNING:-0}" = "1" ] && return 0
     local chk_bin=""
     for cand in "${APP_DIR:-}/check_backend.sh" \
                 "/usr/share/slacky-update/lib/check_backend.sh" \

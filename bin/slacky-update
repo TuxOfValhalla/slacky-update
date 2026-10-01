@@ -177,6 +177,7 @@ print_cat(_("CAT_FLATPAK"), data.get("flatpak_updates", []))
 print_cat(_("CAT_SBO"), data.get("sbo_updates", []))
 print_cat(_("CAT_KERNEL"), data.get("cachyos_kernel_updates", []))
 print_cat(_("CAT_GAMING"), data.get("cachyos_gaming_updates", []))
+print_cat(_("CAT_GNOMES"), data.get("gnomes_updates", []))
 print_cat(_("CAT_NVIDIA"), data.get("nvidia_driver_updates", []))
 
 if data.get("nvidia_gl_mismatch", False):
@@ -187,7 +188,7 @@ if sb.get("state") == "enabled":
     for w in sb.get("warnings", []):
         print(f"\033[1;31m• Secure Boot Warning: {w}\033[0m")
 
-total = len(data.get("slackware_updates", [])) + len(data.get("slackpkgplus_updates", [])) + len(data.get("flatpak_updates", [])) + len(data.get("sbo_updates", [])) + len(data.get("cachyos_kernel_updates", [])) + len(data.get("cachyos_gaming_updates", [])) + len(data.get("nvidia_driver_updates", []))
+total = len(data.get("slackware_updates", [])) + len(data.get("slackpkgplus_updates", [])) + len(data.get("flatpak_updates", [])) + len(data.get("sbo_updates", [])) + len(data.get("cachyos_kernel_updates", [])) + len(data.get("cachyos_gaming_updates", [])) + len(data.get("gnomes_updates", [])) + len(data.get("nvidia_driver_updates", []))
 if total == 0 and not data.get("nvidia_gl_mismatch", False):
     print("\033[1;32m" + _("NO_PENDING_UPDATES") + "\033[0m")
 print("")
@@ -289,6 +290,8 @@ run_full_update() {
     echo -e "\n${CYAN}$(_ VALIDATING_ADMIN)${RESET}"
     validate_privileges
 
+    run_preflight_check 0
+
     local lock_file="/tmp/slacky-update-running.lock"
     if [ -f "${lock_file}" ]; then
         local lpid
@@ -304,6 +307,14 @@ run_full_update() {
 
     export DEFER_BOOT_SYNC=1
     export SLACKY_UPDATE_RUNNING=1
+
+    local slack_done=0
+    local cachy_done=0
+    local flatpak_done=0
+    local sbo_done=0
+    local gaming_done=0
+    local gnomes_done=0
+    local nvidia_done=0
 
     local snap_before_file snap_after_file
     snap_before_file=$(mktemp /tmp/slacky-snap-before.XXXXXX)
@@ -336,6 +347,7 @@ run_full_update() {
         if [[ "$reply_slack" =~ ^[YyJjSsOo]$ ]]; then
             echo -e "\n${BLUE}${BOLD}$(_ UPGRADING_SLACKWARE)${RESET}"
             update_slackware_core
+            slack_done=1
         fi
     else
         log_info "$(_ SLACKWARE_CORE_UP_TO_DATE)"
@@ -353,6 +365,7 @@ run_full_update() {
             echo -e "\n${BLUE}${BOLD}$(_ UPGRADING_CACHYOS_KERNEL)${RESET}"
             update_cachyos_kernels
             kernel_or_driver_changed=1
+            cachy_done=1
         fi
     fi
 
@@ -385,6 +398,7 @@ except Exception:
                     act_nv=$(cat /sys/module/nvidia/version 2>/dev/null || head -n 1 /proc/driver/nvidia/version 2>/dev/null | awk '{print $8}' || true)
                     register_flatpak_gl_sync "${act_nv}"
                 fi
+                flatpak_done=1
             fi
         fi
     fi
@@ -400,6 +414,7 @@ except Exception:
             fi
             if [[ "$reply_sbo" =~ ^[YyJjSsOo]$ ]]; then
                 update_sbo_packages
+                sbo_done=1
             fi
         fi
     fi
@@ -416,6 +431,7 @@ except Exception:
             if [[ "$reply_gaming" =~ ^[YyJjSsOo]$ ]]; then
                 echo -e "\n${BLUE}${BOLD}$(_ UPGRADING_GAMING)${RESET}"
                 sync_all_installed_cachyos_gaming_packages
+                gaming_done=1
             fi
         fi
     fi
@@ -431,7 +447,30 @@ except Exception:
             fi
             if [[ "$reply_gnomes" =~ ^[YyJjSsOo]$ ]]; then
                 echo -e "\n${BLUE}${BOLD}$(_ UPGRADING_GNOMES)${RESET}"
-                python3 "${APP_DIR}/gnomes_pacman.py" list-updates
+                local gnomes_json
+                gnomes_json=$(python3 "${APP_DIR}/gnomes_pacman.py" list-updates --json 2>/dev/null || echo "[]")
+                local g_targets=()
+                while IFS= read -r gt; do
+                    [ -n "${gt}" ] && g_targets+=("${gt}")
+                done < <(python3 -c "import sys, json; [print(x['name']) for x in json.loads(sys.argv[1]) if 'name' in x]" "${gnomes_json}" 2>/dev/null || true)
+                if [ ${#g_targets[@]} -gt 0 ]; then
+                    if [ -x "${SCRIPT_DIR}/gnomes" ]; then
+                        "${SCRIPT_DIR}/gnomes" -S --yes "${g_targets[@]}"
+                    elif command -v gnomes >/dev/null 2>&1; then
+                        gnomes -S --yes "${g_targets[@]}"
+                    else
+                        python3 "${APP_DIR}/gnomes_pacman.py" transmute "${g_targets[@]}" --yes
+                        for gt in "${g_targets[@]}"; do
+                            local txz_cand
+                            txz_cand=$(ls -1t /tmp/underpants-"${gt}"-*.txz 2>/dev/null | head -n1 || true)
+                            [ -n "${txz_cand}" ] && [ -f "${txz_cand}" ] && upgradepkg --install-new --reinstall "${txz_cand}" || true
+                            for old_cg in /var/log/packages/cachyos-gnome-"${gt}"-*; do
+                                [ -f "${old_cg}" ] && removepkg "$(basename "${old_cg}")" >/dev/null 2>&1 || true
+                            done
+                        done
+                    fi
+                    gnomes_done=1
+                fi
             fi
         fi
     fi
@@ -448,6 +487,7 @@ except Exception:
             if [[ "$reply_nv" =~ ^[YyJjSsOo]$ ]]; then
                 install_nvidia_run_driver "production"
                 kernel_or_driver_changed=1
+                nvidia_done=1
             fi
         fi
     fi
@@ -546,7 +586,7 @@ except Exception:
     unset DEFER_BOOT_SYNC || true
     unset SLACKY_UPDATE_RUNNING || true
 
-    trigger_silent_background_refresh 2>/dev/null || true
+    reconcile_post_update_status "${slack_done}" "${cachy_done}" "${flatpak_done}" "${sbo_done}" "${gaming_done}" "${gnomes_done}" "${nvidia_done}"
 
     python3 -c "
 import os, json, time
@@ -764,6 +804,7 @@ interactive_menu() {
         echo -e "${BLUE}Slackware Core Update & High-Performance Modernization Engine${RESET}"
         check_slacky_update_self_update "${CURRENT_VERSION}"
         echo ""
+        run_preflight_check 0
         display_pending_status
         echo -e "${BOLD}$(_ CLI_ACTIONS_HEADER)${RESET}"
 
@@ -987,7 +1028,7 @@ if [ "${1:-}" = "--non-interactive" ] || [ "${1:-}" = "-y" ]; then
     export NON_INTERACTIVE=1
     run_full_update
 elif [ "${1:-}" = "--check" ]; then
-    "${CHECK_BIN}"
+    run_preflight_check 1
     display_pending_status
 elif [ "${1:-}" = "--rank-mirrors" ] || [ "${1:-}" = "--mirrors" ] || [ "${1:-}" = "-M" ]; then
     INTERACTIVE_SESSION=1

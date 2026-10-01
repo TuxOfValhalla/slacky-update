@@ -242,5 +242,6 @@
   "NVIDIA_LEGACY_BRANCH_535": "NVIDIA 535-Zweig (Maxwell 2. Gen / GTX 900-Serie)",
   "NVIDIA_LEGACY_BRANCH_470": "NVIDIA 470-Zweig (Kepler-Architektur / GTX 600/700)",
   "NVIDIA_LEGACY_BRANCH_390": "NVIDIA 390-Zweig (Fermi-Architektur / GTX 400/500)",
-  "NVIDIA_LEGACY_RETURN": "Zurück zum vorherigen Menü"
+  "NVIDIA_LEGACY_RETURN": "Zurück zum vorherigen Menü",
+  "CAT_GNOMES": "Underpants Gnomes-Pakete"
 }

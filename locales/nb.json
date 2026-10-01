@@ -26,6 +26,8 @@
   "TOOLTIP_REBOOT": "Omstart av systemet kreves for å fullføre installasjonen.",
   "PRESS_ENTER_EXIT": "Trykk [ENTER] for å avslutte...",
   "CLI_UPDATES_HEADER": "Tilgjengelige oppdateringer:",
+  "PREFLIGHT_SCOUTING": "Speider etter ferske, råkule oppdateringer... ⏳",
+  "PREFLIGHT_DONE": "Bodacious! Oppdateringsmatrisen er låst og klar.",
   "NO_PENDING_UPDATES": "Ingen ventende oppdateringer funnet. Systemet er oppdatert.",
   "PROMPT_CONTINUE_UPDATES": "Utføre oppdateringer nå? [J/n] ",
   "CANCELLED_BY_USER": "Handlingen ble avbrutt av bruker. Ingen endringer utført.",
@@ -242,5 +244,6 @@
   "NVIDIA_LEGACY_BRANCH_535": "NVIDIA 535-gren (Maxwell 2. gen / GTX 900-serien)",
   "NVIDIA_LEGACY_BRANCH_470": "NVIDIA 470-gren (Kepler-arkitektur / GTX 600/700)",
   "NVIDIA_LEGACY_BRANCH_390": "NVIDIA 390-gren (Fermi-arkitektur / GTX 400/500)",
-  "NVIDIA_LEGACY_RETURN": "Tilbake til forrige meny"
+  "NVIDIA_LEGACY_RETURN": "Tilbake til forrige meny",
+  "CAT_GNOMES": "Underpants Gnomes-pakker"
 }

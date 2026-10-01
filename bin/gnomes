@@ -230,6 +230,13 @@ case "${OP}" in
                         echo -e "\n${BOLD}${CYAN}:: Deploying ${PKG_NAME_BASE} to Slackware host via upgradepkg (requires sudo)...${RESET}"
                         sudo upgradepkg --install-new --reinstall "${TXZ_PATH}"
                         cleanup_stale_wrappers
+                        for old_cg in /var/log/packages/cachyos-gnome-"${TARGET}"-*; do
+                            if [ -f "${old_cg}" ]; then
+                                old_id=$(basename "${old_cg}")
+                                echo -e "${BOLD}${YELLOW}:: Purging superseded legacy package: ${old_id}...${RESET}"
+                                sudo removepkg "${old_id}" >/dev/null 2>&1 || true
+                            fi
+                        done
                         RUN_BINS=()
                         if [ -f "/var/log/packages/${PKG_NAME_BASE%.txz}" ]; then
                             while IFS= read -r line; do
@@ -259,7 +266,28 @@ case "${OP}" in
         echo -e "${BOLD}${CYAN}:: Synchronizing Underpants Gnomes Repositories & Checking Updates...${RESET}"
         python3 "${GNOMES_PY}" sync
         echo -e "\n${BOLD}${GREEN}:: Checking installed Underpants Gnomes packages...${RESET}"
+        updates_json=$(python3 "${GNOMES_PY}" list-updates --json 2>/dev/null || echo "[]")
         python3 "${GNOMES_PY}" list-updates
+        targets=()
+        while IFS= read -r t; do
+            [ -n "${t}" ] && targets+=("${t}")
+        done < <(python3 -c "import sys, json; [print(x['name']) for x in json.loads(sys.argv[1]) if 'name' in x]" "${updates_json}" 2>/dev/null || true)
+        if [ ${#targets[@]} -gt 0 ]; then
+            auto_yes=0
+            for arg in "$@"; do
+                if [ "${arg}" = "-y" ] || [ "${arg}" = "--yes" ] || [ "${arg}" = "--noconfirm" ]; then
+                    auto_yes=1
+                fi
+            done
+            reply="Y"
+            if [ "${auto_yes}" -eq 0 ]; then
+                read -r -p "Upgrade ${#targets[@]} Underpants Gnomes package(s)? [Y/n] " reply || reply="Y"
+                reply=${reply:-Y}
+            fi
+            if [[ "$reply" =~ ^[YyJjSsOo]$ ]]; then
+                "$0" -S "${targets[@]}"
+            fi
+        fi
         ;;
     -Sc|clean|--clean)
         python3 "${GNOMES_PY}" clean "$@"

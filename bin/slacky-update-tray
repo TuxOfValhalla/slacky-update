@@ -25,5 +25,9 @@ elif pgrep -f "python3.*slacky-update-tray" >/dev/null 2>&1; then
     exit 0
 fi
 
+if [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] || [ "${XDG_CURRENT_DESKTOP:-}" = "Hyprland" ]; then
+    export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-xcb}"
+fi
+
 python3 "${TARGET_BIN}" </dev/null >/dev/null 2>&1 &
 disown

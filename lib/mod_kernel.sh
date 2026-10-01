@@ -497,6 +497,132 @@ PYKERNELFETCH
     echo "NONE NONE NONE NONE NONE"
 }
 
+check_all_installed_cachyos_flavors_fast() {
+    local installed_flavors="${1:-}"
+    if [ -z "${installed_flavors}" ]; then
+        installed_flavors=$(get_installed_cachyos_flavors 2>/dev/null || echo "")
+    fi
+    [ -n "${installed_flavors}" ] || return 0
+
+    local tier
+    tier=$(detect_cpu_tier)
+    local repo_urls=()
+
+    case "${tier}" in
+        znver4)
+            repo_urls=("https://mirror.cachyos.org/repo/x86_64_v4/cachyos-znver4/" "https://mirror.cachyos.org/repo/x86_64_v4/cachyos-v4/")
+            ;;
+        v4)
+            repo_urls=("https://mirror.cachyos.org/repo/x86_64_v4/cachyos-v4/")
+            ;;
+        v3)
+            repo_urls=("https://mirror.cachyos.org/repo/x86_64_v3/cachyos-v3/" "https://mirror.cachyos.org/repo/x86_64/cachyos/")
+            ;;
+        *)
+            repo_urls=("https://mirror.cachyos.org/repo/x86_64/cachyos/")
+            ;;
+    esac
+
+    python3 - "${tier}" "${installed_flavors}" "${repo_urls[@]}" << 'PYBATCHKERNEL'
+import re, sys, os, time, urllib.request, hashlib
+
+tier = sys.argv[1]
+flavors = [f.strip() for f in sys.argv[2].split() if f.strip()]
+tier_urls = sys.argv[3:]
+
+def get_cache_dir():
+    for d in ['/var/cache/slacky-update', os.path.expanduser('~/.cache/slacky-update'), '/tmp/slacky-update-cache']:
+        try:
+            os.makedirs(d, exist_ok=True)
+            test_f = os.path.join(d, '.write_test')
+            with open(test_f, 'w') as f: f.write('1')
+            os.remove(test_f)
+            return d
+        except Exception:
+            continue
+    return '/tmp'
+
+cache_dir = get_cache_dir()
+
+def fetch_url_cached(url, cdir, ttl=1800):
+    url_hash = hashlib.sha256(url.encode('utf-8')).hexdigest()[:16]
+    cache_file = os.path.join(cdir, f'repo_idx_{url_hash}.html')
+    now = time.time()
+    if os.path.exists(cache_file):
+        try:
+            mtime = os.path.getmtime(cache_file)
+            if (now - mtime) < ttl:
+                with open(cache_file, 'r', encoding='utf-8', errors='ignore') as f:
+                    return f.read()
+        except Exception:
+            pass
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64)'})
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            content = resp.read().decode('utf-8', errors='ignore')
+            try:
+                with open(cache_file, 'w', encoding='utf-8', errors='ignore') as f:
+                    f.write(content)
+            except Exception:
+                pass
+            return content
+    except Exception:
+        return ''
+
+def parse_ver_key(v_str):
+    return [int(x) for x in re.findall(r'\d+', v_str)]
+
+for flv in flavors:
+    if flv == 'zen':
+        r_urls = ['https://geo.mirror.pkgbuild.com/extra/os/x86_64/']
+        k_pref, h_pref, nv_pref, r8125_pref = 'linux-zen', 'linux-zen-headers', 'NONE', 'NONE'
+    elif flv == 'arch':
+        r_urls = ['https://geo.mirror.pkgbuild.com/core/os/x86_64/']
+        k_pref, h_pref, nv_pref, r8125_pref = 'linux', 'linux-headers', 'NONE', 'NONE'
+    else:
+        r_urls = tier_urls
+        k_pref = f'linux-cachyos-{flv}' if flv != 'standard' else 'linux-cachyos'
+        h_pref = f'{k_pref}-headers'
+        nv_pref = f'{k_pref}-nvidia-open'
+        r8125_pref = f'{k_pref}-r8125'
+
+    matched = False
+    for u in r_urls:
+        html = fetch_url_cached(u, cache_dir)
+        if not html:
+            continue
+        k_matches = re.findall(r'href=[\'\"]?(' + re.escape(k_pref) + r'-([0-9]+\.[0-9]+[a-zA-Z0-9\._]*-[0-9]+)[^\'\">]*\.pkg\.tar\.zst)', html)
+        h_matches = re.findall(r'href=[\'\"]?(' + re.escape(h_pref) + r'-([0-9]+\.[0-9]+[a-zA-Z0-9\._]*-[0-9]+)[^\'\">]*\.pkg\.tar\.zst)', html)
+        nv_matches = re.findall(r'href=[\'\"]?(' + re.escape(nv_pref) + r'-([0-9]+\.[0-9]+[a-zA-Z0-9\._]*-[0-9]+)[^\'\">]*\.pkg\.tar\.zst)', html) if nv_pref != 'NONE' else []
+        r8125_matches = re.findall(r'href=[\'\"]?(' + re.escape(r8125_pref) + r'-([0-9]+\.[0-9]+[a-zA-Z0-9\._]*-[0-9]+)[^\'\">]*\.pkg\.tar\.zst)', html) if r8125_pref != 'NONE' else []
+
+        if k_matches and h_matches:
+            avail_vers = sorted(list(set(m[1] for m in k_matches)), key=parse_ver_key, reverse=True)
+            latest_ver = avail_vers[0]
+            k_pkg = next(m[0] for m in k_matches if m[1] == latest_ver)
+            h_pkg = next(m[0] for m in h_matches if m[1] == latest_ver)
+            nv_url = 'NONE'
+            if nv_matches:
+                try:
+                    nv_pkg = next(m[0] for m in nv_matches if m[1] == latest_ver)
+                    nv_url = f'{u}{nv_pkg}'
+                except StopIteration:
+                    pass
+            r8125_url = 'NONE'
+            if r8125_matches:
+                try:
+                    r8125_pkg = next(m[0] for m in r8125_matches if m[1] == latest_ver)
+                    r8125_url = f'{u}{r8125_pkg}'
+                except StopIteration:
+                    pass
+            print(f'{flv}|{latest_ver}|{u}{k_pkg}|{u}{h_pkg}|{nv_url}|{r8125_url}')
+            matched = True
+            break
+    if not matched:
+        print(f'{flv}|NONE|NONE|NONE|NONE|NONE')
+PYBATCHKERNEL
+}
+
 check_latest_cachyos_upstream() {
     check_cachyos_upstream_flavor "standard"
 }

@@ -911,7 +911,7 @@ class GnomesPacmanEngine:
 
             if not need_download and os.path.exists(local_path):
                 mtime = os.path.getmtime(local_path)
-                if (now - mtime) > 10800: # 3 hours TTL
+                if (now - mtime) > 14400: # 4 hours TTL
                     need_download = True
 
             if need_download:
@@ -993,11 +993,26 @@ class GnomesPacmanEngine:
 
         self._loaded = True
 
-    def ensure_loaded(self) -> None:
-        """Ensure databases are loaded into memory, syncing if empty."""
+    def _is_db_stale(self, max_age_seconds: int = 14400) -> bool:
+        """Check if cached database files are older than max_age_seconds."""
+        if not self.db_dir or not os.path.isdir(self.db_dir):
+            return True
+        db_files = [os.path.join(self.db_dir, f) for f in os.listdir(self.db_dir)
+                    if (f.endswith(".db.tar.zst") or f.endswith(".db.tar.gz")) and not f.endswith(".meta")]
+        if not db_files:
+            return True
+        now = time.time()
+        try:
+            oldest = min(os.path.getmtime(fp) for fp in db_files)
+            return (now - oldest) > max_age_seconds
+        except Exception:
+            return True
+
+    def ensure_loaded(self, auto_sync_stale: bool = True, max_age_seconds: int = 14400) -> None:
+        """Ensure databases are loaded into memory, syncing if empty or stale."""
         if not self._loaded or not self.index:
             self.load_cached_databases()
-            if not self.index:
+            if not self.index or (auto_sync_stale and self._is_db_stale(max_age_seconds)):
                 self.sync_repositories(verbose=False)
 
     def search(self, query: str, repo: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
@@ -1318,12 +1333,24 @@ class GnomesPacmanEngine:
             "host_glibc_supported": f"{host_glibc[0]}.{host_glibc[1]}"
         }
 
+    @staticmethod
+    def is_quarantined_gnomes_package(name: str) -> bool:
+        """Ensure kernels, kernel headers, and dkms modules are never managed by Gnomes."""
+        nl = str(name).strip().lower()
+        if nl in ("linux", "linux-zen", "linux-lts", "linux-headers", "linux-docs", "linux-api-headers"):
+            return True
+        if nl.startswith("linux-cachyos") or nl.startswith("linux-headers") or nl.startswith("linux-zen") or nl.startswith("linux-lts"):
+            return True
+        if nl.endswith("-dkms") or "-dkms-" in nl or nl.startswith("nvidia-open-dkms") or nl.startswith("nvidia-dkms"):
+            return True
+        return False
+
     def list_installed_gnomes_packages(self) -> List[Dict[str, str]]:
         """Inspect /var/log/packages/ for native underpants-* packages."""
-        installed = []
+        pkgs_by_name: Dict[str, Dict[str, str]] = {}
         log_dir = "/var/log/packages"
         if not os.path.exists(log_dir):
-            return installed
+            return []
 
         try:
             for fname in os.listdir(log_dir):
@@ -1332,16 +1359,26 @@ class GnomesPacmanEngine:
                     if len(parts) == 4:
                         raw_name, ver, arch, build = parts
                         app_name = raw_name.replace("underpants-", "").replace("cachyos-gnome-", "")
-                        installed.append({
+                        if self.is_quarantined_gnomes_package(app_name):
+                            continue
+                        cand = {
                             "package_id": fname,
                             "name": app_name,
                             "version": ver,
                             "arch": arch,
                             "build": build
-                        })
+                        }
+                        if app_name not in pkgs_by_name:
+                            pkgs_by_name[app_name] = cand
+                        else:
+                            prev = pkgs_by_name[app_name]
+                            if fname.startswith("underpants-") and prev["package_id"].startswith("cachyos-gnome-"):
+                                pkgs_by_name[app_name] = cand
+                            elif self.is_newer_version(ver, prev["version"]):
+                                pkgs_by_name[app_name] = cand
         except Exception:
             pass
-        return sorted(installed, key=lambda x: x["name"])
+        return sorted(list(pkgs_by_name.values()), key=lambda x: x["name"])
 
     def check_curated_collision(self, pkg_name: str) -> Optional[str]:
         """Check if pkg_name is already installed natively as a curated Slackware package."""
@@ -1533,6 +1570,8 @@ class GnomesPacmanEngine:
         updates = []
         for inst in installed:
             name = inst["name"]
+            if self.is_quarantined_gnomes_package(name):
+                continue
             cur_ver = inst["version"]
             upstream = self.get_package(name)
             if upstream:
@@ -4322,6 +4361,8 @@ def main():
             print(f"  • Space freed   : \033[1;32m{human_str}\033[0m")
 
     elif cmd == "list-updates":
+        if "--sync" in sys.argv or "-y" in sys.argv or "-Sy" in sys.argv:
+            engine.sync_repositories(force=True, verbose=False)
         as_json = "--json" in sys.argv
         as_count = "--count" in sys.argv
         updates = engine.list_updates()

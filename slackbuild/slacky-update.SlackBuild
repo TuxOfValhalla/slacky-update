@@ -6,7 +6,7 @@ set -euo pipefail
 PRGNAM="slacky-update"
 VERSION="1.0_RC2"
 ARCH="noarch"
-BUILD="1_slacky"
+BUILD="7_slacky"
 
 SRC_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 BUILD_DIR="/tmp/build-${PRGNAM}"
@@ -43,7 +43,7 @@ mkdir -p "${PKG_DIR}/etc/boot/hooks/post.d"
 mkdir -p "${PKG_DIR}/var/cache/slacky-update"
 mkdir -p "${PKG_DIR}/install"
 
-chmod 0755 "${PKG_DIR}/var/cache/slacky-update"
+chmod 1777 "${PKG_DIR}/var/cache/slacky-update"
 
 # --- [ FILE INSTALLATION ] ---
 install -m 0755 "${SRC_DIR}/bin/slacky-update" "${PKG_DIR}/usr/bin/"
@@ -136,9 +136,12 @@ fi
 # --- [ POST-INSTALL SCRIPT (doinst.sh) ] ---
 cat << 'DOINST_EOF' > "${PKG_DIR}/install/doinst.sh"
 #!/bin/sh
+# NOLOCK
 
 mkdir -p /var/cache/slacky-update
-chmod 0755 /var/cache/slacky-update 2>/dev/null || true
+chmod 1777 /var/cache/slacky-update 2>/dev/null || true
+touch /var/cache/slacky-update/status.json 2>/dev/null || true
+chmod 0666 /var/cache/slacky-update/status.json 2>/dev/null || true
 
 mkdir -p /etc/boot/hooks/pre.d /etc/boot/hooks/post.d 2>/dev/null || true
 if [ -d /usr/lib64/limine ] && [ ! -d /usr/lib/limine ] && [ ! -L /usr/lib/limine ]; then
@@ -169,20 +172,6 @@ fi
 
 if [ -x /usr/bin/gtk-update-icon-cache ]; then
     /usr/bin/gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor >/dev/null 2>&1 || true
-fi
-
-ACTIVE_GUI_USER=$(who | awk '{if ($2 ~ /:[0-9]/ || $5 ~ /:[0-9]/) print $1}' | head -n1 || true)
-if [ -n "${ACTIVE_GUI_USER}" ]; then
-    TRAY_BIN=""
-    for cand in /usr/bin/slacky-update-tray /usr/local/bin/slacky-update-tray; do
-        if [ -x "${cand}" ]; then
-            TRAY_BIN="${cand}"
-            break
-        fi
-    done
-    if [ -n "${TRAY_BIN}" ] && ! pgrep -u "${ACTIVE_GUI_USER}" -f "slacky-update-tray" >/dev/null 2>&1; then
-        su - "${ACTIVE_GUI_USER}" -c "nohup ${TRAY_BIN} >/dev/null 2>&1 &" 2>/dev/null || true
-    fi
 fi
 
 exit 0

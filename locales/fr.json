@@ -242,5 +242,6 @@
   "NVIDIA_LEGACY_BRANCH_535": "Branche NVIDIA 535 (Maxwell 2e gén / Série GTX 900)",
   "NVIDIA_LEGACY_BRANCH_470": "Branche NVIDIA 470 (Architecture Kepler / GTX 600/700)",
   "NVIDIA_LEGACY_BRANCH_390": "Branche NVIDIA 390 (Architecture Fermi / GTX 400/500)",
-  "NVIDIA_LEGACY_RETURN": "Retour au menu précédent"
+  "NVIDIA_LEGACY_RETURN": "Retour au menu précédent",
+  "CAT_GNOMES": "Paquets Underpants Gnomes"
 }
