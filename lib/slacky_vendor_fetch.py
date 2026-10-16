@@ -33,6 +33,30 @@ UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"
 # the member checks above replace the extraction filter; naming the no-op filter avoids the Python 3.12 deprecation warning
 _TRUSTED = {"filter": "fully_trusted"} if hasattr(tarfile, "fully_trusted_filter") else {}
 
+_NET = False
+
+
+def _urlopen(req, timeout):
+    """6A-244: urlopen with one IPv4 retry when an IPv6 address is unreachable (slacky_net.py, loaded by path); plain
+    urllib when that file is missing."""
+    global _NET
+    if _NET is False:
+        _NET = None
+        try:
+            import importlib.util
+            path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "slacky_net.py")
+            spec = importlib.util.spec_from_file_location("slacky_net", path)
+            if spec and spec.loader:
+                mod = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(mod)
+                _NET = mod
+        except Exception:
+            _NET = None
+    if _NET is not None:
+        return _NET.open_url(req, timeout=timeout)
+    return urllib.request.urlopen(req, timeout=timeout)
+
+
 _PLAIN_VERSION = re.compile(r"^[0-9]{1,9}(\.[0-9]{1,9}){0,4}$")
 
 
@@ -48,7 +72,7 @@ def _read_capped(url, cap, timeout=60):
     if not url.startswith("https://"):
         raise VendorError("not an https address")
     req = urllib.request.Request(url, headers={"User-Agent": UA})
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
+    with _urlopen(req, timeout) as resp:
         if not resp.geturl().startswith("https://"):
             raise VendorError("redirected away from https")
         data = resp.read(cap + 1)
@@ -177,7 +201,7 @@ def download_verified(url, dest, algo, want_hex, max_bytes):
     total = 0
     try:
         req = urllib.request.Request(url, headers={"User-Agent": UA})
-        with urllib.request.urlopen(req, timeout=120) as resp, open(part, "xb") as out:
+        with _urlopen(req, 120) as resp, open(part, "xb") as out:
             if not resp.geturl().startswith("https://"):
                 raise VendorError("redirected away from https")
             while True:

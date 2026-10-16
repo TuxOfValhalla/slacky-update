@@ -54,8 +54,25 @@ STATUS_FILE="${USER_CACHE_DIR}/status.json"
 TMP_DIR=$(mktemp -d /tmp/slacky-update-check.XXXXXX)
 trap 'rm -rf "${TMP_DIR}" "${CHECK_LOCK}" 2>/dev/null || true' EXIT
 
+# 6A-243: the user-level slackpkg / slackpkg+ list reader (fetches the repo lists itself; slackpkg's own pkglist is only
+# refreshed by `slackpkg update` as root). Looked up like the other helper scripts; empty when missing.
+SLACKPKG_CHECK_SCRIPT=""
+for cand in "${SCRIPT_DIR:-}/slacky_slackpkg_check.py" \
+            "${APP_DIR:-}/slacky_slackpkg_check.py" \
+            "/usr/share/slacky-update/lib/slacky_slackpkg_check.py" \
+            "/usr/local/share/slacky-update/lib/slacky_slackpkg_check.py" \
+            "/usr/local/lib/slacky-update/slacky_slackpkg_check.py"; do
+    if [ -f "${cand}" ]; then
+        SLACKPKG_CHECK_SCRIPT="${cand}"
+        break
+    fi
+done
+
 touch "${TMP_DIR}/slackware_updates"
 touch "${TMP_DIR}/slackpkgplus_updates"
+touch "${TMP_DIR}/slackpkgplus_unverified"
+touch "${TMP_DIR}/slackware_new_packages"
+touch "${TMP_DIR}/slackware_new_status"
 touch "${TMP_DIR}/flatpak_updates"
 touch "${TMP_DIR}/sbo_updates"
 touch "${TMP_DIR}/cachy_updates"
@@ -240,106 +257,41 @@ for item in sorted(pending_updates):
     print(item)
 PYSLACK
         echo "SUCCESS" > "${TMP_DIR}/slackware_status"
+        # 6A-243: packages ADDED in the ChangeLog since the installed state (what `slackpkg install-new` would offer)
+        if [ -n "${SLACKPKG_CHECK_SCRIPT}" ] \
+            && python3 -I "${SLACKPKG_CHECK_SCRIPT}" new --changelog "${TMP_DIR}/ChangeLog.txt" > "${TMP_DIR}/slackware_new.json" 2>/dev/null \
+            && python3 -I -c 'import json,sys; d=json.load(open(sys.argv[1])); l=d["slackware_new_packages"]; assert isinstance(l,list); print("\n".join(str(x) for x in l))' "${TMP_DIR}/slackware_new.json" > "${TMP_DIR}/slackware_new_packages" 2>/dev/null; then
+            echo "SUCCESS" > "${TMP_DIR}/slackware_new_status"
+        else
+            : > "${TMP_DIR}/slackware_new_packages"
+        fi
     else
         echo "FAILED" > "${TMP_DIR}/slackware_status"
     fi
 ) & PID_SLACK=$!
 
 # --- [ 1.5. SLACKPKGPLUS & MULTILIB REPOSITORY INSPECTION (UNPRIVILEGED) ] ---
+# 6A-243: the repo lists (CHECKSUMS.md5, signature checked against the keys slackpkg already trusts) are fetched here, as
+# the user, into the app's own cache; /var/lib/slackpkg/pkglist is no longer read (it is stale until a root `slackpkg update`).
 (
-    python3 > "${TMP_DIR}/slackpkgplus_updates" << 'PYPLUS'
-import os, sys, re
-
-pkg_log_dir = "/var/log/packages"
-installed = {}
-if os.path.exists(pkg_log_dir):
-    for f in os.listdir(pkg_log_dir):
-        parts = f.rsplit('-', 3)
-        if len(parts) == 4:
-            installed[parts[0]] = f
-
-def parse_pkg_details(filename):
-    clean = re.sub(r'\.(t[xg]z|tlz|tbz)$', '', filename)
-    parts = clean.split('-')
-    if len(parts) >= 4:
-        base_name = "-".join(parts[:-3])
-        version = parts[-3]
-        arch = parts[-2]
-        build = parts[-1]
-        return base_name, version, arch, build, clean
-    return clean, "0", "0", "0", clean
-
-def split_numeric(s):
-    tokens = re.split(r'(\d+)', str(s))
-    res = []
-    for t in tokens:
-        if not t:
-            continue
-        if t.isdigit():
-            res.append(int(t))
-        else:
-            res.append(t)
-    return res
-
-def is_strictly_newer(installed_full, upstream_full):
-    if installed_full == upstream_full:
-        return False
-    _, i_ver, _, i_bld, _ = parse_pkg_details(installed_full)
-    _, u_ver, _, u_bld, _ = parse_pkg_details(upstream_full)
-    i_v = split_numeric(i_ver)
-    u_v = split_numeric(u_ver)
-    if u_v != i_v:
-        return u_v > i_v
-    i_b = split_numeric(i_bld)
-    u_b = split_numeric(u_bld)
-    return u_b > i_b
-
-allowed_repos = set()
-mirror_map = {}
-conf_path = "/etc/slackpkg/slackpkgplus.conf"
-if os.path.exists(conf_path):
-    try:
-        with open(conf_path, "r", encoding="utf-8", errors="ignore") as f:
-            content = f.read()
-            for line in content.splitlines():
-                sline = line.strip()
-                if sline.startswith("MIRRORPLUS[") and "=" in sline:
-                    repo_key = sline.split("[", 1)[1].split("]", 1)[0].strip("'\"")
-                    repo_url = sline.split("=", 1)[1].strip().strip("'\"").rstrip("/")
-                    if repo_key and repo_url:
-                        mirror_map[repo_key] = repo_url
-                        allowed_repos.add(repo_key)
-            match = re.search(r'REPOPLUS=\(\s*([^)]+)\s*\)', content, re.DOTALL)
-            if match:
-                for r in match.group(1).split():
-                    allowed_repos.add(r.strip())
-    except Exception:
-        pass
-
-updates = []
-pkglist_path = "/var/lib/slackpkg/pkglist"
-if os.path.exists(pkglist_path):
-    try:
-        with open(pkglist_path, "r", encoding="utf-8", errors="ignore") as f:
-            for line in f:
-                parts = line.strip().split()
-                if len(parts) >= 7:
-                    ext = parts[-1]
-                    relpath = parts[-2]
-                    fullname = parts[-3]
-                    name = parts[-7]
-                    raw_repo = parts[0] if len(parts) >= 8 else ""
-                    clean_repo = raw_repo.replace("SLACKPKGPLUS_", "")
-                    if clean_repo in allowed_repos or raw_repo in allowed_repos or (raw_repo.startswith("SLACKPKGPLUS_") and not raw_repo.startswith("slackware")):
-                        if name in installed and is_strictly_newer(installed[name], fullname):
-                            updates.append(f"{fullname}.{ext}")
-    except Exception:
-        pass
-
-for u in sorted(updates):
-    print(u)
+    if [ -n "${SLACKPKG_CHECK_SCRIPT}" ] \
+        && python3 -I "${SLACKPKG_CHECK_SCRIPT}" plus --cache "${USER_CACHE_DIR}" > "${TMP_DIR}/slackpkgplus.json" 2>/dev/null \
+        && python3 -I - "${TMP_DIR}" << 'PYPLUS'
+import json, sys, os
+t = sys.argv[1]
+d = json.load(open(os.path.join(t, "slackpkgplus.json")))
+if not d.get("slackpkgplus_ok"):
+    sys.exit(1)
+with open(os.path.join(t, "slackpkgplus_updates"), "w") as f:
+    f.write("".join(str(x) + "\n" for x in d.get("slackpkgplus_updates", [])))
+with open(os.path.join(t, "slackpkgplus_unverified"), "w") as f:
+    f.write("".join(str(x) + "\n" for x in d.get("slackpkgplus_unverified", [])))
 PYPLUS
-    echo "SUCCESS" > "${TMP_DIR}/slackpkgplus_status"
+    then
+        echo "SUCCESS" > "${TMP_DIR}/slackpkgplus_status"
+    else
+        echo "FAILED" > "${TMP_DIR}/slackpkgplus_status"
+    fi
 ) & PID_PLUS=$!
 
 # --- [ 2. FLATPAK REPOSITORY INSPECTION ] ---
@@ -1055,6 +1007,20 @@ if get_status("slackpkgplus_status") == "SUCCESS":
 
 slackware_updates = filter_uninstalled_slack_pkgs(slackware_updates)
 slackpkgplus_updates = filter_uninstalled_slack_pkgs(slackpkgplus_updates)
+# 6A-243: install-new candidates are recomputed on every successful check (never carried forward: a package the owner
+# skipped must not be listed for ever); on a failed run the old list stays, minus what got installed meanwhile
+if get_status("slackware_new_status") == "SUCCESS":
+    slackware_new_packages = read_file_lines("slackware_new_packages")
+else:
+    _inst_names = set()
+    if os.path.exists("/var/log/packages"):
+        for _f in os.listdir("/var/log/packages"):
+            _p = _f.rsplit("-", 3)
+            if len(_p) == 4:
+                _inst_names.add(_p[0])
+    slackware_new_packages = [x for x in existing_data.get("slackware_new_packages", [])
+                              if parse_pkg_details_local(os.path.basename(x))[0] not in _inst_names]
+slackpkgplus_unverified = read_file_lines("slackpkgplus_unverified") if get_status("slackpkgplus_status") == "SUCCESS" else existing_data.get("slackpkgplus_unverified", [])
 flatpak_updates = get_persisted_list("flatpak_updates", "flatpak_status", "flatpak_updates")
 sbo_updates = get_persisted_list("sbo_updates", "sbo_status", "sbo_updates")
 cachy_updates = get_persisted_list("cachy_updates", "cachy_status", "cachyos_kernel_updates")
@@ -1082,6 +1048,8 @@ now_dt = datetime.now(timezone.utc)
 data = {
     "slackware_updates": slackware_updates,
     "slackpkgplus_updates": slackpkgplus_updates,
+    "slackpkgplus_unverified": slackpkgplus_unverified,
+    "slackware_new_packages": slackware_new_packages,
     "flatpak_updates": flatpak_updates,
     "sbo_updates": sbo_updates,
     "cachyos_kernel_updates": cachy_updates,

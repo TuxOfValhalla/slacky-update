@@ -623,6 +623,28 @@ class _Redirects(urllib.request.HTTPRedirectHandler):
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
+_NET: Any = False
+
+
+def _net() -> Any:
+    """6A-244: slacky_net.py loaded by path (IPv4 retry); None when missing or broken."""
+    global _NET
+    if _NET is False:
+        _NET = None
+        try:
+            import importlib.util
+            path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "slacky_net.py")
+            spec = importlib.util.spec_from_file_location("slacky_net", path)
+            if spec and spec.loader:
+                mod = sys.modules.get("slacky_net") or importlib.util.module_from_spec(spec)
+                sys.modules["slacky_net"] = mod
+                spec.loader.exec_module(mod)
+                _NET = mod
+        except Exception:
+            _NET = None
+    return _NET
+
+
 def http_get(url: str, max_bytes: int, timeout: float, headers: Optional[Dict[str, str]] = None,
              method: str = "GET", truncate: bool = False) -> Tuple[int, bytes, Dict[str, str], str]:
     """(status, body, response headers lower-cased, final url). Raises OSError/URLError on a network problem and
@@ -634,8 +656,10 @@ def http_get(url: str, max_bytes: int, timeout: float, headers: Optional[Dict[st
     h.update(headers or {})
     opener = urllib.request.build_opener(_Redirects())
     req = urllib.request.Request(url, headers=h, method=method)
+    nm = _net()
     try:
-        with opener.open(req, timeout=timeout) as resp:
+        # 6A-244: one IPv4 retry when an IPv6 address is unreachable (slacky_net.py; plain opener when it is missing)
+        with (nm.open_url(req, timeout=timeout, handlers=(_Redirects(),)) if nm is not None else opener.open(req, timeout=timeout)) as resp:
             body = resp.read(max_bytes + 1) if method != "HEAD" else b""
             if len(body) > max_bytes:
                 if not truncate:

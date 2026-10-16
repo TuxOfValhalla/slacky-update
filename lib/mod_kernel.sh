@@ -2633,9 +2633,117 @@ install_initramfs_image() {
     return 1
 }
 
+# 6A-245: initramfs input fingerprints. An image is "stale" when the things dracut puts into it changed, not merely when
+# vmlinuz has a newer mtime (signing for Secure Boot rewrites vmlinuz after the image was built, so the mtime rule
+# rebuilt good images on every run). One record per kernel, written AFTER the whole boot chain (so it holds the signed
+# kernel): sha256 of vmlinuz, sha256 of every extra/DKMS/NVIDIA module, a hash of the dracut configuration and the size
+# and mtime of the image itself. Firmware is not an input: images keep the firmware they were built with until a real
+# rebuild (kernel/module/config change, a SpiderSense order, or --force style commands).
+# SS_FP_DIR / SS_FP_BOOT / SS_FP_MODS / SS_FP_ETC exist only so tests can run on a fake root.
+ss_fp_dir()  { printf '%s' "${SS_FP_DIR:-/var/lib/slacky-boot/initramfs-inputs}"; }
+ss_fp_valid_kver() {
+    case "${1:-}" in ""|.*|*/*|*[[:space:]]*) return 1 ;; esac
+    return 0
+}
+
+# Prints the canonical fingerprint text of one kernel. Returns 1 when the image is missing.
+initramfs_inputs_fingerprint() {
+    local k="$1" boot="${SS_FP_BOOT:-/boot}" etc="${SS_FP_ETC:-/etc}"
+    local mods="${SS_FP_MODS:-/lib/modules /usr/lib/modules}"
+    ss_fp_valid_kver "${k}" || return 1
+    local vm="${boot}/vmlinuz-${k}" img="${boot}/initramfs-${k}.img" d
+    sudo test -f "${img}" || return 1
+    echo "slacky-initramfs-inputs v1"
+    if sudo test -f "${vm}"; then
+        echo "vmlinuz $(sudo sha256sum -- "${vm}" | cut -d' ' -f1)"
+    else
+        echo "vmlinuz none"
+    fi
+    for d in ${mods}; do
+        [ -d "${d}/${k}" ] || continue
+        sudo find "${d}/${k}" \( -path '*/extramodules/*' -o -path '*/updates/*' -o -name 'nvidia*.ko*' \) -type f \
+            -exec sha256sum -- {} + 2>/dev/null | LC_ALL=C sort -k2 | sed 's/^\([0-9a-f]*\)  /module \1 /'
+    done
+    echo "dracut-conf $( { sudo find "${etc}/dracut.conf" "${etc}/dracut.conf.d" -maxdepth 1 -type f \
+        -exec sha256sum -- {} + 2>/dev/null | LC_ALL=C sort -k2; } | sha256sum | cut -d' ' -f1)"
+    echo "image $(sudo stat -c '%s %Y' -- "${img}")"
+}
+
+# 0 = the record matches the current inputs (image is current), 1 = changed (rebuild), 2 = no usable record (mtime fallback)
+initramfs_record_check() {
+    local k="$1" rec cur old
+    ss_fp_valid_kver "${k}" || return 2
+    rec="$(ss_fp_dir)/${k}"
+    sudo test -L "$(ss_fp_dir)" && return 2
+    sudo test -L "${rec}" && return 2
+    sudo test -f "${rec}" || return 2
+    cur=$(initramfs_inputs_fingerprint "${k}") || return 1
+    old=$(sudo cat -- "${rec}" 2>/dev/null) || return 2
+    [ -n "${old}" ] || return 2
+    [ "${cur}" = "${old}" ] && return 0
+    return 1
+}
+
+# Writes the record atomically (temp file + rename), root-owned 0644. Refuses links in the path.
+initramfs_record_write() {
+    local k="$1" dir parent fp tmp rec
+    ss_fp_valid_kver "${k}" || return 1
+    dir="$(ss_fp_dir)"; parent=$(dirname "${dir}"); rec="${dir}/${k}"
+    sudo test -L "${parent}" && return 1
+    sudo test -L "${dir}" && return 1
+    sudo test -L "${rec}" && return 1
+    fp=$(initramfs_inputs_fingerprint "${k}") || return 1
+    sudo mkdir -p "${dir}" || return 1
+    sudo test -L "${dir}" && return 1
+    sudo chmod 0755 "${parent}" "${dir}" 2>/dev/null || true
+    tmp=$(sudo mktemp "${dir}/.${k}.XXXXXX") || return 1
+    if printf '%s\n' "${fp}" | sudo tee "${tmp}" >/dev/null \
+        && sudo chmod 0644 "${tmp}" && sudo chown 0:0 "${tmp}" && sudo mv -T -f -- "${tmp}" "${rec}"; then
+        return 0
+    fi
+    sudo rm -f -- "${tmp}" 2>/dev/null || true
+    return 1
+}
+
+# 0 = the image of this kernel must be rebuilt, 1 = it is current. Never skips a needed rebuild: no image, a SpiderSense
+# order, a changed record, or (only without any record) the old mtime rule.
+initramfs_is_stale() {
+    local k="$1" has_nv="${2:-false}" nv_mod="${3:-}" boot="${SS_FP_BOOT:-/boot}"
+    local img="${boot}/initramfs-${k}.img" fp_rc=0
+    sudo test -f "${img}" || return 0
+    # 6A-97: the NVIDIA sync ordered this image (an unpacked module keeps the package's old mtime)
+    if ss_initrd_ordered "${k}"; then return 0; fi
+    initramfs_record_check "${k}" || fp_rc=$?
+    if [ "${fp_rc}" -eq 0 ]; then return 1; fi
+    if [ "${fp_rc}" -eq 1 ]; then return 0; fi
+    # 6A-245: no usable record (first run after the upgrade): the old mtime rule
+    if sudo test -f "${boot}/vmlinuz-${k}" && sudo test "${boot}/vmlinuz-${k}" -nt "${img}"; then return 0; fi
+    if [ "${has_nv}" = "true" ] && [ -f "${nv_mod}" ] && sudo test "${nv_mod}" -nt "${img}"; then return 0; fi
+    return 1
+}
+
+# Called once after the whole boot chain: records every kept kernel whose image was built or confirmed in [3/5].
+# Kernels that are being removed, or whose image failed, get no record (a stale record could hide a stale image).
+record_initramfs_inputs_all() {
+    local kdir k dying=""
+    case "${SS_INITRD_FAILED-ALL}" in *ALL*) return 0 ;; esac
+    command -v ss_purge_set >/dev/null 2>&1 && dying=" $(ss_purge_set 2>/dev/null | tr '\n' ' ') "
+    local mroot="${SS_FP_MODS:-/lib/modules}"; mroot="${mroot%% *}"
+    for kdir in "${mroot}"/*; do
+        [ -d "${kdir}" ] || continue
+        k=$(basename "${kdir}")
+        [ -f "${kdir}/modules.dep" ] || continue
+        case "${dying}" in *" ${k} "*) continue ;; esac
+        case " ${SS_INITRD_FAILED:-} " in *" ${k} "*) continue ;; esac
+        initramfs_record_write "${k}" || true
+    done
+    return 0
+}
+
 generate_kernel_initramfs() {
     local kver="$1"
     validate_privileges
+    [ "${kver}" = "TARGETED_PIPELINE" ] && SS_INITRD_FAILED="ALL"
     probe_gpu_hardware
     # 6A-133 (LTS B7): on LILO/ELILO the stock kernels' initrds stay with geninitrd and the user's loader (hands-off)
     local ss_handsoff
@@ -2733,18 +2841,7 @@ generate_kernel_initramfs() {
 
                     # In TARGETED mode, check if existing initramfs is already up to date
                     if { [ "${kver}" = "TARGETED" ] || [ "${kver}" = "TARGETED_PIPELINE" ]; } && sudo test -f "${initrd_out}"; then
-                        local is_up_to_date=true
-                        if sudo test -f "/boot/vmlinuz-${single_kver}" && sudo test "/boot/vmlinuz-${single_kver}" -nt "${initrd_out}"; then
-                            is_up_to_date=false
-                        fi
-                        if [ "${has_k_nv}" = "true" ] && [ -f "${k_nv_mod}" ] && sudo test "${k_nv_mod}" -nt "${initrd_out}"; then
-                            is_up_to_date=false
-                        fi
-                        # 6A-97: the NVIDIA sync ordered this image (an unpacked module keeps the package's old mtime)
-                        if ss_initrd_ordered "${single_kver}"; then
-                            is_up_to_date=false
-                        fi
-                        if [ "${is_up_to_date}" = "true" ]; then
+                        if ! initramfs_is_stale "${single_kver}" "${has_k_nv}" "${k_nv_mod}"; then
                             continue
                         fi
                     fi
@@ -2773,6 +2870,7 @@ generate_kernel_initramfs() {
             local pipeline_failed=()
 
             if [ "${total_builds}" -eq 0 ]; then
+                [ "${kver}" = "TARGETED_PIPELINE" ] && SS_INITRD_FAILED=""
                 if [ "${kver}" = "TARGETED_PIPELINE" ]; then
                     printf "  \033[1;36m[3/5]\033[0m \033[1mDracut Initramfs Generation\033[0m  : \033[1;32mAll installed images are up to date\033[0m\n"
                 fi
@@ -2951,6 +3049,7 @@ generate_kernel_initramfs() {
             done < <(sudo find /boot -maxdepth 1 -name "initramfs-*.img" 2>/dev/null || true)
 
             sudo rm -rf "${dracut_tmpdir}" 2>/dev/null || true
+            [ "${kver}" = "TARGETED_PIPELINE" ] && SS_INITRD_FAILED=" ${pipeline_failed[*]:-} "
             if [ "${kver}" = "TARGETED_PIPELINE" ]; then
                 # 6A-44: a failed image is shown as failed (was always green)
                 if [ "${#pipeline_failed[@]}" -gt 0 ]; then

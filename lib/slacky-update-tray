@@ -308,7 +308,7 @@ class SlackyUpdateTray(QSystemTrayIcon):
         data = self.load_status()
         total_updates = 0
         if data:
-            total_updates = len(data.get("slackware_updates", [])) + len(data.get("slackpkgplus_updates", [])) + len(data.get("flatpak_updates", [])) + len(data.get("sbo_updates", [])) + len(data.get("cachyos_kernel_updates", [])) + len(data.get("cachyos_gaming_updates", [])) + len(data.get("gnomes_updates", [])) + len(data.get("nvidia_driver_updates", []))
+            total_updates = len(data.get("slackware_updates", [])) + len(data.get("slackpkgplus_updates", [])) + len(data.get("slackware_new_packages", [])) + len(data.get("flatpak_updates", [])) + len(data.get("sbo_updates", [])) + len(data.get("cachyos_kernel_updates", [])) + len(data.get("cachyos_gaming_updates", [])) + len(data.get("gnomes_updates", [])) + len(data.get("nvidia_driver_updates", []))
         if total_updates > 0 or (data and data.get("nvidia_gl_mismatch", False)):
             self.setIcon(self.icon_pending_full)
         else:
@@ -387,7 +387,7 @@ class SlackyUpdateTray(QSystemTrayIcon):
                         pass
             data = self.load_status()
 
-            slack_list = data.get("slackware_updates", []) if data else []
+            slack_list = (data.get("slackware_updates", []) + data.get("slackware_new_packages", [])) if data else []
             slackpkgplus_list = data.get("slackpkgplus_updates", []) if data else []
             flatpak_list = data.get("flatpak_updates", []) if data else []
             sbo_list = data.get("sbo_updates", []) if data else []
@@ -451,7 +451,7 @@ class SlackyUpdateTray(QSystemTrayIcon):
     def update_menu_content(self):
         data = self.load_status()
 
-        slack_list = data.get("slackware_updates", []) if data else []
+        slack_list = (data.get("slackware_updates", []) + data.get("slackware_new_packages", [])) if data else []
         slackpkgplus_list = data.get("slackpkgplus_updates", []) if data else []
         flatpak_list = data.get("flatpak_updates", []) if data else []
         sbo_list = data.get("sbo_updates", []) if data else []

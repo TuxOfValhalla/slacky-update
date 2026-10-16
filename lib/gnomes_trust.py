@@ -631,6 +631,30 @@ def _flush_used_signers() -> None:
         pass
 
 
+_NET: Any = False
+
+
+def _urlopen(req: Any, timeout: float) -> Any:
+    """6A-244: urlopen with one IPv4 retry when an IPv6 address is unreachable (slacky_net.py, loaded by path)."""
+    global _NET
+    if _NET is False:
+        _NET = None
+        try:
+            import importlib.util
+            path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "slacky_net.py")
+            spec = importlib.util.spec_from_file_location("slacky_net", path)
+            if spec and spec.loader:
+                mod = sys.modules.get("slacky_net") or importlib.util.module_from_spec(spec)
+                sys.modules["slacky_net"] = mod
+                spec.loader.exec_module(mod)
+                _NET = mod
+        except Exception:
+            _NET = None
+    if _NET is not None:
+        return _NET.open_url(req, timeout=timeout)
+    return urllib.request.urlopen(req, timeout=timeout)
+
+
 def sig_url(pkg_url: str) -> str:
     """Detached signature URL used by Arch, CachyOS and Chaotic mirrors."""
     return pkg_url + ".sig"
@@ -640,7 +664,7 @@ def fetch_signature(url: str, timeout: int = 15) -> Optional[bytes]:
     """Download a detached .sig (bounded size). None on any failure (caller reports "unsigned")."""
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "Slacky-Update UnderpantsGnomes"})
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        with _urlopen(req, timeout) as resp:
             data = resp.read(MAX_SIG_BYTES + 1)
         return data if 0 < len(data) <= MAX_SIG_BYTES else None
     except Exception:

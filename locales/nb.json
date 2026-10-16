@@ -35,6 +35,7 @@
   "CAT_NVIDIA": "NVIDIA-driver",
   "CAT_SBO": "SlackBuilds.org (SBo)",
   "CAT_SLACKPKGPLUS": "Multilib- og Slackpkg+-pakker",
+  "CAT_SLACKWARE_NEW": "Nye Slackware-pakker",
   "CAT_SLACKWARE": "Slackware-pakker",
   "CHECKING_FOR_UPDATES": "Søker etter oppdateringer...",
   "CHECK_FOR_UPDATES": "Søk etter oppdateringer",

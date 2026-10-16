@@ -178,6 +178,7 @@ def print_cat(title, items):
 
 print_cat(_("CAT_SLACKWARE"), data.get("slackware_updates", []))
 print_cat(_("CAT_SLACKPKGPLUS"), data.get("slackpkgplus_updates", []))
+print_cat(_("CAT_SLACKWARE_NEW"), data.get("slackware_new_packages", []))
 print_cat(_("CAT_FLATPAK"), data.get("flatpak_updates", []))
 print_cat(_("CAT_SBO"), data.get("sbo_updates", []))
 print_cat(_("CAT_KERNEL"), data.get("cachyos_kernel_updates", []))
@@ -193,7 +194,7 @@ if sb.get("state") == "enabled":
     for w in sb.get("warnings", []):
         print(f"\033[1;31m• Secure Boot Warning: {w}\033[0m")
 
-total = len(data.get("slackware_updates", [])) + len(data.get("slackpkgplus_updates", [])) + len(data.get("flatpak_updates", [])) + len(data.get("sbo_updates", [])) + len(data.get("cachyos_kernel_updates", [])) + len(data.get("cachyos_gaming_updates", [])) + len(data.get("gnomes_updates", [])) + len(data.get("nvidia_driver_updates", []))
+total = len(data.get("slackware_updates", [])) + len(data.get("slackpkgplus_updates", [])) + len(data.get("slackware_new_packages", [])) + len(data.get("flatpak_updates", [])) + len(data.get("sbo_updates", [])) + len(data.get("cachyos_kernel_updates", [])) + len(data.get("cachyos_gaming_updates", [])) + len(data.get("gnomes_updates", [])) + len(data.get("nvidia_driver_updates", []))
 if total == 0 and not data.get("nvidia_gl_mismatch", False):
     print("\033[1;32m" + _("NO_PENDING_UPDATES") + "\033[0m")
 print("")
@@ -383,10 +384,11 @@ run_full_update() {
         is_headless=1
     fi
 
-    local slack_count plus_count total_slack_pkgs
+    local slack_count plus_count new_count total_slack_pkgs
     slack_count=$(get_status_key_count "slackware_updates")
     plus_count=$(get_status_key_count "slackpkgplus_updates")
-    total_slack_pkgs=$(( slack_count + plus_count ))
+    new_count=$(get_status_key_count "slackware_new_packages")
+    total_slack_pkgs=$(( slack_count + plus_count + new_count ))
 
     local cachy_count
     cachy_count=$(get_status_key_count "cachyos_kernel_updates")
@@ -765,6 +767,8 @@ run_full_update() {
             fi
         fi
         echo -e "  \033[1;36m[4/5]\033[0m \033[1mSecure Boot Kernel Signing\033[0m    : ${sb_color}${sb_status}${RESET}"
+        # 6A-245: remember what the images were built from (after signing, so the signed kernel is the recorded one)
+        command -v record_initramfs_inputs_all >/dev/null 2>&1 && record_initramfs_inputs_all || true
 
         # [5/5] Limine Config, BLAKE2B Hash Matrix & Bootloader Reseal
         local lim_installed=false

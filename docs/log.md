@@ -1952,3 +1952,13 @@
 
 ### Build 87 (pending) - 6A-241: gnomes -Qu used a stale system cache (lib/gnomes_pacman.py)
 - `list-updates --no-sync` now uses the system database cache only when it is at least as new as the user's own; before, a cache from 3 days earlier hid the claude-desktop update from `gnomes -Qu` and the Rust app.
+
+### Build 87 (pending) - 6A-245: no unnecessary dracut runs (lib/mod_kernel.sh, bin/slacky-update)
+- Images are judged by a per-kernel fingerprint record (`/var/lib/slacky-boot/initramfs-inputs/<kver>`: kernel hash, module hashes, dracut config hash, image size+mtime) written after Secure Boot signing, instead of the vmlinuz-newer-than-image mtime rule (kept only when no record exists). Any real change, a missing image or a SpiderSense order still rebuilds. kernel-headers was already ignored; kernel-firmware changes do not rebuild images. Hashing ~0.05 s per kernel.
+- Tested offline in a fake root; not tested on the real machine. Rust mirror: not affected (booked steps, no mtime rule).
+
+### Build 87 (pending) - 6A-244: IPv6-only mirror hosts (lib/slacky_net.py, lib/gnomes_pacman.py)
+- Payload downloads now also try the other ranked hosts of the CachyOS / Arch / Chaotic family (bounded, 16 URLs, old tier fall-backs kept); an unreachable IPv6 address is retried over IPv4 in one shared helper used by gnomes db sync and payloads, the signature fetch, the sentinel and the vendor fetch. Checks unchanged. Tested offline with patched resolution; not tested against the real host. Rust mirror: 6A-244 (resolver that drops IPv6 without a route; the Ranker takes the next host).
+
+### Build 87 (pending) - 6A-243: multilib and install-new in the check (lib/slacky_slackpkg_check.py, lib/check_backend.sh)
+- The user-level check fetches the slackpkg+ repo lists itself (conditional, signature checked against slackpkg's keys, unverified = hint) and lists packages ADDED to Slackware since the installed state; new status keys `slackpkgplus_unverified` and `slackware_new_packages`, counted everywhere the Slackware lists are. Tested offline and once against the real repos in a private HOME (nothing pending now; a fixture of yesterday's state finds compat32 and the new libgit2). Rust mirror: 6A-243.

@@ -453,6 +453,37 @@ def mirrors_module() -> Any:
     return _MIRRORS_MODULE
 
 
+_NET_MODULE: Any = False
+
+
+def net_module() -> Any:
+    """6A-244: lib/slacky_net.py (one IPv4 retry when an IPv6 address is unreachable), loaded by explicit path. None when
+    it is missing or broken: plain urllib is then used, as before."""
+    global _NET_MODULE
+    if _NET_MODULE is False:
+        _NET_MODULE = None
+        try:
+            import importlib.util
+            path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "slacky_net.py")
+            spec = importlib.util.spec_from_file_location("slacky_net", path)
+            if spec and spec.loader:
+                mod = importlib.util.module_from_spec(spec)
+                sys.modules["slacky_net"] = mod
+                spec.loader.exec_module(mod)
+                _NET_MODULE = mod
+        except Exception:
+            _NET_MODULE = None
+    return _NET_MODULE
+
+
+def url_open(req: Any, timeout: float) -> Any:
+    """urlopen with the 6A-244 IPv4 retry (a host with only IPv6 addresses on a machine without an IPv6 route)."""
+    nm = net_module()
+    if nm is not None:
+        return nm.open_url(req, timeout=timeout)
+    return urllib.request.urlopen(req, timeout=timeout)
+
+
 def trust_log(entries: List[Dict[str, Any]]) -> None:
     """WP-7 log-only rollout: one JSON line per check in <cache>/trust-log.jsonl (kept under about 2 MB). Silent."""
     if not entries:
@@ -1391,7 +1422,7 @@ class GnomesPacmanEngine:
                 for cand_url in urls:
                     try:
                         req = urllib.request.Request(cand_url, headers=req_headers)
-                        with urllib.request.urlopen(req, timeout=10) as resp:
+                        with url_open(req, 10) as resp:
                             body = resp.read()
                             lm = resp.headers.get("Last-Modified") or email.utils.formatdate(now, usegmt=True)
                         if not (body.startswith(b"\x1f\x8b") or body.startswith(b"\x28\xb5\x2f\xfd")):
@@ -1706,7 +1737,43 @@ class GnomesPacmanEngine:
             if c and c not in seen:
                 seen.add(c)
                 unique_candidates.append(c)
-        return unique_candidates
+        return self._with_mirror_hosts(unique_candidates)
+
+    # 6A-244: at most this many payload URLs per package (tier/folder fall-backs and the other ranked hosts together)
+    MAX_PAYLOAD_CANDIDATES = 16
+
+    @staticmethod
+    def _with_mirror_hosts(candidates: List[str]) -> List[str]:
+        """6A-244: the same file on the other ranked hosts of its mirror family (CachyOS, Arch, Chaotic: same path layout,
+        only the host part changes), so a host that cannot be reached (for example one with only IPv6 addresses on a
+        machine without IPv6) does not stop the download. Order: the first candidate on every ranked host, then the
+        existing tier/folder fall-backs as before, then the other hosts for those fall-backs. Bounded. The caller still
+        verifies every file (size, SHA256, magic bytes); another host never relaxes a check."""
+        mm = mirrors_module()
+        if mm is None or not candidates:
+            return candidates
+        out: List[str] = []
+        seen: Set[str] = set()
+
+        def add(u: str) -> None:
+            if u and u not in seen and len(out) < GnomesPacmanEngine.MAX_PAYLOAD_CANDIDATES:
+                seen.add(u)
+                out.append(u)
+
+        def alts(u: str) -> List[str]:
+            try:
+                return list(mm.alternatives(u) or [u])
+            except Exception:
+                return [u]
+
+        for u in alts(candidates[0]):
+            add(u)
+        for u in candidates:
+            add(u)
+        for u in candidates:
+            for a in alts(u):
+                add(a)
+        return out
 
     def get_download_url(self, pkg: Dict[str, Any]) -> Optional[str]:
         """Construct direct HTTP download URL for package archive."""
@@ -3304,7 +3371,7 @@ exec "${{TARGET_BIN}}" "$@"
                         if attempt > 0:
                             time.sleep(0.2 * attempt)
                         req = urllib.request.Request(cand_url, headers=headers)
-                        with urllib.request.urlopen(req, timeout=25) as resp:
+                        with url_open(req, 25) as resp:
                             first_chunk = resp.read(8192)
                             if not first_chunk or first_chunk.startswith(b"<html") or b"<head" in first_chunk.lower():
                                 continue
@@ -3480,7 +3547,7 @@ exec "${{TARGET_BIN}}" "$@"
                         exp_sha = refreshed.get("SHA256SUM", "")
                         try:
                             req = urllib.request.Request(cand_url, headers=headers)
-                            with urllib.request.urlopen(req, timeout=25) as resp:
+                            with url_open(req, 25) as resp:
                                 first_chunk = resp.read(8192)
                                 if not first_chunk or first_chunk.startswith(b"<html") or b"<head" in first_chunk.lower():
                                     continue
@@ -3524,7 +3591,7 @@ exec "${{TARGET_BIN}}" "$@"
                             if attempt > 0:
                                 time.sleep(0.3 * attempt)
                             req = urllib.request.Request(cand_url, headers=headers)
-                            with urllib.request.urlopen(req, timeout=20) as resp:
+                            with url_open(req, 20) as resp:
                                 first_chunk = resp.read(8192)
                                 if not first_chunk or first_chunk.startswith(b"<html") or b"<head" in first_chunk.lower():
                                     continue
@@ -3704,12 +3771,16 @@ exec "${{TARGET_BIN}}" "$@"
                         with open(sig_path, "rb") as fh:
                             sig = fh.read(16384)
                     else:
-                        url = self.engine.get_download_url(pdata) or ""
-                        if url.startswith("https://"):
+                        # 6A-244: the signature is the same file on every host of the family; try the first hosts in
+                        # order so one unreachable host does not make a signed package look unsigned
+                        for url in self.engine.get_download_urls_candidates(pdata)[:4]:
+                            if not url.startswith("https://"):
+                                continue
                             sig = trust.fetch_signature(trust.sig_url(url))
                             if sig:
                                 with open(sig_path, "wb") as fh:
                                     fh.write(sig)
+                                break
                 except OSError:
                     pass
             return trust.verify_package(path, sig, pdata.get("_REPO", ""), name=pdata.get("NAME", ""),

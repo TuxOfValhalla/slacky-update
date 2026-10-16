@@ -299,7 +299,7 @@ def status_names():
         if ts > best_ts:
             best, best_ts = d, ts
     names = set()
-    for key in ("slackware_updates", "slackpkgplus_updates"):
+    for key in ("slackware_updates", "slackpkgplus_updates", "slackware_new_packages"):
         for ent in best.get(key, []) or []:
             if not isinstance(ent, str) or not ent.strip():
                 continue

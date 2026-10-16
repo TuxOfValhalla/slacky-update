@@ -749,6 +749,7 @@ if not base_data:
     base_data = {
         "slackware_updates": [],
         "slackpkgplus_updates": [],
+        "slackware_new_packages": [],
         "flatpak_updates": [],
         "sbo_updates": [],
         "cachyos_kernel_updates": [],
@@ -769,6 +770,7 @@ if not base_data:
 if slack_done == "1":
     base_data["slackware_updates"] = []
     base_data["slackpkgplus_updates"] = []
+    base_data["slackware_new_packages"] = []
 if cachy_done == "1":
     base_data["cachyos_kernel_updates"] = []
 if flatpak_done == "1":

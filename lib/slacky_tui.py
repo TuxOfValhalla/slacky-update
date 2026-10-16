@@ -564,6 +564,7 @@ def get_pending_updates_lines(max_available_lines=None, cols=80, ascii_only=Fals
                 cats = [
                     ("CAT_SLACKWARE", "Slackware", data.get("slackware_updates", [])),
                     ("CAT_SLACKPKGPLUS", "Slackpkg+", data.get("slackpkgplus_updates", [])),
+                    ("CAT_SLACKWARE_NEW", "New Slackware packages", data.get("slackware_new_packages", [])),
                     ("CAT_FLATPAK", "Flatpak", data.get("flatpak_updates", [])),
                     ("CAT_SBO", "SlackBuilds", data.get("sbo_updates", [])),
                     ("CAT_KERNEL", "CachyOS Kernel", data.get("cachyos_kernel_updates", [])),
