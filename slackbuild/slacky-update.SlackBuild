@@ -6,7 +6,7 @@ set -euo pipefail
 PRGNAM="slacky-update"
 VERSION="1.0_RC2"
 ARCH="noarch"
-BUILD="88_slacky"
+BUILD="89_slacky"
 
 SRC_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 OUTPUT_DIR="${OUTPUT_DIR:-${SRC_DIR}/../slacky-updates_releases}"

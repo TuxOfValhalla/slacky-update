@@ -2069,9 +2069,41 @@ class GnomesPacmanEngine:
         If clean_all is False, removes uninstalled or corrupt files.
         Returns (files_removed, bytes_freed).
         """
-        installed_apps = {p["name"].lower() for p in self.list_installed_gnomes_packages()}
+        installed_list = self.list_installed_gnomes_packages()
+        installed_apps = {p["name"].lower() for p in installed_list}
         files_removed = 0
         bytes_freed = 0
+        now = time.time()
+
+        def _archive_name_version(fname: str) -> Optional[Tuple[str, str]]:
+            """name-pkgver-pkgrel-arch.pkg.tar.<ext> -> (name, "pkgver-pkgrel") (same as Rust cache_clean::split_archive_name)."""
+            stem = fname
+            for ext in (".zst", ".xz", ".gz"):
+                if stem.endswith(ext):
+                    stem = stem[:-len(ext)]
+                    break
+            else:
+                return None
+            if not stem.endswith(".pkg.tar"):
+                return None
+            parts = stem[:-len(".pkg.tar")].rsplit("-", 3)
+            if len(parts) != 4:
+                return None
+            return parts[0].lower(), f"{parts[1]}-{parts[2]}"
+
+        def _is_installed_version(name: str, version: str) -> bool:
+            # 6A-262: the package database id writes "-" and ":" as "_"; an epoch ("1_2.0_1") is part of the id only
+            want = re.sub(r"[-:]", "_", version)
+            for ip in installed_list:
+                if ip["name"].lower() != name and ip.get("canonical_name", "").lower() != name:
+                    continue
+                have = ip["version"]
+                if have == want:
+                    return True
+                ep, sep, rest = have.partition("_")
+                if sep and ep.isdigit() and rest == want:
+                    return True
+            return False
 
         candidate_dirs = {
             os.path.join(self.cache_dir, "pkg"),
@@ -2085,46 +2117,56 @@ class GnomesPacmanEngine:
         }
 
         for cdir in candidate_dirs:
-            if not os.path.isdir(cdir):
+            # 6A-262: never follow a link: a linked folder is skipped, and only regular files directly in the folder count
+            if os.path.islink(cdir) or not os.path.isdir(cdir):
                 continue
             try:
-                for fname in os.listdir(cdir):
-                    fpath = os.path.join(cdir, fname)
-                    if not os.path.isfile(fpath):
+                regular: Dict[str, os.stat_result] = {}
+                for fname in sorted(os.listdir(cdir)):
+                    try:
+                        st = os.lstat(os.path.join(cdir, fname))
+                    except OSError:
                         continue
-                    # WP-7: a cached detached signature goes with its package
-                    if fname.endswith(".sig"):
-                        if clean_all or not os.path.exists(fpath[:-4]):
-                            try:
-                                bytes_freed += os.path.getsize(fpath)
-                                os.remove(fpath)
-                                files_removed += 1
-                            except OSError:
-                                pass
-                        continue
-                    if not (fname.endswith(".pkg.tar.zst") or fname.endswith(".pkg.tar.xz") or fname.endswith(".part")):
-                        continue
+                    if stat.S_ISREG(st.st_mode):
+                        regular[fname] = st
+                gone: Set[str] = set()
 
-                    should_delete = False
-                    if clean_all or fname.endswith(".part"):
+                def _remove(fname: str) -> None:
+                    nonlocal files_removed, bytes_freed
+                    try:
+                        os.remove(os.path.join(cdir, fname))
+                        files_removed += 1
+                        bytes_freed += regular[fname].st_size
+                    except OSError:
+                        pass
+
+                for fname, st in regular.items():
+                    fpath = os.path.join(cdir, fname)
+                    if fname.endswith(".sig"):
+                        continue
+                    if fname.endswith(".part"):
+                        # 6A-262: a download may still be running: a fresh .part is kept, even for clean_all
+                        if now - st.st_mtime < CLEAN_PART_GRACE:
+                            continue
+                        _remove(fname)
+                        continue
+                    if not (fname.endswith(".pkg.tar.zst") or fname.endswith(".pkg.tar.xz")):
+                        continue
+                    if clean_all or not TransmutationFactory.is_valid_pkg_archive(fpath):
                         should_delete = True
                     else:
-                        if not TransmutationFactory.is_valid_pkg_archive(fpath):
-                            should_delete = True
-                        else:
-                            m = re.match(r"^([a-zA-Z0-9_\.\+-]+?)-[0-9]+[a-zA-Z0-9_\.:-]*-[0-9]+", fname)
-                            pkg_name = m.group(1).lower() if m else ""
-                            if pkg_name not in installed_apps:
-                                should_delete = True
-
+                        # 6A-262: only the archive of the INSTALLED name AND version stays (old versions used to stay forever)
+                        nv = _archive_name_version(fname)
+                        should_delete = not (nv and _is_installed_version(nv[0], nv[1]))
                     if should_delete:
-                        try:
-                            sz = os.path.getsize(fpath)
-                            os.remove(fpath)
-                            files_removed += 1
-                            bytes_freed += sz
-                        except Exception:
-                            pass
+                        gone.add(fname)
+                        _remove(fname)
+                # WP-7: a cached detached signature goes with its package
+                for fname in regular:
+                    if fname.endswith(".sig"):
+                        arch = fname[:-4]
+                        if clean_all or arch in gone or arch not in regular:
+                            _remove(fname)
             except Exception:
                 pass
 
@@ -2567,7 +2609,7 @@ class TransmutationFactory:
                 with open(os.path.join(sp, "_underpants_app_paths.pth"), "w") as fh:
                     fh.write("\n".join(dict.fromkeys(extra)) + "\n")
             if verbose:
-                print(f"  ✓ Private Python venv created (runtime {ver}, no exported PYTHONPATH).")
+                print(f"  Private Python venv created (runtime {ver}, no exported PYTHONPATH).")
             return True
         except Exception as e:
             if verbose:
@@ -3192,14 +3234,14 @@ exec "${{TARGET_BIN}}" "$@"
 
         if not needed_pkgs:
             if verbose:
-                print(f"  ✓ All {total_pkgs} package payload(s) ready in local cache.")
+                print(f"  All {total_pkgs} package payload(s) ready in local cache.")
             return downloaded_results
 
         needed_bytes = sum(int(p.get("CSIZE", 15 * 1024 * 1024)) for p in needed_pkgs)
         tot_mb = needed_bytes / (1024 * 1024)
         if verbose:
             print(f"\033[1;36m:: Fetching {len(needed_pkgs)} package payload(s) [{tot_mb:.2f} MB]...\033[0m")
-            print("   🩲 Step 1: Steal Underpants  ➔  Step 2: ? ? ? ?  ➔  🧙 💰 Step 3: PROFIT!\n")
+            print("   Step 1: Steal Underpants  ->  Step 2: ? ? ? ?  ->  Step 3: PROFIT!\n")
 
         num_workers = min(len(needed_pkgs), 10)
         available_slots = list(range(num_workers))
@@ -3522,7 +3564,7 @@ exec "${{TARGET_BIN}}" "$@"
         # Immediate Self-Healing if packages failed due to 404
         if missing_pkgs and pkgs_with_404:
             if verbose:
-                print(f"  :: \033[1;33m⚡ Self-Healing:\033[0m Detected {len(pkgs_with_404)} outdated package URL(s) (HTTP 404). Resynchronizing repository databases...")
+                print(f"  :: \033[1;33mSelf-Healing:\033[0m Detected {len(pkgs_with_404)} outdated package URL(s) (HTTP 404). Resynchronizing repository databases...")
             try:
                 self.engine.sync_repositories(force=True, verbose=False)
             except Exception as e:
@@ -4028,7 +4070,7 @@ exec "${{TARGET_BIN}}" "$@"
         has_patchelf = shutil.which("patchelf") is not None
         if not has_patchelf:
             if verbose:
-                print("  ⚠️  patchelf binary not found in PATH; skipping RUNPATH relocation.")
+                print("  Warning: patchelf binary not found in PATH; skipping RUNPATH relocation.")
             return 0
 
         # WP-3: no /opt/underpants/common (never existed) and no 32-bit /usr/lib/{pulseaudio,pipewire-0.3} (wrong ELF class)
@@ -4159,7 +4201,7 @@ exec "${{TARGET_BIN}}" "$@"
 
         if is_tty:
             start_t = time.time()
-            anim_chars = ["🩲 · · 🧙", "· 🩲 · 🧙", "· · 🩲 🧙", "· · · 🧙 💰", "· · 🩲 🧙", "· 🩲 · 🧙"]
+            anim_chars = ["underpants · · gnome", "· underpants · gnome", "· · underpants gnome", "· · · gnome profit", "· · underpants gnome", "· underpants · gnome"]
             idx = 0
             while p.poll() is None:
                 elapsed = time.time() - start_t
@@ -4167,7 +4209,7 @@ exec "${{TARGET_BIN}}" "$@"
                 s = int(elapsed) % 60
                 time_str = f"{m:02d}:{s:02d}"
                 anim = anim_chars[idx % len(anim_chars)]
-                sys.stdout.write(f"\033[2K\r   \033[1;36m🧙 Compressing Slackware package (xz -T0 -1) [{time_str}] {anim}\033[0m")
+                sys.stdout.write(f"\033[2K\r   \033[1;36mCompressing Slackware package (xz -T0 -1) [{time_str}] {anim}\033[0m")
                 sys.stdout.flush()
                 idx += 1
                 time.sleep(0.1)
@@ -4203,7 +4245,7 @@ exec "${{TARGET_BIN}}" "$@"
             target_name_resolved = p["NAME"]
             if is_protected_host_binary(target_name_resolved):
                 if verbose:
-                    print(f"\n\033[1;31m🛑 Host Sovereignty Shield Activated!\033[0m")
+                    print(f"\n\033[1;31mSTOP: Host Sovereignty Shield Activated!\033[0m")
                     print(f"   '{target_name_resolved}' is a protected Slackware core system component.")
                     print(f"   The Host Sovereignty Shield refuses to transmute or overwrite core distribution utilities.")
                     print(f"   Please manage '{target_name_resolved}' natively using Slackware pkgtools or slackpkg.\n")
@@ -4215,7 +4257,7 @@ exec "${{TARGET_BIN}}" "$@"
             collision = self.engine.check_curated_collision(actual_name)
             if collision and not force:
                 if verbose:
-                    print(f"\n\033[1;33m⚠️  Warning: '{actual_name}' is already installed as a curated Slackware package ({collision})!\033[0m")
+                    print(f"\n\033[1;33mWarning: '{actual_name}' is already installed as a curated Slackware package ({collision})!\033[0m")
                 if sys.stdin.isatty():
                     try:
                         ans = input(f"   Do you want to override '{actual_name}' with the Underpants Gnomes version? [y/N]: ").strip().lower()
@@ -4339,7 +4381,7 @@ exec "${{TARGET_BIN}}" "$@"
         # Host Sovereignty Shield: Refuse to transmute core distribution utilities
         if not is_runtime and is_protected_host_binary(actual_name):
             if verbose:
-                print(f"\n\033[1;31m🛑 Host Sovereignty Shield Activated!\033[0m")
+                print(f"\n\033[1;31mSTOP: Host Sovereignty Shield Activated!\033[0m")
                 print(f"   '{actual_name}' is a protected Slackware core system component.")
                 print(f"   The Host Sovereignty Shield refuses to transmute or overwrite core distribution utilities.")
                 print(f"   Please manage '{actual_name}' natively using Slackware pkgtools or slackpkg.\n")
@@ -4350,7 +4392,7 @@ exec "${{TARGET_BIN}}" "$@"
             collision = self.engine.check_curated_collision(actual_name)
             if collision and not force:
                 if verbose:
-                    print(f"\n\033[1;33m⚠️  Warning: '{actual_name}' is already installed as a curated Slackware package ({collision})!\033[0m")
+                    print(f"\n\033[1;33mWarning: '{actual_name}' is already installed as a curated Slackware package ({collision})!\033[0m")
                     print(f"   Transmuting it will place the Underpants Gnomes binary in /usr/bin/{actual_name}.")
                 if sys.stdin.isatty():
                     try:
@@ -4709,7 +4751,7 @@ exec "${{TARGET_BIN}}" "$@"
                 print(":: Relocating ELF RUNPATH with patchelf...")
             patched_count = self.patch_elf_rpaths(opt_app_dir, verbose=verbose)
             if verbose:
-                print(f"  ✓ Relocated {patched_count} ELF binaries and shared objects.")
+                print(f"  Relocated {patched_count} ELF binaries and shared objects.")
 
             # P2/L1: hold the package when it needs newer glibc/libstdc++/libgcc symbols than the host provides
             if self._headroom_refusal(opt_app_dir, actual_name, verbose, name=actual_name, version=raw_version):
@@ -5028,7 +5070,7 @@ fi
 
             pkg_size_mb = os.path.getsize(txz_output_path) / (1024 * 1024)
             if verbose:
-                print(f"\n\033[1;32m✓ Successfully transmuted {actual_name} into genuine Slackware package!\033[0m")
+                print(f"\n\033[1;32mSuccessfully transmuted {actual_name} into genuine Slackware package!\033[0m")
                 print(f"  Package File    : {txz_output_path} [{pkg_size_mb:.2f} MB]")
                 print(f"  Installed Root  : {inst_root}")
                 print(f"  Binaries Linked : {', '.join(created_binaries) if created_binaries else ('None (Isolated Runtime)' if is_runtime else 'None')}")
@@ -5278,7 +5320,7 @@ esac
 
         if verbose:
             total_mb = plan["download_size_bytes"] / (1024 * 1024)
-            print(f"  📦 Runtime Profile Payload Packages ({len(to_install)} files • {total_mb:.2f} MB):")
+            print(f"  Runtime Profile Payload Packages ({len(to_install)} files • {total_mb:.2f} MB):")
             for i, p in enumerate(to_install, 1):
                 csize_mb = int(p.get("CSIZE", 0)) / (1024 * 1024)
                 print(f"    • ({i:>2d}/{len(to_install)}) [{p.get('_REPO')}] {p.get('NAME')} ({p.get('VERSION')}) [{csize_mb:.2f} MB]")
@@ -5385,7 +5427,7 @@ esac
                 print(":: Relocating runtime ELF RUNPATH with patchelf...")
             patched_count = self.patch_elf_rpaths(opt_runtime_dir, verbose=verbose)
             if verbose:
-                print(f"  ✓ Relocated {patched_count} ELF binaries and shared objects.")
+                print(f"  Relocated {patched_count} ELF binaries and shared objects.")
 
             # P2/L1: never ship a runtime that needs newer glibc/libstdc++/libgcc symbols than the host provides
             if self._headroom_refusal(opt_runtime_dir, f"The shared runtime ({profile_name})", verbose, name=f"runtime-{profile_name}"):
@@ -5492,7 +5534,7 @@ fi
 
             pkg_size_mb = os.path.getsize(txz_output_path) / (1024 * 1024)
             if verbose:
-                print(f"\n\033[1;32m🧙 💰 PROFIT! Successfully transmuted runtime profile '{profile_name}' into Slackware package!\033[0m")
+                print(f"\n\033[1;32mPROFIT! Successfully transmuted runtime profile '{profile_name}' into Slackware package!\033[0m")
                 print(f"  Package File    : {txz_output_path} [{pkg_size_mb:.2f} MB]")
                 print(f"  Installed Root  : /opt/underpants/runtime/")
                 print(f"  Install Command : \033[1;36mupgradepkg --install-new {txz_output_path}\033[0m\n")
@@ -5512,23 +5554,90 @@ fi
             shutil.rmtree(staging_base, ignore_errors=True)
 
     @staticmethod
-    def purge_gnomes_service_hooks(svc_name: str) -> None:
+    def purge_gnomes_service_hooks(svc_name: str, files: Optional[Tuple[str, ...]] = None, lock_path: str = "/run/lock/slacky-update.lock") -> List[str]:
         """
         Cleanly purges demarcated gnomes-service blocks from /etc/rc.d/rc.local and
         /etc/rc.d/rc.local_shutdown with zero residual syntax errors.
+
+        6A-263: under the shared run lock (skipped when the calling script already holds it), a backup copy
+        `<file>.slacky-bak` first, a temp file in the same folder + rename, owner and mode kept, and a link is never
+        followed or rewritten. Returns one plain sentence per file that was NOT changed because it was unsafe.
         """
-        for fpath in ("/etc/rc.d/rc.local", "/etc/rc.d/rc.local_shutdown"):
-            if os.path.exists(fpath):
+        import fcntl
+        problems: List[str] = []
+        targets = files if files is not None else ("/etc/rc.d/rc.local", "/etc/rc.d/rc.local_shutdown")
+        lock_fd = None
+        if os.environ.get("SLACKY_RUN_LOCK_HELD") != "1":
+            try:
+                lock_fd = os.open(lock_path, os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW)
+            except OSError:
+                lock_fd = None  # no lock file (a normal system without one): the other protections still apply
+            if lock_fd is not None:
+                deadline = time.time() + 60
+                while True:
+                    try:
+                        fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                        break
+                    except OSError:
+                        if time.time() > deadline:
+                            os.close(lock_fd)
+                            return ["Another update is running right now, so the startup file was not changed; try again when it has finished."]
+                        time.sleep(0.5)
+        try:
+            pattern = r'(?m)^[ \t]*# --- \[ gnomes-service: ' + re.escape(svc_name) + r' \] ---[\s\S]*?^[ \t]*# --- \[ /gnomes-service: ' + re.escape(svc_name) + r' \] ---\n?'
+            for fpath in targets:
                 try:
-                    with open(fpath, "r", encoding="utf-8", errors="ignore") as fp:
+                    if os.path.islink(fpath):
+                        problems.append(f"{fpath} is a link, so it was not changed.")
+                        continue
+                    if not os.path.isfile(fpath):
+                        continue
+                    st = os.stat(fpath)
+                    with open(fpath, "r", encoding="utf-8", errors="strict") as fp:
                         content = fp.read()
-                    pattern = r'(?m)^[ \t]*# --- \[ gnomes-service: ' + re.escape(svc_name) + r' \] ---[\s\S]*?^[ \t]*# --- \[ /gnomes-service: ' + re.escape(svc_name) + r' \] ---\n?'
                     new_content = re.sub(pattern, "", content)
-                    if new_content != content:
-                        with open(fpath, "w", encoding="utf-8") as fp:
+                    if new_content == content:
+                        continue
+                    d = os.path.dirname(fpath)
+                    tmp = os.path.join(d, f".{os.path.basename(fpath)}.gnomes-tmp.{os.getpid()}")
+                    bak = fpath + ".slacky-bak"
+                    try:
+                        # keep a copy of what is replaced (never through a link)
+                        if os.path.islink(bak):
+                            problems.append(f"{bak} is a link, so {fpath} was not changed.")
+                            continue
+                        shutil.copy2(fpath, bak)
+                        fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+                        with os.fdopen(fd, "w", encoding="utf-8") as fp:
                             fp.write(new_content)
+                            fp.flush()
+                            os.fsync(fp.fileno())
+                        os.chmod(tmp, stat.S_IMODE(st.st_mode))
+                        try:
+                            os.chown(tmp, st.st_uid, st.st_gid)
+                        except PermissionError:
+                            if os.geteuid() == 0:
+                                raise
+                        # a result that no longer parses is refused when the original did parse
+                        was_ok = subprocess.run(["sh", "-n", fpath], capture_output=True).returncode == 0
+                        now_ok = subprocess.run(["sh", "-n", tmp], capture_output=True).returncode == 0
+                        if was_ok and not now_ok:
+                            os.remove(tmp)
+                            problems.append(f"{fpath} would have a syntax error after the change, so it was not changed.")
+                            continue
+                        os.replace(tmp, fpath)
+                    except Exception:
+                        try:
+                            os.remove(tmp)
+                        except OSError:
+                            pass
+                        problems.append(f"{fpath} could not be changed safely, so it was left as it was.")
                 except Exception:
-                    pass
+                    problems.append(f"{fpath} could not be read, so it was not changed.")
+        finally:
+            if lock_fd is not None:
+                os.close(lock_fd)
+        return problems
 
 
 class RuntimeManager:
@@ -5647,12 +5756,11 @@ class RuntimeManager:
                 print(":: No installed Underpants package library directories found to deduplicate.")
             return {"files_scanned": 0, "duplicates_linked": 0, "bytes_saved": 0, "human_saved": "0 MB"}
 
-        file_hash_map: Dict[Tuple[int, str], str] = {}
-        inode_map: Dict[int, str] = {}
-
         total_scanned = 0
         duplicates_linked = 0
         bytes_saved = 0
+        skipped_owner = 0
+        runtime_lib = os.path.join(self.RUNTIME_DIR, "lib")
 
         def _sha256(path: str) -> Optional[str]:
             h = hashlib.sha256()
@@ -5664,53 +5772,68 @@ class RuntimeManager:
             except Exception:
                 return None
 
+        # 6A-261 (mirror of Rust src/gnomes/dedup.rs): regular, non-empty files only (links are skipped); candidates are
+        # grouped by device and size first and hashed only when another file of that size exists.
+        entries: Dict[Tuple[int, int], List[Dict[str, Any]]] = {}
         for sdir in scan_dirs:
+            is_runtime = os.path.abspath(sdir) == os.path.abspath(runtime_lib)
             for root, _, files in os.walk(sdir):
-                for fname in files:
+                for fname in sorted(files):
                     fpath = os.path.join(root, fname)
-                    if os.path.islink(fpath):
-                        continue
                     try:
-                        st = os.stat(fpath)
+                        st = os.lstat(fpath)
                     except Exception:
                         continue
-
                     if not stat.S_ISREG(st.st_mode) or st.st_size == 0:
                         continue
-
                     total_scanned += 1
+                    entries.setdefault((st.st_dev, st.st_size), []).append({
+                        "path": fpath, "ino": st.st_ino, "uid": st.st_uid, "gid": st.st_gid,
+                        "mode": stat.S_IMODE(st.st_mode), "runtime": is_runtime, "size": st.st_size})
 
-                    if st.st_ino in inode_map:
+        for (_dev, f_size), group in sorted(entries.items()):
+            if len({e["ino"] for e in group}) < 2:
+                continue  # one inode: already linked or alone
+            by_hash: Dict[str, List[Dict[str, Any]]] = {}
+            hashed: Dict[int, Optional[str]] = {}
+            for e in group:
+                if e["ino"] not in hashed:
+                    hashed[e["ino"]] = _sha256(e["path"])
+                if hashed[e["ino"]]:
+                    by_hash.setdefault(hashed[e["ino"]], []).append(e)
+            for same in by_hash.values():
+                if len({e["ino"] for e in same}) < 2:
+                    continue
+                # the runtime copy is the one that is kept; otherwise the first path in scan order
+                same.sort(key=lambda e: (not e["runtime"], e["path"]))
+                keep = same[0]
+                freed: Set[int] = set()
+                for e in same[1:]:
+                    if e["ino"] == keep["ino"]:
                         continue
-
-                    f_size = st.st_size
-                    f_hash = _sha256(fpath)
-                    if not f_hash:
+                    if e["runtime"]:
+                        continue  # a file of the runtime package is never relinked, not even between two runtime files
+                    if (e["uid"], e["gid"], e["mode"]) != (keep["uid"], keep["gid"], keep["mode"]):
+                        skipped_owner += 1  # a hardlink shares owner, group and mode: never link across a difference
                         continue
-
-                    key = (f_size, f_hash)
-                    if key in file_hash_map:
-                        master_file = file_hash_map[key]
-                        tmp_link = fpath + f".dedup_tmp_{os.getpid()}"
-                        try:
-                            os.link(master_file, tmp_link)
-                            os.replace(tmp_link, fpath)
-                            duplicates_linked += 1
+                    fpath = e["path"]
+                    tmp_link = fpath + f".dedup_tmp_{os.getpid()}"
+                    try:
+                        os.link(keep["path"], tmp_link)
+                        os.replace(tmp_link, fpath)
+                        duplicates_linked += 1
+                        if e["ino"] not in freed:
+                            freed.add(e["ino"])
                             bytes_saved += f_size
-                            inode_map[st.st_ino] = master_file
-                            if verbose:
-                                rel_dup = os.path.relpath(fpath, "/opt/underpants")
-                                rel_master = os.path.relpath(master_file, "/opt/underpants")
-                                print(f"  \033[1;32m🔗\033[0m Hardlinked \033[1m{rel_dup}\033[0m ➔ \033[1;30m{rel_master}\033[0m [{f_size/(1024*1024):.2f} MB]")
-                        except Exception:
-                            if os.path.exists(tmp_link):
-                                try:
-                                    os.remove(tmp_link)
-                                except Exception:
-                                    pass
-                    else:
-                        file_hash_map[key] = fpath
-                        inode_map[st.st_ino] = fpath
+                        if verbose:
+                            rel_dup = os.path.relpath(fpath, "/opt/underpants")
+                            rel_master = os.path.relpath(keep["path"], "/opt/underpants")
+                            print(f"  \033[1;32m[link]\033[0m Hardlinked \033[1m{rel_dup}\033[0m -> \033[1;30m{rel_master}\033[0m [{f_size/(1024*1024):.2f} MB]")
+                    except Exception:
+                        try:
+                            os.remove(tmp_link)
+                        except OSError:
+                            pass
 
         saved_mb = bytes_saved / (1024 * 1024)
         saved_gb = bytes_saved / (1024 * 1024 * 1024)
@@ -5720,13 +5843,16 @@ class RuntimeManager:
             print(f"\n:: Deduplication Summary:")
             print(f"  • Files Scanned       : {total_scanned}")
             print(f"  • Duplicates Linked   : {duplicates_linked}")
+            if skipped_owner:
+                print(f"  • Left out (other owner or mode): {skipped_owner}")
             print(f"  • Disk Space Reclaimed: \033[1;32m{human_str}\033[0m\n")
 
         return {
             "files_scanned": total_scanned,
             "duplicates_linked": duplicates_linked,
             "bytes_saved": bytes_saved,
-            "human_saved": human_str
+            "human_saved": human_str,
+            "skipped_owner": skipped_owner
         }
 
 
@@ -6095,13 +6221,22 @@ def _snapshot_info(snapdir: str, num: int) -> Dict[str, str]:
     return info
 
 
+# 6A-262: a .part file younger than this may belong to a running download (kept even by clean --all)
+CLEAN_PART_GRACE = 10 * 60
+# 6A-262: build folders younger than 30 minutes are never removed; the D14 rule in clean_cache keeps them 6 hours (stricter)
+
+
 # Boot chain: rolling back only the package would leave the ESP, initramfs or signatures out of step with it. These go
 # back with the whole system (the snapshot entries in the Limine menu), never one package at a time.
 ROLLBACK_REFUSED = ("limine", "sbctl", "snapper", "kernel", "nvidia", "linux-cachyos", "dkms", "grub", "shim")
 
 
 def rollback_refusal(base: str) -> Optional[str]:
-    short = base.replace("underpants-", "", 1).replace("cachyos-gnome-", "", 1).replace("cachyos-", "", 1)
+    # 6A-260: prefixes only (str.replace also cut a "cachyos-" out of the middle, so "linux-cachyos-bore" slipped through)
+    short = base
+    for pre in ("underpants-", "cachyos-gnome-", "cachyos-"):
+        if short.startswith(pre):
+            short = short[len(pre):]
     if any(short == r or short.startswith(r + "-") or short.startswith(r) and r in ("kernel", "nvidia", "linux-cachyos")
            for r in ROLLBACK_REFUSED):
         return (f"{base} is part of the boot chain, so it is never rolled back on its own. Boot the snapshot entry "
@@ -6111,7 +6246,10 @@ def rollback_refusal(base: str) -> Optional[str]:
 
 def _rollback_aliases(base: str) -> Set[str]:
     """Same app under the names it had before a rename (cachyos-gnome-X became underpants-X)."""
-    short = base.replace("underpants-", "", 1).replace("cachyos-gnome-", "", 1)
+    short = base
+    for pre in ("underpants-", "cachyos-gnome-"):
+        if short.startswith(pre):
+            short = short[len(pre):]
     return {base, "underpants-" + short, "cachyos-gnome-" + short}
 
 
@@ -6289,23 +6427,23 @@ def main():
         else:
             print(f":: Dependency Resolution Plan for: {', '.join(targets)}")
             print(f"  Host Glibc Capable  : GLIBC <= {res['host_glibc_supported']}")
-            print(f"\n  📦 Packages to Install ({len(res['to_install'])}):")
+            print(f"\n  Packages to Install ({len(res['to_install'])}):")
             for pkg in res["to_install"]:
                 csize = int(pkg.get("CSIZE", 0)) / (1024 * 1024)
                 print(f"    • [{pkg.get('_REPO')}] {pkg.get('NAME')} ({pkg.get('VERSION')}) [{csize:.2f} MB]")
 
             if res["host_provided"]:
-                print(f"\n  🛡️  Host Base System Shielded ({len(res['host_provided'])}):")
+                print(f"\n  Host Base System Shielded ({len(res['host_provided'])}):")
                 for k, reason in res["host_provided"].items():
                     print(f"    • {k:<24} => {reason}")
 
             if res["virtual_satisfied"]:
-                print(f"\n  ✨ Virtual Providers Satisfied ({len(res['virtual_satisfied'])}):")
+                print(f"\n  Virtual Providers Satisfied ({len(res['virtual_satisfied'])}):")
                 for k, target in res["virtual_satisfied"].items():
                     print(f"    • {k:<24} => {target}")
 
             if res["missing"]:
-                print(f"\n  ⚠️  Unresolved / Missing ({len(res['missing'])}):")
+                print(f"\n  Unresolved / Missing ({len(res['missing'])}):")
                 for m in res["missing"]:
                     print(f"    • {m}")
 
@@ -6550,25 +6688,29 @@ def main():
         sys.exit(0)
 
     elif cmd == "check-collision":
+        # 6A-264: the text stays; the exit code says whether something was found (0) or not (1)
         if len(sys.argv) < 3:
             print("NONE")
-            sys.exit(0)
+            sys.exit(1)
         target = sys.argv[2]
         collision = engine.check_curated_collision(target)
         if collision:
             print(collision)
         else:
             print("NONE")
+            sys.exit(1)
 
     elif cmd == "url":
         if len(sys.argv) < 3:
             sys.exit(1)
         pkg_name = sys.argv[2]
         p = engine.get_package(pkg_name)
-        if p:
-            print(engine.get_download_url(p) or "NONE")
+        url_found = engine.get_download_url(p) if p else None
+        if url_found:
+            print(url_found)
         else:
-            print("NONE")
+            print("NONE")  # 6A-264: text unchanged, exit 1 when nothing is found
+            sys.exit(1)
 
     elif cmd == "check-host":
         as_json = "--json" in sys.argv
@@ -6604,6 +6746,11 @@ def main():
     elif cmd == "list-installed":
         as_json = "--json" in sys.argv
         installed = engine.list_installed_gnomes_packages()
+        # 6A-265: like pacman -Qs, search words keep only the apps whose name or package id contains every word
+        qs_words = [w.lower() for w in sys.argv[2:] if w and not w.startswith("-")]
+        if qs_words:
+            installed = [i for i in installed
+                         if all(w in f"{i['name']} {i.get('canonical_name', '')} {i['package_id']}".lower() for w in qs_words)]
         if as_json:
             print(json.dumps(installed, indent=2))
         else:
@@ -6660,9 +6807,17 @@ def main():
             print("Error: Specify service name to purge hooks for.")
             sys.exit(1)
         targets = [a for a in sys.argv[2:] if not a.startswith("-")]
+        purge_failed = False
         for svc in targets:
-            TransmutationFactory.purge_gnomes_service_hooks(svc)
-            print(f":: Purged service hooks for '{svc}' from rc.local and rc.local_shutdown.")
+            problems = TransmutationFactory.purge_gnomes_service_hooks(svc)
+            for pr in problems:
+                print(f":: {pr}")
+            if problems:
+                purge_failed = True
+            else:
+                print(f":: Purged service hooks for '{svc}' from rc.local and rc.local_shutdown.")
+        if purge_failed:
+            sys.exit(1)
 
 
 if __name__ == "__main__":

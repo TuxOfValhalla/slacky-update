@@ -2092,6 +2092,63 @@ backup_limine_self_heal() {
     fi
 }
 
+# 6A-251: checks a Limine pair (EFI file + limine.conf) against the kernel files on the startup partition.
+# Args: efi conf esp. Prints ONE plain sentence and returns 1 when the pair does not belong together:
+#  - the EFI must be a Limine binary whose enrolled BLAKE2B equals the BLAKE2B of the limine.conf (all-zero = not enrolled, accepted)
+#  - every `path: boot():/file#hash` entry of the limine.conf must match the real file on the startup partition
+limine_pair_check() {
+    sudo python3 -I - "$1" "$2" "$3" << 'PYPAIR'
+import hashlib, os, re, sys
+efi, conf, esp = sys.argv[1:4]
+
+def b2(path):
+    h = hashlib.blake2b()
+    with open(path, "rb") as fh:
+        for chunk in iter(lambda: fh.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest().lower()
+
+def fail(msg):
+    print(msg); sys.exit(1)
+
+if os.path.islink(efi) or os.path.islink(conf) or not os.path.isfile(efi) or not os.path.isfile(conf):
+    fail("The saved boot loader and menu are not a complete pair, so nothing was restored.")
+data = open(efi, "rb").read()
+marker = b"++CONFIG_B2SUM_SIGNATURE++"
+pos, enrolled, found = 0, None, False
+while True:
+    i = data.find(marker, pos)
+    if i < 0:
+        break
+    field = data[i + len(marker): i + len(marker) + 128]
+    if len(field) == 128 and re.fullmatch(rb"[0-9a-fA-F]{128}", field):
+        found = True
+        enrolled = None if field.strip(b"0") == b"" else field.decode().lower()
+        break
+    pos = i + len(marker)
+if not found:
+    fail("The saved boot loader file is not a Limine program, so nothing was restored.")
+if enrolled is not None and enrolled != b2(conf):
+    fail("The saved boot loader and the saved menu do not match each other, so nothing was restored.")
+bad = 0
+for line in open(conf, errors="replace"):
+    m = re.match(r"\s*(?:path|kernel_path|module_path|image_path|wallpaper)\s*:\s*boot\(\):/([^#\s]+)#([0-9a-fA-F]{128})\s*$", line)
+    if not m:
+        continue
+    rel = m.group(1)
+    f = os.path.normpath(os.path.join(esp, rel))
+    if not f.startswith(os.path.normpath(esp) + os.sep) or os.path.islink(f):
+        bad += 1; continue
+    try:
+        if b2(f).lower() != m.group(2).lower():
+            bad += 1
+    except OSError:
+        bad += 1
+if bad:
+    fail("The saved menu lists boot files that have changed since, so nothing was restored; run a full update to reseal the boot menu instead.")
+PYPAIR
+}
+
 restore_limine_self_heal() {
     validate_privileges
     local esp_path
@@ -2117,14 +2174,109 @@ restore_limine_self_heal() {
         log_error "No valid Limine Self-Heal backup found."
         return 1
     fi
+    if [ ! -f "${src_dir}/limine.conf" ]; then
+        log_error "The saved boot loader has no saved menu next to it, so nothing was restored."
+        return 1
+    fi
+    if ! limine_boot_paths_ready "${esp_path}"; then
+        log_warn "Nothing was restored because the boot partition is not mounted and writable; mount it and try again."
+        return 1
+    fi
+
+    # 6A-251: one boot writer at a time (shared with updates and the hourly check)
+    acquire_boot_lock || return 1
+
+    # The saved pair must belong together BEFORE anything is overwritten
+    local verdict
+    if ! verdict=$(limine_pair_check "${src_dir}/limine_x64.efi" "${src_dir}/limine.conf" "${esp_path}"); then
+        log_error "${verdict:-The saved boot loader could not be checked, so nothing was restored.}"
+        return 1
+    fi
+    if is_sbctl_keys_configured && ! limine_efi_signature_ok "${src_dir}/limine_x64.efi"; then
+        log_error "The saved boot loader is not validly signed, so nothing was restored."
+        return 1
+    fi
 
     log_info "Restoring known-good Limine configuration from ${src_dir}..."
-    sudo mkdir -p "${esp_path}/EFI/limine"
-    sudo cp -af "${src_dir}/"* "${esp_path}/EFI/limine/" 2>/dev/null || true
-    if [ -f "${src_dir}/limine.conf" ]; then
-        sudo cp -af "${src_dir}/limine.conf" "${esp_path}/limine.conf"
+    local live_dir="${esp_path}/EFI/limine"
+    local keep_root="/var/cache/slacky-update/limine_replaced"
+    local keep_dir="${keep_root}/$(date +%Y%m%d-%H%M%S)-$$"
+    local f name
+
+    # Keep a copy of everything that is about to be replaced
+    if ! sudo install -d -m 0700 -o root -g root "${keep_dir}" 2>/dev/null; then
+        log_error "Could not make a safety copy of the current boot files, so nothing was restored."
+        return 1
     fi
-    sync -f "${esp_path}/EFI/limine/limine_x64.efi" 2>/dev/null || sync 2>/dev/null || true
+    if sudo test -f "${esp_path}/limine.conf"; then
+        sudo cp -p "${esp_path}/limine.conf" "${keep_dir}/limine.conf" || { log_error "Could not make a safety copy of the current boot menu, so nothing was restored."; return 1; }
+    fi
+    sudo mkdir -p "${live_dir}" || { log_error "Could not open the boot loader folder, so nothing was restored."; return 1; }
+    local names=()
+    for f in "${src_dir}"/*; do
+        [ -f "${f}" ] && [ ! -L "${f}" ] || continue
+        name=$(basename "${f}")
+        [ "${name}" = "limine.conf" ] && continue
+        names+=("${name}")
+        if sudo test -f "${live_dir}/${name}"; then
+            sudo cp -p "${live_dir}/${name}" "${keep_dir}/efi-${name}" || { log_error "Could not make a safety copy of the current boot loader, so nothing was restored."; return 1; }
+        fi
+    done
+
+    # Stage next to the targets, then rename in back to back with hang-up and interrupt held off
+    local stage_ok=1
+    for name in "${names[@]}"; do
+        sudo cp -f "${src_dir}/${name}" "${live_dir}/.restore-$$-${name}" || stage_ok=0
+    done
+    sudo cp -f "${src_dir}/limine.conf" "${esp_path}/.limine.conf.restore-$$" || stage_ok=0
+    if [ "${stage_ok}" -ne 1 ]; then
+        for name in "${names[@]}"; do sudo rm -f "${live_dir}/.restore-$$-${name}" 2>/dev/null || true; done
+        sudo rm -f "${esp_path}/.limine.conf.restore-$$" 2>/dev/null || true
+        log_error "Could not copy the saved boot files, so nothing was restored."
+        return 1
+    fi
+    sudo sync 2>/dev/null || true
+    local old_traps commit_ok=1
+    old_traps="$(trap -p HUP INT TERM)"
+    trap '' HUP INT TERM
+    for name in "${names[@]}"; do
+        sudo mv -f "${live_dir}/.restore-$$-${name}" "${live_dir}/${name}" || commit_ok=0
+    done
+    sudo mv -f "${esp_path}/.limine.conf.restore-$$" "${esp_path}/limine.conf" || commit_ok=0
+    sudo sync 2>/dev/null || true
+    # The live pair must now hold together; if not, put back what was there
+    if [ "${commit_ok}" -eq 1 ] && ! verdict=$(limine_pair_check "${live_dir}/limine_x64.efi" "${esp_path}/limine.conf" "${esp_path}"); then
+        commit_ok=0
+    fi
+    if [ "${commit_ok}" -ne 1 ]; then
+        for name in "${names[@]}"; do
+            sudo rm -f "${live_dir}/.restore-$$-${name}" 2>/dev/null || true
+            if sudo test -f "${keep_dir}/efi-${name}"; then
+                sudo cp -pf "${keep_dir}/efi-${name}" "${live_dir}/${name}" || log_error "Could not put back ${name}; the safety copy is in ${keep_dir}."
+            fi
+        done
+        sudo rm -f "${esp_path}/.limine.conf.restore-$$" 2>/dev/null || true
+        if sudo test -f "${keep_dir}/limine.conf"; then
+            sudo cp -pf "${keep_dir}/limine.conf" "${esp_path}/limine.conf" || log_error "Could not put back the boot menu; the safety copy is in ${keep_dir}."
+        fi
+        sudo sync 2>/dev/null || true
+        trap - HUP INT TERM; eval "${old_traps}"
+        log_error "The restore did not work, so the previous boot loader and menu were put back (safety copy: ${keep_dir})."
+        return 1
+    fi
+    trap - HUP INT TERM; eval "${old_traps}"
+    sync -f "${live_dir}/limine_x64.efi" 2>/dev/null || sync 2>/dev/null || true
+
+    # Record what is live now (so the hourly check compares against it), and keep the /boot mirror equal
+    limine_write_committed_record "${esp_path}/limine.conf" || log_warn "Could not write the boot menu record; the hourly check cannot compare the menu until the next update."
+    if [ "${esp_path}" != "/boot" ] && [ -d "/boot" ]; then
+        sudo cp -f "${esp_path}/limine.conf" "/boot/limine.conf" || log_warn "Could not update the copy of the boot menu in /boot."
+    fi
+    # Keep only the three newest safety copies (our own folders only)
+    local old
+    while read -r old; do
+        [ -n "${old}" ] && [ -d "${old}" ] && [ ! -L "${old}" ] && sudo rm -rf "${old}"
+    done < <(sudo find "${keep_root}" -mindepth 1 -maxdepth 1 -type d -name '[0-9]*-[0-9]*-*' 2>/dev/null | sort -r | tail -n +4)
     log_success "Limine bootloader and configuration successfully restored from Self-Heal backup."
 }
 

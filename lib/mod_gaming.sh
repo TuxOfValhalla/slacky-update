@@ -449,16 +449,37 @@ PKG_DESCRIPTIONS = {
     "sbctl": "UEFI Secure Boot key manager, enrollment, and file signing utility."
 }
 
+def split_catalog_row(line):
+    # 6A-250: split on "|" only outside (...) and [...] so regex alternations like (?:-bin|-git) stay inside their field.
+    out, cur, depth, i = [], [], 0, 0
+    while i < len(line):
+        ch = line[i]
+        if ch == "\\" and i + 1 < len(line):
+            cur.append(line[i:i + 2]); i += 2; continue
+        if ch in "([":
+            depth += 1
+        elif ch in ")]":
+            depth = max(0, depth - 1)
+        if ch == "|" and depth == 0:
+            out.append("".join(cur)); cur = []
+        else:
+            cur.append(ch)
+        i += 1
+    out.append("".join(cur))
+    return out
+
 items = []
 for line in raw_catalog.strip().split("\n"):
     line = line.strip()
     if not line or line.startswith("#"):
         continue
-    parts = line.split("|")
-    if len(parts) < 3:
-        continue
+    parts = split_catalog_row(line)
+    # 6A-250: a row has 7 fields (+ the optional 8th "hidden"). Anything else is a catalog bug: fail loudly.
+    if len(parts) not in (7, 8) or (len(parts) == 8 and parts[7].strip() != "hidden"):
+        sys.stderr.write("Catalog row is malformed (%d fields): %s\n" % (len(parts), parts[0]))
+        sys.exit(1)
     pkg_id, name, cat = parts[0], parts[1], parts[2]
-    if len(parts) > 7 and parts[7].strip() == "hidden":
+    if len(parts) == 8:
         continue
     
     inst_ver = "NONE"
@@ -484,6 +505,28 @@ for line in raw_catalog.strip().split("\n"):
 
 print(json.dumps(items, indent=2))
 PYJSONEXPORT
+}
+
+# 6A-250 self-check: every catalog row must parse into the right fields and no hidden row may be exported.
+# Prints nothing and returns 0 when fine; prints one sentence on stderr and returns 1 otherwise (used by tests).
+gaming_catalog_selfcheck() {
+    local exported hidden_ids id
+    if ! exported=$(export_gaming_catalog_json); then
+        echo "Catalog self-check failed: a catalog row has the wrong number of fields." >&2
+        return 1
+    fi
+    hidden_ids=$(get_gaming_catalog | grep -v '^#' | grep '|hidden$' | cut -d'|' -f1)
+    for id in ${hidden_ids}; do
+        if printf '%s' "${exported}" | grep -q "\"id\": \"${id}\""; then
+            echo "Catalog self-check failed: hidden entry ${id} is listed." >&2
+            return 1
+        fi
+    done
+    printf '%s' "${exported}" | grep -q '"id": "openghub"' && {
+        echo "Catalog self-check failed: openghub is hidden but listed." >&2
+        return 1
+    }
+    return 0
 }
 
 is_elf_binary() {
@@ -787,8 +830,8 @@ catalog = {}
 for line in raw_catalog_lines:
     if not line.strip() or line.strip().startswith('#'):
         continue
-    parts_all = line.split("|")
-    if len(parts_all) > 7 and parts_all[7].strip() == "hidden":
+    # 6A-250: the last field is "hidden" or the repo list; regexes may contain "|", so only the tail is trusted
+    if line.rstrip().endswith("|hidden"):
         continue
     left_parts = line.split("|", 3)
     if len(left_parts) >= 4:
@@ -3658,7 +3701,7 @@ _transmute_and_deploy_gaming_pkg_impl() {
     local extra_url="${pre_extra_url}"
 
     if [ -z "${ver}" ] || [ "${ver}" = "NONE" ]; then
-        echo -e "${CYAN}${BOLD}🧙 Transmuting & Deploying: ${pkg_id}${RESET}"
+        echo -e "${CYAN}${BOLD}Transmuting & Deploying: ${pkg_id}${RESET}"
         read -r ver main_url lib32_url extra_url <<< "$(resolve_cachyos_gaming_upstream_metadata "${pkg_id}" || echo "NONE NONE NONE NONE")"
     fi
 
@@ -6441,11 +6484,11 @@ STORYBOARDER_WRAPPER_EOF
         cat << 'RESOLVE_AAC_CHECK_EOF' > "${staging_root}/usr/bin/resolve-aac-status"
 #!/bin/sh
 # DaVinci Resolve AAC Audio Bridge Status Checker
-echo "=== 🎬 DaVinci Resolve AAC Audio Bridge Status ==="
+echo "=== DaVinci Resolve AAC Audio Bridge Status ==="
 if [ -d "/opt/resolve/IOPlugins/aac_decoder_probe.dvcp.bundle" ] && [ -d "/opt/resolve/IOPlugins/aac_fdk_plugin.dvcp.bundle" ]; then
-    echo "  [✓] AAC Decoder Plugin (Import & Playback) : Active in /opt/resolve/IOPlugins"
-    echo "  [✓] AAC Encoder Plugin (Export & Render)   : Active in /opt/resolve/IOPlugins"
-    echo "  [✓] Status: DaVinci Resolve Studio is armed with full native AAC support!"
+    echo "  [OK] AAC Decoder Plugin (Import & Playback) : Active in /opt/resolve/IOPlugins"
+    echo "  [OK] AAC Encoder Plugin (Export & Render)   : Active in /opt/resolve/IOPlugins"
+    echo "  [OK] Status: DaVinci Resolve Studio is armed with full native AAC support!"
 else
     echo "  [!] Warning: One or more AAC plugin bundles are missing from /opt/resolve/IOPlugins."
 fi
@@ -6813,7 +6856,7 @@ def scan_and_boost_games():
                 fg_comm = f.read().strip()
             if fg_comm not in ["plasmashell", "kwin_wayland", "systemsettings", "konsole", "zsh", "bash", "Hyprland", "noctalia", "waybar", "xfwm4", "xfce4-panel", "xfdesktop"]:
                 if boost_pid(fg_pid):
-                    log(f"⚡ Foreground GPU Shield: Boosted active window '{fg_comm}' (PID {fg_pid}) into dmemcg-gaming slice")
+                    log(f"Foreground GPU Shield: Boosted active window '{fg_comm}' (PID {fg_pid}) into dmemcg-gaming slice")
                     count += 1
                     boosted.add(str(fg_pid))
         except Exception:
@@ -6840,7 +6883,7 @@ def scan_and_boost_games():
                             match = True
                 if match:
                     if boost_pid(p):
-                        log(f"⚡ Boosted gaming process: {comm} (PID {p}) into dmemcg-gaming slice")
+                        log(f"Boosted gaming process: {comm} (PID {p}) into dmemcg-gaming slice")
                         count += 1
             except Exception:
                 continue
@@ -7022,7 +7065,7 @@ ${pkg_name}:
 ${pkg_name}: Part of the Underpants Gnomes Gaming Master Suite.
 ${pkg_name}: Maintained by slacky-update.
 ${pkg_name}:
-${pkg_name}: 🧙 💰 Step 3: PROFIT!!!
+${pkg_name}: Step 3: PROFIT!!!
 ${pkg_name}:
 DESC_EOF
 
@@ -8375,7 +8418,7 @@ for uhome in target_homes:
         echo -e "  ${CYAN}•${RESET} [4/4] Synchronizing system status & background registry..."
         sleep 0.5
         trigger_silent_background_refresh 2>/dev/null || true
-        echo -e "${GREEN}${BOLD}✓ ${pkg_name} (v${ver}) deployed successfully!${RESET}"
+        echo -e "${GREEN}${BOLD}${pkg_name} (v${ver}) deployed successfully!${RESET}"
     else
         log_error "Failed to create ${pkg_name} txz package."
         rm -rf "${staging_base}"
@@ -8470,7 +8513,7 @@ deploy_gaming_packages_batch() {
 
     if [ ${#dl_items[@]} -gt 0 ]; then
         echo ""
-        log_info "⚡ Starting Unified Parallel Batch Download (${total_pkgs} packages • ${#dl_items[@]} files)..."
+        log_info "Starting Unified Parallel Batch Download (${total_pkgs} packages • ${#dl_items[@]} files)..."
         if ! download_parallel_pacman "Underpants Gnomes Batch (${total_pkgs} packages)" "${dl_items[@]}"; then
             log_error "Failed to complete parallel download batch."
             rm -rf "${staging_base}"
@@ -8487,7 +8530,7 @@ deploy_gaming_packages_batch() {
     for entry in "${valid_entries[@]}"; do
         IFS='|' read -r pid ver main_url lib32_url extra_url <<< "${entry}"
         echo ""
-        echo -e "${CYAN}${BOLD}🧙 Transmuting & Deploying: ${pid} (v${ver})${RESET}"
+        echo -e "${CYAN}${BOLD}Transmuting & Deploying: ${pid} (v${ver})${RESET}"
         if transmute_and_deploy_gaming_pkg "${pid}" "${batch_cache}" "${ver}" "${main_url}" "${lib32_url}" "${extra_url}"; then
             success_count=$((success_count + 1))
         else
@@ -8506,7 +8549,7 @@ deploy_gaming_packages_batch() {
         log_error "${#failed_pids[@]} of ${#target_pkg_ids[@]} packages failed (${failed_pids[*]:-unknown}); their installed versions were kept."
         return 1
     fi
-    log_success "🎉 Batch deployment complete! ${success_count}/${total_pkgs} packages successfully installed!"
+    log_success "Batch deployment complete! ${success_count}/${total_pkgs} packages successfully installed!"
 }
 
 uninstall_cachyos_gaming_pkg() {
@@ -8864,9 +8907,10 @@ PYTUIFASTMAP
             local cat_installed=0
             local cat_entries=()
 
-            while IFS='|' read -r pkg_id name cat main_pat l32_pat ext_pat repos hidden_flag; do
+            while IFS='|' read -r pkg_id name cat catalog_rest; do
                 [[ -z "${pkg_id}" || "${pkg_id}" =~ ^# ]] && continue
-                [ "${hidden_flag:-}" = "hidden" ] && continue
+                # 6A-250: regex fields may contain "|", so only the tail of the row is checked for the marker
+                [[ "${catalog_rest}" == *"|hidden" ]] && continue
                 [ "${cat}" = "${ckey}" ] || continue
                 if ! is_gaming_pkg_whitelisted "${pkg_id}"; then
                     continue
@@ -8922,7 +8966,7 @@ PYTUIFASTMAP
                         elif [ ${#sv1} -gt 6 ]; then
                             sv1="${sv1:0:5}…"
                         fi
-                        badge1="${GREEN}[v${sv1} ✓]${RESET}"
+                        badge1="${GREEN}[v${sv1} OK]${RESET}"
                     else
                         badge1="${RED}[Not Inst]${RESET}"
                     fi
@@ -8943,7 +8987,7 @@ PYTUIFASTMAP
                             elif [ ${#sv2} -gt 6 ]; then
                                 sv2="${sv2:0:5}…"
                             fi
-                            badge2="${GREEN}[v${sv2} ✓]${RESET}"
+                            badge2="${GREEN}[v${sv2} OK]${RESET}"
                         else
                             badge2="${RED}[Not Inst]${RESET}"
                         fi
@@ -8969,7 +9013,7 @@ PYTUIFASTMAP
             echo -e "  ${CYAN}${BOLD}U.${RESET}  Synchronize & Upgrade All Installed Gaming Packages"
             echo -e "  ${CYAN}${BOLD}D.${RESET}  Uninstall a Component"
             echo ""
-            echo -e " ${CYAN}[↑/↓] Navigate   [Enter] Select   [Shift + Drag] Copy Text   [Super + Drag/Click] Move/Resize   [ESC / q] Exit${RESET}"
+            echo -e " ${CYAN}[Up/Down] Navigate   [Enter] Select   [Shift + Drag] Copy Text   [Super + Drag/Click] Move/Resize   [ESC / q] Exit${RESET}"
             echo ""
             read -r -p "Enter your choice here (manual mode) [1-${#item_ids[@]}, O, U, D]: " user_choice
         fi

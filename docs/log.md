@@ -1,5 +1,17 @@
 # Slacky-Update-RS Development Changelog
 
+## [Catalog parsing, safe Limine restore, gnomes cleanup rules (6A-250, 6A-251, 6A-260..6A-265)] - 2026-10-16
+
+### Fixes
+- **`lib/mod_gaming.sh`** (6A-250): catalog rows are split only outside brackets, so the `|` in `(?:-bin|-git)` no longer shifts the fields; the `hidden` marker of OpenGHub is read and it is not listed. A malformed row stops the export with one sentence; `gaming_catalog_selfcheck` checks all rows and that no hidden entry is exported. Rust mirror: none (no `|` catalog).
+- **`lib/mod_limine.sh`** (6A-251): `restore_limine_self_heal` takes the boot lock, verifies the saved pair (enrolled BLAKE2B equals the saved limine.conf, every `#hash` boot file matches, signature), refuses with one plain sentence otherwise, keeps a copy of what it replaces in `/var/cache/slacky-update/limine_replaced/`, stages and renames, re-checks the live pair and rolls back on a mismatch, and no longer swallows errors. Rust mirror: `BootCommit::recover` already works this way.
+- **`lib/gnomes_pacman.py`** (6A-260): `rollback_refusal` matches prefixes only (`linux-cachyos-*` is refused). Rust mirror: already correct.
+- **`lib/gnomes_pacman.py`** (6A-261): `deduplicate_storage` links only identical owner, group, mode and content, never a runtime file, and keeps the runtime copy. Rust mirror: already correct (`dedup.rs`).
+- **`lib/gnomes_pacman.py`** (6A-262): `clean_cache` keeps only the installed name AND version, skips `.part` younger than 10 minutes, never follows links. Rust mirror: `gnomes-native clean` now cleans the shared package folder with the same rules (owner decision 2026-10-16).
+- **`lib/gnomes_pacman.py`** (6A-263): `purge_gnomes_service_hooks` uses the run lock, a `.slacky-bak` backup, temp file + rename, keeps owner and mode, refuses links and results that fail `sh -n`. Rust mirror: already correct (no `/etc` write outside a package entry).
+- **`lib/gnomes_pacman.py`** (6A-264): `check-collision` and `url` exit 1 when nothing is found (text unchanged). Rust mirror: already correct for `url`.
+- **`lib/gnomes_pacman.py`** (6A-265): `-Qs` / `list-installed` filter by the search words. Rust mirror: `gnomes-native installed [words]`.
+
 ## [OBS plugin updates from GitHub (6A-242)] - 2026-10-16
 
 ### Fixes
@@ -1962,3 +1974,6 @@
 
 ### Build 87 (pending) - 6A-243: multilib and install-new in the check (lib/slacky_slackpkg_check.py, lib/check_backend.sh)
 - The user-level check fetches the slackpkg+ repo lists itself (conditional, signature checked against slackpkg's keys, unverified = hint) and lists packages ADDED to Slackware since the installed state; new status keys `slackpkgplus_unverified` and `slackware_new_packages`, counted everywhere the Slackware lists are. Tested offline and once against the real repos in a private HOME (nothing pending now; a fixture of yesterday's state finds compat32 and the new libgit2). Rust mirror: 6A-243.
+
+### Build 87 (pending) - 6A-246: no emoji in gnomes and curated deploy output (bin/gnomes, lib/gnomes_pacman.py, lib/mod_gaming.sh)
+- Emoji and decorative pictographs (wizard, money bag, underpants, party, stop sign, warning, sparkles, shield, package, link, lightning, clapper, check marks, arrows) replaced by plain words in the same tone; the "Step 1 ... Step 3: PROFIT!" banner and the curated slack-desc keep their humour in words. Colours and behaviour unchanged. Checked with `bash -n`, a `compile()` of the Python file and a code point scan (0 hits). Rust mirror: 6A-246 (output filter in the Rust app).
