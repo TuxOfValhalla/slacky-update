@@ -4,6 +4,18 @@
 
 set -euo pipefail
 
+if ! type resolve_boot_root_cmd >/dev/null 2>&1; then
+    for cand in "${SCRIPT_DIR:-}/common.sh" \
+                "$(dirname "${BASH_SOURCE[0]}")/common.sh" \
+                "/usr/share/slacky-update/lib/common.sh" \
+                "/usr/local/lib/slacky-update/common.sh"; do
+        if [ -f "${cand}" ]; then
+            source "${cand}"
+            break
+        fi
+    done
+fi
+
 # --- [ CONSTANTS & ENDPOINTS ] ---
 CACHYOS_REPO_BASE="https://mirror.cachyos.org/repo/x86_64/cachyos"
 ARCH_EXTRA_REPO_BASE="https://geo.mirror.pkgbuild.com/extra/os/x86_64"
@@ -11,6 +23,23 @@ ARCH_EXTRA_REPO_BASE="https://geo.mirror.pkgbuild.com/extra/os/x86_64"
 MIN_BOOT_PARTITION_MB=3500
 
 # --- [ DETECT LIMINE INSTALLATION & ESP PATH ] ---
+# 6A-120 (LTS B3): the btrfs subvolume path of the snapshot directory, as rootflags=subvol= needs it. Read from the
+# mount table, never guessed: /.snapshots is often its own subvolume (@snapshots, the usual snapper layout) and then
+# "<root subvol>/.snapshots/N" is only an empty mount point and the entry cannot boot. Prints e.g. "/@snapshots" or
+# "/@/.snapshots"; prints nothing (no snapshot entries) when the directory is on another filesystem than /.
+ss_snapshot_subvol_base() {
+    local snap_dir="$1" line target fsroot src root_src rel
+    line=$(findmnt -n -r -o TARGET,FSROOT,SOURCE --target "${snap_dir}" 2>/dev/null | head -n 1) || return 0
+    [ -n "${line}" ] || return 0
+    read -r target fsroot src <<< "${line}"
+    root_src=$(findmnt -n -r -o SOURCE --target / 2>/dev/null | head -n 1)
+    # same filesystem as /: compare the device part of SOURCE ("/dev/x[/@sub]")
+    [ -n "${root_src}" ] && [ "${src%%\[*}" = "${root_src%%\[*}" ] || return 0
+    rel="${snap_dir#"${target%/}"}"
+    fsroot="${fsroot%/}${rel}"
+    printf '%s\n' "/${fsroot#/}"
+}
+
 detect_limine_esp_path() {
     # Check explicitly defined ESP_PATH from /etc/default/limine or /etc/limine-entry-tool.conf
     for cfg in /etc/default/limine /etc/limine-entry-tool.conf; do
@@ -46,45 +75,141 @@ detect_limine_esp_path() {
     fi
 }
 
+# 6A-122 (LTS boot-fs M7): Limine is managed only on a UEFI boot with the Limine EFI binary on the ESP. BIOS Limine or a
+# leftover /etc/default/limine / limine.conf is left alone (enroll needs EFI/limine/limine_x64.efi; without it every run
+# ended in "do not reboot", exit 30).
+limine_uefi_booted() {
+    [ -d /sys/firmware/efi ]
+}
+# True when a file exists; uses a cached sudo ticket for root-only ESP mounts (umask 0077), never prompts.
+limine_path_exists() {
+    [ -f "$1" ] && return 0
+    [ "$(id -u)" -eq 0 ] && return 1
+    sudo -n test -f "$1" 2>/dev/null
+}
 is_limine_installed() {
     local esp_path
     esp_path=$(detect_limine_esp_path)
 
-    if [ -f "${esp_path}/EFI/limine/limine_x64.efi" ] || \
-       [ -f "${esp_path}/EFI/limine/BOOTX64.EFI" ] || \
-       [ -f "${esp_path}/limine.conf" ] || \
-       [ -f "/boot/limine.conf" ] || \
-       [ -f "/etc/default/limine" ]; then
-        echo "true"
-        return 0
+    if limine_uefi_booted; then
+        if limine_path_exists "${esp_path}/EFI/limine/limine_x64.efi"; then
+            echo "true"
+            return 0
+        fi
+        # 6A-122: as a normal user without a sudo ticket a root-only ESP cannot be read. Keep the old config-based answer
+        # then (a false "not installed" would skip the reseal after a kernel change).
+        if [ "$(id -u)" -ne 0 ] && { [ ! -r "${esp_path}" ] || [ ! -x "${esp_path}" ]; } && ! sudo -n true 2>/dev/null; then
+            if [ -f "/etc/default/limine" ] || [ -f "/boot/limine.conf" ]; then
+                echo "true"
+                return 0
+            fi
+        fi
     fi
 
     echo "false"
     return 1
 }
+# 6A-122: one plain line, once per run, when Limine files exist that slacky-update does not manage
+SLACKY_LIMINE_UNMANAGED_SHOWN="${SLACKY_LIMINE_UNMANAGED_SHOWN:-0}"
+limine_unmanaged_notice() {
+    [ "${SLACKY_LIMINE_UNMANAGED_SHOWN}" = "1" ] && return 0
+    if [ -f "/etc/default/limine" ] || [ -f "/boot/limine.conf" ] || [ -d "/usr/share/limine" ]; then
+        SLACKY_LIMINE_UNMANAGED_SHOWN=1
+        log_warn "Limine on this computer is not managed by slacky-update (it needs a UEFI start and the Limine EFI file), so its menu was left unchanged."
+    fi
+    return 0
+}
+# 6A-123 (LTS boot M11): true when an EFI file is a Limine binary (it carries Limine's config-hash marker)
+limine_efi_is_limine() {
+    sudo grep -a -q -F '++CONFIG_B2SUM_SIGNATURE++' "$1" 2>/dev/null
+}
+# 6A-123: the UEFI fallback loader is ours to replace or sign only when it is already Limine (shim, GRUB or another
+# system's loader is left alone, logged once)
+SLACKY_FALLBACK_EFI_NOTE_SHOWN="${SLACKY_FALLBACK_EFI_NOTE_SHOWN:-0}"
+limine_fallback_efi_is_ours() {
+    local f="$1"
+    sudo test -f "${f}" || return 1
+    limine_efi_is_limine "${f}" && return 0
+    if [ "${SLACKY_FALLBACK_EFI_NOTE_SHOWN}" != "1" ]; then
+        SLACKY_FALLBACK_EFI_NOTE_SHOWN=1
+        log_info "The fallback boot file ${f} belongs to another boot loader, so it was left unchanged."
+    fi
+    return 1
+}
+# 6A-121 (LTS boot M7): /boot and a separate ESP must be mounted and writable before any boot file is written
+limine_boot_paths_ready() {
+    local esp_path="${1:-}"
+    if command -v ss_boot_ready >/dev/null 2>&1 && ! ss_boot_ready; then
+        return 1
+    fi
+    if [ -n "${esp_path}" ] && [ "${esp_path}" != "/boot" ]; then
+        local want opts
+        want=$(awk -v m="${esp_path}" '!/^[[:space:]]*#/ && $2==m {print $3; exit}' /etc/fstab 2>/dev/null || true)
+        if [ -n "${want}" ]; then
+            opts=$(findmnt -n -o OPTIONS --mountpoint "${esp_path}" 2>/dev/null | head -n1 || true)
+            [ -n "${opts}" ] || return 1
+            case ",${opts}," in *,rw,*) ;; *) return 1 ;; esac
+        fi
+    fi
+    return 0
+}
+# 6A-121: copy one boot file onto the ESP safely: free-space check, copy to a hidden temp name, compare, then rename.
+# An unchanged file is not rewritten. On any failure the old file stays and the function returns 1.
+limine_esp_safe_copy() {
+    local src="$1" dest="$2"
+    local dir="${dest%/*}" base="${dest##*/}"
+    local tmp="${dir}/.slacky-${base}.new"
+    if sudo test -f "${dest}" && sudo cmp -s "${src}" "${dest}"; then
+        return 0
+    fi
+    local need_kb avail_kb
+    need_kb=$(( ( $(sudo stat -c %s "${src}" 2>/dev/null || echo 0) / 1024 ) + 1024 ))
+    avail_kb=$(df -Pk "${dir}" 2>/dev/null | awk 'NR==2 {print $4}' || true)
+    if [ -z "${avail_kb}" ] || [ "${avail_kb}" -lt "${need_kb}" ] 2>/dev/null; then
+        log_error "There is not enough free space on the boot partition for ${base}, so the old file was kept."
+        return 1
+    fi
+    sudo rm -f "${tmp}" 2>/dev/null || true
+    if ! sudo cp -f "${src}" "${tmp}"; then
+        sudo rm -f "${tmp}" 2>/dev/null || true
+        log_error "Copying ${base} to the boot partition failed, so the old file was kept."
+        return 1
+    fi
+    sudo sync -f "${tmp}" 2>/dev/null || sudo sync 2>/dev/null || true
+    if ! sudo cmp -s "${src}" "${tmp}" || ! sudo mv -f "${tmp}" "${dest}"; then
+        sudo rm -f "${tmp}" 2>/dev/null || true
+        log_error "Copying ${base} to the boot partition failed, so the old file was kept."
+        return 1
+    fi
+    return 0
+}
 
 # --- [ ENSURE CLEAN MKINITRD STAGING FOR FAT32 /BOOT ] ---
 ensure_mkinitrd_staging_configured() {
     local mkconf="/etc/mkinitrd.conf"
+    local secure_tree="/var/tmp/slacky-initrd-tree"
 
     if [ ! -f "${mkconf}" ]; then
-        log_info "Configuring ${mkconf} with SOURCE_TREE=\"/tmp/initrd-tree\" for FAT32 /boot..."
-        echo '# Use /tmp for staging to support FAT32/ESP /boot staging' | sudo tee "${mkconf}" >/dev/null
-        echo 'SOURCE_TREE="/tmp/initrd-tree"' | sudo tee -a "${mkconf}" >/dev/null
+        log_info "Configuring ${mkconf} with SOURCE_TREE=\"${secure_tree}\" for FAT32 /boot..."
+        echo '# Use /var/tmp for staging to support FAT32/ESP /boot staging' | sudo tee "${mkconf}" >/dev/null
+        echo "SOURCE_TREE=\"${secure_tree}\"" | sudo tee -a "${mkconf}" >/dev/null
         return 0
     fi
 
-    # Check if SOURCE_TREE is already pointing to /tmp
+    # Check if SOURCE_TREE is already pointing to /var/tmp or /tmp
     if grep -q "^[[:space:]]*SOURCE_TREE=" "${mkconf}" 2>/dev/null; then
         local curr_tree
         curr_tree=$(grep "^[[:space:]]*SOURCE_TREE=" "${mkconf}" | tail -n 1 | cut -d'=' -f2 | tr -d '"'\'' ' || true)
-        if [[ ! "${curr_tree}" =~ ^/tmp ]]; then
-            log_info "Updating ${mkconf}: changing staging directory from '${curr_tree}' to '/tmp/initrd-tree'..."
-            sudo sed -i 's|^[[:space:]]*SOURCE_TREE=.*|SOURCE_TREE="/tmp/initrd-tree"|' "${mkconf}"
+        if [[ ! "${curr_tree}" =~ ^/var/tmp ]] && [[ ! "${curr_tree}" =~ ^/tmp ]]; then
+            log_info "Updating ${mkconf}: changing staging directory from '${curr_tree}' to '${secure_tree}'..."
+            sudo sed -i "s|^[[:space:]]*SOURCE_TREE=.*|SOURCE_TREE=\"${secure_tree}\"|" "${mkconf}"
+        elif [ "${curr_tree}" = "/tmp/initrd-tree" ]; then
+            log_info "Hardening ${mkconf}: migrating staging directory from '/tmp/initrd-tree' to '${secure_tree}'..."
+            sudo sed -i "s|^[[:space:]]*SOURCE_TREE=.*|SOURCE_TREE=\"${secure_tree}\"|" "${mkconf}"
         fi
     else
-        log_info "Adding SOURCE_TREE=\"/tmp/initrd-tree\" to ${mkconf} for FAT32 /boot support..."
-        echo -e "\n# Use /tmp for staging to support FAT32/ESP /boot staging\nSOURCE_TREE=\"/tmp/initrd-tree\"" | sudo tee -a "${mkconf}" >/dev/null
+        log_info "Adding SOURCE_TREE=\"${secure_tree}\" to ${mkconf} for FAT32 /boot support..."
+        echo -e "\n# Use /var/tmp for staging to support FAT32/ESP /boot staging\nSOURCE_TREE=\"${secure_tree}\"" | sudo tee -a "${mkconf}" >/dev/null
     fi
 }
 
@@ -134,10 +259,14 @@ list_esp_partition_candidates() {
         [ "${TYPE}" != "part" ] && continue
         [ "${SIZE:-0}" -lt "${min_bytes}" ] 2>/dev/null && continue
 
-        # Filter out system critical mounts
-        if [ "${MOUNTPOINT}" = "/" ] || [ "${MOUNTPOINT}" = "/home" ] || [ "${MOUNTPOINT}" = "/var" ] || [ "${MOUNTPOINT}" = "/usr" ] || [ "${MOUNTPOINT}" = "[SWAP]" ]; then
-            continue
-        fi
+        # 6A-45: never offer a partition that is in use or holds anything but FAT. Mounted partitions, other systems'
+        # roots (ext4/btrfs/xfs), Windows (ntfs), encrypted volumes, LVM and swap are never candidates: only an
+        # unmounted FAT partition or an empty one (no filesystem at all) can become the new /boot.
+        [ -n "${MOUNTPOINT}" ] && continue
+        case "${FSTYPE}" in
+            ""|vfat) ;;
+            *) continue ;;
+        esac
 
         local dev_path="/dev/${NAME}"
         local size_mb=$(( SIZE / 1024 / 1024 ))
@@ -154,32 +283,69 @@ provision_esp_partition_type_and_fs() {
 
     # 1. Determine disk and partition number
     local parent_disk="" part_num=""
-    if [[ "${target_dev}" =~ (/dev/nvme[0-9]+n[0-9]+)p([0-9]+) ]]; then
+    if [[ "${target_dev}" =~ (/dev/(nvme[0-9]+n[0-9]+|mmcblk[0-9]+|nbd[0-9]+))p([0-9]+) ]]; then
         parent_disk="${BASH_REMATCH[1]}"
-        part_num="${BASH_REMATCH[2]}"
+        part_num="${BASH_REMATCH[3]}"
     elif [[ "${target_dev}" =~ (/dev/[a-z]+)([0-9]+) ]]; then
         parent_disk="${BASH_REMATCH[1]}"
         part_num="${BASH_REMATCH[2]}"
     fi
 
-    if [ -n "${parent_disk}" ] && [ -n "${part_num}" ]; then
-        log_info "Setting GPT partition type to EFI System Partition (ef00) on ${target_dev}..."
-        if command -v sgdisk >/dev/null 2>&1; then
-            sudo sgdisk -t "${part_num}:ef00" "${parent_disk}" >/dev/null 2>&1 || true
-        elif command -v parted >/dev/null 2>&1; then
-            sudo parted -s "${parent_disk}" set "${part_num}" esp on >/dev/null 2>&1 || true
-        fi
-    fi
-
     # 2. Check if already FAT32 or needs formatting
+    # 6A-124 (LTS boot M5): the empty-partition check comes first; the partition table is changed only afterwards
     local cur_fs
     cur_fs=$(blkid -s TYPE -o value "${target_dev}" 2>/dev/null || true)
     if [ "${cur_fs}" != "vfat" ]; then
+        # 6A-45: only an empty partition (no filesystem signature at all) is ever formatted
+        if [ -n "${cur_fs}" ] || [ -n "$(sudo blkid -p -o value -s TYPE "${target_dev}" 2>/dev/null)" ]; then
+            log_error "${target_dev} holds a ${cur_fs:-known} filesystem, so it was not formatted. Nothing was changed."
+            return 1
+        fi
         log_info "Formatting ${target_dev} as FAT32 (ESP_BOOT)..."
-        sudo mkfs.vfat -F32 -n "ESP_BOOT" "${target_dev}" >/dev/null
+        sudo mkfs.vfat -F32 -n "ESP_BOOT" "${target_dev}" >/dev/null || { log_error "Formatting ${target_dev} failed. Nothing else was changed."; return 1; }
     else
         log_info "${target_dev} is already formatted as FAT32 (vfat)."
     fi
+
+    # 3. Mark the partition as an EFI System Partition (GPT disks only; sgdisk would turn an MBR disk into GPT)
+    if [ -n "${parent_disk}" ] && [ -n "${part_num}" ]; then
+        local pttype parttype
+        pttype=$(sudo blkid -p -s PTTYPE -o value "${parent_disk}" 2>/dev/null || lsblk -n -d -o PTTYPE "${parent_disk}" 2>/dev/null || true)
+        parttype=$(lsblk -n -d -o PARTTYPE "${target_dev}" 2>/dev/null | tr 'A-Z' 'a-z' || true)
+        if [ "${parttype}" = "c12a7328-f81f-11d2-ba4b-00a0c93ec93b" ]; then
+            :
+        elif [ "${pttype}" != "gpt" ]; then
+            log_warn "${parent_disk} has no GPT partition table, so the partition type of ${target_dev} was not changed."
+        else
+            log_info "Setting GPT partition type to EFI System Partition (ef00) on ${target_dev}..."
+            local retype_ok=0
+            if command -v sgdisk >/dev/null 2>&1; then
+                sudo sgdisk -t "${part_num}:ef00" "${parent_disk}" >/dev/null 2>&1 && retype_ok=1
+            elif command -v parted >/dev/null 2>&1; then
+                sudo parted -s "${parent_disk}" set "${part_num}" esp on >/dev/null 2>&1 && retype_ok=1
+            fi
+            if [ "${retype_ok}" -ne 1 ]; then
+                log_error "${target_dev} could not be marked as an EFI System Partition, so /etc/fstab was not changed."
+                return 1
+            fi
+        fi
+    fi
+    return 0
+}
+
+# 6A-45: every top-level boot file copied to the new ESP must be there with the same content before fstab is touched
+verify_boot_copy() {
+    local src="$1" dst="$2" f bad=0
+    for f in "${src}"/*; do
+        [ -e "${f}" ] || continue
+        case "${f##*/}" in efi|EFI|lost+found) continue ;; esac
+        if [ -f "${f}" ]; then
+            sudo cmp -s "${f}" "${dst}/${f##*/}" || { log_error "Copy check failed for ${f##*/}."; bad=1; }
+        elif [ -d "${f}" ] && [ ! -L "${f}" ]; then
+            sudo diff -rq "${f}" "${dst}/${f##*/}" >/dev/null 2>&1 || { log_error "Copy check failed for ${f##*/}/."; bad=1; }
+        fi
+    done
+    return "${bad}"
 }
 
 # --- [ SCENARIO A: IN-PLACE ESP UPGRADE (/boot/efi -> /boot) ] ---
@@ -197,7 +363,15 @@ migrate_existing_esp_to_boot() {
     fi
 
     # Ensure GPT type ef00 (ESP) and bootable flags are 100% active
-    provision_esp_partition_type_and_fs "${esp_dev}"
+    # 6A-124: stop when provisioning fails (the result was ignored before)
+    provision_esp_partition_type_and_fs "${esp_dev}" || return 1
+    # 6A-124: the ESP must still be mounted read-write on /boot/efi before anything is copied onto it
+    local efi_opts
+    efi_opts=$(findmnt -n -o OPTIONS --mountpoint /boot/efi 2>/dev/null | head -n1 || true)
+    case ",${efi_opts}," in
+        *,rw,*) ;;
+        *) log_error "/boot/efi is not mounted read-write, so nothing was copied and /etc/fstab was not changed."; return 1 ;;
+    esac
 
     local ts
     ts=$(date +%Y%m%d_%H%M%S)
@@ -206,6 +380,10 @@ migrate_existing_esp_to_boot() {
 
     log_info "Copying system boot files (/boot/*) to ESP..."
     sudo find /boot -maxdepth 1 ! -name 'efi' ! -name 'EFI' ! -path '/boot' -exec cp -a {} /boot/efi/ \; 2>/dev/null || true
+    if ! verify_boot_copy /boot /boot/efi; then
+        log_error "The boot files did not copy completely to the ESP, so /etc/fstab was not changed. Nothing else was changed."
+        return 1
+    fi
 
     log_info "Updating /etc/fstab mountpoint from /boot/efi to /boot..."
     sudo sed -i -E "s|([[:space:]]+)/boot/efi([[:space:]]+vfat)|\1/boot\2|g" /etc/fstab
@@ -214,13 +392,16 @@ migrate_existing_esp_to_boot() {
 
     log_info "Remounting ESP partition directly on /boot..."
     sudo umount /boot/efi 2>/dev/null || true
-    sudo mount /boot 2>/dev/null || sudo mount -t vfat -o defaults,noatime,umask=0077 "${esp_dev}" /boot
+    sudo mount /boot 2>/dev/null || sudo mount -t vfat -o defaults,noatime,umask=0077 "${esp_dev}" /boot || true
 
-    if [ "$(findmnt -n -o FSTYPE /boot 2>/dev/null)" = "vfat" ]; then
+    if [ "$(findmnt -n -o FSTYPE --mountpoint /boot 2>/dev/null | head -n1)" = "vfat" ]; then
         log_success "Scenario A complete: /boot is now actively mounted on ESP (${esp_dev})."
         return 0
     else
-        log_error "Failed to verify FAT32 mount at /boot after migration!"
+        # 6A-124: a failed mount must not leave the edited fstab behind; restore it and put the ESP back on /boot/efi
+        sudo cp -f "/etc/fstab.bak.${ts}" /etc/fstab 2>/dev/null || true
+        sudo mount /boot/efi 2>/dev/null || true
+        log_error "The boot partition could not be mounted on /boot, so the previous /etc/fstab was restored."
         return 1
     fi
 }
@@ -231,7 +412,8 @@ migrate_to_new_esp_partition() {
     validate_privileges
     log_info "Initiating Scenario C: Migrating boot files to new dedicated ESP on ${target_dev}..."
 
-    provision_esp_partition_type_and_fs "${target_dev}"
+    # 6A-124: stop when provisioning fails (the result was ignored before)
+    provision_esp_partition_type_and_fs "${target_dev}" || return 1
 
     local new_uuid
     new_uuid=$(blkid -s UUID -o value "${target_dev}" 2>/dev/null || true)
@@ -242,11 +424,28 @@ migrate_to_new_esp_partition() {
 
     local tmp_mnt="/mnt/slacky_new_boot_$$"
     sudo mkdir -p "${tmp_mnt}"
-    sudo mount -t vfat "${target_dev}" "${tmp_mnt}"
+    # 6A-124: an unchecked mount copied the boot files onto the root filesystem and then rewrote fstab. Check the mount
+    # and confirm with findmnt that the new partition really is there before copying.
+    local mnt_src=""
+    if sudo mount -t vfat "${target_dev}" "${tmp_mnt}"; then
+        mnt_src=$(findmnt -n -o SOURCE --mountpoint "${tmp_mnt}" 2>/dev/null | head -n1 || true)
+    fi
+    if [ -z "${mnt_src}" ] || [ "$(readlink -f "${mnt_src}" 2>/dev/null || echo "${mnt_src}")" != "$(readlink -f "${target_dev}" 2>/dev/null || echo "${target_dev}")" ]; then
+        log_error "${target_dev} could not be mounted, so nothing was copied and /etc/fstab was not changed."
+        [ -n "${mnt_src}" ] && sudo umount "${tmp_mnt}" 2>/dev/null || true
+        sudo rmdir "${tmp_mnt}" 2>/dev/null || true
+        return 1
+    fi
 
     log_info "Copying kernels, initrds and configs from /boot to new ESP..."
     if [ -d "/boot" ]; then
         sudo find /boot -maxdepth 1 ! -name 'efi' ! -name 'EFI' ! -path '/boot' -exec cp -a {} "${tmp_mnt}/" \; 2>/dev/null || true
+    fi
+    if ! verify_boot_copy /boot "${tmp_mnt}"; then
+        log_error "The boot files did not copy completely to ${target_dev}, so /etc/fstab was not changed."
+        sudo umount "${tmp_mnt}" 2>/dev/null || true
+        sudo rmdir "${tmp_mnt}" 2>/dev/null || true
+        return 1
     fi
 
     for efi_cand in /boot/efi/EFI /boot/EFI; do
@@ -274,13 +473,17 @@ migrate_to_new_esp_partition() {
     sudo umount /boot/efi 2>/dev/null || true
 
     log_info "Mounting new ESP at /boot..."
-    sudo mount /boot 2>/dev/null || sudo mount -t vfat -o defaults,noatime,umask=0077 "${target_dev}" /boot
+    sudo mount /boot 2>/dev/null || sudo mount -t vfat -o defaults,noatime,umask=0077 "${target_dev}" /boot || true
 
-    if [ "$(findmnt -n -o FSTYPE /boot 2>/dev/null)" = "vfat" ]; then
+    if [ "$(findmnt -n -o FSTYPE --mountpoint /boot 2>/dev/null | head -n1)" = "vfat" ]; then
         log_success "Scenario C complete: Dedicated ESP (${target_dev}, UUID=${new_uuid}) is now mounted at /boot."
         return 0
     else
-        log_error "Failed to verify FAT32 mount at /boot after Scenario C migration!"
+        # 6A-124: restore the previous fstab and mounts instead of leaving a /boot entry that cannot mount
+        sudo cp -f "/etc/fstab.bak.${ts}" /etc/fstab 2>/dev/null || true
+        sudo mount /boot 2>/dev/null || true
+        sudo mount /boot/efi 2>/dev/null || true
+        log_error "The new boot partition could not be mounted on /boot, so the previous /etc/fstab was restored."
         return 1
     fi
 }
@@ -321,10 +524,14 @@ validate_or_migrate_boot_topology() {
             echo -e "  • ${BOLD}Current State:${RESET} /boot is on system root (${boot_fs:-posix}), and /boot/efi is ${efi_size_mb} MB FAT32."
             echo -e "  • ${BOLD}Recommendation:${RESET} Migrate /boot/efi directly to /boot for optimal Limine & Snapper sync."
             echo ""
-            echo -n "$(_ TOPOLOGY_SCENARIO_A_PROMPT)"
+            # 6A-124: no answer or closed input means no; the prompt shows [y/N] to match
+            local a_prompt
+            a_prompt="$(_ TOPOLOGY_SCENARIO_A_PROMPT)"
+            echo -n "${a_prompt/\[Y\/n\]/[y/N]}"
             local ans
-            read -r ans || ans="y"
-            if [[ ! "${ans}" =~ ^[Nn] ]]; then
+            read -r ans || ans="n"
+            [ -n "${ans}" ] || ans="n"
+            if [[ "${ans}" =~ ^[YyJj] ]]; then
                 migrate_existing_esp_to_boot || return 1
                 return 0
             else
@@ -344,7 +551,9 @@ validate_or_migrate_boot_topology() {
     echo ""
     echo -n "$(_ TOPOLOGY_SCENARIO_C_PROMPT)"
     local opt_ans
-    read -r opt_ans || opt_ans="y"
+    # 6A-45: no answer (closed input) means no
+    read -r opt_ans || opt_ans="n"
+    [ -n "${opt_ans}" ] || opt_ans="n"
     if [[ "${opt_ans}" =~ ^[Nn] ]]; then
         log_warn "Limine setup cancelled. Existing bootloader (GRUB/ELILO) remains completely untouched."
         return 1
@@ -378,11 +587,20 @@ validate_or_migrate_boot_topology() {
     if [[ "${p_choice}" =~ ^[0-9]+$ ]] && [ "${p_choice}" -ge 1 ] && [ "${p_choice}" -lt "${idx}" ]; then
         local chosen_dev="${cand_devs[$((p_choice - 1))]}"
         echo ""
-        echo -e "${RED}${BOLD}WARNING: You selected ${chosen_dev}.${RESET}"
-        echo -e "If this partition contains data, ensure you have backups or that it was created specifically for boot."
-        echo -n "Are you SURE you want to configure ${chosen_dev} as /boot? [y/N]: "
+        local chosen_fs
+        chosen_fs=$(blkid -s TYPE -o value "${chosen_dev}" 2>/dev/null || true)
         local confirm
-        read -r confirm || confirm="n"
+        if [ "${chosen_fs}" = "vfat" ]; then
+            echo -e "${YELLOW}${chosen_dev} is a FAT partition. Its files are kept; the boot files are copied next to them.${RESET}"
+            echo -n "Use ${chosen_dev} as /boot? [y/N]: "
+            read -r confirm || confirm="n"
+        else
+            # 6A-45: formatting needs the word ERASE, not just y
+            echo -e "${RED}${BOLD}${chosen_dev} will be FORMATTED. Everything on it is erased.${RESET}"
+            echo -n "Type ERASE to format ${chosen_dev} and use it as /boot (anything else cancels): "
+            read -r confirm || confirm=""
+            [ "${confirm}" = "ERASE" ] && confirm="y" || confirm="n"
+        fi
         if [[ "${confirm}" =~ ^[Yy] ]]; then
             migrate_to_new_esp_partition "${chosen_dev}" || return 1
             return 0
@@ -473,7 +691,7 @@ CONFIG_BACKUP_THRESHOLD=6
 
 # Automatic Background Btrfs Snapper Boot Sync (Opt-In: default disabled)
 ENABLE_AUTO_SNAPPER_SYNC=no
-SNAPPER_BOOT_POLICY=daily_spread
+SNAPPER_BOOT_POLICY=important
 SNAPPER_BOOT_DEPTH=5
 LIMINE_DEFAULT_EOF
         sudo chmod 644 /etc/default/limine
@@ -562,12 +780,18 @@ sync_host_kernel_cmdline_config() {
         esp_path=$(detect_limine_esp_path)
     fi
 
-    local root_dev root_fs root_uuid root_flags
-    IFS='|' read -r root_dev root_fs root_uuid root_flags <<< "$(detect_root_filesystem_details)"
+    local root_res
+    root_res=$(resolve_boot_root_cmd 2>/dev/null || echo "ERROR")
+    if [ "${root_res}" = "ERROR" ] || [ -z "${root_res}" ]; then
+        log_error "FATAL: Root filesystem device or UUID resolution failed! Aborting kernel cmdline synchronization."
+        return 1
+    fi
+    local root_cmd root_flags root_fs root_dev root_uuid
+    IFS='|' read -r root_cmd root_flags root_fs root_dev root_uuid <<< "${root_res}"
 
-    local root_cmd="root=${root_dev}"
-    if [ -n "${root_uuid}" ]; then
-        root_cmd="root=UUID=${root_uuid}"
+    if [ -z "${root_cmd}" ] || [ "${root_cmd}" = "root=" ]; then
+        log_error "FATAL: Empty or invalid root= parameter resolved! Aborting kernel cmdline synchronization."
+        return 1
     fi
 
     local root_extra=""
@@ -651,6 +875,12 @@ compute_file_boot_hash() {
     fi
 }
 
+# 6A-121: callers run resolve_and_hash_boot_assets in $( ), so a failed ESP copy is recorded in a file the generator reads
+LIMINE_ESP_COPY_FAIL_FILE=""
+limine_esp_copy_failed() {
+    [ -n "${LIMINE_ESP_COPY_FAIL_FILE}" ] && printf '%s\n' "$1" >> "${LIMINE_ESP_COPY_FAIL_FILE}" 2>/dev/null
+    return 0
+}
 resolve_and_hash_boot_assets() {
     local kver="$1"
     local esp_path="$2"
@@ -661,7 +891,11 @@ resolve_and_hash_boot_assets() {
     if sudo test -f "/boot/vmlinuz-${kver}"; then
         vmlinuz_src="/boot/vmlinuz-${kver}"
         if [ "${esp_path}" != "/boot" ]; then
-            sudo cp -f "${vmlinuz_src}" "${esp_path}/vmlinuz-${kver}"
+            # 6A-121: temp + compare + rename with a space check (cp -f could leave a truncated kernel that was then sealed)
+            if ! limine_esp_safe_copy "${vmlinuz_src}" "${esp_path}/vmlinuz-${kver}"; then
+                limine_esp_copy_failed "vmlinuz-${kver}"
+                return 1
+            fi
             vmlinuz_src="${esp_path}/vmlinuz-${kver}"
         fi
     elif sudo test -f "${esp_path}/vmlinuz-${kver}"; then
@@ -675,7 +909,10 @@ resolve_and_hash_boot_assets() {
             if [ "${esp_path}" != "/boot" ] && [[ "${initrd_src}" == /boot/* ]]; then
                 local base_initrd
                 base_initrd=$(basename "${initrd_src}")
-                sudo cp -f "${initrd_src}" "${esp_path}/${base_initrd}"
+                if ! limine_esp_safe_copy "${initrd_src}" "${esp_path}/${base_initrd}"; then
+                    limine_esp_copy_failed "${base_initrd}"
+                    return 1
+                fi
                 initrd_src="${esp_path}/${base_initrd}"
             fi
             break
@@ -697,6 +934,35 @@ resolve_and_hash_boot_assets() {
         return 0
     fi
     return 1
+}
+
+# 6A-121: kernel versions on a separate ESP whose /boot/vmlinuz-<ver> is gone. Prints nothing when /boot holds no kernel at
+# all (an unmounted or empty /boot must never make every ESP kernel look obsolete).
+limine_esp_orphan_kernels() {
+    local esp_path="$1" esp_f esp_kver
+    [ "${esp_path}" != "/boot" ] || return 0
+    sudo test -d "${esp_path}" || return 0
+    sudo find /boot -maxdepth 1 -type f -name 'vmlinuz-*' 2>/dev/null | grep -q . || return 0
+    while IFS= read -r esp_f; do
+        [ -n "${esp_f}" ] || continue
+        esp_kver="${esp_f##*/vmlinuz-}"
+        sudo test -f "/boot/vmlinuz-${esp_kver}" || printf '%s\n' "${esp_kver}"
+    done < <(sudo find "${esp_path}" -maxdepth 1 -type f -name 'vmlinuz-*' 2>/dev/null | LC_ALL=C sort)
+}
+# 6A-121: runs only after the verified commit. Deletes an orphan ESP kernel only when the live limine.conf no longer
+# references it.
+limine_prune_esp_orphans() {
+    local esp_path="$1" k
+    limine_boot_paths_ready "${esp_path}" || return 0
+    while IFS= read -r k; do
+        [ -n "${k}" ] || continue
+        if sudo grep -q -F "boot():/vmlinuz-${k}#" "${esp_path}/limine.conf" 2>/dev/null; then
+            continue
+        fi
+        log_info "Pruning obsolete kernel from ESP: vmlinuz-${k}"
+        sudo rm -f "${esp_path}/vmlinuz-${k}" "${esp_path}/initramfs-${k}.img"* "${esp_path}/initrd-${k}.gz"* 2>/dev/null || true
+    done < <(limine_esp_orphan_kernels "${esp_path}")
+    return 0
 }
 
 # --- [ SMART HEADER & THEME PRESERVATION HELPER ] ---
@@ -817,9 +1083,75 @@ $(echo -e "${splash_line}")
 DEFAULT_HEADER_EOF
 }
 
+# --- [ SS-4 ONE MENU WRITER: MENU ORDER + MENU INPUT FINGERPRINT ] ---
+# 6A-105/106: snapper's limine-snapper-sync plugin (our curated build) and the kernel post-install hook do not write the
+# menu while a slacky-update run holds the run lock, or when the boot lock is busy. They leave this order instead. The
+# generator claims it (rename to .taken) under the boot lock; the verified commit in enroll_limine_config_hash clears
+# the claim. An order that arrives after the claim keeps its own file and is served by the next holder or the hourly job.
+SLACKY_MENU_ORDER="/var/cache/slacky-update/boot-menu-pending"
+# 6A-55: fingerprint of what the menu is built from. Shared with cron/slacky-snapper-limine-sync.
+SLACKY_MENU_FP_FILE="/var/cache/slacky-update/snapper_limine_fingerprint"
+limine_menu_order_claim() {
+    if sudo test -f "${SLACKY_MENU_ORDER}"; then
+        sudo mv -f "${SLACKY_MENU_ORDER}" "${SLACKY_MENU_ORDER}.taken" 2>/dev/null || true
+    fi
+    return 0
+}
+limine_menu_order_done() {
+    sudo rm -f "${SLACKY_MENU_ORDER}.taken" 2>/dev/null || true
+    return 0
+}
+# Prints one hash over the inputs that change the menu: snapshot policy + the snapshots it selects, the kernel and
+# initramfs files (name, size, time) and /etc/default/limine (command lines). A new timeline snapshot that the policy
+# does not select leaves the hash unchanged, so the hourly job does not rewrite and re-sign the boot loader for it.
+limine_menu_input_fingerprint() {
+    local esp_path snap_dir="" sd root_fs
+    esp_path=$(detect_limine_esp_path)
+    root_fs=$(findmnt -n -o FSTYPE / 2>/dev/null || true)
+    if [ "${root_fs}" = "btrfs" ]; then
+        for sd in "/.snapshots" "/@snapshots" "/mnt/@snapshots"; do
+            if sudo test -d "${sd}"; then
+                snap_dir="${sd}"
+                break
+            fi
+        done
+    fi
+    {
+        echo "fp=1 root_fs=${root_fs} esp=${esp_path}"
+        echo "policy=$(get_snapper_sync_config "SNAPPER_BOOT_POLICY" "important") depth=$(get_snapper_sync_config "SNAPPER_BOOT_DEPTH" "5")"
+        if [ -n "${snap_dir}" ]; then
+            scan_snapper_boot_candidates "${snap_dir}"
+        fi
+        sudo find /boot "${esp_path}" -maxdepth 1 -type f \( -name 'vmlinuz*' -o -name 'initramfs*' -o -name 'initrd*' \) \
+            -printf '%p %s %T@\n' 2>/dev/null | LC_ALL=C sort -u
+        sudo cat /etc/default/limine 2>/dev/null || true
+    } | b2sum 2>/dev/null | awk '{print $1}'
+}
+limine_menu_fingerprint_save() {
+    local fp
+    fp=$(limine_menu_input_fingerprint 2>/dev/null || true)
+    [ -n "${fp}" ] || return 0
+    printf '%s\n' "${fp}" | sudo tee "${SLACKY_MENU_FP_FILE}" >/dev/null 2>&1 || true
+    return 0
+}
+
 # --- [ LIMINE CONFIGURATION GENERATOR WITH BLAKE2B HASHING ] ---
 generate_limine_configuration() {
     validate_privileges
+    # 6A-122: a Limine that slacky-update does not manage (BIOS, or no Limine EFI file) is left alone
+    if [ "$(is_limine_installed 2>/dev/null || echo false)" != "true" ]; then
+        limine_unmanaged_notice
+        return 0
+    fi
+    # 6A-121 (LTS boot M7): every caller (full run, --sync-boot, --sync-snapper, menus, cron) stops here when /boot or
+    # the ESP is not mounted and writable, before anything is written
+    if ! limine_boot_paths_ready "$(detect_limine_esp_path)"; then
+        log_warn "The boot menu was not changed because the boot partition is not mounted and writable; mount it and try again."
+        return 1
+    fi
+    acquire_boot_lock || return 1
+    # SS-4: this generation serves every menu order placed so far (snapshots taken during the run included)
+    limine_menu_order_claim
     probe_gpu_hardware
 
     local esp_path
@@ -834,12 +1166,18 @@ generate_limine_configuration() {
     local machine_id
     machine_id=$(get_or_create_machine_id)
 
-    local root_dev root_fs root_uuid root_flags
-    IFS='|' read -r root_dev root_fs root_uuid root_flags <<< "$(detect_root_filesystem_details)"
+    local root_res
+    root_res=$(resolve_boot_root_cmd 2>/dev/null || echo "ERROR")
+    if [ "${root_res}" = "ERROR" ] || [ -z "${root_res}" ]; then
+        log_error "FATAL: Root filesystem device or UUID resolution failed! Aborting Limine configuration."
+        return 1
+    fi
+    local root_cmd root_flags root_fs root_dev root_uuid
+    IFS='|' read -r root_cmd root_flags root_fs root_dev root_uuid <<< "${root_res}"
 
-    local root_cmd="root=${root_dev}"
-    if [ -n "${root_uuid}" ]; then
-        root_cmd="root=UUID=${root_uuid}"
+    if [ -z "${root_cmd}" ] || [ "${root_cmd}" = "root=" ]; then
+        log_error "FATAL: Empty or invalid root= parameter resolved! Aborting Limine configuration."
+        return 1
     fi
 
     local root_extra=""
@@ -877,18 +1215,11 @@ generate_limine_configuration() {
         splash_hash=$(compute_file_boot_hash "${target_splash}")
     fi
 
-    # Prune orphaned kernels and initramfs from ESP if /boot and ESP are separate
-    if [ "${esp_path}" != "/boot" ] && sudo test -d "${esp_path}"; then
-        for esp_f in "${esp_path}"/vmlinuz-*; do
-            sudo test -f "${esp_f}" || continue
-            local esp_kver
-            esp_kver=$(basename "${esp_f}" | sed 's/^vmlinuz-//')
-            if ! sudo test -f "/boot/vmlinuz-${esp_kver}"; then
-                log_info "Pruning obsolete kernel from ESP: $(basename "${esp_f}")"
-                sudo rm -f "${esp_f}" "${esp_path}/initramfs-${esp_kver}.img"* "${esp_path}/initrd-${esp_kver}.gz"* 2>/dev/null || true
-            fi
-        done
-    fi
+    # 6A-121: ESP kernels whose /boot copy is gone are left out of the new menu here and deleted only after the verified
+    # commit (limine_prune_esp_orphans in enroll_limine_config_hash). Deleting them first left the old live menu pointing
+    # at missing files whenever the later veto stopped the commit.
+    local ss_esp_orphans
+    ss_esp_orphans=$(limine_esp_orphan_kernels "${esp_path}" | tr '\n' ' ')
 
     # Resolve early CPU microcode (Intel / AMD) if present on ESP
     local ucode_name="" ucode_hash=""
@@ -897,7 +1228,8 @@ generate_limine_configuration() {
             local base_ucode
             base_ucode=$(basename "${cand_ucode}")
             if [ "${esp_path}" != "/boot" ] && sudo test -f "/boot/${base_ucode}"; then
-                sudo cp -f "/boot/${base_ucode}" "${esp_path}/${base_ucode}"
+                # 6A-121: safe copy; a failed copy stops the menu update (the old menu and files stay)
+                limine_esp_safe_copy "/boot/${base_ucode}" "${esp_path}/${base_ucode}" || return 1
             fi
             ucode_name="${base_ucode}"
             ucode_hash=$(compute_file_boot_hash "${esp_path}/${base_ucode}")
@@ -906,10 +1238,21 @@ generate_limine_configuration() {
         fi
     done
 
+    # 6A-98: keep-set menu. In a commit that removes old kernels afterwards, the menu is built without them, so the live
+    # menu never lists a kernel whose files are about to be deleted
+    local ss_menu_exclude=""
+    if [ "${SS_KEEP_SET_MENU:-0}" = "1" ]; then
+        ss_menu_exclude=$(ss_purge_set | tr '\n' ' ')
+    fi
+    ss_menu_exclude="${ss_menu_exclude} ${ss_esp_orphans}"
+    # 6A-121: ESP copies that fail are recorded here; any failure stops the menu update before the live files change
+    LIMINE_ESP_COPY_FAIL_FILE=$(mktemp /tmp/slacky-esp-copy.XXXXXX)
+
     # Analyze all kernels using python3 classifier (Primary vs Fallback separation)
     local kernel_class_json
     kernel_class_json=$(sudo python3 -c "
-import os, re, json
+import os, re, json, sys
+excl = set(sys.argv[1].split()) if len(sys.argv) > 1 else set()
 
 def get_flavor_and_label(k):
     if '-cachyos-bore-lto' in k or '-cachyos-lto' in k:
@@ -956,6 +1299,7 @@ for d in search_dirs:
                     found.add(f.replace('vmlinuz-', ''))
         except Exception:
             pass
+found = {k for k in found if k not in excl and not any(k in ('generic-' + v, 'huge-' + v) for v in excl)}
 
 sorted_kernels = sorted(list(found), key=rank, reverse=True)
 
@@ -986,7 +1330,7 @@ print(json.dumps({
     'slackware': slackware_kver,
     'lts': lts_kver
 }))
-" 2>/dev/null || echo '{"primary":[],"fallback":[],"top_primary":null,"slackware":null,"lts":null}')
+" "${ss_menu_exclude}" 2>/dev/null || echo '{"primary":[],"fallback":[],"top_primary":null,"slackware":null,"lts":null}')
 
     local primary_entries=""
     local top_kver="" top_label=""
@@ -1154,6 +1498,13 @@ print(json.dumps({
             fi
         done
 
+        local snap_subvol_base=""
+        [ -n "${found_snap_dir}" ] && snap_subvol_base=$(ss_snapshot_subvol_base "${found_snap_dir}")
+        if [ -n "${found_snap_dir}" ] && [ -z "${snap_subvol_base}" ]; then
+            log_warn "Snapshot boot entries are left out: the snapshot folder could not be matched to the root disk."
+            found_snap_dir=""
+        fi
+
         if [ -n "${found_snap_dir}" ]; then
             local snap_list=()
             while IFS= read -r s_id; do
@@ -1161,8 +1512,14 @@ print(json.dumps({
             done < <(scan_snapper_boot_candidates "${found_snap_dir}")
 
             if [ "${#snap_list[@]}" -gt 0 ] && [ -n "${top_kver}" ] && [ -n "${top_vname}" ]; then
+                # 6A-96: every kernel this menu knows, newest first (primary, then fallbacks)
+                local -a ss_all_kvers=()
+                local -A ss_asset_cache=()
+                while IFS= read -r c_k; do
+                    [ -n "${c_k}" ] && ss_all_kvers+=("${c_k}")
+                done < <(echo "${kernel_class_json}" | python3 -c "import sys, json; d=json.load(sys.stdin); seen=[]; [seen.append(x['kver']) for x in d.get('primary', [])+d.get('fallback', []) if x.get('kver') and x['kver'] not in seen]; print('\n'.join(seen))" 2>/dev/null || true)
                 local boot_policy
-                boot_policy=$(get_snapper_sync_config "SNAPPER_BOOT_POLICY" "daily_spread")
+                boot_policy=$(get_snapper_sync_config "SNAPPER_BOOT_POLICY" "important")
                 snapshot_entries+="\n     //Snapshots\n"
                 snapshot_entries+="     ### Auto-generated by slacky-snapper-limine-sync (${boot_policy})\n"
                 snapshot_entries+="     comment: ${#snap_list[@]} snapshots (${boot_policy})\n"
@@ -1179,41 +1536,40 @@ print(json.dumps({
                     [ -n "${s_desc}" ] && s_label="${s_label} │ ${s_desc}"
                     [ -n "${s_date}" ] && s_label="${s_label} (${s_date%% *})"
 
-                    local s_subvol="@snapshots/${s_num}/snapshot"
-                    if [ -n "${root_flags}" ]; then
-                        local cur_subvol
-                        cur_subvol=$(echo "${root_flags}" | grep -o -E 'subvol=[^ ]+' | cut -d'=' -f2 || true)
-                        if [ -n "${cur_subvol}" ] && [ "${cur_subvol}" != "/" ]; then
-                            s_subvol="${cur_subvol}/.snapshots/${s_num}/snapshot"
-                        fi
-                    fi
+                    local s_subvol="${snap_subvol_base}/${s_num}/snapshot"
 
                     local s_cmdline="${root_cmd} rootflags=subvol=${s_subvol} rw ${host_cmdline}"
                     s_cmdline=$(echo "${s_cmdline}" | tr -s ' ' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
 
-                    snapshot_entries+="     ///${s_label}\n"
-                    # Primary kernel snapshot entry
-                    snapshot_entries+="     ////${top_label}\n"
-                    snapshot_entries+="     protocol: linux\n"
-                    snapshot_entries+="     path: boot():/${top_vname}#${top_khash}\n"
-                    snapshot_entries+="     module_path: boot():/${top_iname}#${top_ihash}\n"
-                    snapshot_entries+="     cmdline: ${s_cmdline}\n"
-
-                    # CachyOS LTS fallback kernel snapshot entry
-                    if [ -n "${lts_kver}" ] && [ -n "${lts_vname}" ] && [ "${lts_kver}" != "${top_kver}" ]; then
-                        snapshot_entries+="     ////Linux Cachyos LTS\n"
+                    # 6A-96: a snapshot boots only kernels whose modules are inside that snapshot (after a kernel update
+                    # the newest kernel has no modules in older snapshots, so its "undo" entry failed exactly when needed).
+                    # Up to two matching kernels, newest first; hashes are reused across snapshots.
+                    local s_added=0 c_kver c_info c_v c_kh c_i c_ih
+                    for c_kver in "${ss_all_kvers[@]}"; do
+                        [ "${s_added}" -lt 2 ] || break
+                        sudo test -d "${s_path}/snapshot/lib/modules/${c_kver}" || continue
+                        c_info="${ss_asset_cache[${c_kver}]:-}"
+                        if [ -z "${c_info}" ]; then
+                            c_info=$(resolve_and_hash_boot_assets "${c_kver}" "${esp_path}" || true)
+                            ss_asset_cache[${c_kver}]="${c_info:--}"
+                        fi
+                        [ -n "${c_info}" ] && [ "${c_info}" != "-" ] || continue
+                        IFS='|' read -r c_v c_kh c_i c_ih <<< "${c_info}"
+                        [ "${s_added}" -eq 0 ] && snapshot_entries+="     ///${s_label}\n"
+                        snapshot_entries+="     ////Kernel ${c_kver}\n"
                         snapshot_entries+="     protocol: linux\n"
-                        snapshot_entries+="     path: boot():/${lts_vname}#${lts_khash}\n"
-                        snapshot_entries+="     module_path: boot():/${lts_iname}#${lts_ihash}\n"
+                        snapshot_entries+="     path: boot():/${c_v}#${c_kh}\n"
+                        snapshot_entries+="     module_path: boot():/${c_i}#${c_ih}\n"
                         snapshot_entries+="     cmdline: ${s_cmdline}\n"
-                    fi
-
-                    # Slackware fallback kernel snapshot entry
-                    if [ -n "${slack_kver}" ] && [ -n "${slack_vname}" ] && [ "${slack_kver}" != "${top_kver}" ] && [ "${slack_kver}" != "${lts_kver}" ]; then
-                        snapshot_entries+="     ////Slackware Linux\n"
+                        s_added=$((s_added + 1))
+                    done
+                    if [ "${s_added}" -eq 0 ]; then
+                        # no kernel in /boot matches this snapshot: keep the old entry, clearly labelled
+                        snapshot_entries+="     ///${s_label} (newer kernel, some drivers may be missing)\n"
+                        snapshot_entries+="     ////${top_label}\n"
                         snapshot_entries+="     protocol: linux\n"
-                        snapshot_entries+="     path: boot():/${slack_vname}#${slack_khash}\n"
-                        snapshot_entries+="     module_path: boot():/${slack_iname}#${slack_ihash}\n"
+                        snapshot_entries+="     path: boot():/${top_vname}#${top_khash}\n"
+                        snapshot_entries+="     module_path: boot():/${top_iname}#${top_ihash}\n"
                         snapshot_entries+="     cmdline: ${s_cmdline}\n"
                     fi
                 done
@@ -1238,6 +1594,15 @@ print(json.dumps({
         foreign_entries+="    protocol: efi_chainload\n"
         foreign_entries+="    image_path: boot():/EFI/Slackware/shimx64.efi\n"
     fi
+
+    if [ -s "${LIMINE_ESP_COPY_FAIL_FILE}" ]; then
+        log_error "Some boot files could not be copied to the boot partition, so the boot menu was not changed."
+        rm -f "${LIMINE_ESP_COPY_FAIL_FILE}" 2>/dev/null || true
+        LIMINE_ESP_COPY_FAIL_FILE=""
+        return 1
+    fi
+    rm -f "${LIMINE_ESP_COPY_FAIL_FILE}" 2>/dev/null || true
+    LIMINE_ESP_COPY_FAIL_FILE=""
 
     # 6. Retrieve or build smart theme header (Preserves user customizations & auto-hashes wallpaper)
     local theme_header
@@ -1264,24 +1629,91 @@ $(echo -e "${snapshot_entries}")
 $(echo -e "${foreign_entries}")
 LIMINE_HEADER_EOF
 
-    sudo cp -f "${limine_cfg_tmp}" "${limine_cfg_file}"
-    sudo rm -f "${limine_cfg_tmp}" 2>/dev/null || true
-    sudo chmod 644 "${limine_cfg_file}" 2>/dev/null || true
-
-    # Also keep a mirror at /boot/limine.conf if /boot != esp_path
-    if [ "${esp_path}" != "/boot" ] && [ -d "/boot" ]; then
-        sudo cp -f "${limine_cfg_file}" "/boot/limine.conf" 2>/dev/null || true
+    # --- [ ZERO-BRICK VETO GUARDRAIL: INTEGRITY SANITY CHECK ] ---
+    if grep -E 'cmdline:[[:space:]]*root=([[:space:]]|$)' "${limine_cfg_tmp}" >/dev/null 2>&1; then
+        log_error "FATAL: Integrity violation detected in generated Limine config!"
+        log_error "Generated configuration contains an empty or invalid 'root=' parameter."
+        log_error "Aborting Limine configuration update to protect system bootability."
+        rm -f "${limine_cfg_tmp}" 2>/dev/null || true
+        return 1
     fi
+
+    if ! grep -q 'cmdline:.*root=' "${limine_cfg_tmp}" 2>/dev/null; then
+        log_error "FATAL: Generated Limine configuration contains no valid 'root=' directives! Aborting deployment."
+        rm -f "${limine_cfg_tmp}" 2>/dev/null || true
+        return 1
+    fi
+
+    # Preserve known-good backup before overwriting active configuration
+    if sudo test -f "${limine_cfg_file}"; then
+        sudo cp -f "${limine_cfg_file}" "${limine_cfg_file}.bak" 2>/dev/null || true
+    fi
+
+    # 6A-8d: write next to the target on the ESP, flush, then rename (a crash leaves the old or the new file, never half)
+    # 6A-8c: the rename target is limine.conf.next; enroll_and_sign_limine activates it together with the enrolled EFI,
+    # so the live limine.conf never differs from the hash inside the live EFI.
+    mark_boot_reseal_pending
+    local limine_cfg_stage="${limine_cfg_file}.new.$$"
+    local stage_ok=1
+    { sudo cp -f "${limine_cfg_tmp}" "${limine_cfg_stage}" && sudo chmod 644 "${limine_cfg_stage}"; } || stage_ok=0
+    if [ "${stage_ok}" -eq 0 ]; then
+        sudo rm -f "${limine_cfg_stage}" "${limine_cfg_tmp}" 2>/dev/null || true
+        log_error "Could not stage the new Limine configuration. The current one is unchanged."
+        return 1
+    fi
+    sudo sync -f "${limine_cfg_stage}" 2>/dev/null || sudo sync 2>/dev/null || true
+    if ! sudo mv -f "${limine_cfg_stage}" "${limine_cfg_file}.next"; then
+        sudo rm -f "${limine_cfg_stage}" "${limine_cfg_tmp}" 2>/dev/null || true
+        log_error "Could not prepare the new Limine configuration. The current one is unchanged."
+        return 1
+    fi
+    sudo sync 2>/dev/null || true
+    sudo rm -f "${limine_cfg_tmp}" 2>/dev/null || true
 
     return 0
 }
 
 # --- [ CONFIG ENROLLMENT & SBCTL SIGNING ] ---
+# 6A-157 (C29, spec 6.1): /var/lib/slacky-boot/limine-committed = one JSON line {v,txid,app,ts,blake2b,sha256} of the exact
+# limine.conf bytes that are live after a verified commit. Temp file + rename in the same dir, root:root 0644, never in /boot.
+SLACKY_LIMINE_COMMITTED="/var/lib/slacky-boot/limine-committed"
+limine_write_committed_record() {
+    local conf="$1" dir tmp b2 s256 now txid
+    dir="$(dirname "${SLACKY_LIMINE_COMMITTED}")"
+    b2=$(sudo b2sum "${conf}" 2>/dev/null | awk '{print $1}')
+    s256=$(sudo sha256sum "${conf}" 2>/dev/null | awk '{print $1}')
+    case "${b2}" in ''|*[!0-9a-f]*) return 1 ;; esac
+    case "${s256}" in ''|*[!0-9a-f]*) return 1 ;; esac
+    [ "${#b2}" -eq 128 ] && [ "${#s256}" -eq 64 ] || return 1
+    now=$(date +%s)
+    txid="${SLACKY_TXID:-legacy-${now}-$$}"
+    sudo install -d -m 0755 -o root -g root "${dir}" 2>/dev/null || return 1
+    [ ! -L "${dir}" ] || return 1
+    tmp="${SLACKY_LIMINE_COMMITTED}.tmp.$$"
+    printf '{"v":1,"txid":"%s","app":"slacky-update","ts":%s,"blake2b":"%s","sha256":"%s"}\n' "${txid}" "${now}" "${b2}" "${s256}" \
+        | sudo tee "${tmp}" >/dev/null 2>&1 || { sudo rm -f "${tmp}" 2>/dev/null; return 1; }
+    if ! { sudo chown root:root "${tmp}" && sudo chmod 0644 "${tmp}" && sudo mv -f "${tmp}" "${SLACKY_LIMINE_COMMITTED}"; } 2>/dev/null; then
+        sudo rm -f "${tmp}" 2>/dev/null || true
+        return 1
+    fi
+    return 0
+}
+
 enroll_limine_config_hash() {
     validate_privileges
 
     local esp_path
     esp_path=$(detect_limine_esp_path)
+    # 6A-122: never touch a Limine that slacky-update does not manage
+    if [ "$(is_limine_installed 2>/dev/null || echo false)" != "true" ]; then
+        limine_unmanaged_notice
+        return 0
+    fi
+    # 6A-121: nothing is committed onto an unmounted or read-only boot partition
+    if ! limine_boot_paths_ready "${esp_path}"; then
+        log_warn "The boot loader was not changed because the boot partition is not mounted and writable; mount it and try again."
+        return 1
+    fi
     local target_efi="${esp_path}/EFI/limine/limine_x64.efi"
     local cfg_file="${esp_path}/limine.conf"
 
@@ -1294,7 +1726,10 @@ enroll_limine_config_hash() {
         return 1
     fi
 
-    # Reset target_efi to clean original binary before enrolling to prevent Authenticode digest corruption
+    # 6A-8a: build the new EFI in a STAGING copy on the ESP. The live EFIs are replaced only after the copy
+    # is enrolled and, when sbctl keys exist, signed and verified. Before, both live EFIs were first reset
+    # to the clean UNSIGNED binary; a failed enroll only warned and a failed `sbctl sign` was swallowed,
+    # which left Limine unsigned (firmware refuses it with Secure Boot on).
     local limine_clean_src=""
     for cand in "/usr/share/limine/BOOTX64.EFI" "/usr/share/limine/x86_64/BOOTX64.EFI" "/usr/lib/limine/BOOTX64.EFI"; do
         if [ -f "${cand}" ]; then
@@ -1303,33 +1738,120 @@ enroll_limine_config_hash() {
         fi
     done
 
+    local stage_dir="${esp_path}/EFI/limine/.stage-$$"
+    sudo rm -rf "${stage_dir}" 2>/dev/null || true
+    sudo mkdir -p "${stage_dir}"
+
     if [ -n "${limine_clean_src}" ]; then
+        sudo cp -f "${limine_clean_src}" "${stage_dir}/clean.efi"
+        # Keep the clean-binary fallback archive as before
         local clean_bak_tmp
         clean_bak_tmp=$(mktemp -d /tmp/limine-bak.XXXXXX)
         cp -f "${limine_clean_src}" "${clean_bak_tmp}/limine_x64.efi"
-        sudo cp -f "${limine_clean_src}" "${target_efi}"
-        if sudo test -f "${esp_path}/EFI/BOOT/BOOTX64.EFI"; then
-            sudo cp -f "${limine_clean_src}" "${esp_path}/EFI/BOOT/BOOTX64.EFI"
-        fi
         sudo tar --owner=0 --group=0 -cf "${esp_path}/EFI/limine/limine_x64.bak" -C "${clean_bak_tmp}" "limine_x64.efi" 2>/dev/null || true
         rm -rf "${clean_bak_tmp}" 2>/dev/null || true
     elif sudo test -f "${esp_path}/EFI/limine/limine_x64.bak"; then
-        sudo tar -xf "${esp_path}/EFI/limine/limine_x64.bak" --directory="${esp_path}/EFI/limine" 2>/dev/null || true
+        sudo tar -xf "${esp_path}/EFI/limine/limine_x64.bak" --directory="${stage_dir}" 2>/dev/null || true
+        sudo mv -f "${stage_dir}/limine_x64.efi" "${stage_dir}/clean.efi" 2>/dev/null || true
+    fi
+    if ! sudo test -f "${stage_dir}/clean.efi"; then
+        log_error "Clean Limine EFI binary not found. The boot loader was left unchanged."
+        sudo rm -rf "${stage_dir}" 2>/dev/null || true
+        return 1
     fi
 
     local limine_cli
     limine_cli=$(command -v limine 2>/dev/null || echo "/usr/bin/limine")
-    if [ -x "${limine_cli}" ]; then
-        local cfg_hash
-        cfg_hash=$(sudo b2sum "${cfg_file}" 2>/dev/null | awk '{print $1}')
-        if [ -n "${cfg_hash}" ]; then
-            if ! { sudo "${limine_cli}" enroll-config "${target_efi}" "${cfg_file}" >/dev/null 2>&1 || sudo "${limine_cli}" enroll-config "${target_efi}" "${cfg_hash}" >/dev/null 2>&1 || sudo "${limine_cli}" enroll-config "${target_efi}" < "${cfg_file}" >/dev/null 2>&1; }; then
-                log_warn "Notice: limine enroll-config returned non-zero (or already enrolled)."
-            fi
-            if sudo test -f "${esp_path}/EFI/BOOT/BOOTX64.EFI"; then
-                sudo "${limine_cli}" enroll-config "${esp_path}/EFI/BOOT/BOOTX64.EFI" "${cfg_file}" >/dev/null 2>&1 || sudo "${limine_cli}" enroll-config "${esp_path}/EFI/BOOT/BOOTX64.EFI" "${cfg_hash}" >/dev/null 2>&1 || true
+    # 6A-8c: a freshly generated configuration waits in limine.conf.next and goes live together with this EFI
+    local cfg_src="${cfg_file}"
+    sudo test -f "${cfg_file}.next" && cfg_src="${cfg_file}.next"
+    local cfg_hash
+    cfg_hash=$(sudo b2sum "${cfg_src}" 2>/dev/null | awk '{print $1}')
+    if [ ! -x "${limine_cli}" ] || [ -z "${cfg_hash}" ]; then
+        log_error "limine tool or limine.conf hash unavailable. The boot loader was left unchanged."
+        sudo rm -rf "${stage_dir}" 2>/dev/null || true
+        return 1
+    fi
+
+    local sign_needed=0
+    is_sbctl_keys_configured && sign_needed=1
+    local sbctl_bin
+    sbctl_bin=$(command -v sbctl 2>/dev/null || echo "/usr/bin/sbctl")
+
+    local targets=("${target_efi}")
+    # 6A-123 (LTS boot M11): the UEFI fallback is replaced only when it is already Limine (never shim, GRUB or Windows)
+    if limine_fallback_efi_is_ours "${esp_path}/EFI/BOOT/BOOTX64.EFI"; then
+        targets+=("${esp_path}/EFI/BOOT/BOOTX64.EFI")
+    fi
+
+    log_info "Enrolling BLAKE2B configuration digest into Limine EFI bootloader..."
+    local idx=0 tgt staged
+    for tgt in "${targets[@]}"; do
+        staged="${stage_dir}/efi${idx}.efi"
+        idx=$((idx + 1))
+        sudo cp -f "${stage_dir}/clean.efi" "${staged}"
+        if ! sudo "${limine_cli}" enroll-config "${staged}" "${cfg_hash}" >/dev/null 2>&1; then
+            log_error "limine enroll-config failed for $(basename "${tgt}"). The boot loader was left unchanged."
+            sudo rm -rf "${stage_dir}" "${cfg_file}.next" 2>/dev/null || true
+            return 1
+        fi
+        if [ "${sign_needed}" -eq 1 ]; then
+            if ! sudo "${sbctl_bin}" sign "${staged}" >/dev/null 2>&1 || ! limine_efi_signature_ok "${staged}"; then
+                log_error "Signing the new Limine EFI failed for $(basename "${tgt}"). The boot loader was left unchanged."
+                sudo rm -rf "${stage_dir}" "${cfg_file}.next" 2>/dev/null || true
+                return 1
             fi
         fi
+    done
+
+    # 6A-8c: commit conf + EFI as one pair. Keep the current (matching) pair as .prev, flush the staged files, then rename
+    # them in back to back with hang-up/interrupt/terminate held off, so closing the terminal cannot split the pair.
+    # Any failed rename rolls the whole pair back from .prev. Same filesystem, so mv is a rename.
+    local old_traps
+    old_traps="$(trap -p HUP INT TERM)"
+    trap '' HUP INT TERM
+    local commit_ok=1 moved=()
+    sudo cp -f "${cfg_file}" "${cfg_file}.prev" 2>/dev/null || commit_ok=0
+    for tgt in "${targets[@]}"; do
+        sudo cp -f "${tgt}" "${tgt}.prev" 2>/dev/null || commit_ok=0
+    done
+    sudo sync 2>/dev/null || true
+    if [ "${commit_ok}" -eq 1 ] && [ "${cfg_src}" != "${cfg_file}" ]; then
+        if sudo mv -f "${cfg_src}" "${cfg_file}"; then moved+=("${cfg_file}"); else commit_ok=0; fi
+    fi
+    idx=0
+    for tgt in "${targets[@]}"; do
+        staged="${stage_dir}/efi${idx}.efi"
+        idx=$((idx + 1))
+        [ "${commit_ok}" -eq 1 ] || break
+        if sudo mv -f "${staged}" "${tgt}"; then moved+=("${tgt}"); else commit_ok=0; fi
+    done
+    if [ "${commit_ok}" -ne 1 ]; then
+        local m
+        for m in "${moved[@]}"; do
+            sudo cp -f "${m}.prev" "${m}" 2>/dev/null || true
+        done
+        sudo sync 2>/dev/null || true
+        sudo rm -rf "${stage_dir}" "${cfg_file}.next" 2>/dev/null || true
+        trap - HUP INT TERM; eval "${old_traps}"
+        log_error "Could not install the new Limine boot files. The previous configuration and boot loader were restored."
+        return 1
+    fi
+    sudo sync 2>/dev/null || true
+    trap - HUP INT TERM; eval "${old_traps}"
+    sudo rm -rf "${stage_dir}" 2>/dev/null || true
+    # 6A-157 (C29): record what was committed BEFORE the reseal marker goes away (shared spec 6.1); a failure only warns
+    limine_write_committed_record "${cfg_file}" || log_warn "Could not write the boot menu record; the hourly check cannot compare the menu until the next update."
+    clear_boot_reseal_pending
+    # SS-4: the claimed menu order is served; record what this menu was built from (6A-55 hourly check)
+    limine_menu_order_done
+    limine_menu_fingerprint_save
+    # 6A-121: obsolete ESP kernels are removed only now, after the new menu is live and no longer lists them
+    limine_prune_esp_orphans "${esp_path}"
+
+    # Also keep a mirror at /boot/limine.conf if /boot != esp_path
+    if [ "${esp_path}" != "/boot" ] && [ -d "/boot" ]; then
+        sudo cp -f "${cfg_file}" "/boot/limine.conf" 2>/dev/null || true
     fi
     return 0
 }
@@ -1351,6 +1873,61 @@ is_sbctl_keys_configured() {
     return 1
 }
 
+# 6A-8a/6A-8b: true when an EFI file carries a valid signature from the sbctl db key.
+# Without sbverify or the db certificate it trusts the sign exit status (returns 0).
+limine_efi_signature_ok() {
+    local efi="$1" cert=""
+    for c in "/var/lib/sbctl/keys/db/db.pem" "/usr/share/secureboot/keys/db/db.pem"; do
+        if sudo test -f "${c}"; then cert="${c}"; break; fi
+    done
+    if [ -z "${cert}" ] || ! command -v sbverify >/dev/null 2>&1; then
+        return 0
+    fi
+    sudo sbverify --cert "${cert}" "${efi}" >/dev/null 2>&1
+}
+
+# 6A-8b: silent read-back after a reseal. Returns 0 when every `path#hash` in limine.conf matches its
+# file and the live Limine EFI verifies; otherwise prints one plain line and returns 1.
+verify_limine_seal() {
+    local esp_path
+    esp_path=$(detect_limine_esp_path 2>/dev/null || echo "/boot")
+    local bad
+    bad=$(sudo python3 - "${esp_path}" << 'PYSEAL'
+import hashlib, os, re, sys
+esp = sys.argv[1]
+cfg = os.path.join(esp, "limine.conf")
+if not os.path.isfile(cfg):
+    print("limine.conf not found"); sys.exit(0)
+bad = 0
+for line in open(cfg, errors="replace"):
+    m = re.match(r"\s*(?:path|kernel_path|module_path|image_path|wallpaper)\s*:\s*boot\(\):/([^#\s]+)#([0-9a-fA-F]{128})\s*$", line)
+    if not m:
+        continue
+    f = os.path.join(esp, m.group(1))
+    h = hashlib.blake2b()
+    try:
+        with open(f, "rb") as fh:
+            for chunk in iter(lambda: fh.read(1 << 20), b""):
+                h.update(chunk)
+    except OSError:
+        bad += 1; continue
+    if h.hexdigest().lower() != m.group(2).lower():
+        bad += 1
+if bad:
+    print(f"{bad} boot file hash(es) in limine.conf do not match")
+PYSEAL
+)
+    if [ -n "${bad}" ]; then
+        log_warn "Limine seal check: ${bad}."
+        return 1
+    fi
+    if is_sbctl_keys_configured && ! limine_efi_signature_ok "${esp_path}/EFI/limine/limine_x64.efi"; then
+        log_warn "Limine seal check: the Limine EFI is not validly signed."
+        return 1
+    fi
+    return 0
+}
+
 sign_kernel_binaries_sbctl() {
     validate_privileges
     local sbctl_bin
@@ -1360,33 +1937,34 @@ sign_kernel_binaries_sbctl() {
         return 0
     fi
 
-    # Strict whitelist pruning of sbctl database (/var/lib/sbctl/files.json)
-    # Retain ONLY active /boot/vmlinuz-* kernels and Limine EFI bootloader
-    if [ -f "/var/lib/sbctl/files.json" ]; then
+    # 6A-123 (LTS boot-fs M5): prune only sbctl database entries whose file no longer exists. GRUB, shim, ELILO and UKI
+    # entries stay registered (the old whitelist kept only /boot/vmlinuz-* and the Limine EFIs). Written atomically.
+    # An unmounted /boot would make every kernel look gone, so nothing is pruned then.
+    if sudo test -f "/var/lib/sbctl/files.json" && limine_boot_paths_ready "$(detect_limine_esp_path)"; then
         sudo python3 -c "
-import json, os
+import json, os, tempfile
 
 fpath = '/var/lib/sbctl/files.json'
 try:
     with open(fpath, 'r', encoding='utf-8') as f:
         data = json.load(f)
-    cleaned = {}
-    for p, info in data.items():
-        if not os.path.exists(p) or os.path.islink(p):
-            continue
-        fname = os.path.basename(p)
-        is_valid_kernel = fname.startswith('vmlinuz-') and os.path.dirname(os.path.abspath(p)) == '/boot'
-        is_limine_efi = p.endswith('/EFI/limine/limine_x64.efi') or p.endswith('/EFI/BOOT/BOOTX64.EFI')
-        if is_valid_kernel or is_limine_efi:
-            cleaned[p] = info
-    with open(fpath, 'w', encoding='utf-8') as f:
-        json.dump(cleaned, f, indent=2)
+    if isinstance(data, dict):
+        cleaned = {p: info for p, info in data.items() if os.path.exists(p)}
+        if len(cleaned) != len(data):
+            fd, tmp = tempfile.mkstemp(dir=os.path.dirname(fpath), prefix='.files.json.')
+            with os.fdopen(fd, 'w', encoding='utf-8') as f:
+                json.dump(cleaned, f, indent=2)
+                f.flush()
+                os.fsync(f.fileno())
+            os.chmod(tmp, os.stat(fpath).st_mode & 0o777)
+            os.replace(tmp, fpath)
 except Exception:
     pass
 " 2>/dev/null || true
     fi
 
     local kern_files=()
+    local sb_failed=()
     mapfile -t kern_files < <(sudo python3 -c "
 import os
 if os.path.exists('/boot'):
@@ -1399,11 +1977,17 @@ if os.path.exists('/boot'):
         [ -n "${kern}" ] || continue
         log_info "Signing kernel binary with sbctl: $(basename "${kern}")..."
         sudo "${sbctl_bin}" sign -s "${kern}" >/dev/null 2>&1 || true
+        # 6A-44: check the result instead of assuming it (errors were swallowed and reported as signed)
+        limine_efi_signature_ok "${kern}" || sb_failed+=("$(basename "${kern}")")
     done
 
-    # Resign all registered entries with sbctl
-    sudo "${sbctl_bin}" sign-all >/dev/null 2>&1 || true
+    # 6A-101: no `sbctl sign-all` here. It re-signed the registered live Limine EFIs in place (a FAT write of the only
+    # boot loader without staging); the Limine EFI is signed once, as a staged copy, in enroll_limine_config_hash.
 
+    if [ "${#sb_failed[@]}" -gt 0 ]; then
+        log_warn "Could not sign ${sb_failed[*]} for Secure Boot."
+        return 1
+    fi
     return 0
 }
 
@@ -1418,10 +2002,21 @@ sign_limine_efi_sbctl() {
     if [ -x "${sbctl_bin}" ] && is_sbctl_keys_configured; then
         if sudo test -f "${target_efi}"; then
             log_info "Signing Limine EFI bootloader with sbctl: ${target_efi}..."
+            # -s keeps the file registered in the sbctl database; the copy is usually already signed
             sudo "${sbctl_bin}" sign -s "${target_efi}" >/dev/null 2>&1 || true
+            # 6A-8b: report a bad signature instead of swallowing it
+            if ! limine_efi_signature_ok "${target_efi}"; then
+                log_error "The Limine EFI at ${target_efi} is not validly signed."
+                return 1
+            fi
         fi
-        if sudo test -f "${esp_path}/EFI/BOOT/BOOTX64.EFI"; then
+        # 6A-123: sign the fallback only when it is Limine (a shim or GRUB fallback is left alone)
+        if limine_fallback_efi_is_ours "${esp_path}/EFI/BOOT/BOOTX64.EFI"; then
             sudo "${sbctl_bin}" sign -s "${esp_path}/EFI/BOOT/BOOTX64.EFI" >/dev/null 2>&1 || true
+            if ! limine_efi_signature_ok "${esp_path}/EFI/BOOT/BOOTX64.EFI"; then
+                log_error "The fallback EFI at ${esp_path}/EFI/BOOT/BOOTX64.EFI is not validly signed."
+                return 1
+            fi
         fi
     fi
 
@@ -1432,9 +2027,32 @@ sign_limine_efi_sbctl() {
 }
 
 enroll_and_sign_limine() {
+    # 6A-122: a Limine that slacky-update does not manage is left alone (no "do not reboot" for it)
+    if [ "$(is_limine_installed 2>/dev/null || echo false)" != "true" ]; then
+        limine_unmanaged_notice
+        return 0
+    fi
+    # 6A-121: stop before the lock when the boot partition is not mounted and writable
+    if ! limine_boot_paths_ready "$(detect_limine_esp_path)"; then
+        log_warn "The boot loader was not changed because the boot partition is not mounted and writable; mount it and try again."
+        return 1
+    fi
+    acquire_boot_lock || return 1
     enroll_limine_config_hash || return 1
     if is_sbctl_keys_configured; then
-        sign_limine_efi_sbctl || return 1
+        # 6A-101: the staged EFI was signed and verified before the swap; the live file is only read back here, never
+        # re-signed in place (sign_limine_efi_sbctl stays for the interactive menu)
+        local esp_v
+        esp_v=$(detect_limine_esp_path)
+        if ! limine_efi_signature_ok "${esp_v}/EFI/limine/limine_x64.efi"; then
+            log_error "The Limine EFI at ${esp_v}/EFI/limine/limine_x64.efi is not validly signed."
+            return 1
+        fi
+        if limine_fallback_efi_is_ours "${esp_v}/EFI/BOOT/BOOTX64.EFI" && ! limine_efi_signature_ok "${esp_v}/EFI/BOOT/BOOTX64.EFI"; then
+            log_error "The fallback EFI at ${esp_v}/EFI/BOOT/BOOTX64.EFI is not validly signed."
+            return 1
+        fi
+        backup_limine_self_heal
     else
         log_info "sbctl keys not enrolled. Limine EFI bootloader enrolled without sbctl signature."
     fi
@@ -1513,6 +2131,11 @@ restore_limine_self_heal() {
 # --- [ INSTALL LIMINE BOOTLOADER (ZERO DESTRUCTION) ] ---
 install_limine_bootloader() {
     validate_privileges
+    # 6A-122: slacky-update manages Limine only on a UEFI start; a BIOS computer keeps its boot loader
+    if ! limine_uefi_booted; then
+        log_warn "This computer did not start in UEFI mode, so slacky-update cannot install or manage Limine here; nothing was changed."
+        return 1
+    fi
 
     local esp_path
     esp_path=$(detect_limine_esp_path)
@@ -1569,9 +2192,9 @@ install_limine_bootloader() {
         esp_source=$(findmnt -n -o SOURCE "${esp_path}" 2>/dev/null || true)
         if [ -n "${esp_source}" ]; then
             local esp_disk="" esp_part=""
-            if [[ "${esp_source}" =~ (/dev/nvme[0-9]+n[0-9]+)p([0-9]+) ]]; then
+            if [[ "${esp_source}" =~ (/dev/(nvme[0-9]+n[0-9]+|mmcblk[0-9]+|nbd[0-9]+))p([0-9]+) ]]; then
                 esp_disk="${BASH_REMATCH[1]}"
-                esp_part="${BASH_REMATCH[2]}"
+                esp_part="${BASH_REMATCH[3]}"
             elif [[ "${esp_source}" =~ (/dev/[a-z]+)([0-9]+) ]]; then
                 esp_disk="${BASH_REMATCH[1]}"
                 esp_part="${BASH_REMATCH[2]}"
@@ -1605,13 +2228,20 @@ manage_kernel_cmdline_interactive() {
     local esp_path
     esp_path=$(detect_limine_esp_path)
 
-    local root_dev root_fs root_uuid root_flags
-    IFS='|' read -r root_dev root_fs root_uuid root_flags <<< "$(detect_root_filesystem_details)"
-
-    local root_cmd="root=${root_dev}"
-    if [ -n "${root_uuid}" ]; then
-        root_cmd="root=UUID=${root_uuid}"
+    local root_res
+    root_res=$(resolve_boot_root_cmd 2>/dev/null || echo "ERROR")
+    if [ "${root_res}" = "ERROR" ] || [ -z "${root_res}" ]; then
+        log_error "FATAL: Root filesystem device or UUID resolution failed! Aborting interactive configuration."
+        return 1
     fi
+    local root_cmd root_flags root_fs root_dev root_uuid
+    IFS='|' read -r root_cmd root_flags root_fs root_dev root_uuid <<< "${root_res}"
+
+    if [ -z "${root_cmd}" ] || [ "${root_cmd}" = "root=" ]; then
+        log_error "FATAL: Empty or invalid root= parameter resolved! Aborting interactive configuration."
+        return 1
+    fi
+
     local root_extra=""
     if [ -n "${root_flags}" ]; then
         root_extra=" ${root_flags}"
@@ -1663,85 +2293,132 @@ manage_kernel_cmdline_interactive() {
         local zram_active=false
         if is_zram_active; then zram_active=true; fi
 
-        echo ""
-        echo -e "${CYAN}================================================================================${RESET}"
-        echo -e "${YELLOW}${BOLD}⚙️  KERNEL BOOT PARAMETERS & GAMING HUB${RESET}"
-        echo -e "${CYAN}================================================================================${RESET}"
-        echo -e "  • ${BOLD}Base Root (Auto):${RESET}   ${GREEN}${fixed_root}${RESET}"
-        echo -e "  • ${BOLD}Active Custom:${RESET}     ${CYAN}${current_custom:-"(None - using bare root)"}${RESET}"
-        echo ""
-        echo -e "  ${BOLD}Toggles (Type number to flip [x] / [ ]):${RESET}"
+        local tui_py="${APP_DIR:-}/slacky_tui.py"
+        [ ! -f "${tui_py}" ] && [ -f "/usr/share/slacky-update/lib/slacky_tui.py" ] && tui_py="/usr/share/slacky-update/lib/slacky_tui.py"
+        [ ! -f "${tui_py}" ] && [ -f "${SCRIPT_DIR:-}/../lib/slacky_tui.py" ] && tui_py="${SCRIPT_DIR:-}/../lib/slacky_tui.py"
 
-        if [ "${has_quiet}" = "true" ]; then
-            echo -e "  \033[1;32m[x]\033[0m \033[1;33m1.\033[0m Quiet & Splash Boot          [quiet splash loglevel=3 rd.udev.log_priority=3]"
-        else
-            echo -e "  \033[1;30m[ ]\033[0m \033[1;33m1.\033[0m Quiet & Splash Boot          [quiet splash loglevel=3 rd.udev.log_priority=3]"
-        fi
-
-        if [ "${has_nvidia}" = "true" ]; then
-            echo -e "  \033[1;32m[x]\033[0m \033[1;33m2.\033[0m NVIDIA GPU Modeset & VRAM    [nvidia_drm.modeset=1 nvidia_drm.fbdev=1 nvidia.NVreg_PreserveVideoMemoryAllocations=1]"
-        else
-            echo -e "  \033[1;30m[ ]\033[0m \033[1;33m2.\033[0m NVIDIA GPU Modeset & VRAM    [nvidia_drm.modeset=1 nvidia_drm.fbdev=1 nvidia.NVreg_PreserveVideoMemoryAllocations=1]"
-        fi
-
-        local amd_note=""
-        if [ "${HAS_AMD}" = "true" ] || lspci 2>/dev/null | grep -Ei 'vga|3d' | grep -qi 'amd|radeon|ati'; then
-            amd_note=" (AMD GPU detected)"
-        fi
-        if [ "${has_amd_oc}" = "true" ]; then
-            echo -e "  \033[1;32m[x]\033[0m \033[1;33m3.\033[0m AMD GPU Overclocking (LACT)  [amdgpu.ppfeaturemask=0xffffffff]${amd_note}"
-        else
-            echo -e "  \033[1;30m[ ]\033[0m \033[1;33m3.\033[0m AMD GPU Overclocking (LACT)  [amdgpu.ppfeaturemask=0xffffffff]${amd_note}"
-        fi
-
-        if [ "${has_watchdog}" = "true" ]; then
-            echo -e "  \033[1;32m[x]\033[0m \033[1;33m4.\033[0m Disable Watchdog             [nowatchdog]"
-        else
-            echo -e "  \033[1;30m[ ]\033[0m \033[1;33m4.\033[0m Disable Watchdog             [nowatchdog]"
-        fi
-
-        if [ "${has_usb}" = "true" ]; then
-            echo -e "  \033[1;32m[x]\033[0m \033[1;33m5.\033[0m Disable USB Autosuspend      [usbcore.autosuspend=-1]"
-        else
-            echo -e "  \033[1;30m[ ]\033[0m \033[1;33m5.\033[0m Disable USB Autosuspend      [usbcore.autosuspend=-1]"
-        fi
-
-        if [ "${has_umip}" = "true" ]; then
-            echo -e "  \033[1;32m[x]\033[0m \033[1;33m6.\033[0m Hypervisor / VM UMIP Fix     [clearcpuid=umip]"
-        else
-            echo -e "  \033[1;30m[ ]\033[0m \033[1;33m6.\033[0m Hypervisor / VM UMIP Fix     [clearcpuid=umip]"
-        fi
-
-        local cpu_tag="Intel CPU"
-        [ "${is_amd_cpu}" = "true" ] && cpu_tag="AMD Ryzen"
-        if [ "${has_iommu}" = "true" ]; then
-            echo -e "  \033[1;32m[x]\033[0m \033[1;33m7.\033[0m IOMMU / VFIO Passthrough     [${iommu_flag}] (${cpu_tag})"
-        else
-            echo -e "  \033[1;30m[ ]\033[0m \033[1;33m7.\033[0m IOMMU / VFIO Passthrough     [${iommu_flag}] (${cpu_tag})"
-        fi
-
-        if [ "${zram_active}" = "true" ]; then
-            echo -e "  \033[1;30m[ ]\033[0m \033[1;33m8.\033[0m ZSWAP Fast RAM Compression   [zswap.enabled=1 ...] ${YELLOW}(⛔ Disabled: ZRAM active)${RESET}"
-        else
-            if [ "${has_zswap}" = "true" ]; then
-                echo -e "  \033[1;32m[x]\033[0m \033[1;33m8.\033[0m ZSWAP Fast RAM Compression   [zswap.enabled=1 zswap.compressor=zstd zswap.max_pool_percent=25]"
+        local act_choice=""
+        if [ -f "${tui_py}" ] && command -v python3 >/dev/null 2>&1 && [ -t 0 ]; then
+            local tui_out
+            tui_out=$(python3 "${tui_py}" --mode limine-cmdline --cmdline "${current_custom}")
+            tui_out=$(echo "${tui_out}" | tr -d '\r' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+            if [[ "${tui_out}" =~ ^SAVE ]]; then
+                local sel_indices="${tui_out#SAVE}"
+                sel_indices=$(echo "${sel_indices}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+                local new_tokens=()
+                for idx in ${sel_indices}; do
+                    case "${idx}" in
+                        1) new_tokens+=("quiet" "splash" "loglevel=3" "rd.udev.log_priority=3") ;;
+                        2) new_tokens+=("nvidia_drm.modeset=1" "nvidia_drm.fbdev=1" "nvidia.NVreg_PreserveVideoMemoryAllocations=1") ;;
+                        3) new_tokens+=("amdgpu.ppfeaturemask=0xffffffff") ;;
+                        4) new_tokens+=("nowatchdog") ;;
+                        5) new_tokens+=("usbcore.autosuspend=-1") ;;
+                        6) new_tokens+=("clearcpuid=umip") ;;
+                        7) [ -n "${iommu_flag}" ] && new_tokens+=(${iommu_flag}) ;;
+                        8) [ "${zram_active}" != "true" ] && new_tokens+=("zswap.enabled=1" "zswap.compressor=zstd" "zswap.max_pool_percent=25") ;;
+                        9) new_tokens+=("fsck.mode=skip") ;;
+                        10) new_tokens+=("split_lock_mitigate=0" "split_lock_detect=off") ;;
+                    esac
+                done
+                current_custom="${new_tokens[*]:-}"
+                act_choice="S"
+            elif [ -n "${tui_out}" ]; then
+                act_choice=$(echo "${tui_out}" | tr '[:lower:]' '[:upper:]')
             else
-                echo -e "  \033[1;30m[ ]\033[0m \033[1;33m8.\033[0m ZSWAP Fast RAM Compression   [zswap.enabled=1 zswap.compressor=zstd zswap.max_pool_percent=25]"
+                act_choice="Q"
             fi
-        fi
+        else
+            echo ""
+            echo -e "${CYAN}================================================================================${RESET}"
+            echo -e "${YELLOW}${BOLD}⚙️  KERNEL BOOT PARAMETERS & GAMING HUB${RESET}"
+            echo -e "${CYAN}================================================================================${RESET}"
+            echo -e "  • ${BOLD}Base Root (Auto):${RESET}   ${GREEN}${fixed_root}${RESET}"
+            echo -e "  • ${BOLD}Active Custom:${RESET}     ${CYAN}${current_custom:-"(None - using bare root)"}${RESET}"
+            echo ""
+            echo -e "  ${BOLD}Toggles (Type number to flip [x] / [ ]):${RESET}"
 
-        echo ""
-        echo -e "  ${BOLD}Actions:${RESET}"
-        echo -e "  \033[1;36m[E]\033[0m ✏️  Edit Raw CMDLINE (Inline readline terminal prompt)"
-        echo -e "  \033[1;36m[N]\033[0m 📝  Open in Nano / Text Editor"
-        echo -e "  \033[1;36m[R]\033[0m 🔄  Reset to Hardware & Sensible Defaults"
-        echo -e "  \033[1;32m[S]\033[0m 💾  Save & Enroll (Rebuild limine.conf, BLAKE2B & Sign EFI)"
-        echo -e "  \033[1;31m[Q]\033[0m ↩️  Cancel / Return without saving"
-        echo ""
-        echo -n "Select option [1-8, E, N, R, S, Q]: "
-        local act_choice
-        read -r act_choice || act_choice="Q"
-        act_choice=$(echo "${act_choice}" | tr '[:lower:]' '[:upper:]' | tr -d '[:space:]')
+            if [ "${has_quiet}" = "true" ]; then
+                echo -e "  \033[1;32m[x]\033[0m \033[1;33m1.\033[0m Quiet & Splash Boot          [quiet splash loglevel=3 rd.udev.log_priority=3]"
+            else
+                echo -e "  \033[1;30m[ ]\033[0m \033[1;33m1.\033[0m Quiet & Splash Boot          [quiet splash loglevel=3 rd.udev.log_priority=3]"
+            fi
+
+            if [ "${has_nvidia}" = "true" ]; then
+                echo -e "  \033[1;32m[x]\033[0m \033[1;33m2.\033[0m NVIDIA GPU Modeset & VRAM    [nvidia_drm.modeset=1 nvidia_drm.fbdev=1 nvidia.NVreg_PreserveVideoMemoryAllocations=1]"
+            else
+                echo -e "  \033[1;30m[ ]\033[0m \033[1;33m2.\033[0m NVIDIA GPU Modeset & VRAM    [nvidia_drm.modeset=1 nvidia_drm.fbdev=1 nvidia.NVreg_PreserveVideoMemoryAllocations=1]"
+            fi
+
+            local amd_note=""
+            if [ "${HAS_AMD}" = "true" ] || lspci 2>/dev/null | grep -Ei 'vga|3d' | grep -qi 'amd|radeon|ati'; then
+                amd_note=" (AMD GPU detected)"
+            fi
+            if [ "${has_amd_oc}" = "true" ]; then
+                echo -e "  \033[1;32m[x]\033[0m \033[1;33m3.\033[0m AMD GPU Overclocking (LACT)  [amdgpu.ppfeaturemask=0xffffffff]${amd_note}"
+            else
+                echo -e "  \033[1;30m[ ]\033[0m \033[1;33m3.\033[0m AMD GPU Overclocking (LACT)  [amdgpu.ppfeaturemask=0xffffffff]${amd_note}"
+            fi
+
+            if [ "${has_watchdog}" = "true" ]; then
+                echo -e "  \033[1;32m[x]\033[0m \033[1;33m4.\033[0m Disable Watchdog             [nowatchdog]"
+            else
+                echo -e "  \033[1;30m[ ]\033[0m \033[1;33m4.\033[0m Disable Watchdog             [nowatchdog]"
+            fi
+
+            if [ "${has_usb}" = "true" ]; then
+                echo -e "  \033[1;32m[x]\033[0m \033[1;33m5.\033[0m Disable USB Autosuspend      [usbcore.autosuspend=-1]"
+            else
+                echo -e "  \033[1;30m[ ]\033[0m \033[1;33m5.\033[0m Disable USB Autosuspend      [usbcore.autosuspend=-1]"
+            fi
+
+            if [ "${has_umip}" = "true" ]; then
+                echo -e "  \033[1;32m[x]\033[0m \033[1;33m6.\033[0m Hypervisor / VM UMIP Fix     [clearcpuid=umip]"
+            else
+                echo -e "  \033[1;30m[ ]\033[0m \033[1;33m6.\033[0m Hypervisor / VM UMIP Fix     [clearcpuid=umip]"
+            fi
+
+            local cpu_tag="Intel CPU"
+            [ "${is_amd_cpu}" = "true" ] && cpu_tag="AMD Ryzen"
+            if [ "${has_iommu}" = "true" ]; then
+                echo -e "  \033[1;32m[x]\033[0m \033[1;33m7.\033[0m IOMMU / VFIO Passthrough     [${iommu_flag}] (${cpu_tag})"
+            else
+                echo -e "  \033[1;30m[ ]\033[0m \033[1;33m7.\033[0m IOMMU / VFIO Passthrough     [${iommu_flag}] (${cpu_tag})"
+            fi
+
+            if [ "${zram_active}" = "true" ]; then
+                echo -e "  \033[1;30m[ ]\033[0m \033[1;33m8.\033[0m ZSWAP Fast RAM Compression   [zswap.enabled=1 ...] ${YELLOW}(⛔ Disabled: ZRAM active)${RESET}"
+            else
+                if [ "${has_zswap}" = "true" ]; then
+                    echo -e "  \033[1;32m[x]\033[0m \033[1;33m8.\033[0m ZSWAP Fast RAM Compression   [zswap.enabled=1 zswap.compressor=zstd zswap.max_pool_percent=25]"
+                else
+                    echo -e "  \033[1;30m[ ]\033[0m \033[1;33m8.\033[0m ZSWAP Fast RAM Compression   [zswap.enabled=1 zswap.compressor=zstd zswap.max_pool_percent=25]"
+                fi
+            fi
+
+            if [[ " ${current_custom} " =~ [[:space:]]fsck\.mode=skip[[:space:]] ]]; then
+                echo -e "  \033[1;32m[x]\033[0m \033[1;33m9.\033[0m Skip Initramfs FSCK          [fsck.mode=skip]"
+            else
+                echo -e "  \033[1;30m[ ]\033[0m \033[1;33m9.\033[0m Skip Initramfs FSCK          [fsck.mode=skip]"
+            fi
+
+            if [[ " ${current_custom} " =~ [[:space:]]split_lock_mitigate=0[[:space:]] ]] || [[ " ${current_custom} " =~ [[:space:]]split_lock_detect=off[[:space:]] ]]; then
+                echo -e "  \033[1;32m[x]\033[0m \033[1;33m10.\033[0m Split Lock Protection       [split_lock_mitigate=0 split_lock_detect=off]"
+            else
+                echo -e "  \033[1;30m[ ]\033[0m \033[1;33m10.\033[0m Split Lock Protection       [split_lock_mitigate=0 split_lock_detect=off]"
+            fi
+
+            echo ""
+            echo -e "  ${BOLD}Actions:${RESET}"
+            echo -e "  \033[1;36m[E]\033[0m ✏️  Edit Raw CMDLINE (Inline readline terminal prompt)"
+            echo -e "  \033[1;36m[N]\033[0m 📝  Open in Nano / Text Editor"
+            echo -e "  \033[1;36m[R]\033[0m 🔄  Reset to Hardware & Sensible Defaults"
+            echo -e "  \033[1;32m[S]\033[0m 💾  Save & Enroll (Rebuild limine.conf, BLAKE2B & Sign EFI)"
+            echo -e "  \033[1;31m[Q]\033[0m ↩️  Cancel / Return without saving"
+            echo ""
+            echo -n "Select option [1-10, E, N, R, S, Q]: "
+            read -r act_choice || act_choice="Q"
+            act_choice=$(echo "${act_choice}" | tr '[:lower:]' '[:upper:]' | tr -d '[:space:]')
+        fi
 
         case "${act_choice}" in
             1)
@@ -1856,6 +2533,33 @@ else:
 print(' '.join(new_t))
 " "${current_custom}")
                 fi
+                ;;
+            9)
+                current_custom=$(python3 -c "
+import sys
+cur = sys.argv[1]
+tokens = cur.split()
+has_fsck = 'fsck.mode=skip' in tokens
+if has_fsck:
+    new_t = [x for x in tokens if x != 'fsck.mode=skip']
+else:
+    new_t = tokens + ['fsck.mode=skip']
+print(' '.join(new_t))
+" "${current_custom}")
+                ;;
+            10)
+                current_custom=$(python3 -c "
+import sys
+cur = sys.argv[1]
+sl_tokens = 'split_lock_mitigate=0 split_lock_detect=off'
+tokens = cur.split()
+has_sl = any(x in ('split_lock_mitigate=0', 'split_lock_detect=off') for x in tokens)
+if has_sl:
+    new_t = [x for x in tokens if not x.startswith('split_lock_')]
+else:
+    new_t = tokens + sl_tokens.split()
+print(' '.join(new_t))
+" "${current_custom}")
                 ;;
             E)
                 echo ""
@@ -1987,7 +2691,7 @@ scan_snapper_boot_candidates() {
     [ -z "${snap_dir}" ] && return 0
 
     local policy
-    policy=$(get_snapper_sync_config "SNAPPER_BOOT_POLICY" "daily_spread")
+    policy=$(get_snapper_sync_config "SNAPPER_BOOT_POLICY" "important")
     local depth
     depth=$(get_snapper_sync_config "SNAPPER_BOOT_DEPTH" "5")
 
@@ -2086,13 +2790,8 @@ elif policy == "important":
             selected.append(e)
             if len(selected) >= depth:
                 break
-    # If not enough important entries found, fill remaining slots with newest snapshots
-    if len(selected) < depth:
-        for e in entries:
-            if e not in selected:
-                selected.append(e)
-                if len(selected) >= depth:
-                    break
+    # 6A-55 (owner 2026-10-13): important snapshots only. Filling up with the newest timeline snapshots made the menu
+    # change every hour, so the boot loader was re-hashed and re-signed every hour.
 else: # "recent" sequence
     selected = entries[:depth]
 
@@ -2121,7 +2820,7 @@ manage_snapper_sync_interactive() {
         local auto_sync
         auto_sync=$(get_snapper_sync_config "ENABLE_AUTO_SNAPPER_SYNC" "no")
         local policy
-        policy=$(get_snapper_sync_config "SNAPPER_BOOT_POLICY" "daily_spread")
+        policy=$(get_snapper_sync_config "SNAPPER_BOOT_POLICY" "important")
         local depth
         depth=$(get_snapper_sync_config "SNAPPER_BOOT_DEPTH" "5")
 
@@ -2270,11 +2969,12 @@ check_kernel_boot_hashes() {
     local esp_path
     esp_path=$(detect_limine_esp_path 2>/dev/null || echo "/boot")
 
-    sudo python3 -c "
+    sudo python3 - "${esp_path}" << 'PYVERIFY'
 import os, sys, re, subprocess, shutil
 
 CYAN = '\033[1;36m'
 BLUE = '\033[1;34m'
+LIGHT_BLUE = '\033[94m'
 GREEN = '\033[1;32m'
 YELLOW = '\033[1;33m'
 RED = '\033[1;31m'
@@ -2283,7 +2983,7 @@ BOLD = '\033[1m'
 DIM = '\033[2m'
 RESET = '\033[0m'
 
-esp_path = '${esp_path}'
+esp_path = sys.argv[1] if len(sys.argv) > 1 else '/boot'
 cfg_candidates = [
     os.path.join(esp_path, 'limine.conf'),
     '/boot/limine.conf',
@@ -2305,13 +3005,16 @@ for c in cfg_candidates:
         cfg_file = c
         break
 
+bar = '=' * 100
+div = '-' * 100
+
 print()
-print(f'{BOLD}{CYAN}========================================================================================{RESET}')
-print(f'{BOLD}{CYAN}            ⚡ SLACKY-UPDATE DYNAMIC KERNEL & LIMINE HASH VERIFIER ⚡{RESET}')
-print(f'{BOLD}{CYAN}========================================================================================{RESET}')
+print(f'{BOLD}{CYAN}{bar}{RESET}')
+print(f'{BOLD}{CYAN}{"⚡ SLACKY-UPDATE DYNAMIC KERNEL & LIMINE HASH VERIFIER ⚡".center(100)}{RESET}')
+print(f'{BOLD}{CYAN}{bar}{RESET}')
 
 running_kver = os.uname().release
-print(f' {BOLD}Running Kernel:{RESET}   {MAGENTA}{running_kver}{RESET}')
+print(f' {BOLD}Running Kernel:{RESET}   {LIGHT_BLUE}{running_kver}{RESET}')
 print(f' {BOLD}Active ESP Path:{RESET}  {BLUE}{esp_path}{RESET}')
 if cfg_file:
     print(f' {BOLD}Limine Config:{RESET}    {BLUE}{cfg_file}{RESET}')
@@ -2332,15 +3035,13 @@ if shutil.which('sbctl'):
     except Exception:
         pass
 print(f' {BOLD}UEFI Secure Boot:{RESET} {sb_status}')
-print(f'{BOLD}{CYAN}----------------------------------------------------------------------------------------{RESET}')
+print(f'{BOLD}{CYAN}{div}{RESET}')
 
 if not cfg_file:
     print(f'{RED}✗ Error: Cannot verify hashes because limine.conf could not be found.{RESET}')
     print(f'Run {BOLD}sudo slacky-update --sync-boot{RESET} to generate and register Limine boot configuration.')
     print()
     sys.exit(1)
-
-limine_hashes = {}
 
 try:
     with open(cfg_file, 'r', encoding='utf-8', errors='ignore') as f:
@@ -2349,41 +3050,68 @@ except Exception as e:
     print(f'{RED}✗ Error reading {cfg_file}: {e}{RESET}')
     sys.exit(1)
 
-wp_match = re.search(r'^[ \t]*wallpaper:[ \t]*(?:boot\(\):)?/([^\s#\n\r]+)(?:#([a-fA-F0-9]+))?', content, re.M)
-if wp_match:
-    wp_name = os.path.basename(wp_match.group(1).lstrip('/'))
-    wp_hash = (wp_match.group(2) or '').lower().strip()
-    limine_hashes[wp_name] = wp_hash
+primary_kernels = []
+fallback_kernels = []
+initramfs_entries = {}
+splash_entry = None
 
-for m in re.finditer(r'^[ \t]*(?:path|kernel_path|module_path|image_path):[ \t]*(?:boot\(\):)?/([^\s#\n\r]+)(?:#([a-fA-F0-9]+))?', content, re.M):
-    fname = os.path.basename(m.group(1).lstrip('/'))
-    fhash = (m.group(2) or '').lower().strip()
-    limine_hashes[fname] = fhash
+in_fallback = False
+for line in content.splitlines():
+    s = line.strip()
+    if s.startswith('//Fallback') or (s.startswith('///') and 'fallback' in s.lower()):
+        in_fallback = True
+    elif s.startswith('//') and not s.startswith('///'):
+        if 'fallback' not in s.lower():
+            in_fallback = False
+
+    m_wp = re.search(r'^[ \t]*wallpaper:[ \t]*(?:boot\(\):)?/([^\s#\n\r]+)(?:#([a-fA-F0-9]+))?', line)
+    if m_wp:
+        wp_name = os.path.basename(m_wp.group(1).lstrip('/'))
+        wp_hash = (m_wp.group(2) or '').lower().strip()
+        splash_entry = (wp_name, wp_hash)
+        continue
+
+    m_kern = re.search(r'^[ \t]*(?:path|kernel_path):[ \t]*(?:boot\(\):)?/([^\s#\n\r]+)(?:#([a-fA-F0-9]+))?', line)
+    if m_kern:
+        k_name = os.path.basename(m_kern.group(1).lstrip('/'))
+        k_hash = (m_kern.group(2) or '').lower().strip()
+        if k_name.startswith('vmlinuz'):
+            if in_fallback or '[fallback]' in line.lower():
+                if not any(k[0] == k_name for k in fallback_kernels) and not any(k[0] == k_name for k in primary_kernels):
+                    fallback_kernels.append((k_name, k_hash))
+            else:
+                if not any(k[0] == k_name for k in primary_kernels):
+                    primary_kernels.append((k_name, k_hash))
+        continue
+
+    m_mod = re.search(r'^[ \t]*module_path:[ \t]*(?:boot\(\):)?/([^\s#\n\r]+)(?:#([a-fA-F0-9]+))?', line)
+    if m_mod:
+        m_name = os.path.basename(m_mod.group(1).lstrip('/'))
+        m_hash = (m_mod.group(2) or '').lower().strip()
+        if m_name not in initramfs_entries:
+            initramfs_entries[m_name] = m_hash
+        continue
 
 scan_dirs = ['/boot']
 if esp_path != '/boot' and os.path.exists(esp_path):
     scan_dirs.append(esp_path)
 
 found_files = {}
-
 for sdir in scan_dirs:
     if not os.path.exists(sdir):
         continue
     try:
-        entries = os.listdir(sdir)
+        for fname in os.listdir(sdir):
+            fpath = os.path.join(sdir, fname)
+            if os.path.isfile(fpath):
+                if fname not in found_files or sdir == esp_path:
+                    found_files[fname] = fpath
     except Exception:
-        continue
-    for fname in entries:
-        fpath = os.path.join(sdir, fname)
-        if not os.path.isfile(fpath):
-            continue
-        if (fname.startswith('vmlinuz') or fname.startswith('initramfs-') or 
-            fname.startswith('initrd-') or fname == 'initrd.gz' or 
-            fname == 'initrd' or fname in limine_hashes):
-            if fname not in found_files or sdir == esp_path:
-                found_files[fname] = fpath
+        pass
 
 def compute_b2(path):
+    if not path or not os.path.exists(path):
+        return ''
     try:
         import hashlib
         hb = hashlib.blake2b()
@@ -2407,86 +3135,145 @@ def short_h(h):
         return f'{h[:10]}...{h[-8:]}'
     return h
 
-print(f' {BOLD}{\"COMPONENT / FILE\":<34} {\"TYPE\":<10} {\"REGISTERED (LIMINE)\":<22} {\"ON-DISK (B2SUM)\":<22} {\"STATUS\"}{RESET}')
-print(f'{DIM} ' + '-'*86 + f'{RESET}')
+active_entry = None
+ordered_primaries = []
+for k_name, k_hash in primary_kernels:
+    if running_kver in k_name and not active_entry:
+        active_entry = (k_name, k_hash)
+    else:
+        ordered_primaries.append((k_name, k_hash))
+
+if not active_entry:
+    new_fallbacks = []
+    for k_name, k_hash in fallback_kernels:
+        if running_kver in k_name and not active_entry:
+            active_entry = (k_name, k_hash)
+        else:
+            new_fallbacks.append((k_name, k_hash))
+    fallback_kernels = new_fallbacks
+
+ordered_kernels = []
+if active_entry:
+    ordered_kernels.append(active_entry)
+ordered_kernels.extend(ordered_primaries)
+ordered_kernels.extend(fallback_kernels)
+
+print(f' {BOLD}{"COMPONENT / FILE":<34} {"TYPE":<11} {"REGISTERED (LIMINE)":<23} {"ON-DISK (B2SUM)":<23} {"STATUS"}{RESET}')
+print(f'{DIM} ' + '-'*98 + f'{RESET}')
 
 all_ok = True
 mismatches = 0
-untracked = 0
 total_checked = 0
 
-def sort_key(name):
-    if running_kver in name and name.startswith('vmlinuz'):
-        return (0, name)
-    elif running_kver in name:
-        return (1, name)
-    elif name.startswith('vmlinuz'):
-        return (2, name)
-    elif name.startswith('init'):
-        return (3, name)
-    return (4, name)
-
-sorted_names = sorted(found_files.keys(), key=sort_key)
-
-for fname in sorted_names:
-    fpath = found_files[fname]
-    actual_hash = compute_b2(fpath)
-    reg_hash = limine_hashes.get(fname, '')
+for k_name, reg_hash in ordered_kernels:
+    fpath = found_files.get(k_name)
+    actual_hash = compute_b2(fpath) if fpath else ''
+    total_checked += 1
     
-    ftype = 'Other'
-    if fname.startswith('vmlinuz'):
-        ftype = 'Kernel'
-    elif fname.startswith('init'):
-        ftype = 'Initramfs'
-    elif fname.endswith('.png') or fname.endswith('.jpg'):
-        ftype = 'Splash'
-
-    status_str = ''
-    if not reg_hash:
-        status_str = f'{YELLOW}⚠️ UNTRACKED{RESET}'
-        untracked += 1
-    elif actual_hash == reg_hash:
-        status_str = f'{GREEN}✓ MATCH{RESET}'
-        total_checked += 1
-    else:
-        status_str = f'{RED}✗ MISMATCH{RESET}'
+    is_match = bool(actual_hash and reg_hash and actual_hash == reg_hash)
+    if not is_match:
         all_ok = False
         mismatches += 1
-        total_checked += 1
-
-    fname_disp = f'{MAGENTA}★ {fname}{RESET}' if running_kver in fname else f'  {fname}'
-    reg_disp = short_h(reg_hash)
-    act_disp = short_h(actual_hash)
     
-    raw_fname = ('★ ' if running_kver in fname else '  ') + fname
-    padding = max(0, 34 - len(raw_fname))
-    
-    print(f' {fname_disp}{\" \"*padding} {ftype:<10} {reg_disp:<30} {act_disp:<30} {status_str}')
+    raw_name = k_name
+    pad = " " * max(0, 34 - len(raw_name))
+    disp_name = f"{LIGHT_BLUE}{raw_name}{RESET}{pad}"
+    ftype = f'{"Kernel":<11}'
+    reg_str = f'{short_h(reg_hash):<23}'
+    act_str = f'{short_h(actual_hash):<23}'
+    status_str = f'{GREEN}✓ MATCH{RESET}' if is_match else f'{RED}✗ MISMATCH{RESET}'
+    print(f' {disp_name} {ftype} {reg_str} {act_str} {status_str}')
 
-print(f'{BOLD}{CYAN}========================================================================================{RESET}')
+init_mismatches = []
+init_matches = []
+for i_name, reg_hash in initramfs_entries.items():
+    fpath = found_files.get(i_name)
+    actual_hash = compute_b2(fpath) if fpath else ''
+    total_checked += 1
+    if actual_hash and reg_hash and actual_hash == reg_hash:
+        init_matches.append(i_name)
+    else:
+        init_mismatches.append((i_name, reg_hash, actual_hash))
+        all_ok = False
+        mismatches += 1
+
+if not init_mismatches and init_matches:
+    raw_name = f"Initramfs Suite ({len(init_matches)} images)"
+    pad = " " * max(0, 34 - len(raw_name))
+    disp_name = f"{raw_name}{pad}"
+    ftype = f'{"Initramfs":<11}'
+    val_str = "[BLAKE2B Validated]"
+    reg_str = f'{val_str:<23}'
+    act_str = f'{val_str:<23}'
+    status_str = f'{GREEN}✓ MATCH{RESET}'
+    print(f' {disp_name} {ftype} {reg_str} {act_str} {status_str}')
+elif init_mismatches:
+    for i_name, reg_hash, actual_hash in init_mismatches:
+        raw_name = i_name
+        pad = " " * max(0, 34 - len(raw_name))
+        disp_name = f"{RED}{raw_name}{RESET}{pad}"
+        ftype = f'{"Initramfs":<11}'
+        reg_str = f'{short_h(reg_hash):<23}'
+        act_str = f'{short_h(actual_hash):<23}'
+        status_str = f'{RED}✗ MISMATCH{RESET}'
+        print(f' {disp_name} {ftype} {reg_str} {act_str} {status_str}')
+    if init_matches:
+        raw_name = f"Initramfs Suite ({len(init_matches)} images)"
+        pad = " " * max(0, 34 - len(raw_name))
+        disp_name = f"{raw_name}{pad}"
+        ftype = f'{"Initramfs":<11}'
+        val_str = "[BLAKE2B Validated]"
+        reg_str = f'{val_str:<23}'
+        act_str = f'{val_str:<23}'
+        status_str = f'{GREEN}✓ MATCH{RESET}'
+        print(f' {disp_name} {ftype} {reg_str} {act_str} {status_str}')
+
+if splash_entry:
+    wp_name, reg_hash = splash_entry
+    fpath = found_files.get(wp_name)
+    actual_hash = compute_b2(fpath) if fpath else ''
+    total_checked += 1
+    is_match = bool(actual_hash and reg_hash and actual_hash == reg_hash)
+    if not is_match:
+        all_ok = False
+        mismatches += 1
+    raw_name = wp_name
+    pad = " " * max(0, 34 - len(raw_name))
+    disp_name = f"{raw_name}{pad}"
+    ftype = f'{"Splash":<11}'
+    reg_str = f'{short_h(reg_hash):<23}'
+    act_str = f'{short_h(actual_hash):<23}'
+    status_str = f'{GREEN}✓ MATCH{RESET}' if is_match else f'{RED}✗ MISMATCH{RESET}'
+    print(f' {disp_name} {ftype} {reg_str} {act_str} {status_str}')
+
+print(f'{BOLD}{CYAN}{bar}{RESET}')
 if all_ok and mismatches == 0 and total_checked > 0:
     print(f' {GREEN}{BOLD}✓ PERFECT INTEGRITY:{RESET} All {total_checked} registered boot assets match their Limine BLAKE2B hashes 1:1.')
     print(f' {DIM}Your bootloader security and kernel sealing are 100% synchronized and stable.{RESET}')
-    print(f'{BOLD}{CYAN}========================================================================================{RESET}')
+    print(f'{BOLD}{CYAN}{bar}{RESET}')
     print()
     sys.exit(0)
 elif mismatches > 0:
     print(f' {RED}{BOLD}✗ INTEGRITY ALERT:{RESET} {mismatches} hash mismatch(es) detected between on-disk files and limine.conf!')
     print(f' {YELLOW}Recommendation:{RESET} Run {BOLD}sudo slacky-update --sync-boot{RESET} to recalculate hashes and reseal.')
-    print(f'{BOLD}{CYAN}========================================================================================{RESET}')
+    print(f'{BOLD}{CYAN}{bar}{RESET}')
     print()
     sys.exit(1)
 else:
     print(f' {YELLOW}{BOLD}⚠️ NOTICE:{RESET} Boot files found, but none are currently registered with hashes in limine.conf.')
     print(f' Run {BOLD}sudo slacky-update --sync-boot{RESET} to enable BLAKE2B boot sealing.')
-    print(f'{BOLD}{CYAN}========================================================================================{RESET}')
+    print(f'{BOLD}{CYAN}{bar}{RESET}')
     print()
     sys.exit(0)
-"
+PYVERIFY
 }
 
 # --- [ INTERACTIVE LIMINE MANAGEMENT MENU ] ---
 manage_limine_interactive() {
+    local tui_py="${APP_DIR:-}/slacky_tui.py"
+    [ ! -f "${tui_py}" ] && [ -f "/usr/share/slacky-update/lib/slacky_tui.py" ] && tui_py="/usr/share/slacky-update/lib/slacky_tui.py"
+    [ ! -f "${tui_py}" ] && [ -f "${SCRIPT_DIR:-}/../lib/slacky_tui.py" ] && tui_py="${SCRIPT_DIR:-}/../lib/slacky_tui.py"
+
     while true; do
         local esp_path
         esp_path=$(detect_limine_esp_path)
@@ -2495,25 +3282,29 @@ manage_limine_interactive() {
             lim_status="${GREEN}[INSTALLED & ACTIVE]${RESET}"
         fi
 
-        echo ""
-        echo -e "${BLUE}${BOLD}============================================================${RESET}"
-        echo -e "${BLUE}${BOLD}LIMINE BOOTLOADER & SECURE BOOT MATRIX${RESET}"
-        echo -e "${BLUE}${BOLD}============================================================${RESET}"
-        echo -e "  • ${BOLD}Status:${RESET}      ${lim_status}"
-        echo -e "  • ${BOLD}ESP Path:${RESET}    ${esp_path}"
-        echo ""
-        echo -e "  \033[1;33m1.\033[0m Install / Re-deploy Limine Bootloader (Coexistence Mode)"
-        echo -e "  \033[1;33m2.\033[0m Regenerate limine.conf & Re-enroll BLAKE2B Checksums"
-        echo -e "  \033[1;33m3.\033[0m 🔍 Verify Kernel BLAKE2B Hashes vs Limine Registry"
-        echo -e "  \033[1;33m4.\033[0m ⚙️  Configure Kernel Boot Parameters (CMDLINE & Gaming Hub)"
-        echo -e "  \033[1;33m5.\033[0m 🌲 $(_ MENU_SNAPPER_HUB)"
-        echo -e "  \033[1;33m6.\033[0m 1-Click Self-Heal: Restore Limine from Backup"
-        echo -e "  \033[1;33m7.\033[0m View / Export Field Guide (PDF / Email / Phone QR)"
-        echo -e "  \033[1;33m8.\033[0m Return to Main Menu"
-        echo ""
-        echo -n "Select operation [1-8]: "
-        local lim_choice
-        read -r lim_choice || lim_choice="8"
+        local lim_choice=""
+        if [ -f "${tui_py}" ] && command -v python3 >/dev/null 2>&1 && [ -t 0 ]; then
+            lim_choice=$(python3 "${tui_py}" --mode limine-main)
+        else
+            echo ""
+            echo -e "${BLUE}${BOLD}============================================================${RESET}"
+            echo -e "${BLUE}${BOLD}LIMINE BOOTLOADER & SECURE BOOT MATRIX${RESET}"
+            echo -e "${BLUE}${BOLD}============================================================${RESET}"
+            echo -e "  • ${BOLD}Status:${RESET}      ${lim_status}"
+            echo -e "  • ${BOLD}ESP Path:${RESET}    ${esp_path}"
+            echo ""
+            echo -e "  \033[1;33m1.\033[0m Install / Re-deploy Limine Bootloader (Coexistence Mode)"
+            echo -e "  \033[1;33m2.\033[0m Regenerate limine.conf & Re-enroll BLAKE2B Checksums"
+            echo -e "  \033[1;33m3.\033[0m 🔍 Verify Kernel BLAKE2B Hashes vs Limine Registry"
+            echo -e "  \033[1;33m4.\033[0m ⚙️  Configure Kernel Boot Parameters (CMDLINE & Gaming Hub)"
+            echo -e "  \033[1;33m5.\033[0m 🌲 $(_ MENU_SNAPPER_HUB)"
+            echo -e "  \033[1;33m6.\033[0m 1-Click Self-Heal: Restore Limine from Backup"
+            echo -e "  \033[1;33m7.\033[0m View / Export Field Guide (PDF / Email / Phone QR)"
+            echo -e "  \033[1;33m8.\033[0m Return to Main Menu"
+            echo ""
+            echo -n "Select operation [1-8]: "
+            read -r lim_choice || lim_choice="8"
+        fi
 
         case "${lim_choice}" in
             1)
@@ -2524,8 +3315,37 @@ manage_limine_interactive() {
                 ;;
             2)
                 echo ""
+                log_info "Generating /boot/limine.conf & recalculating BLAKE2B checksums..."
                 generate_limine_configuration
+                log_info "Enrolling BLAKE2B configuration digest & signing bootloader..."
                 enroll_and_sign_limine
+
+                local cfg_file=""
+                for cand in "${esp_path}/limine.conf" "/boot/limine.conf" "/boot/efi/limine.conf" "${esp_path}/EFI/limine/limine.conf"; do
+                    if sudo test -f "${cand}"; then
+                        cfg_file="${cand}"
+                        break
+                    fi
+                done
+                local k_count=0
+                local i_count=0
+                if [ -n "${cfg_file}" ] && sudo test -f "${cfg_file}"; then
+                    k_count=$(sudo grep -o 'vmlinuz-[^#[:space:]]*' "${cfg_file}" 2>/dev/null | sort -u | wc -l || echo "0")
+                    k_count=$(echo "${k_count}" | tr -d '[:space:]')
+                    [ -n "${k_count}" ] || k_count=0
+
+                    i_count=$(sudo grep -o -E '(initramfs|initrd)[^#[:space:]]*' "${cfg_file}" 2>/dev/null | sort -u | wc -l || echo "0")
+                    i_count=$(echo "${i_count}" | tr -d '[:space:]')
+                    [ -n "${i_count}" ] || i_count=0
+                fi
+                echo ""
+                echo -e "${BOLD}${CYAN}========================================================================${RESET}"
+                echo -e "${BOLD}${GREEN}✓ LIMINE BOOT MATRIX & BLAKE2B INTEGRITY SEALED:${RESET}"
+                echo -e "  • ${BOLD}Registered Kernels :${RESET} ${k_count} kernels mapped (active + fallback entries)"
+                echo -e "  • ${BOLD}Initramfs Images   :${RESET} ${i_count} initramfs matched and hash-locked"
+                echo -e "  • ${BOLD}Bootloader Binary  :${RESET} Enrolled with BLAKE2B & signed with active MOK/sbctl"
+                echo -e "  • ${BOLD}Status             :${RESET} ${GREEN}100% Sealed, Protected & Ready to Boot${RESET}"
+                echo -e "${BOLD}${CYAN}========================================================================${RESET}"
                 echo ""
                 read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
                 ;;

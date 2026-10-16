@@ -1,213 +1,181 @@
 <div align="center">
 
 # ⚡ Slacky-Update
-### *Enterprise-Grade System Maintenance, Kernel Lifecycle, Driver Orchestrator & Workstation Suite for Slackware Linux*
-#### `v1.0_RC2` — *"Dark Star"* (Stability & Hardware Release Candidate)
+### *High-Performance System Upgrade, CachyOS Kernel Lifecycle, Driver Orchestrator & Workstation Modernization Suite for Slackware Linux*
+#### `v1.0 LTS` — *"Dark Star"* (Official Long-Term Support Release)
 
 [![Slackware -current](https://img.shields.io/badge/Slackware--current-15.0%2B-blue?style=for-the-badge&logo=slackware&logoColor=white)](http://www.slackware.com/)
-[![Release](https://img.shields.io/badge/Release-v1.0_RC2-purple?style=for-the-badge)](https://github.com/TuxOfValhalla/slacky-update/releases)
-[![Canonical: GitHub](https://img.shields.io/badge/Canonical-GitHub-black?style=for-the-badge&logo=github&logoColor=white)](https://github.com/TuxOfValhalla/slacky-update)
-[![Mirror: Codeberg](https://img.shields.io/badge/Mirror-Codeberg-2185d0?style=for-the-badge&logo=codeberg&logoColor=white)](https://codeberg.org/TuxOfValhalla/slacky-update)
+[![Release](https://img.shields.io/badge/Release-v1.0%20LTS-purple?style=for-the-badge)](https://github.com/TuxOfValhalla/slacky-update/releases)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-green.svg?style=for-the-badge)](LICENSE)
-[![Zero-Binary](https://img.shields.io/badge/Architecture-100%25%20Pure%20Source-brightgreen?style=for-the-badge)](lib/)
-[![Locales](https://img.shields.io/badge/Locales-24%20Languages-yellow?style=for-the-badge)](locales/)
+[![Architecture: 100% Pure Source](https://img.shields.io/badge/Architecture-100%25%20Pure%20Source-brightgreen?style=for-the-badge)](lib/)
+[![Locales: 24 Languages](https://img.shields.io/badge/Locales-24%20Languages%20(100%25)-yellow?style=for-the-badge)](locales/)
 [![Manual: Survival Guide](https://img.shields.io/badge/Manual-Survival%20Guide-teal?style=for-the-badge)](docs/THE_ULTIMATE_SLACKY_UPDATE_SURVIVAL_GUIDE.md)
-[![Manual: Oh My Hyprland](https://img.shields.io/badge/Manual-Oh%20My%20Hyprland-purple?style=for-the-badge)](docs/OH_MY_HYPRLAND_GUIDE.md)
-[![Architecture: Technical Guide](https://img.shields.io/badge/Architecture-Technical%20Guide-blueviolet?style=for-the-badge)](docs/TECHNICAL_COMPANION_GUIDE.md)
 
 ---
 
-**Slacky-Update** is an all-in-one system maintenance station, background monitor, driver orchestrator, and gaming/workstation modernization suite engineered specifically for **Slackware Linux (-current / 15.0+)**.
+**Slacky-Update** is an all-in-one system upgrade station, CachyOS kernel manager, graphics driver orchestrator, and high-performance gaming suite engineered specifically for **Slackware Linux (-current / 15.0+)**.
 
-*Canonical source: [GitHub](https://github.com/TuxOfValhalla/slacky-update) | Mirror: [Codeberg](https://codeberg.org/TuxOfValhalla/slacky-update) | Master Guide: [The Ultimate Survival Guide](docs/THE_ULTIMATE_SLACKY_UPDATE_SURVIVAL_GUIDE.md) | Hyprland: [Oh My Hyprland Guide](docs/OH_MY_HYPRLAND_GUIDE.md) | Technical Architecture: [Technical Companion Guide](docs/TECHNICAL_COMPANION_GUIDE.md) | Troubleshooting: [Troubleshooting Guide](docs/TROUBLESHOOTING_GUIDE.md)*
+*Pure Slackware philosophy • Zero external runtime dependencies • Native `.txz` packaging • Safe, reversible operations*
 
 </div>
 
 ---
 
-> [!IMPORTANT]
-> **TARGET DISTRIBUTION REQUIREMENT & VERSION DISCLAIMER**  
-> **Slacky-Update is engineered strictly for Slackware 15+ (`slackware-current` / `Slackware 16 alpha`).**  
-> It is **NOT** compatible with or supported on legacy **Slackware 15.0 (stable)**. Legacy 15.0 systems feature older core packages, toolchains, and shared libraries (older glibc, GCC, Wayland/Mesa, PipeWire, and kernel headers) that cause package and soname conflicts which cannot be safely resolved. Users on Slackware 15.0 must migrate to `slackware-current` before using this suite.
+## 🖥️ The Interactive Command Center
 
-> [!CAUTION]
-> **COMPREHENSIVE TESTING, LIABILITY & USE-AT-YOUR-OWN-RISK DISCLAIMER**  
-> * **Hardware Testing & Verification:** Slacky-Update has been extensively verified and field-tested on the author's bare-metal workstations, and dry-run/simulated test passes have been executed across diverse build environments. However, **this in no way guarantees that it will operate seamlessly or without anomalies on your specific hardware configuration.**
-> * **100% User Responsibility:** Slacky-Update executes deep, low-level modifications to foundational system components, including kernel deployments, proprietary graphics stacks, initramfs generation, Btrfs subvolumes, and UEFI bootloader topologies. **All installation, upgrades, and system modifications are performed 100% at your own discretion and risk.**
-> * **No Liability for Data Loss:** The authors, maintainers, and contributors assume **no liability, warranty, or responsibility** for system malfunctions, unbootable states, hardware quirks, or loss of personal data.
-> * **Mandatory Backups:** Always maintain current, tested backups of your personal data (`/home`, configuration files, and boot partitions) and keep a bootable Slackware Live-USB accessible before performing upgrades or modifying bootloaders.
-> * **Bug Reporting & Support:** If you encounter bugs, regressions, or hardware edge-cases, please report them on [GitHub Issues](https://github.com/TuxOfValhalla/slacky-update/issues) so they can be addressed. Beyond the comprehensive documentation provided in `docs/`, no individual customer support, warranties, or service level agreements are offered.
+Slacky-Update features a state-of-the-art interactive TUI engine built entirely on the Python 3 standard library. It dynamically adapts to your terminal dimensions, automatically budgets vertical space, and provides full native mouse text selection for effortless clipboard sharing with LLMs.
 
----
-
-## 📸 Screenshots
-
-| 🖥️ Interactive Terminal Command Center | 🔔 System Tray Monitor & Applet |
+| 📋 Dynamic Package Status & ChangeLog Grid | 🎮 Intuitive Operations & Navigation |
 | :---: | :---: |
-| ![Slacky-Update CLI Interface](assets/screenshots/04_interactive-CLI-interface.png) | ![Tray Icon](assets/screenshots/01_systray-applet-icon.png) |
+| ![Slacky-Update CLI - Available Updates](assets/screenshots/slacky-update-cli1.png) | ![Slacky-Update CLI - Operations Menu](assets/screenshots/slacky-update-cli2.png) |
+| *Real-time 2/3-column package layout with automatic terminal height budgeting* | *Arrow-key navigation, instant number jumping, and universal `(ESC)` back navigation* |
 
 ---
 
-## 🏛️ System Architecture
+## 🛡️ Peace of Mind by Design: Simplicity, Not Complexity
 
-Slacky-Update adheres strictly to Slackware's native packaging standards (`/var/log/packages`), BSD-style init scripts (`/etc/rc.d/`), and pure source transparency:
+Slackware is revered for its simplicity, stability, and lack of abstraction. But running a bleeding-edge modern workstation—with PCIe Gen 4/5 NVMe SSDs, modern NVIDIA Ada/Blackwell GPUs, low-latency PipeWire pro-audio, and high-refresh gaming—often forces users to manually coordinate a fragile web of kernels, initrd builds, DKMS modules, and sysctl configs.
+
+**Slacky-Update does not replace Slackware; it liberates you from manual friction.**
+
+* **You Are Always in Control:** Slacky-Update never executes intrusive system operations behind your back. Every major operation presents a clear, human-readable summary before asking for your explicit confirmation.
+* **In-Flight Transaction Armor:** Accidental keystrokes cannot corrupt your system. Once a package upgrade or kernel deployment begins, signals (`INT`, `QUIT`, `TSTP`) are safely trapped until the transaction completes cleanly.
+* **Zero Coexistence Conflict:** Existing bootloaders (GRUB, ELILO) and system tools remain untouched and functional as fallbacks.
+* **Granular Reversibility:** Every system tweak, boot parameter, and kernel option can be toggled on or reverted individually with a single keypress.
+* **Btrfs Snapshot Safeguard:** Integrated Snapper snapshot rollbacks ensure you can always restore your exact previous state in seconds.
+
+---
+
+## 🔔 Seamless Desktop Integration
+
+Whether you work in **KDE Plasma Wayland**, **XFCE**, or **Hyprland**, the Slacky-Update companion tray applet runs quietly in the background, monitoring Slackware ChangeLogs and upstream package repositories without waking your CPU unnecessarily.
+
+| 🎛️ Unobtrusive Status Applet | ⚡ 1-Click Operations Launcher |
+| :---: | :---: |
+| ![Slacky-Update Tray Applet](assets/screenshots/slacky-update-tray1.png) | ![Slacky-Update Tray Popup Menu](assets/screenshots/slacky-update-tray2.png) |
+| *Lightweight tray notification badge when updates are ready* | *Right-click access to kernel management, full upgrades, and system tools* |
+
+---
+
+## ⚡ First-Principles Engineering & Performance
+
+Slacky-Update incorporates cutting-edge optimizations engineered to eliminate micro-stutters, minimize system latency, and unlock the full potential of high-end hardware:
+
+* **🚀 CachyOS High-Performance Kernels:** Deploy and manage 11 specialized CachyOS kernel flavors (BORE, LTS, RC, BMQ, EEVDF) built for high-throughput responsiveness and gaming frame pacing.
+* **⚡ Multi-Core FastBoot Compression:** Generates dracut initramfs images using parallel zstd level 1 (`compress="zstd -1 -T0"`), dropping kernel boot decompression overhead to sub-20 milliseconds.
+* **🏎️ NVMe Direct I/O Bypass:** Automatically applies hardware bypass (`none` I/O scheduler) to PCIe Gen 4/5 NVMe SSDs, eliminating kernel queue lock contention during intense gaming and compiling workloads.
+* **🎮 10GB Global Shader Disk Cache:** Permanent shader retention for NVIDIA and Mesa (`__GL_SHADER_DISK_CACHE_SIZE=10737418240`), eradicating shader re-compilation stutters across titles like Cyberpunk 2077 and Unreal Engine 5.
+* **🎵 Low-Latency Pro-Audio:** Drop-in PipeWire quantum configuration locked to 256 samples (5.3ms) paired with RT95 audio limits for zero-xrun audio production and gaming communication.
+* **🛡️ Limine BLAKE2B Security Matrix:** UEFI bootloader with cryptographic BLAKE2B kernel and initramfs digest verification. Features a guided, streamlined setup for Secure Boot MOK key generation and enrollment—which operates fully automatically on all subsequent kernel builds once configured.
+
+---
+
+## 📦 Transmuted Software Ecosystem (Underpants Gnomes)
+
+Need bleeding-edge applications not yet packaged in standard Slackware or SlackBuilds repositories? Slacky-Update’s **Underpants Gnomes engine** delivers pure package transmutation with zero compromise to your host system:
+
+* **In-Memory Streaming Transmutation:** Inspects and decompresses upstream Arch/CachyOS package archives (`.pkg.tar.zst`) directly in RAM using pure Python 3 standard library and native `zstandard` decoding. Zero foreign package managers (`pacman`, `libalpm`, `apt`, `dnf`) are ever installed or executed on your host system.
+* **Isolated `/opt/underpants/` Architecture:** Applications, shared runtime libraries, and assets are extracted and maintained strictly inside isolated `/opt/underpants/` directory structures with private `RPATH`/`RUNPATH` environments.
+* **Host Sovereignty Shielding:** Native Slackware system libraries (`/lib64`, `/usr/lib64`, system `glibc`, PAM, and SysVinit) are 100% shielded and protected from upstream ABI clashes or runtime overrides.
+* **Zero Host Package Pollution:** Transmuted software builds authentic namespaced Slackware `.txz` packages (`underpants-*.txz`) and installs cleanly via Slackware's native `upgradepkg --install-new`. They log cleanly under `/var/log/packages/underpants-*`, ensuring native Slackware packages (`AAA_base`, `glibc`, `coreutils`, etc.) are never overwritten, hijacked, or corrupted. Slackware’s host sovereignty remains 100% shielded and pristine.
+* **Seamless Desktop & CLI Access:** Provides lightweight launch wrappers in `/usr/bin` and desktop entries in `/usr/share/applications` so transmuted applications integrate seamlessly into KDE Plasma, XFCE, and Hyprland just like native software.
+
+| 🚀 Sidecar Quick-Launch Station | 🗂️ Intuitive Category Explorer |
+| :---: | :---: |
+| ![Underpants Gnomes Sidecar Overview](assets/screenshots/underpantsgnomes-sidecar.png) | ![Underpants Gnomes Category Browser](assets/screenshots/underpantsgnomes-sidecar2.png) |
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                           SLACKY-UPDATE ARCHITECTURE                        │
-├─────────────────────────────────────────────────────────────────────────────┤
-│  [User Layer]      CLI Interface (Bash)  │  System Tray Applet (PyQt5)      │
-├─────────────────────────────────────────────────────────────────────────────┤
-│  [Desktop Layer]   Hyprland + Noctalia   │  KDE Plasma Wayland  │  XFCE     │
-├─────────────────────────────────────────────────────────────────────────────┤
-│  [Graphics/Audio]  NVIDIA Master Stack   │  AMD ROCm / HIP  │  PipeWire/DSP │
-├─────────────────────────────────────────────────────────────────────────────┤
-│  [Kernel Layer]    CachyOS Schedulers    │  Arch Zen/Linux  │  Stock Huge   │
-├─────────────────────────────────────────────────────────────────────────────┤
-│  [Init/Storage]    Dracut Initramfs      │  Btrfs Snapper Snapshots         │
-├─────────────────────────────────────────────────────────────────────────────┤
-│  [Boot Layer]      Limine (Two-Zone + sbctl)  │  GRUB / ELILO Coexistence   │
+│                   UNDER PANTS GNOMES SOFTWARE SUITE (TUI)                   │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
+<div align="center">
+
+![Underpants Gnomes Software Suite Grid](assets/screenshots/underpantsgnomes-software-suite.png)  
+*Full interactive software grid with category expansion, live status badges, and batch deployment*
+
+</div>
 
 ---
 
-## 🚀 Key Modules & Capabilities at a Glance
+## 🚀 Quickstart: Installation & Build
 
-For full architectural breakdowns, step-by-step walkthroughs, and troubleshooting, consult **[The Ultimate Slacky-Update Survival Guide](docs/THE_ULTIMATE_SLACKY_UPDATE_SURVIVAL_GUIDE.md)**.
+Slacky-Update adheres strictly to Slackware's native packaging standards. Build and install the verified `.txz` package using one of the automated one-liners below, or follow the step-by-step instructions:
 
-```
-=============================================================================
-                      ⚡ SLACKY-UPDATE CONTROL CENTER ⚡
-=============================================================================
- [1] Total System Synchronization --> Slackware + Flatpaks + SBo + Kernels
- [2] CachyOS Kernel Time Machine  --> 9 Kernel Schedulers, Deploy & Purge
- [3] NVIDIA & ROCm Graphics Hub   --> CachyOS Master, DKMS, OpenCL / HIP
- [4] Curated & Underpants Gnomes  --> Native Workstation Apps, Games & Drivers
- [5] System Cleanup & Retention   --> Dual Kernel Retention & Artifact Purge
- [6] Limine & Secure Boot Armor   --> Two-Zone Config, CMDLINE Hub, sbctl Signing
- [7] System Performance Tweaks    --> NVIDIA 615+ VRAM Booster, TCP BBR, NTSYNC
- [8] Master Field Guide & Manual  --> Open Documentation & Mobile Export
- [9] Multi-Lingual Engine (i18n)  --> 24 Locales with 100% Key Parity (244 keys)
-=============================================================================
-```
+### ⚡ 1-Line Automated Install
 
-### 1. 🛡️ System Synchronization & Package Engine
-* **10-Worker Parallel Pre-fetch:** Accelerates `.txz` downloads with resume support (`-C -`), cutting download phases by 5–10×.
-* **Stream Normalizer:** Real-time VT100/CSI/DEC normalizer in `run_slackpkg()` converts `\r` to `\n`, strips spinner jumps, filters background `wget` logs, and ensures full scrollback retention in Konsole/zsh.
-* **Smart `.new` Reconciliation:** Intelligently categorizes and resolves `/etc/*.new` configuration files.
-
-### 2. 🏎️ CachyOS Kernels (And all the flavors)
-* **Microarchitecture Targeting:** Auto-detects host CPU features (`x86_64_v4`, `x86_64_v3`, `x86_64_v2`, `znver4`).
-* **9 Specialized Schedulers:** Deploys `bore`, `standard`, `lto`, `eevdf`, `bmq`, `rt-bore`, `rc`, `lts`, and handheld `deckify` (strictly for handhelds/Steam Deck, never for desktop PCs/laptops).
-* **Multi-Kernel DKMS & Retention:** Automatically builds out-of-tree modules across all installed kernels and safely retains the 2 newest standard kernels plus active running kernel.
-
-### 3. 🎮 NVIDIA & ROCm Graphics Hub
-* **Automated Module Orchestration:** Installs precompiled open modules for CachyOS kernels and `nvidia-open-dkms` for Slackware/Arch kernels.
-* **Userspace Integration:** Automatically resolves and packages `cachyos-nvidia-utils`, `libnvidia-egl-gbm`, 64-bit Xorg output class configs, and GLX symlinks. (The official `.run` installer remains supported as a custom fallback).
-* **AMD ROCm / HIP Creator Toolkit:** Complete compute runtime deployment for DaVinci Resolve Studio with automatic Mesa OpenCL conflict resolution.
-
-### 4. 🥾 Limine Bootloader & UEFI Secure Boot Matrix
-* **Two-Zone `limine.conf`:** Preserves custom user styling in Zone A while atomically calculating kernel boot entries and BLAKE2B anti-tamper hashes in Zone B.
-* **Interactive CMDLINE Hub:** Instant toggles for NVIDIA DRM modesetting, AMD LACT overclocking, USB autosuspend, watchdog, and ZSWAP compression.
-* **Seamless Windows 11 Dual-Booting:** Keeps UEFI Secure Boot permanently **ENABLED** in motherboard BIOS via automated `sbctl` key management and signing.
-
-### 5. 🩲 Underpants Gnomes Sidecar CLI (`gnomes`) — *Experimental*
-* **Host-Sovereign Transmutation:** Transmutes upstream Arch and CachyOS packages into native `.txz` packages isolated under `/opt/underpants/pkgs/` without polluting the host Slackware base.
-* **Mandatory Runtime Pool:** Run `gnomes runtime install all` before deploying individual standalone packages.
-
-### 6. 🖥️ Curated Hyprland Desktop Suite
-* **`hyprland-noctalia`:** Mac-like Wayland desktop with Noctalia Shell (topbar, dock, spotlight launcher, control center), modular Lua configuration (`hyprland.lua` + `modules/*.lua`), and HyprMod GTK4 visual settings.
-* **`hyprland-core`:** DIY minimalist compositor for custom setups. Detailed in **[Oh My Hyprland Guide](docs/OH_MY_HYPRLAND_GUIDE.md)**.
-
-### 7. 🌍 Multi-Lingual Engine (24 Locales)
-* Full internationalization across 24 languages with 100% key parity (244 keys each), including sober standard editions and radical 90s pop-culture editions (`en-radical`, `nb-radical`).
-
----
-
-## 📦 Installation & Setup
-
-### ⚡ Quick One-Liner Install & Upgrade (Recommended)
-Paste the one-liner for your preferred mirror directly into your terminal. This securely clones to `/tmp`, builds a native Slackware `.txz` package via `slacky-update.SlackBuild`, installs or upgrades it via `upgradepkg`, and cleans up the temporary build directory:
-
-**GitHub:**
+**From GitHub:**
 ```bash
-git clone https://github.com/TuxOfValhalla/slacky-update.git /tmp/slacky-update && (cd /tmp/slacky-update/slackbuild && sudo ./slacky-update.SlackBuild && sudo upgradepkg --install-new --reinstall /tmp/slacky-update.txz) && rm -rf /tmp/slacky-update
+git clone https://github.com/TuxOfValhalla/slacky-update.git && cd slacky-update && bash slackbuild/slacky-update.SlackBuild && sudo upgradepkg --reinstall --install-new /tmp/slacky-update-*.txz && slacky-update
 ```
 
-**Codeberg:**
+**From Codeberg:**
 ```bash
-git clone https://codeberg.org/TuxOfValhalla/slacky-update.git /tmp/slacky-update && (cd /tmp/slacky-update/slackbuild && sudo ./slacky-update.SlackBuild && sudo upgradepkg --install-new --reinstall /tmp/slacky-update.txz) && rm -rf /tmp/slacky-update
+git clone https://codeberg.org/TuxOfValhalla/slacky-update.git && cd slacky-update && bash slackbuild/slacky-update.SlackBuild && sudo upgradepkg --reinstall --install-new /tmp/slacky-update-*.txz && slacky-update
 ```
 
-### 🛠️ Manual Clone & Build
-If you prefer maintaining a persistent local clone of the repository:
-
+### 🛠️ Step-by-Step Manual Build
 ```bash
-# 1. Clone repository (GitHub or Codeberg)
+# 1. Clone the repository
 git clone https://github.com/TuxOfValhalla/slacky-update.git
-cd slacky-update/slackbuild
+cd slacky-update
 
-# 2. Build the package via SlackBuild
-sudo ./slacky-update.SlackBuild
+# 2. Build the native Slackware package
+bash slackbuild/slacky-update.SlackBuild
 
-# 3. Install or upgrade
-sudo upgradepkg --install-new --reinstall /tmp/slacky-update.txz
-```
+# 3. Install or upgrade the package
+sudo upgradepkg --reinstall --install-new /tmp/slacky-update-*.txz
 
----
-
-## 💻 CLI Quick Reference
-
-```bash
-# Interactive Control Center
+# 4. Launch Slacky-Update
 slacky-update
-
-# Full unattended system update
-slacky-update -y
-
-# Curated Hyprland Desktop Deployment
-slacky-update --hyprland
-slacky-update --hyprland-noctalia
-slacky-update --hyprland-core
-
-# Underpants Gnomes CLI (Experimental Sidecar)
-gnomes runtime install all   # Install shared runtime pool
-gnomes -S <package>          # Install package
-gnomes -Ss <query>           # Search packages
-gnomes -Syu                  # Update installed packages
-gnomes -R <package>          # Remove package
-
-# Bootloader & Hardware Hubs
-slacky-update --limine       # Limine & Secure Boot Matrix
-slacky-update --cmdline      # Kernel CMDLINE & Gaming Hub
-slacky-update --sync-nvidia  # NVIDIA Driver Stack Synchronization
-slacky-update --clean        # Cache & Kernel Cleanup
-slacky-update --tweaks       # System Performance & Gaming Tweaks
 ```
 
----
-
-## 📖 Complete Documentation & System Manuals
-
-* 📘 **[The Ultimate Slacky-Update Survival Guide](docs/THE_ULTIMATE_SLACKY_UPDATE_SURVIVAL_GUIDE.md)** — Master operational manual, engine architecture, ELI5 breakdowns, and troubleshooting playbooks.
-* 🖥️ **[Oh My Hyprland Guide](docs/OH_MY_HYPRLAND_GUIDE.md)** — Deep dive into `hyprland-noctalia` vs `hyprland-core`, modular Lua configs, HyprMod GUI editor, and keybinding references.
-* 🛠️ **[Technical Companion Guide](docs/TECHNICAL_COMPANION_GUIDE.md)** — Architectural whitepaper detailing internal engines, sandboxing, and Slackware coexistence philosophy.
-* 🚨 **[Disaster Recovery & Troubleshooting Guide](docs/TROUBLESHOOTING_GUIDE.md)** — Recovery playbooks, symptom catalogs, and emergency live-USB chroot procedures.
-* 🥾 **[Limine & Secure Boot Field Guide](docs/LIMINE_SECUREBOOT_FIELD_GUIDE.md)** — ESP partitioning standards, topology migration, and `sbctl` setup.
-* 🧙 **[Underpants Gnomes Field Guide](docs/UNDERPANTS_GNOMES_FIELD_GUIDE.md)** — Pacman sidecar CLI guide and runtime pool management.
+### 🖱️ Mouse Navigation & Terminal Text Copying (Pro-Tip)
+* **Direct Mouse Navigation:** Click any menu option (1–9, checkboxes, buttons) to select or execute operations directly with your mouse.
+* **Text Selection & Copying (LLM Workflows):** Terminal emulators with mouse tracking enabled capture click events by default. To highlight and copy package lists or terminal text directly to your clipboard, **hold `Shift` while dragging your mouse** (`Shift + Drag`). This temporarily bypasses application mouse tracking in Konsole, Alacritty, Foot, and Kitty, copying pristine plain text instantly.
 
 ---
 
-## 📜 Project Ancestry, Trademarks & License
+## 🌍 Complete Multilingual Support (24 Languages)
 
-### AI-Assisted Development Notice
-This suite was architected, debugged, refactored, and validated on bare-metal Slackware hardware by **tuxofvalhalla** with the assistance of advanced AI pair-programming agents.
+Slacky-Update features 100% complete string parity across all 24 supported language packs, automatically honoring your system's `$LANG` and `$LC_MESSAGES` locale:
 
-### Trademarks & Disclaimer
-* **Slacky-Update** is an independent open-source project by and for the Linux enthusiast community.
-* This project is **not** officially affiliated with, endorsed by, or sponsored by **Patrick Volkerding** or **Slackware Linux, Inc.**
-* The name *Slackware* and the *Slackware logo* are registered trademarks of **Patrick Volkerding** and **Slackware Linux, Inc.**, used under **nominative fair use** strictly to identify target system compatibility.
+| Language | Code | Language | Code | Language | Code |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 🇬🇧 **English (Default)** | `en` | 🇳🇴 **Norwegian (Bokmål)** | `nb` | 🇳🇴 **Norwegian (Nynorsk)** | `nn` |
+| 🇩🇪 **Deutsch** | `de` | 🇫🇷 **Français** | `fr` | 🇪🇸 **Español** | `es` |
+| 🇮🇹 **Italiano** | `it` | 🇵🇹 **Português** | `pt` | 🇳🇱 **Nederlands** | `nl` |
+| 🇩🇰 **Dansk** | `da` | 🇸🇪 **Svenska** | `sv` | 🇫🇮 **Suomi** | `fi` |
+| 🇮🇸 **Íslenska** | `is` | 🇵🇱 **Polski** | `pl` | 🇷🇺 **Русский** | `ru` |
+| 🇨🇳 **简体中文** | `zh` | 🇯🇵 **日本語** | `ja` | 🇰🇷 **한국어** | `ko` |
+| 🇮🇳 **हिन्दी** | `hi` | 🇸🇦 **العربية** | `ar` | 🇨🇦 **English (Canada)**| `en-ca` |
+| ❄️ **Davvisámegiella** | `se` | 🛹 **Radical English** | `en-radical` | ⚡ **Radical Norwegian** | `nb-radical` |
 
-### License
-Licensed under the **GNU General Public License v3.0 (GPL-3.0)**. See [LICENSE](LICENSE) for details.
+---
+
+## 📖 Documentation & Field Guides
+
+Comprehensive technical documentation is maintained in the `docs/` directory:
+
+* [The Ultimate Slacky-Update Survival Guide](docs/THE_ULTIMATE_SLACKY_UPDATE_SURVIVAL_GUIDE.md) — *Complete operator manual and quick-reference.*
+* [Limine & Secure Boot Field Guide](docs/LIMINE_SECUREBOOT_FIELD_GUIDE.md) — *UEFI cryptographic matrix, MOK keys, and snapshot recovery.*
+* [Technical Companion Guide](docs/TECHNICAL_COMPANION_GUIDE.md) — *Underlying architecture, signal safety, and module breakdown.*
+* [Oh My Hyprland Guide](docs/OH_MY_HYPRLAND_GUIDE.md) — *Wayland desktop setup and integration guide.*
+
+---
+
+## ⚖️ System Requirements, Liability & Legal Disclaimers
+
+### 💻 Target System Requirements
+* **Target Operating System:** Slackware Linux `-current` (or Slackware 15+).
+* **Hardware Architecture:** `x86_64` (optimized for modern CPUs with AVX2 / AVX-512 support).
+
+### 🛡️ Use at Your Own Risk
+Slacky-Update executes low-level modifications to foundational system components, including kernel deployments, graphics driver stacks, initramfs images, and UEFI bootloader topologies. While engineered with strict safety guardrails, signal traps, and rollback capabilities, **all installations, kernel updates, and system modifications are performed strictly at your own discretion and risk**. The authors, maintainers, and contributors assume **no liability or warranty** for data loss, hardware quirks, or unbootable system states. Always ensure your personal data is backed up before performing major system upgrades.
+
+### 🤖 AI Pair Programming Disclosure
+Slacky-Update has been engineered utilizing advanced **AI pair programming and agentic coding workflows**, developed in continuous close collaboration with a human Linux systems architect. Every module, refactoring pass, and test suite has been iteratively planned, audited, and verified against high standards of system performance, safety, and comfort.
+
+### ⚖️ Trademark & Non-Affiliation Disclaimer
+Slacky-Update is an independent community open-source project. It is **not** an official product of Slackware Linux, Inc., nor is it endorsed, sponsored, affiliated with, or maintained by Patrick Volkerding or the official Slackware project. 
+The name "Slackware" and the Slackware logo are used solely under **nominative fair use** for identification and compatibility purposes, to identify that this utility is designed and engineered specifically for the Slackware Linux operating system.

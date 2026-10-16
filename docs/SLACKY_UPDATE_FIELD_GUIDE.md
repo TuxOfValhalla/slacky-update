@@ -1,6 +1,6 @@
 # 📖 Slacky-Update Field Guide & System Manual
 ### *Slackware Linux 15.0 & -current — Complete Architecture, Deployment & Operational Manual*
-#### `v1.0_RC2` — *"Dark Star"* (Stability & Hardware Release Candidate)
+#### `v1.0 LTS` — *"Dark Star"* (Official Long-Term Support Release)
 
 ---
 
@@ -12,7 +12,7 @@
 > [!CAUTION]
 > **COMPREHENSIVE TESTING, LIABILITY & USE-AT-YOUR-OWN-RISK DISCLAIMER**  
 > * **Hardware Testing & Verification:** Slacky-Update has been extensively verified and field-tested on bare-metal workstations with dry-run/simulated test passes across diverse build environments. However, **this in no way guarantees that it will operate seamlessly or without anomalies on your specific hardware configuration.**
-> * **100% User Responsibility:** Slacky-Update executes deep, low-level modifications to foundational system components. **All installation, upgrades, and system modifications are performed 100% at your own discretion and risk.**
+> * **100% User Responsibility:** Slacky-Update executes deep, low-level modifications to foundational system components. **All installation, upgrades, and system modifications are performed strictly at your own discretion and risk.**
 > * **No Liability for Data Loss:** The authors, maintainers, and contributors assume **no liability, warranty, or responsibility** for system malfunctions, unbootable states, hardware quirks, or loss of personal data.
 > * **Mandatory Backups:** Always maintain current, tested backups of your personal data (`/home`, configuration files, and boot partitions) and keep a bootable Slackware Live-USB accessible before performing upgrades or modifying bootloaders.
 > * **Bug Reporting & Support Policy:** If you encounter bugs, regressions, or hardware edge-cases, please report them on [GitHub Issues](https://github.com/TuxOfValhalla/slacky-update/issues) so they can be addressed. Beyond this documentation, no individual customer support, warranties, or service level agreements are offered.
@@ -25,38 +25,28 @@
 2. [2. Installation & Build Guide](#2-installation--build-guide)
 3. [3. System Synchronization Engine](#3-system-synchronization-engine)
 4. [4. Limine Bootloader & UEFI Secure Boot](#4-limine-bootloader--uefi-secure-boot)
-   - [Two-Zone limine.conf Architecture](#two-zone-limineconf-architecture)
-   - [Cryptographic Safe Hashing & Anti-Tamper Security](#cryptographic-safe-hashing--anti-tamper-security)
-   - [Interactive Kernel CMDLINE & Gaming Hub](#interactive-kernel-cmdline--gaming-hub)
-   - [UEFI Secure Boot Setup with sbctl & MOK](#uefi-secure-boot-setup-with-sbctl--mok)
-   - [Windows 11 Dual-Booting Playbook](#windows-11-dual-booting-playbook)
-   - [Motherboard UEFI/BIOS Settings Matrix](#motherboard-uefibios-settings-matrix)
-   - [Btrfs Snapper Snapshot Rollbacks](#btrfs-snapper-snapshot-rollbacks)
-   - [Coexistence Mode & Self-Healing](#coexistence-mode--self-healing)
+   - [Two-Zone Configuration Model](#two-zone-configuration-model)
+   - [Safe Hashing & Anti-Tamper Security](#safe-hashing--anti-tamper-security)
+   - [Interactive Kernel CMDLINE & Gaming Hub](#interactive-kernel-cmdline--gaming-hub-slacky-update---cmdline)
+   - [Windows 11 Dual-Booting & UEFI Secure Boot](#windows-11-dual-booting--uefi-secure-boot)
 5. [5. CachyOS High-Performance Kernels](#5-cachyos-high-performance-kernels)
    - [CPU Microarchitecture Auto-Detection](#cpu-microarchitecture-auto-detection)
-   - [Kernel Flavors & Schedulers](#kernel-flavors--schedulers)
-   - [Retention & Rollback Safeguards](#retention--rollback-safeguards)
+   - [Kernel Flavors & Retention Rules](#kernel-flavors--retention-rules)
 6. [6. Graphics Stack & Driver Orchestration](#6-graphics-stack--driver-orchestration)
    - [NVIDIA CachyOS Master Suite & DKMS](#nvidia-cachyos-master-suite--dkms)
-   - [Stale Kernel Module Purge & Depmod Shield](#stale-kernel-module-purge--depmod-shield)
-   - [Hybrid & Laptop GPU Configuration (PRIME)](#hybrid--laptop-gpu-configuration-prime)
    - [AMD ROCm & HIP Creator Toolkit](#amd-rocm--hip-creator-toolkit)
 7. [7. NVIDIA 615+ VRAM Booster & Memory Architecture](#7-nvidia-615-vram-booster--memory-architecture)
-   - [Driver Memory Management in 615.x+](#driver-memory-management-in-615x)
-   - [VRAM Fragmentation in Direct3D 12 & VKD3D](#vram-fragmentation-in-direct3d-12--vkd3d)
-   - [Preserving Video Memory Allocations](#preserving-video-memory-allocations)
-   - [Wayland & DRM Direct Modesetting](#wayland--drm-direct-modesetting)
-   - [Kernel Memory Mapping & HugePages (madvise + defer)](#kernel-memory-mapping--hugepages-madvise--defer)
-8. [8. The Underpants Gnomes Workstation Suite](#8-the-underpants-gnomes-workstation-suite)
-   - [Isolated Application Trees in /opt](#isolated-application-trees-in-opt)
-   - [Cryptographic GPG Verification](#cryptographic-gpg-verification)
-   - [Native Slackware SysVinit Integration](#native-slackware-sysvinit-integration)
-   - [Package Manifest](#package-manifest)
+8. [8. The Underpants Gnomes Workstation Suite](#8-the-underpants-gnomes-workstation-suite-52-components--gnomes-cli)
+   - [Pacman Command-Line Parity](#pacman-command-line-parity-gnomes)
+   - [Curated Hyprland Desktop Suite](#curated-hyprland-desktop-suite-hyprland-noctalia--hyprland-core)
+   - [OBS Creator Suite & DKMS Hardware Driver Fleet](#obs-creator-suite--dkms-hardware-driver-fleet)
+   - [Security, Polkit & SysVinit Services](#security-polkit--sysvinit-services)
 9. [9. SBo SlackBuilds Hub & sbotools](#9-sbo-slackbuilds-hub--sbotools)
 10. [10. System Performance & Kernel Tweaks](#10-system-performance--kernel-tweaks)
 11. [11. Multi-Lingual Engine (24 Locales & 90s Tickers)](#11-multi-lingual-engine-24-locales--90s-tickers)
 12. [12. CLI Reference & Troubleshooting](#12-cli-reference--troubleshooting)
+   - [Command Line Flags](#command-line-flags)
+   - [Troubleshooting & Disaster Recovery](#troubleshooting--disaster-recovery)
 
 ---
 
@@ -66,7 +56,7 @@ Before executing your first full system upgrade or modifying kernels and bootloa
 
 - [ ] **1. Slackware Branch:** Are you running Slackware 15+ (`-current` / `Slackware 16 alpha`)? (Verify via `cat /etc/slackware-version`. *Note: Slackware 15.0 stable is strictly unsupported*).
 - [ ] **2. Boot Mode:** Is your machine booted in UEFI or Legacy BIOS? (Verify via `[ -d /sys/firmware/efi ] && echo "UEFI" || echo "BIOS"`).
-- [ ] **3. ESP Capacity:** Is `/boot` (or `/boot/efi`) at least 3.5 GB if you plan to use Limine? (Verify via `df -h /boot` or `df -h /boot/efi`). See [docs/LIMINE_SECUREBOOT_FIELD_GUIDE.md](docs/LIMINE_SECUREBOOT_FIELD_GUIDE.md) for partitioning standards.
+- [ ] **3. ESP Capacity:** Is `/boot` (or `/boot/efi`) at least 3.5 GB if you plan to use Limine? (Verify via `df -h /boot` or `df -h /boot/efi`). See [docs/LIMINE_SECUREBOOT_FIELD_GUIDE.md](LIMINE_SECUREBOOT_FIELD_GUIDE.md) for partitioning standards.
 - [ ] **4. Filesystem:** Are you running Btrfs (with Snapper subvolumes) or standard ext4? (Verify via `findmnt /`).
 - [ ] **5. Graphics Card:** Do you have dedicated NVIDIA GeForce, AMD Radeon, or Intel GPU? (Verify via `lspci | grep -iE 'vga|3d'`).
 - [ ] **6. Backups:** Have you backed up your personal data (`/home`) and critical system configuration files?
@@ -99,14 +89,28 @@ Before executing your first full system upgrade or modifying kernels and bootloa
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Core Design Principles
+### Core Design Principles: The Sacred Base & The Five Pillars
+
+#### 🏛️ The Sacred Slackware Base System
 * **Strict Slackware Compliance**: No foreign package managers (`apt`, `dnf`, `pacman`). All transmuted binaries and SlackBuilds conform strictly to Slackware's native packaging standards (`.txz`, `pkgtools`, SysVinit scripts in `/etc/rc.d/`).
 * **Non-Destructive Coexistence**: Stock bootloaders (GRUB/ELILO), kernels, and system configuration files are never overwritten destructively. Fallback boot entries remain accessible in firmware NVRAM.
 * **Atomic Transactions**: Kernel updates, DKMS compilation, Dracut initramfs generation, and cryptographic Secure Boot signing occur as an atomic chain to guarantee system bootability.
-* **Pure Source & Auditable Code**: 100% shell scripts, Python, and native C helpers without opaque pre-compiled binaries in the source tree.
+* **Pure Source & Auditable Code**: 100% shell scripts, Python standard library, and native C helpers without opaque pre-compiled binaries in the source tree.
+
+#### 🌟 The Five Pillars of Engineering Excellence
+1. **⚡ Speed:** Multi-core parallel zstd `-1 -T0` initramfs decompression, NVMe direct I/O bypass (`none` scheduler), and 10GB persistent shader disk cache.
+2. **🛋️ Comfort:** Automated ChangeLog tracking, background tray telemetry, dynamic terminal geometry adaptation, full mouse navigation, and instant Shift + Drag text copying.
+3. **🛡️ Safety:** In-flight signal traps (`trap '' INT QUIT TSTP`) protecting active installations, active kernel shields, and Btrfs Snapper snapshots.
+4. **🎨 UI Design:** Clean Dark Star terminal aesthetics, absolute cursor row addressing (zero staircase defects), and dynamic multi-column package status.
+5. **🤝 Ease of Use:** 1-line automated installs, guided Secure Boot setup, universal `(ESC)` navigation across all menus, and clear confirmation prompts.
 
 > [!TIP]
-> For a deep technical analysis of how our 12 internal engines function, see the **[Slacky-Update Technical Companion Guide](TECHNICAL_COMPANION_GUIDE.md)**. For symptom-based recovery and emergency procedures, see the **[Disaster Recovery & Troubleshooting Guide](docs/TROUBLESHOOTING_GUIDE.md)**.
+> **Terminal Mouse Navigation & Shift-Drag Text Copying:**  
+> Slacky-Update supports interactive mouse navigation across all menus. You can click menu numbers, buttons, and checkboxes directly with your mouse.  
+> **To highlight and copy text from the terminal (e.g., package lists or error messages to share with LLMs):** Hold down the **`Shift`** key while dragging your mouse (`Shift + Drag`). In modern terminal emulators (Konsole, Alacritty, Foot, Kitty), holding `Shift` temporarily bypasses application mouse tracking and activates native terminal text selection directly to your clipboard!
+
+> [!TIP]
+> For a deep technical analysis of how our internal engines function, see the **[Slacky-Update Technical Companion Guide](TECHNICAL_COMPANION_GUIDE.md)**. For symptom-based recovery and emergency procedures, see the **[Disaster Recovery & Troubleshooting Guide](TROUBLESHOOTING_GUIDE.md)**.
 
 ---
 
@@ -121,12 +125,12 @@ To build and install in a single automated pass without leaving lingering build 
 
 **GitHub One-Liner:**
 ```bash
-git clone https://github.com/TuxOfValhalla/slacky-update.git /tmp/slacky-update && (cd /tmp/slacky-update/slackbuild && sudo ./slacky-update.SlackBuild && sudo upgradepkg --install-new --reinstall /tmp/slacky-update.txz) && rm -rf /tmp/slacky-update
+git clone https://github.com/TuxOfValhalla/slacky-update.git && cd slacky-update && bash slackbuild/slacky-update.SlackBuild && sudo upgradepkg --reinstall --install-new /tmp/slacky-update-*.txz && slacky-update
 ```
 
 **Codeberg One-Liner:**
 ```bash
-git clone https://codeberg.org/TuxOfValhalla/slacky-update.git /tmp/slacky-update && (cd /tmp/slacky-update/slackbuild && sudo ./slacky-update.SlackBuild && sudo upgradepkg --install-new --reinstall /tmp/slacky-update.txz) && rm -rf /tmp/slacky-update
+git clone https://codeberg.org/TuxOfValhalla/slacky-update.git && cd slacky-update && bash slackbuild/slacky-update.SlackBuild && sudo upgradepkg --reinstall --install-new /tmp/slacky-update-*.txz && slacky-update
 ```
 
 ### Manual Source Build (`.txz`)
@@ -229,13 +233,13 @@ If an unverified binary modification occurs on disk, Limine detects the hash mis
 
 ### Interactive Kernel CMDLINE & Gaming Hub (`slacky-update --cmdline`)
 * **Root Protection**: Fixed filesystem root parameters (`root=UUID=...`) are automatically protected.
-* **Smart Parameter Toggles**: Quick toggles for `quiet splash`, `nvidia_drm.modeset=1`, AMD LACT GPU overclocking (`amdgpu.ppfeaturemask=0xffffffff`), `nowatchdog`, USB autosuspend, IOMMU/VFIO passthrough, and ZSWAP memory compression.
+* **Smart Parameter Toggles**: Quick toggles for `quiet splash`, `nvidia_drm.modeset=1`, AMD LACT GPU overclocking (`amdgpu.ppfeaturemask=0xffffffff`), `nowatchdog`, USB autosuspend, IOMMU/VFIO passthrough, ZSWAP memory compression, and Universal Split Lock Protection (`split_lock_mitigate=0 split_lock_detect=off`).
 
 ### Windows 11 Dual-Booting & UEFI Secure Boot
-With Slacky-Update's `sbctl` and MOK (Machine Owner Keys) integration, you can keep **Secure Boot permanently enabled in BIOS** and boot freely between Windows 11 and Slackware Linux without security warnings.
+With Slacky-Update's `sbctl` and MOK (Machine Owner Key) integration, you can keep **Secure Boot permanently enabled in BIOS** and boot freely between Windows 11 and Slackware Linux without security warnings. Slacky-Update provides a guided, streamlined setup for key generation and enrollment—which operates fully automatically on all subsequent kernel builds once configured.
 
 > [!TIP]
-> For a comprehensive A–Z manual partitioning guide, ESP requirements ($\ge 3.5\text{ GB}$), and migration scenarios, see **[docs/LIMINE_SECUREBOOT_FIELD_GUIDE.md](docs/LIMINE_SECUREBOOT_FIELD_GUIDE.md)**.
+> For a comprehensive A–Z manual partitioning guide, ESP requirements ($\ge 3.5\text{ GB}$), and migration scenarios, see **[docs/LIMINE_SECUREBOOT_FIELD_GUIDE.md](LIMINE_SECUREBOOT_FIELD_GUIDE.md)**.
 
 ---
 
@@ -316,10 +320,12 @@ For creative professionals using AMD Radeon GPUs in DaVinci Resolve Studio:
 
 > [!NOTE]
 > ### 🧩 ELI5 — What does this module do and why do you care?
-> Want Steam, Discord, Chrome, Curated Hyprland with Noctalia Shell, OBS Studio with all pro streamer plugins, DKMS Wi-Fi/hardware drivers, or MangoHud on Slackware without having to compile 50 dependencies by hand? Our Underpants Gnomes fetch prebuilt packages, verify their cryptographic signatures, and package them into self-contained `/opt` folders that never mess up your system libraries.
+> Want Steam, Discord, Chrome, Curated Hyprland with Noctalia Shell, OBS Studio with all pro streamer plugins, DKMS Wi-Fi/hardware drivers, or MangoHud on Slackware without having to compile 50 dependencies by hand? Our Underpants Gnomes fetch prebuilt packages, verify their cryptographic signatures, decompress them directly in RAM with `zstandard` using pure in-memory Python streaming (zero foreign package manager binaries like `pacman`, `apt`, `dnf`, or `libalpm` installed on your host!), and package them into self-contained `/opt/underpants/` application trees registered as genuine namespaced Slackware `.txz` packages (`underpants-*.txz`) that never mess up your host system libraries (`/lib64`, `/usr/lib64`, `glibc`, PAM).
 
 ### Pacman Command-Line Parity (`gnomes`)
 * Full CLI parity with Pacman: `gnomes -S <pkg>`, `gnomes -Ss <query>`, `gnomes -Syu`, `gnomes -R <pkg>`, `gnomes -Si <pkg>`, `gnomes -Q`, and `gnomes runtime install all`.
+* **Zero Foreign Package Managers**: Pure in-memory Python implementation (`lib/gnomes_pacman.py`). Zero foreign package manager binaries (`pacman`, `apt`, `dnf`, `libalpm`) or `/var/lib/pacman` databases are ever installed or executed on the host.
+* **Authentic Slackware Packages**: Every application is built into authentic namespaced Slackware `.txz` packages (`underpants-*.txz`), installed cleanly via `upgradepkg --install-new`, and logged cleanly under `/var/log/packages/underpants-*`. Host system libraries (`/lib64`, `/usr/lib64`, `glibc`, PAM) are 100% shielded and sovereign.
 * **Fast-Race Mirror Engine**: Instant-win (<55ms) sub-second benchmarking with 750ms cutoffs for Chaotic-AUR packages.
 * **Self-Healing 404 Engine**: Transparent background resync and auto-retry if upstream releases a new version during database TTL.
 
@@ -358,15 +364,18 @@ For creative professionals using AMD Radeon GPUs in DaVinci Resolve Studio:
 
 > [!NOTE]
 > ### 🧩 ELI5 — What does this module do and why do you care?
-> Here we tune your system's 'throttle pedal' and network stack. We enable Google BBR for lower ping and smoother downloads, optimize memory buffers for gaming, and give real-time priority to audio so sound and mouse movement never stutter under heavy load.
+> Here we tune your system's 'throttle pedal' and network stack. We enable Google BBR for lower ping and smoother downloads, optimize memory buffers for gaming, cut your shutdown time down to seconds, and give real-time priority to audio so sound and mouse movement never stutter under heavy load.
 
-Accessible via `slacky-update --tweaks`:
-1. **1 Million File Descriptors**: Eliminates resource exhaustion in heavily modded games (*Star Citizen*, *Cyberpunk 2077*).
-2. **Pro Audio Realtime Scheduling**: Prioritizes PipeWire (`rtprio 95`, `nice -19`) for dropout-free audio production and gaming.
-3. **Transparent HugePages (`madvise + defer`)**: Eliminates allocation micro-stutter in modern game engines.
-4. **Google TCP BBR**: Minimizes bufferbloat and network latency during online gaming.
-5. **NTSYNC & Gamepad Udev Rules**: Prepares fast Windows NT synchronization primitives and includes udev rules for 28 gaming controllers.
-6. **Universal HiDPI & Wayland Scaling**: System-wide `/etc/profile.d/slacky-hidpi.sh` defaults for 4K/1440p displays.
+Accessible via `slacky-update --tweaks` with 100% symmetric individual reversibility:
+1. **1 Million File Descriptors**: Eliminates resource exhaustion in heavily modded games (*Star Citizen*, *Cyberpunk 2077*) and complex workloads.
+2. **Virtual Memory & THP (`madvise + defer`)**: Sets `vm.max_map_count=2147483642`, `vm.swappiness=10`, `vm.dirty_background_bytes=134217728` (128MB), `vm.dirty_bytes=268435456` (256MB), and eliminates micro-stutter during background writebacks.
+3. **Google TCP BBR**: Minimizes bufferbloat and network latency during online gaming via `net.ipv4.tcp_congestion_control=bbr` and `net.core.default_qdisc=fq`.
+4. **NTSYNC Primitives**: Prepares fast in-kernel Windows NT synchronization primitives (`/dev/ntsync` with 0666 permissions) for Proton and Wine.
+5. **Universal Gamepad Forcefield**: Deploys udev hardware rules across 27+ vendor profiles, disabling USB autosuspend on gaming peripherals (`ATTR{power/control}="on"`).
+6. **Turbo Boot & Fast Shutdown**: Disables legacy 16-bit PCMCIA routines, skips inactive NFS server pauses, enforces NetworkManager interface sovereignty, mounts `/tmp` as RAM-backed `tmpfs`, and reduces SysVinit shutdown sleeps from 5s to 0.5s.
+7. **Storage & NVMe Direct I/O Scheduler**: Configures hardware bypass (`none`) on NVMe PCIe Gen 4/5 SSDs to eliminate kernel I/O queue lock overhead, with `mq-deadline` for SATA SSDs and `bfq` for HDDs.
+8. **NVIDIA & Mesa 10GB Global Shader Disk Cache**: Permanent shader retention (`__GL_SHADER_DISK_CACHE_SIZE=10737418240`, `MESA_SHADER_CACHE_MAX_SIZE=10G`) eliminating micro-stutters from ongoing shader recompilation.
+9. **PipeWire Low-Latency Audio**: Drop-in PipeWire quantum configuration locked to 256 samples (5.33ms) paired with RT95 audio priority limits for zero-xrun audio production and gaming communication.
 
 ---
 
@@ -416,7 +425,7 @@ Accessible via `slacky-update --tweaks`:
 
 ### Troubleshooting & Disaster Recovery
 For comprehensive step-by-step procedures covering all critical failure scenarios (black screen, NVRAM reset, hash mismatch, NVIDIA TTY crash, Hypridle DPMS, 4K scaling, Live-USB chroot):
-👉 **Consult [docs/TROUBLESHOOTING_GUIDE.md](docs/TROUBLESHOOTING_GUIDE.md)**
+👉 **Consult [docs/TROUBLESHOOTING_GUIDE.md](TROUBLESHOOTING_GUIDE.md)**
 
 ---
 

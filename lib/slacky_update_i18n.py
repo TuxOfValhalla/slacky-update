@@ -9,7 +9,19 @@ LOCALES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "lo
 if not os.path.exists(LOCALES_DIR):
     LOCALES_DIR = "/usr/share/slacky-update/locales"
 
-CONFIG_FILE = os.path.expanduser("~/.config/slacky-update/config.json")
+import pwd
+
+def get_config_file():
+    sudo_u = os.environ.get("SUDO_USER")
+    if sudo_u:
+        try:
+            pw = pwd.getpwnam(sudo_u)
+            cand = os.path.join(pw.pw_dir, ".config", "slacky-update", "config.json")
+            if os.path.exists(cand):
+                return cand
+        except Exception:
+            pass
+    return os.path.expanduser("~/.config/slacky-update/config.json")
 
 class I18nEngine:
     def __init__(self, override_lang=None):
@@ -20,21 +32,27 @@ class I18nEngine:
         self.load_config()
         self.load_language(override_lang)
 
+    @property
+    def current_language(self):
+        return self.current_lang
+
     def load_config(self):
-        if os.path.exists(CONFIG_FILE):
+        cfg_file = get_config_file()
+        if os.path.exists(cfg_file):
             try:
-                with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                with open(cfg_file, "r", encoding="utf-8") as f:
                     cfg = json.load(f)
                     self.manual_override = cfg.get("language_override")
             except Exception:
                 self.manual_override = None
 
     def save_language_override(self, lang_code):
-        os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
+        cfg_file = get_config_file()
+        os.makedirs(os.path.dirname(cfg_file), exist_ok=True)
         cfg = {}
-        if os.path.exists(CONFIG_FILE):
+        if os.path.exists(cfg_file):
             try:
-                with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                with open(cfg_file, "r", encoding="utf-8") as f:
                     cfg = json.load(f)
             except Exception:
                 cfg = {}
@@ -47,8 +65,12 @@ class I18nEngine:
             self.manual_override = lang_code
 
         try:
-            with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+            with open(cfg_file, "w", encoding="utf-8") as f:
                 json.dump(cfg, f, indent=2)
+            sudo_u = os.environ.get("SUDO_USER")
+            if sudo_u:
+                pw = pwd.getpwnam(sudo_u)
+                os.chown(cfg_file, pw.pw_uid, pw.pw_gid)
         except Exception:
             pass
 

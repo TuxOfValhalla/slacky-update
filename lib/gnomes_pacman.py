@@ -19,6 +19,7 @@ import hashlib
 import io
 import tarfile
 import shutil
+import tempfile
 import stat
 import threading
 import concurrent.futures
@@ -26,6 +27,7 @@ import urllib.request
 import urllib.error
 import subprocess
 import glob
+import email.utils
 from typing import Dict, List, Optional, Any, Tuple, Set
 
 # --- [ DEFAULT PATHS & CONSTANTS ] ---
@@ -75,8 +77,42 @@ CORE_EXCLUDES = {
     "cmake", "meson", "ninja", "readline", "libreadline", "xz", "liblzma", "zstd", "libzstd"
 }
 
+# WP-3 (D1, runtime contract): GPU front-ends, audio clients and the TLS trust stack always come from Slackware. A copy in
+# the runtime or an app made VA-API, GBM, ALSA, PipeWire and FTPS trust break (wrong driver ABI, 32-bit plugin dirs,
+# missing trust store); Slackware ships the same upstream versions. Never resolved from Arch, in every mode.
+RUNTIME_HOST_ONLY = {
+    "mesa", "libglvnd", "libdrm", "llvm-libs", "vulkan-icd-loader", "libva", "libvdpau", "spirv-tools", "glslang",
+    "shaderc", "ocl-icd", "alsa-lib", "libpulse", "pipewire", "libpipewire", "jack2", "pipewire-jack", "p11-kit",
+    "gnutls", "ca-certificates-utils", "ca-certificates-mozilla",
+}
+# File-level guard for anything that still slips in (split names, vendored copies): runtime-relative globs.
+RUNTIME_HOST_ONLY_FILES = (
+    "lib/libGL.so*", "lib/libEGL.so*", "lib/libGLX*.so*", "lib/libGLdispatch.so*", "lib/libOpenGL.so*", "lib/libGLES*.so*",
+    "lib/libgbm.so*", "lib/libdrm*.so*", "lib/libgallium*.so*", "lib/libva.so*", "lib/libva-*.so*", "lib/libvdpau*.so*",
+    "lib/libvulkan.so*", "lib/libasound.so*", "lib/libpulse*.so*", "lib/libpipewire-0.3.so*", "lib/libspa-*.so*",
+    "lib/libjack*.so*", "lib/libp11-kit.so*", "lib/libgnutls*.so*",
+)
+# WP-3: the first runtime without GPU/audio/TLS copies (same base name, upgradepkg replaces 1.0)
+RUNTIME_PKG_VERSION = "1.1"
+RUNTIME_HOST_ONLY_DIRS = (
+    "lib/dri", "lib/gbm", "lib/vdpau", "lib/alsa-lib", "lib/spa-0.2", "lib/pipewire-0.3", "lib/pkcs11",
+    "share/glvnd", "share/vulkan/icd.d",
+)
+# Sonames that must then come from the host (64-bit, in ld.so.cache, with every symbol version the runtime asks for)
+RUNTIME_HOST_ONLY_SONAME_RE = re.compile(
+    r"^lib(GL|EGL|GLX\w*|GLdispatch|OpenGL|GLES\w*|gbm|drm\w*|va|va-\w+|vdpau|vulkan|asound|pulse\w*|pipewire-0\.3|"
+    r"jack\w*|p11-kit|gnutls\w*|OpenCL)\.so")
+
 # Virtual Providers: Generic interfaces satisfied by Slackware base or graphics drivers
 VIRTUAL_PROVIDES_DEFAULT = {
+    # 6A-33: audio plugin packages depend on a virtual "<format>-host"; the app being built (easyeffects, audacity, ...)
+    # is that host. Resolving it to the first provider pulled a whole DAW (ardour, 17,500 files) into easyeffects.
+    "lv2-host": "app:plugin host (the app itself)",
+    "vst-host": "app:plugin host (the app itself)",
+    "vst3-host": "app:plugin host (the app itself)",
+    "ladspa-host": "app:plugin host (the app itself)",
+    "clap-host": "app:plugin host (the app itself)",
+    "dssi-host": "app:plugin host (the app itself)",
     "libgl": "host:libGL.so.1",
     "libgl.so": "host:libGL.so.1",
     "libegl": "host:libEGL.so.1",
@@ -166,13 +202,100 @@ PROTECTED_HOST_BINARIES = {
     "python", "python3", "python2", "python3.11", "python3.12", "python3.14",
     "python-config", "python3-config", "python3.12-config", "python3.14-config",
     "pip", "pip3", "idle", "idle3", "idle3.14", "pydoc", "pydoc3", "pydoc3.14",
-    "bash", "sh", "zsh", "csh", "tcsh", "fish", "sed", "awk", "gawk", "grep", "egrep", "fgrep",
+    "f2py", "wheel", "numpy-config", "pybind11-config", "cffi-gen-src",
+    "env", "bash", "sh", "zsh", "csh", "tcsh", "fish", "sed", "awk", "gawk", "grep", "egrep", "fgrep",
     "tar", "gzip", "gunzip", "bzip2", "bunzip2", "xz", "unxz", "zstd", "unzstd", "zip", "unzip",
     "find", "xargs", "ls", "cp", "mv", "rm", "mkdir", "rmdir", "chmod", "chown", "cat", "more", "less",
-    "make", "gcc", "g++", "clang", "clang++", "ld", "as", "git", "sudo", "su", "login", "passwd",
-    "curl", "wget", "ssh", "scp", "systemctl", "init", "shutdown", "reboot", "poweroff", "upgradepkg",
-    "installpkg", "removepkg", "slackpkg", "pkgtool", "makepkg", "explodepkg", "wheel"
+    "make", "gmake", "cmake", "meson", "ninja", "gcc", "g++", "clang", "clang++", "ld", "as", "git",
+    "sudo", "su", "login", "passwd", "curl", "wget", "ssh", "scp",
+    "systemctl", "init", "shutdown", "reboot", "poweroff", "upgradepkg",
+    "installpkg", "removepkg", "slackpkg", "pkgtool", "makepkg", "explodepkg",
+    "Xwayland", "xwayland", "Xorg", "X", "startx", "xinit", "xterm", "xauth", "xrdb", "xset", "xrandr",
+    "xprop", "xwininfo", "xhost", "setxkbmap", "xmodmap", "xinput",
+    "Hyprland", "hyprctl", "hyprpm", "kwin_wayland", "kwin_x11", "sway", "wayfire", "weston", "mutter",
+    "startplasma-wayland", "startplasma-x11", "plasma_session", "xfce4-session",
+    "dbus-daemon", "dbus-launch", "dbus-send", "dbus-run-session", "elogind", "loginctl", "polkitd", "pkexec",
+    "glxinfo", "glxgears", "vulkaninfo", "clinfo", "nvidia-smi", "nvidia-settings", "ldconfig",
+    "xdg-open", "xdg-mime", "xdg-email", "xdg-settings", "xdg-desktop-menu", "xdg-desktop-icon",
+    "xdg-icon-resource", "xdg-screensaver", "argon2", "fluidsynth", "libfido2", "fido2-assert",
+    "fido2-cred", "fido2-token", "cec-client", "wx-config", "wxrc", "qdbus", "qdbusviewer", "qtdiag"
 }
+
+# 6A-233: ONE case rule for every audit and write path: Python3, HYPRLAND and xwayland count as protected exactly like
+# their canonical spelling (the Rust app does the same in build/protected.rs).
+PROTECTED_HOST_LOWER = frozenset(n.lower() for n in PROTECTED_HOST_BINARIES)
+
+
+def is_protected_host_binary(name: str) -> bool:
+    return str(name).lower() in PROTECTED_HOST_LOWER
+
+
+def localized_sentence(key: str, english: str) -> str:
+    """Sentence from locales/<lang>.json through the trust module's loader; English when it is not available."""
+    try:
+        t = trust_module()
+        if t is not None:
+            return t.localized(key, english)
+    except Exception:
+        pass
+    return english
+
+
+def desktop_exec_program_index(parts: List[str]) -> int:
+    """6A-11: index of the real program in a .desktop Exec= command, skipping an `env` launcher and
+    VAR=value assignments (e.g. `/usr/bin/env GDK_BACKEND=x11 audacity %F` -> index of `audacity`)."""
+    i = 0
+    if i < len(parts) and os.path.basename(parts[i]) == "env":
+        i += 1
+        while i < len(parts) and (parts[i].startswith("-") or ("=" in parts[i] and not parts[i].startswith("/"))):
+            # options that take a separate argument: -u NAME, -C DIR, -S STRING
+            if parts[i] in ("-u", "--unset", "-C", "--chdir", "-S", "--split-string"):
+                i += 1
+            i += 1
+    while i < len(parts) and "=" in parts[i] and not parts[i].startswith("/") and not parts[i].startswith("%"):
+        i += 1
+    return i if i < len(parts) else -1
+
+
+# 6A-10: private venv for gnomes Python apps. The app's modules are found through
+# APP_ROOT/.venv/pyvenv.cfg (home = runtime python) instead of an exported PYTHONPATH, so programs the
+# app starts (games via umu/Proton, other Python versions) never inherit the app's module paths.
+RUNTIME_PYTHON = "/opt/underpants/runtime/bin/python3"
+
+
+_RUNTIME_PY_VERSION_CACHE: Dict[str, Optional[str]] = {}
+
+
+def runtime_python_version() -> Optional[str]:
+    """Full version of the runtime interpreter (e.g. '3.14.7'), or None if it is not available. Cached."""
+    if "v" in _RUNTIME_PY_VERSION_CACHE:
+        return _RUNTIME_PY_VERSION_CACHE["v"]
+    _RUNTIME_PY_VERSION_CACHE["v"] = _runtime_python_version_uncached()
+    return _RUNTIME_PY_VERSION_CACHE["v"]
+
+
+def _runtime_python_version_uncached() -> Optional[str]:
+    if not os.path.exists(RUNTIME_PYTHON):
+        return None
+    try:
+        env = {k: v for k, v in os.environ.items() if k not in ("LD_LIBRARY_PATH", "PYTHONPATH", "PYTHONHOME")}
+        out = subprocess.run([RUNTIME_PYTHON, "-c", "import sys;print('%d.%d.%d' % sys.version_info[:3])"],
+                             capture_output=True, text=True, timeout=20, env=env)
+        ver = out.stdout.strip()
+        return ver if re.match(r"^\d+\.\d+\.\d+$", ver) else None
+    except Exception:
+        return None
+
+
+def venv_site_packages(opt_app_dir: str) -> Optional[str]:
+    """6A-10: the app's site-packages dir for the runtime's major.minor, if the app should get a venv."""
+    ver = runtime_python_version()
+    if not ver:
+        return None
+    major_minor = ".".join(ver.split(".")[:2])
+    sp = os.path.join(opt_app_dir, "lib", f"python{major_minor}", "site-packages")
+    return sp if os.path.isdir(sp) else None
+
 
 # Modular Application Plugins: Companion plugins automatically required for headless/modular apps
 MODULAR_APP_PLUGINS: Dict[str, List[str]] = {
@@ -185,14 +308,294 @@ MODULAR_APP_PLUGINS: Dict[str, List[str]] = {
     "glycin": ["glycin-loaders"],
     "libglycin": ["glycin-loaders"],
     "filezilla": ["glycin-loaders", "librsvg"],
+    # 6A-33: easyeffects 8 needs Linux Studio Plugins for its equalizer, limiter, compressor, delay, ... (optional in Arch)
+    "easyeffects": ["lsp-plugins-lv2"],
     "gtk4": ["glycin-loaders"],
 }
 
 
 
+def secure_cache_modes(base: str) -> None:
+    """6A-52: nobody else may write into the gnomes cache (repo DBs carry the package checksums). Dirs: 0755 for the
+    system cache, 0700 for a user cache; files in db/ and pkg/: group/other write removed. chmod only, only our own
+    files, never chown; errors are ignored (a read-only cache still works)."""
+    uid = os.geteuid()
+    dir_mode = 0o755 if os.path.abspath(base) == os.path.abspath(DEFAULT_CACHE_BASE) else 0o700
+    for d in (base, os.path.join(base, "db"), os.path.join(base, "pkg")):
+        try:
+            st = os.lstat(d)
+        except OSError:
+            continue
+        if not stat.S_ISDIR(st.st_mode) or st.st_uid != uid:
+            continue
+        try:
+            if stat.S_IMODE(st.st_mode) != dir_mode:
+                os.chmod(d, dir_mode)
+        except OSError:
+            pass
+        if d == base:
+            continue
+        try:
+            entries = list(os.scandir(d))
+        except OSError:
+            continue
+        for e in entries:
+            try:
+                est = e.stat(follow_symlinks=False)
+                if stat.S_ISREG(est.st_mode) and est.st_uid == uid and est.st_mode & 0o022:
+                    os.chmod(e.path, stat.S_IMODE(est.st_mode) & ~0o022)
+            except OSError:
+                pass
+
+
+_SLACK_HOST_PKGS: Optional[Dict[str, str]] = None
+
+
+def slackware_host_packages() -> Dict[str, str]:
+    """6A-151: lower-case name -> version of the installed Slackware packages, our own packages excluded
+    (underpants-*/cachyos-* names, _gnomes/_slacky build tags). Read once per run from the package database."""
+    global _SLACK_HOST_PKGS
+    if _SLACK_HOST_PKGS is None:
+        found: Dict[str, str] = {}
+        for pkgdb in ("/var/lib/pkgtools/packages", "/var/log/packages"):
+            try:
+                names = os.listdir(pkgdb)
+            except OSError:
+                continue
+            for entry in names:
+                parts = entry.rsplit("-", 3)
+                if len(parts) != 4 or "-upgraded-" in entry:
+                    continue
+                name, ver, _arch, build = parts
+                if name.startswith(("underpants-", "cachyos-")) or build.endswith(("_gnomes", "_slacky")):
+                    continue
+                found[name.lower()] = ver
+            break
+        _SLACK_HOST_PKGS = found
+    return _SLACK_HOST_PKGS
+
+
+# 6A-151: Arch splits some Slackware packages; only same-project splits with the same version scheme belong here
+HOST_PACKAGE_ALIASES = {
+    "qemu-system-x86": "qemu",
+    "qemu-common": "qemu",
+    "qemu-system-x86-firmware": "qemu",
+}
+
+
+def host_package_satisfies(name: str, repo_version: str) -> Optional[str]:
+    """6A-151: "name-version" of the installed Slackware package of the same name (or HOST_PACKAGE_ALIASES) when it is
+    at least as new as the repo package (epoch and pkgrel ignored), else None. Without the trust module only an exactly equal version counts."""
+    pkgs = slackware_host_packages()
+    host_name = name.lower() if name.lower() in pkgs else HOST_PACKAGE_ALIASES.get(name.lower(), "")
+    host_ver = pkgs.get(host_name)
+    if not host_ver:
+        return None
+    up = str(repo_version or "")
+    up = up.split(":", 1)[1] if ":" in up else up
+    up = up.rsplit("-", 1)[0] if "-" in up else up
+    if not up:
+        return None
+    trust = trust_module()
+    try:
+        if trust is not None:
+            ok = trust.vercmp(trust.desanitize_slack_version(host_ver), up) >= 0
+        else:
+            ok = host_ver == up
+    except Exception:
+        ok = host_ver == up
+    return f"{host_name}-{host_ver}" if ok else None
+
+
+_TRUST_MODULE: Any = False
+
+
+def trust_module() -> Any:
+    """WP-7: lib/gnomes_trust.py, loaded by explicit path from this package's own lib dir (PYTHONSAFEPATH keeps the
+    script dir off sys.path). None when it is missing or broken: the old behaviour then stays."""
+    global _TRUST_MODULE
+    if _TRUST_MODULE is False:
+        _TRUST_MODULE = None
+        try:
+            import importlib.util
+            path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "gnomes_trust.py")
+            spec = importlib.util.spec_from_file_location("gnomes_trust", path)
+            if spec and spec.loader:
+                mod = importlib.util.module_from_spec(spec)
+                sys.modules["gnomes_trust"] = mod
+                spec.loader.exec_module(mod)
+                _TRUST_MODULE = mod
+        except Exception:
+            _TRUST_MODULE = None
+    return _TRUST_MODULE
+
+
+_MIRRORS_MODULE: Any = False
+
+
+def mirrors_module() -> Any:
+    """6A-180: lib/slacky_mirrors.py (ranked mirrors with bounded fall-back), loaded by explicit path like the trust
+    module. None when it is missing or broken: the single configured mirror is then used, as before."""
+    global _MIRRORS_MODULE
+    if _MIRRORS_MODULE is False:
+        _MIRRORS_MODULE = None
+        try:
+            import importlib.util
+            path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "slacky_mirrors.py")
+            spec = importlib.util.spec_from_file_location("slacky_mirrors", path)
+            if spec and spec.loader:
+                mod = importlib.util.module_from_spec(spec)
+                sys.modules["slacky_mirrors"] = mod
+                spec.loader.exec_module(mod)
+                _MIRRORS_MODULE = mod
+        except Exception:
+            _MIRRORS_MODULE = None
+    return _MIRRORS_MODULE
+
+
+def trust_log(entries: List[Dict[str, Any]]) -> None:
+    """WP-7 log-only rollout: one JSON line per check in <cache>/trust-log.jsonl (kept under about 2 MB). Silent."""
+    if not entries:
+        return
+    base = DEFAULT_CACHE_BASE if os.geteuid() == 0 else USER_CACHE_BASE
+    path = os.path.join(base, "trust-log.jsonl")
+    try:
+        os.makedirs(base, exist_ok=True)
+        if os.path.exists(path) and os.path.getsize(path) > 2 * 1024 * 1024:
+            os.replace(path, path + ".1")
+        stamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        with open(path, "a", encoding="utf-8") as fh:
+            for e in entries:
+                fh.write(json.dumps({"time": stamp, **e}, sort_keys=True) + "\n")
+    except OSError:
+        pass
+
+
+def build_dir_base() -> str:
+    """D14: build and staging dirs on disk, not on the /tmp tmpfs (a 3-4 GB runtime build can fill it). Root:
+    /var/cache/slacky-update/gnomes/build; a user: ~/.cache/slacky-update/gnomes/build. Both 0700."""
+    if os.geteuid() == 0:
+        base = os.path.join(DEFAULT_CACHE_BASE, "build")
+    else:
+        base = os.path.join(os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache"), "slacky-update", "gnomes", "build")
+    os.makedirs(base, mode=0o700, exist_ok=True)
+    try:
+        if stat.S_IMODE(os.stat(base).st_mode) != 0o700:
+            os.chmod(base, 0o700)
+    except OSError:
+        pass
+    return base
+
+
+def safe_db_filename(name: Any) -> bool:
+    """6A-139: True for a plain file name from a repo DB (no path, not empty, not . or ..)."""
+    return isinstance(name, str) and bool(name) and name == os.path.basename(name) and \
+        name not in (".", "..") and "\x00" not in name and "\\" not in name
+
+
+class MergeCopyError(Exception):
+    """6A-138: a payload file could not be staged; the build stops instead of packaging a half-built tree."""
+
+
+def _merge_inside(path: str, boundary: str) -> bool:
+    real, top = os.path.realpath(path), os.path.realpath(boundary)
+    return real == top or real.startswith(top + os.sep)
+
+
+def _merge_real_dir(d_d: str, boundary: str) -> None:
+    """6A-138: make sure d_d is a directory we may write into. A symlinked directory is only followed when it stays
+    inside the staging tree (never written through to the host)."""
+    if os.path.islink(d_d):
+        if os.path.isdir(d_d) and _merge_inside(d_d, boundary):
+            return
+        raise MergeCopyError(f"Could not stage {d_d}: it is a link that leaves the build tree.")
+    try:
+        os.makedirs(d_d, exist_ok=True)
+    except OSError as e:
+        raise MergeCopyError(f"Could not create the folder {d_d}: {e.strerror or e}.")
+
+
+def _merge_place_link(s_l: str, d_l: str) -> None:
+    """6A-138: recreate a symlink as a symlink (files and directories alike). A real directory already in place is kept."""
+    try:
+        target = os.readlink(s_l)
+        if os.path.islink(d_l):
+            if os.readlink(d_l) == target:
+                return
+            os.unlink(d_l)
+        elif os.path.isdir(d_l):
+            return
+        elif os.path.lexists(d_l):
+            os.unlink(d_l)
+        os.symlink(target, d_l)
+    except OSError as e:
+        raise MergeCopyError(f"Could not stage the link {d_l}: {e.strerror or e}.")
+
+
+def _merge_copy_file(s_f: str, d_f: str) -> None:
+    """6A-138: copy one regular file; an existing destination link is replaced, never written through."""
+    try:
+        if os.path.islink(d_f):
+            os.unlink(d_f)
+        elif os.path.isdir(d_f):
+            raise MergeCopyError(f"Could not stage {d_f}: a folder with that name is already there.")
+        shutil.copy2(s_f, d_f, follow_symlinks=False)
+    except OSError as e:
+        raise MergeCopyError(f"Could not stage {d_f}: {e.strerror or e}.")
+
+
+def merge_tree_safe(src_dir: str, dst_dir: str, boundary: str, note: Optional[Any] = None) -> None:
+    """6A-138: merge src_dir into dst_dir. Symlinks (to files or directories) are recreated as links and never
+    descended into, destination links are never written through, and any copy error raises MergeCopyError."""
+    if os.path.islink(src_dir) or not os.path.isdir(src_dir):
+        return
+    _merge_real_dir(dst_dir, boundary)
+    for root, dirs, files in os.walk(src_dir):
+        rel = os.path.relpath(root, src_dir)
+        target_dir = os.path.join(dst_dir, rel) if rel != "." else dst_dir
+        keep = []
+        for d in dirs:
+            s_d, d_d = os.path.join(root, d), os.path.join(target_dir, d)
+            if os.path.islink(s_d):
+                if note:
+                    note(d_d, s_d)
+                _merge_place_link(s_d, d_d)
+            else:
+                _merge_real_dir(d_d, boundary)
+                keep.append(d)
+        dirs[:] = keep
+        for f in files:
+            s_f, d_f = os.path.join(root, f), os.path.join(target_dir, f)
+            if note:
+                note(d_f, s_f)
+            if os.path.islink(s_f):
+                _merge_place_link(s_f, d_f)
+            elif os.path.isfile(s_f):
+                _merge_copy_file(s_f, d_f)
+
+
+def space_precheck(installed_bytes: int, build_dir: str, label: str) -> Optional[str]:
+    """WP-2: None when there is room, else one plain sentence. The build needs about twice the unpacked size (unpacked
+    tree + package being written) and /opt the unpacked size, each with 10 % headroom."""
+    if installed_bytes <= 0:
+        return None
+    for path, need in ((build_dir, 2.2 * installed_bytes), ("/opt", 1.1 * installed_bytes)):
+        probe = path
+        while not os.path.exists(probe) and probe != "/":
+            probe = os.path.dirname(probe)
+        try:
+            free = shutil.disk_usage(probe).free
+        except OSError:
+            continue
+        if free < need:
+            return (f"Not enough free disk space for {label}: {need / 1e9:.1f} GB needed on {probe}, "
+                    f"{free / 1e9:.1f} GB free. Nothing was changed.")
+    return None
+
+
 def get_cache_dir() -> str:
     """Resolve writable cache directory for databases and package index."""
-    for d in [DEFAULT_CACHE_BASE, USER_CACHE_BASE, "/tmp/slacky-update-gnomes"]:
+    for d in [DEFAULT_CACHE_BASE, USER_CACHE_BASE]:
         try:
             os.makedirs(d, exist_ok=True)
             test_file = os.path.join(d, ".write_test")
@@ -202,7 +605,9 @@ def get_cache_dir() -> str:
             return d
         except Exception:
             continue
-    return "/tmp"
+    # 6A-17: no fixed /tmp fallback (predictable path, lost on reboot); a private temp dir instead
+    import tempfile
+    return tempfile.mkdtemp(prefix="slacky-update-gnomes.")
 
 
 def detect_cpu_tier() -> str:
@@ -413,6 +818,39 @@ class HostLibraryScanner:
 
         cls._cached_glibc_ver = max_ver
         return cls._cached_glibc_ver
+
+    _cached_bin_map: Optional[Dict[str, str]] = None
+
+    @classmethod
+    def get_host_binary_map(cls) -> Dict[str, str]:
+        """Index all host binaries provided by native Slackware packages (/var/log/packages/*)."""
+        if cls._cached_bin_map is not None:
+            return cls._cached_bin_map
+
+        bin_map: Dict[str, str] = {}
+        log_dir = "/var/log/packages"
+        if os.path.exists(log_dir):
+            try:
+                for fname in os.listdir(log_dir):
+                    if fname.startswith("underpants-") or fname.startswith("cachyos-gnome-"):
+                        continue
+                    p_path = os.path.join(log_dir, fname)
+                    with open(p_path, "r", encoding="utf-8", errors="ignore") as f:
+                        in_flist = False
+                        for line in f:
+                            sline = line.strip()
+                            if sline == "FILE LIST:":
+                                in_flist = True
+                                continue
+                            if in_flist and sline.startswith("usr/bin/"):
+                                b_name = sline[8:]
+                                if b_name:
+                                    bin_map[b_name] = fname
+            except Exception:
+                pass
+
+        cls._cached_bin_map = bin_map
+        return cls._cached_bin_map
 
     _cached_frameworks: Optional[Dict[str, str]] = None
 
@@ -846,6 +1284,10 @@ class PacmanDBParser:
             else:
                 pkg[cur_key] = cur_lines[0] if cur_lines else ""
 
+        # 6A-139: FILENAME is joined into the cache path and the URL; anything but a plain file name is refused
+        fn = pkg.get("FILENAME")
+        if fn is not None and not safe_db_filename(fn):
+            pkg["FILENAME"] = ""
         return pkg
 
     @classmethod
@@ -885,6 +1327,7 @@ class GnomesPacmanEngine:
         self.cache_dir = cache_dir or get_cache_dir()
         self.db_dir = os.path.join(self.cache_dir, "db")
         os.makedirs(self.db_dir, exist_ok=True)
+        secure_cache_modes(self.cache_dir)
         self.repositories = get_default_repositories()
         self.index: Dict[str, Dict[str, Any]] = {}
         self.provides_index: Dict[str, List[str]] = {}
@@ -892,60 +1335,168 @@ class GnomesPacmanEngine:
         self._loaded = False
 
     def sync_repositories(self, force: bool = False, verbose: bool = True) -> Dict[str, int]:
-        """Download and cache all active repository sync databases."""
+        """Download and cache all active repository sync databases in parallel with If-Modified-Since."""
         results: Dict[str, int] = {}
-        headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) Slacky-Update/1.0_RC2 UnderpantsGnomes"}
+        headers_base = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) Slacky-Update/1.0_RC2 UnderpantsGnomes"}
 
-        for repo in self.repositories:
+        active_repos = [r for r in self.repositories if r["name"] not in BLACKLISTED_REPOS]
+        now = time.time()
+
+        def sync_single_repo(repo: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]:
             rname = repo["name"]
             url = repo["url"]
-            if rname in BLACKLISTED_REPOS:
-                continue
-
             local_ext = ".db.tar.zst" if url.endswith(".zst") else ".db.tar.gz"
             local_path = os.path.join(self.db_dir, f"{rname}{local_ext}")
             local_meta = local_path + ".meta"
 
-            now = time.time()
             need_download = force or not os.path.exists(local_path)
-
+            last_modified_hdr: Optional[str] = None
             if not need_download and os.path.exists(local_path):
                 mtime = os.path.getmtime(local_path)
-                if (now - mtime) > 14400: # 4 hours TTL
+                if not force and (now - mtime) < 1800:
+                    pass
+                else:
                     need_download = True
+                    if os.path.exists(local_meta):
+                        try:
+                            with open(local_meta, "r", encoding="utf-8") as mf:
+                                mdata = json.load(mf)
+                                last_modified_hdr = mdata.get("last_modified")
+                        except Exception:
+                            pass
+                    if not last_modified_hdr and mtime > 0:
+                        last_modified_hdr = email.utils.formatdate(mtime, usegmt=True)
 
+            downloaded = False
             if need_download:
                 if verbose:
                     print(f":: Synchronizing database [{rname}] from {url}...")
-                try:
-                    req = urllib.request.Request(url, headers=headers)
-                    with urllib.request.urlopen(req, timeout=15) as resp:
-                        data = resp.read()
-                        with open(local_path, "wb") as f:
-                            f.write(data)
-                        with open(local_meta, "w", encoding="utf-8") as f:
-                            json.dump({"url": url, "base_url": repo["base_url"], "mtime": now, "size": len(data)}, f)
-                except Exception as e:
-                    if verbose:
-                        print(f"Warning: Failed to sync [{rname}]: {e}")
-                    if not os.path.exists(local_path):
-                        continue
+                req_headers = dict(headers_base)
+                if last_modified_hdr and not force:
+                    req_headers["If-Modified-Since"] = last_modified_hdr
 
-            # Parse and count packages
+                # 6A-180: the fastest known mirror of the repo first, the next ones when it fails (bounded). A body that is
+                # not a gzip/zstd database counts as a failed mirror. If-Modified-Since and the monotonic check stay as before.
+                urls = [url]
+                mm = mirrors_module()
+                if mm is not None:
+                    try:
+                        urls = mm.alternatives(url) or [url]
+                    except Exception:
+                        urls = [url]
+                data: Optional[bytes] = None
+                resp_last_mod = ""
+                not_modified = False
+                last_err: Any = None
+                for cand_url in urls:
+                    try:
+                        req = urllib.request.Request(cand_url, headers=req_headers)
+                        with urllib.request.urlopen(req, timeout=10) as resp:
+                            body = resp.read()
+                            lm = resp.headers.get("Last-Modified") or email.utils.formatdate(now, usegmt=True)
+                        if not (body.startswith(b"\x1f\x8b") or body.startswith(b"\x28\xb5\x2f\xfd")):
+                            raise ValueError("the server did not send a package database")
+                        data, resp_last_mod = body, lm
+                        if mm is not None:
+                            mm.note_success(cand_url)   # 6A-201: mirror health history
+                        break
+                    except urllib.error.HTTPError as he:
+                        if he.code == 304:
+                            not_modified = True
+                            if mm is not None:
+                                mm.note_success(cand_url)
+                            break
+                        last_err = he
+                        if mm is not None and he.code >= 500:
+                            mm.note_failure(cand_url)
+                    except Exception as e:
+                        last_err = e
+                        if mm is not None:
+                            mm.note_failure(cand_url)
+                if not_modified:
+                    try:
+                        os.utime(local_path, (now, now))
+                        if os.path.exists(local_meta):
+                            with open(local_meta, "r", encoding="utf-8") as mf:
+                                mdata = json.load(mf)
+                            mdata["mtime"] = now
+                            with open(local_meta, "w", encoding="utf-8") as mf:
+                                json.dump(mdata, mf)
+                    except Exception:
+                        pass
+                elif data is not None:
+                    try:
+                        tmp_path = local_path + f".tmp.{os.getpid()}"
+                        with open(tmp_path, "wb") as f:
+                            f.write(data)
+                        os.replace(tmp_path, local_path)
+                        with open(local_meta, "w", encoding="utf-8") as f:
+                            json.dump({
+                                "url": url,
+                                "base_url": repo["base_url"],
+                                "mtime": now,
+                                "last_modified": resp_last_mod,
+                                "size": len(data)
+                            }, f)
+                        downloaded = True
+                    except Exception as e:
+                        if verbose:
+                            print(f"Warning: Failed to sync [{rname}]: {e}")
+                elif verbose:
+                    sentence = ""
+                    if mm is not None and len(urls) > 1:
+                        try:
+                            sentence = mm.all_failed_sentence(url)
+                        except Exception:
+                            sentence = ""
+                    print(f"Warning: Failed to sync [{rname}]: {sentence or last_err}")
+
+            pkgs: Dict[str, Any] = {}
             if os.path.exists(local_path):
+                if not downloaded and rname in self.repo_packages and self.repo_packages[rname]:
+                    pkgs = self.repo_packages[rname]
+                else:
+                    try:
+                        with open(local_path, "rb") as f:
+                            raw_data = f.read()
+                        is_zstd = local_path.endswith(".zst")
+                        pkgs = PacmanDBParser.parse_archive(raw_data, is_zstd=is_zstd)
+                    except Exception as e:
+                        if verbose:
+                            print(f"Warning: Error parsing cached [{rname}]: {e}")
+            return (rname, pkgs)
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(active_repos), 8)) as executor:
+            futures = [executor.submit(sync_single_repo, r) for r in active_repos]
+            for fut in concurrent.futures.as_completed(futures):
                 try:
-                    with open(local_path, "rb") as f:
-                        raw_data = f.read()
-                    is_zstd = local_path.endswith(".zst")
-                    pkgs = PacmanDBParser.parse_archive(raw_data, is_zstd=is_zstd)
-                    self.repo_packages[rname] = pkgs
-                    results[rname] = len(pkgs)
-                except Exception as e:
-                    if verbose:
-                        print(f"Warning: Error parsing cached [{rname}]: {e}")
+                    rname, pkgs = fut.result()
+                    if pkgs and not self._db_is_older(rname, pkgs, record=True):
+                        self.repo_packages[rname] = pkgs
+                        results[rname] = len(pkgs)
+                except Exception:
+                    pass
 
         self._build_index()
         return results
+
+    def _db_is_older(self, rname: str, pkgs: Dict[str, Dict[str, Any]], record: bool) -> bool:
+        """WP-7 monotonic rule: a repo database older than the last one accepted (a frozen or replayed mirror). Log mode
+        only logs it; enforce mode keeps the previous database (True = do not use this one)."""
+        trust = trust_module()
+        if trust is None:
+            return False
+        try:
+            res = trust.check_db_monotonic(rname, pkgs, trust.default_state_path(), record=record)
+        except Exception:
+            return False
+        mode = trust.trust_mode()
+        if res.status != "ok":
+            trust_log([dict(res.as_dict(), check="database", mode=mode)])
+        if res.status == "older" and mode == "enforce" and rname in self.repo_packages:
+            print(f":: {res.message(mode)}")
+            return True
+        return False
 
     def load_cached_databases(self) -> None:
         """Load and index all locally cached databases without downloading."""
@@ -1109,7 +1660,8 @@ class GnomesPacmanEngine:
         filename = pkg.get("FILENAME")
         base_url = pkg.get("_BASE_URL")
         repo = pkg.get("_REPO", "")
-        if not filename:
+        # 6A-139: no download for a DB entry whose FILENAME is not a plain file name
+        if not filename or not safe_db_filename(filename):
             return []
 
         candidates: List[str] = []
@@ -1201,6 +1753,10 @@ class GnomesPacmanEngine:
             if clean_name in CORE_EXCLUDES or clean_lower in CORE_EXCLUDES or clean_lower.startswith("linux") or clean_lower.startswith("systemd"):
                 host_provided[clean_name] = f"Host Base System / Core Exclude Protected ({clean_name})"
                 continue
+            # 1.1 WP-3: GPU, audio and TLS-trust libraries always come from Slackware (runtime contract)
+            if clean_lower in RUNTIME_HOST_ONLY:
+                host_provided[clean_name] = f"host-only (runtime contract) ({clean_name})"
+                continue
 
             # 1.5 Shield against 32-bit (multilib) packages when resolving 64-bit target graph
             is_32bit_request = any(t.lower().startswith("lib32-") for t in targets)
@@ -1262,6 +1818,19 @@ class GnomesPacmanEngine:
                 else:
                     fw_source = host_frameworks.get(actual_name, host_frameworks.get(actual_lower))
                     host_provided[clean_name] = f"Host System Framework ({fw_source})"
+                    continue
+
+            # 6.5 6A-151: an installed Slackware package of the same name, at least as new, provides it (programs and data
+            # too, not only .so files: qemu, socat, xdg-utils were bundled again and collided with the base)
+            if not standalone and actual_lower not in target_clean_names:
+                host_pkg = host_package_satisfies(actual_name, pkg.get("VERSION", ""))
+                # never when the host lacks a library soname this package provides (a newer Slackware version with a
+                # bumped soname would leave the app without its .so; step 3 bundles those for the same reason)
+                so_needed = [p.split("=")[0].strip() for p in pkg.get("PROVIDES", []) if ".so" in p]
+                if host_pkg and any(not (so in host_libs or any(h == so or h.startswith(so + ".") or (so.endswith(".so") and h.startswith(so)) for h in host_libs)) for so in so_needed):
+                    host_pkg = None
+                if host_pkg:
+                    host_provided[clean_name] = f"Slackware package ({host_pkg})"
                     continue
 
             # 7. Check Underpants Shared Runtime Pool (/opt/underpants/runtime/ & /opt/underpants/common/)
@@ -1345,6 +1914,15 @@ class GnomesPacmanEngine:
             return True
         return False
 
+    @staticmethod
+    def canonical_app_name(name: str) -> str:
+        """Strip suffixes like -bin, -git, -appimage, -dkms to group alias packages."""
+        n = name.lower().strip()
+        for sfx in ["-bin", "-git", "-appimage", "-dkms"]:
+            if n.endswith(sfx):
+                return n[:-len(sfx)]
+        return n
+
     def list_installed_gnomes_packages(self) -> List[Dict[str, str]]:
         """Inspect /var/log/packages/ for native underpants-* packages."""
         pkgs_by_name: Dict[str, Dict[str, str]] = {}
@@ -1358,27 +1936,36 @@ class GnomesPacmanEngine:
                     parts = fname.rsplit("-", 3)
                     if len(parts) == 4:
                         raw_name, ver, arch, build = parts
+                        # 6A-59: only packages gnomes built itself (_gnomes) are gnomes-managed; curated _slacky
+                        # packages belong to the curated suite and must never be updated/overwritten by gnomes
+                        if not build.endswith("_gnomes"):
+                            continue
                         app_name = raw_name.replace("underpants-", "").replace("cachyos-gnome-", "")
                         if self.is_quarantined_gnomes_package(app_name):
                             continue
+                        canon_name = self.canonical_app_name(app_name)
                         cand = {
                             "package_id": fname,
                             "name": app_name,
+                            "canonical_name": canon_name,
                             "version": ver,
                             "arch": arch,
                             "build": build
                         }
-                        if app_name not in pkgs_by_name:
-                            pkgs_by_name[app_name] = cand
+                        if canon_name not in pkgs_by_name:
+                            pkgs_by_name[canon_name] = cand
                         else:
-                            prev = pkgs_by_name[app_name]
+                            prev = pkgs_by_name[canon_name]
                             if fname.startswith("underpants-") and prev["package_id"].startswith("cachyos-gnome-"):
-                                pkgs_by_name[app_name] = cand
+                                pkgs_by_name[canon_name] = cand
                             elif self.is_newer_version(ver, prev["version"]):
-                                pkgs_by_name[app_name] = cand
+                                pkgs_by_name[canon_name] = cand
+                            elif not self.is_newer_version(prev["version"], ver):
+                                if app_name.endswith("-bin") and not prev["name"].endswith("-bin"):
+                                    pkgs_by_name[canon_name] = cand
         except Exception:
             pass
-        return sorted(list(pkgs_by_name.values()), key=lambda x: x["name"])
+        return sorted(list(pkgs_by_name.values()), key=lambda x: x["canonical_name"])
 
     def check_curated_collision(self, pkg_name: str) -> Optional[str]:
         """Check if pkg_name is already installed natively as a curated Slackware package."""
@@ -1389,13 +1976,21 @@ class GnomesPacmanEngine:
 
         try:
             for fname in os.listdir(log_dir):
-                if fname.startswith("underpants-") or fname.startswith("cachyos-gnome-"):
-                    continue
                 parts = fname.rsplit("-", 3)
-                if len(parts) >= 4:
-                    native_name = parts[0].lower()
-                    if native_name == clean_name:
+                if len(parts) < 4:
+                    continue
+                if fname.startswith("underpants-") or fname.startswith("cachyos-gnome-"):
+                    # 6A-59: a curated package (any build tag except _gnomes) of the same app counts as a collision
+                    app = parts[0].lower()
+                    for pre in ("underpants-", "cachyos-gnome-"):
+                        if app.startswith(pre):
+                            app = app[len(pre):]
+                    if app == clean_name and not parts[3].endswith("_gnomes"):
                         return fname
+                    continue
+                native_name = parts[0].lower()
+                if native_name == clean_name:
+                    return fname
         except Exception:
             pass
         return None
@@ -1430,6 +2025,16 @@ class GnomesPacmanEngine:
                     fpath = os.path.join(cdir, fname)
                     if not os.path.isfile(fpath):
                         continue
+                    # WP-7: a cached detached signature goes with its package
+                    if fname.endswith(".sig"):
+                        if clean_all or not os.path.exists(fpath[:-4]):
+                            try:
+                                bytes_freed += os.path.getsize(fpath)
+                                os.remove(fpath)
+                                files_removed += 1
+                            except OSError:
+                                pass
+                        continue
                     if not (fname.endswith(".pkg.tar.zst") or fname.endswith(".pkg.tar.xz") or fname.endswith(".part")):
                         continue
 
@@ -1460,8 +2065,9 @@ class GnomesPacmanEngine:
         tmp_patterns = [
             "/tmp/underpants-*.txz",
             "/tmp/underpants-*.part",
-            "/tmp/build-*",
-            "/tmp/package-*",
+            # 6A-139: only our own SlackBuild dirs (same patterns as mod_clean.sh), never another build's /tmp/build-*
+            "/tmp/build-slacky*",
+            "/tmp/package-slacky*",
             "/tmp/transmute-gnomes-*",
             "/tmp/slacky-build-*",
             "/tmp/slacky-rocm-*",
@@ -1472,19 +2078,34 @@ class GnomesPacmanEngine:
         if clean_all:
             tmp_patterns.extend([
                 "/tmp/slacky-update-*.txz",
-                "/tmp/SBo/*",
                 "/var/cache/slacky-update/archives/*",
                 "/var/cache/slacky-update/kernel/*",
                 "/var/cache/slacky-update/nvidia/*",
-                "/var/cache/slacky-update/rocm/*",
-                "/var/cache/sbopkg/*"
+                "/var/cache/slacky-update/rocm/*"
             ])
+            # 6A-139: /tmp/SBo and /var/cache/sbopkg belong to sbopkg and are never cleaned here
+
+        # D14: build dirs left behind by an interrupted build (older than 6 hours, so a running build is never touched)
+        for bdir in (os.path.join(DEFAULT_CACHE_BASE, "build"), os.path.join(USER_CACHE_BASE, "build")):
+            for item in glob.glob(os.path.join(bdir, "*")):
+                try:
+                    if os.path.isdir(item) and not os.path.islink(item) and time.time() - os.lstat(item).st_mtime > 6 * 3600:
+                        sz = sum(os.path.getsize(os.path.join(r, f)) for r, _, fl in os.walk(item) for f in fl if os.path.isfile(os.path.join(r, f)))
+                        shutil.rmtree(item, ignore_errors=True)
+                        files_removed += 1
+                        bytes_freed += sz
+                except OSError:
+                    pass
 
         for pat in tmp_patterns:
             for item in glob.glob(pat):
                 try:
+                    # 6A-139: temp leftovers younger than 6 hours may belong to a running build
+                    if (item.startswith("/tmp/") or item.endswith(".tmp")) and \
+                            time.time() - os.lstat(item).st_mtime < 6 * 3600:
+                        continue
                     if os.path.isfile(item) or os.path.islink(item):
-                        sz = os.path.getsize(item)
+                        sz = os.lstat(item).st_size
                         os.remove(item)
                         files_removed += 1
                         bytes_freed += sz
@@ -1514,6 +2135,155 @@ class GnomesPacmanEngine:
                 pass
 
         return files_removed, bytes_freed
+
+    @classmethod
+    def heal_host_sovereignty(cls, dry_run: bool = False, verbose: bool = True) -> Dict[str, Any]:
+        """
+        Audit and purge rogue Underpants Gnomes wrappers from /usr/bin/ that conflict with
+        native Slackware system packages or protected host utilities.
+        6A-154: a wrapper over a file owned by a Slackware package is kept and reported with the
+        `slackpkg reinstall` advice (advice only); only wrappers without a stock owner are removed.
+        The package records in /var/log/packages are never edited.
+        """
+        log_dir = "/var/log/packages"
+        usr_bin = "/usr/bin"
+        if not os.path.exists(usr_bin):
+            return {"purged_wrappers": [], "affected_packages": [], "cleaned_logs": 0}
+
+        # 1. Map all host files to their native Slackware packages
+        host_pkg_map: Dict[str, str] = {}
+        # 6A-137: /usr/bin names listed in our own package records (the owner decides, not the APP_NAME prefix)
+        gnomes_owned: Set[str] = set()
+        if os.path.exists(log_dir):
+            try:
+                for fname in os.listdir(log_dir):
+                    if fname.startswith("underpants-") or fname.startswith("cachyos-gnome-"):
+                        try:
+                            with open(os.path.join(log_dir, fname), "r", encoding="utf-8", errors="ignore") as gf:
+                                for gl in gf:
+                                    gs = gl.strip()
+                                    if gs.startswith("usr/bin/") and len(gs) > 8 and "/" not in gs[8:]:
+                                        gnomes_owned.add(gs[8:])
+                        except OSError:
+                            pass
+                        continue
+                    p_path = os.path.join(log_dir, fname)
+                    with open(p_path, "r", encoding="utf-8", errors="ignore") as f:
+                        in_flist = False
+                        for line in f:
+                            sline = line.strip()
+                            if sline == "FILE LIST:":
+                                in_flist = True
+                                continue
+                            if in_flist and sline.startswith("usr/bin/"):
+                                b_name = sline[8:]
+                                if b_name:
+                                    host_pkg_map[b_name] = fname
+            except Exception:
+                pass
+
+        purged_wrappers = []
+        affected_pkgs: Set[str] = set()
+        heal_errors: List[str] = []
+        # 6A-154: stock owners from the Slackware package db (own packages excluded); unreadable db = delete nothing
+        kept_stock: List[Tuple[str, str, str, str]] = []
+        kept_protected: List[Tuple[str, str, str]] = []     # 6A-232: protected name, no stock owner found: advice only
+        stock_owners: Dict[str, str] = {}
+        owners_ok = True
+        try:
+            stock_owners = footprint_load_owners(log_dir)
+        except Exception:
+            owners_ok = False
+            heal_errors.append("The Slackware package database could not be read; no wrapper was removed.")
+        # 6A-137: removing a wrapper and scrubbing the package record go together and need root; as a user nothing
+        # is changed and the run says so (it used to sudo-remove wrappers while the record scrub failed silently)
+        if not dry_run and os.geteuid() != 0:
+            dry_run = True
+            heal_errors.append("Root is needed to remove rogue wrappers; nothing was changed. Run: sudo gnomes heal")
+
+        # 2. Inspect all files in /usr/bin for rogue wrappers
+        try:
+            for bname in os.listdir(usr_bin):
+                wpath = os.path.join(usr_bin, bname)
+                if not os.path.isfile(wpath) or os.path.islink(wpath):
+                    continue
+                try:
+                    with open(wpath, "r", encoding="utf-8", errors="ignore") as wf:
+                        header = wf.read(512)
+                    if "# --- [ Underpants Gnomes Launcher Wrapper" in header:
+                        m = re.search(r'APP_NAME="([^"]+)"', header)
+                        app_name = m.group(1) if m else ""
+                        canon_app = cls.canonical_app_name(app_name) if app_name else ""
+                        b_lower = bname.lower()
+
+                        valid_targets = set()
+                        if app_name:
+                            valid_targets.add(app_name.lower())
+                            valid_targets.add(app_name.lower().replace("-", "").replace("_", ""))
+                            if app_name.endswith("-bin"):
+                                valid_targets.add(app_name[:-4].lower())
+                        if canon_app:
+                            valid_targets.add(canon_app.lower())
+                            valid_targets.add(canon_app.lower().replace("-", "").replace("_", ""))
+
+                        is_rogue = False
+                        by_protected_name = False
+                        if is_protected_host_binary(bname):
+                            is_rogue = True
+                            by_protected_name = True
+                        elif bname in host_pkg_map and b_lower not in valid_targets:
+                            is_rogue = True
+                        # 6A-137: a wrapper listed in its package's own file list is never rogue by name alone
+                        elif app_name and bname not in gnomes_owned and not (b_lower in valid_targets or any(b_lower.startswith(t + "-") or b_lower.startswith(t) for t in valid_targets if len(t) >= 4)):
+                            is_rogue = True
+
+                        if is_rogue:
+                            # 6A-154: a wrapper that shadows a file a Slackware package lists is NEVER deleted (that
+                            # would leave the stock file missing); report it and advise `slackpkg reinstall <pkg>`
+                            stock_pkg = ""
+                            if owners_ok:
+                                stock_pkg = stock_owners.get("usr/bin/" + bname, "")
+                                if not stock_pkg:
+                                    hp = host_pkg_map.get(bname, "")
+                                    if hp and not footprint_is_own_package(hp):
+                                        stock_pkg = hp
+                            if stock_pkg or not owners_ok:
+                                stock_pkg = stock_pkg.split(" (")[0]
+                                parts = stock_pkg.rsplit("-", 3)
+                                pkg_base = parts[0] if len(parts) >= 4 else stock_pkg
+                                kept_stock.append((wpath, bname, app_name, pkg_base))
+                                continue
+                            if by_protected_name:
+                                # 6A-232: a protected system name is NEVER deleted on a guess; one sentence, the person decides
+                                kept_protected.append((wpath, bname, app_name))
+                                continue
+                            purged_wrappers.append((wpath, bname, app_name, ""))
+                            if not dry_run:
+                                try:
+                                    os.remove(wpath)
+                                except OSError as e:
+                                    heal_errors.append(f"Could not remove {wpath}: {e.strerror or e}.")
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+        # 3. 6A-154: the package records in /var/log/packages are never edited here (they belong to pkgtools);
+        # "cleaned_logs" stays in the result as 0 for older callers.
+        cleaned_logs_count = 0
+
+        if heal_errors and verbose:
+            for msg in heal_errors:
+                print(f":: {msg}", file=sys.stderr)
+
+        return {
+            "purged_wrappers": purged_wrappers,
+            "affected_packages": sorted(list(affected_pkgs)),  # 6A-154: always empty now; see kept_stock_owned
+            "kept_stock_owned": [{"path": k[0], "name": k[1], "app": k[2], "package": k[3]} for k in kept_stock],
+            "kept_protected": [{"path": k[0], "name": k[1], "app": k[2]} for k in kept_protected],
+            "cleaned_logs": cleaned_logs_count,
+            "errors": heal_errors
+        }
 
     @staticmethod
     def parse_pkg_version(v_str: str) -> Tuple[List[Tuple[int, int, str]], List[Tuple[int, int, str]]]:
@@ -1550,6 +2320,14 @@ class GnomesPacmanEngine:
         Compare upstream package version against installed version.
         Returns True only if upstream is strictly newer.
         """
+        # WP-7: pacman's own comparison (epoch, rc/alpha, release) when the trust module is there
+        trust = trust_module()
+        if trust is not None:
+            try:
+                return trust.is_newer(trust.desanitize_slack_version(str(upstream_ver)),
+                                      trust.desanitize_slack_version(str(installed_ver)))
+            except Exception:
+                pass
         up_ver, up_rel = cls.parse_pkg_version(upstream_ver)
         inst_ver, inst_rel = cls.parse_pkg_version(installed_ver)
 
@@ -1563,22 +2341,49 @@ class GnomesPacmanEngine:
 
         return False
 
-    def list_updates(self) -> List[Dict[str, Any]]:
+    def list_updates(self, allow_sync: bool = True) -> List[Dict[str, Any]]:
         """Check installed Underpants packages against synced repositories for available updates."""
-        self.ensure_loaded()
+        if allow_sync:
+            self.ensure_loaded()
+        else:
+            # 6A-139: read-only (gnomes -Qu): only the databases already on disk, never a download
+            if not self._loaded or not self.index:
+                self.load_cached_databases()
+            if not self.index:
+                return []
         installed = self.list_installed_gnomes_packages()
         updates = []
+        held = TransmutationFactory.load_held()
+        rb_holds = load_rollback_holds()
         for inst in installed:
             name = inst["name"]
-            if self.is_quarantined_gnomes_package(name):
+            canon_name = inst.get("canonical_name", name)
+            if self.is_quarantined_gnomes_package(name) or self.is_quarantined_gnomes_package(canon_name):
                 continue
             cur_ver = inst["version"]
             upstream = self.get_package(name)
+            target = name
+            if not upstream and canon_name != name:
+                # 6A-59: never fall back to a differently named package that a curated package already owns
+                # (installed brave-bin must not become underpants-brave = the curated Brave)
+                if self.check_curated_collision(canon_name):
+                    continue
+                upstream = self.get_package(canon_name)
+                target = canon_name
             if upstream:
                 up_ver = upstream.get("VERSION", "0")
+                # P2/L1: a version held for too-new glibc/libstdc++ is not offered again until the host or the package changes
+                h = held.get(target) or held.get(name)
+                if h and h.get("version") == up_ver and h.get("host") == TransmutationFactory.host_symbol_stamp():
+                    continue
+                # WP-2: the version the user rolled back from is not offered again (a newer one is)
+                rb = rb_holds.get(footprint_pkg_base(inst.get("package_id", "")))
+                if rb and not self.is_newer_version(up_ver, rb.get("skip_version", "")):
+                    continue
                 if self.is_newer_version(up_ver, cur_ver):
                     updates.append({
-                        "name": name,
+                        # 6A-59: report the package that was actually looked up (was always the canonical name)
+                        "name": target,
                         "installed_version": cur_ver,
                         "upstream_version": up_ver,
                         "repo": upstream.get("_REPO", "upstream")
@@ -1592,9 +2397,10 @@ class GnomesPacmanEngine:
 class TransmutationFactory:
     """Automates extraction, ELF RUNPATH rewriting, launcher wrapper creation, and Slackware .txz packaging."""
 
-    def __init__(self, engine: GnomesPacmanEngine, output_dir: str = "/tmp"):
+    def __init__(self, engine: GnomesPacmanEngine, output_dir: Optional[str] = None):
         self.engine = engine
-        self.output_dir = output_dir
+        # 6A-139: default output in the private 0700 build dir, never a predictable /tmp path
+        self.output_dir = output_dir or build_dir_base()
         self.cache_pkg_dir = os.path.join(self.engine.cache_dir, "pkg")
         os.makedirs(self.cache_pkg_dir, exist_ok=True)
         os.makedirs(self.output_dir, exist_ok=True)
@@ -1614,13 +2420,15 @@ class TransmutationFactory:
             shutil.rmtree(path, onerror=_onerror)
         except Exception:
             try:
-                subprocess.run(f"chmod -R u+w '{path}' 2>/dev/null; rm -rf '{path}' 2>/dev/null", shell=True, check=False)
+                # 6A-139: argv only, no shell (a path can never become a command)
+                subprocess.run(["chmod", "-R", "u+w", "--", path], stderr=subprocess.DEVNULL, check=False)
+                subprocess.run(["rm", "-rf", "--", path], stderr=subprocess.DEVNULL, check=False)
             except Exception:
                 pass
 
     @staticmethod
-    def is_valid_pkg_archive(fpath: str, expected_size: int = 0) -> bool:
-        """Verify that fpath is a genuine non-corrupted package archive and not an HTML error page."""
+    def is_valid_pkg_archive(fpath: str, expected_size: int = 0, expected_sha256: str = "") -> bool:
+        """Verify that fpath is a genuine non-corrupted package archive and matches expected SHA256."""
         if not os.path.isfile(fpath):
             return False
         sz = os.path.getsize(fpath)
@@ -1637,8 +2445,66 @@ class TransmutationFactory:
                 return False
             if (".gz" in fpath or fpath.endswith(".gz")) and not header.startswith(b"\x1f\x8b"):
                 return False
+
+            if expected_sha256:
+                h = hashlib.sha256()
+                with open(fpath, "rb") as f:
+                    for chunk in iter(lambda: f.read(131072), b""):
+                        h.update(chunk)
+                if h.hexdigest().lower() != expected_sha256.lower().strip():
+                    return False
+
             return True
         except Exception:
+            return False
+
+    @staticmethod
+    def _create_python_venv(opt_app_dir: str, actual_name: str, verbose: bool = True) -> bool:
+        """6A-10: APP_ROOT/.venv with pyvenv.cfg (home = runtime) and a .pth for the app's extra module dirs."""
+        sp = venv_site_packages(opt_app_dir)
+        if not sp:
+            return False
+        ver = runtime_python_version() or ""
+        major_minor = ".".join(ver.split(".")[:2])
+        final_root = f"/opt/underpants/pkgs/{actual_name}"
+        venv = os.path.join(opt_app_dir, ".venv")
+        try:
+            os.makedirs(os.path.join(venv, "bin"), exist_ok=True)
+            os.makedirs(os.path.join(venv, "lib", f"python{major_minor}"), exist_ok=True)
+            with open(os.path.join(venv, "pyvenv.cfg"), "w") as fh:
+                fh.write(f"home = {os.path.dirname(RUNTIME_PYTHON)}\n"
+                         "include-system-site-packages = true\n"
+                         f"version = {ver}\n")
+            for name in ("python", "python3", f"python{major_minor}"):
+                link = os.path.join(venv, "bin", name)
+                if os.path.lexists(link):
+                    os.remove(link)
+                os.symlink(RUNTIME_PYTHON, link)
+            sp_link = os.path.join(venv, "lib", f"python{major_minor}", "site-packages")
+            if os.path.lexists(sp_link):
+                os.remove(sp_link)
+            os.symlink(f"{final_root}/lib/python{major_minor}/site-packages", sp_link)
+            # Same extra module dirs the wrapper used to export via PYTHONPATH, minus bundled stdlib copies
+            extra: List[str] = []
+            for base in ("lib", "share"):
+                d = os.path.join(opt_app_dir, base)
+                if os.path.isdir(d):
+                    for n in sorted(os.listdir(d)):
+                        full = os.path.join(d, n)
+                        if os.path.isdir(full) and not n.startswith("python") and not n.startswith("."):
+                            extra.append(f"{final_root}/{base}/{n}")
+            for sub in (f"lib/{actual_name}/lib", f"lib/{actual_name}/Mod"):
+                if os.path.isdir(os.path.join(opt_app_dir, sub)):
+                    extra.append(f"{final_root}/{sub}")
+            if extra:
+                with open(os.path.join(sp, "_underpants_app_paths.pth"), "w") as fh:
+                    fh.write("\n".join(dict.fromkeys(extra)) + "\n")
+            if verbose:
+                print(f"  ✓ Private Python venv created (runtime {ver}, no exported PYTHONPATH).")
+            return True
+        except Exception as e:
+            if verbose:
+                print(f"  ! Could not create the private Python venv: {e}")
             return False
 
     @staticmethod
@@ -1648,6 +2514,10 @@ class TransmutationFactory:
         in staged shell scripts, text configs, python scripts, and symlinks.
         """
         app_prefix = f"/opt/underpants/pkgs/{actual_name}" if not actual_name.startswith("runtime-") else "/opt/underpants/runtime"
+        # 6A-9/6A-10: interpreter for rewritten /usr/bin/python3 references, decided once per build
+        py_target = None
+        if not actual_name.startswith("runtime-") and os.path.exists(RUNTIME_PYTHON):
+            py_target = f"{app_prefix}/.venv/bin/python3" if venv_site_packages(opt_app_dir) else RUNTIME_PYTHON
         scan_dirs = [opt_app_dir, staging_pkg]
         seen_paths = set()
 
@@ -1754,6 +2624,21 @@ class TransmutationFactory:
                             content = new_content
                             modified = True
 
+                        # 6A-9: Arch scripts expect /usr/bin/python3 to be Python 3.14. On Slackware that path is the
+                        # host Python 3.12, which cannot load the 3.14 modules bundled with the app ("SRE module
+                        # mismatch"). Point them at the runtime interpreter (3.14). Explicit other versions such as
+                        # /usr/bin/python3.12 are left alone; the runtime itself is never rewritten.
+                        if py_target:
+                            runtime_py = py_target
+                            new_content, n_py = re.subn(
+                                r'/usr/bin/(?:env\s+)?python(?:3(\.14)?)?(?![\w.\-])',
+                                lambda m: runtime_py + (m.group(1) or ""),
+                                content,
+                            )
+                            if n_py > 0:
+                                content = new_content
+                                modified = True
+
                         # Rewrite standard Autotools/CMake/Script variable assignments (prefix, exec_prefix, LIBDIR, datarootdir, sysconfdir)
                         new_content, n1 = re.subn(r'^((?:prefix|exec_prefix|PREFIX|EXEC_PREFIX)\s*=\s*)(["\']?)/usr\2(?=$|\s|;)', rf'\g<1>\g<2>{app_prefix}\g<2>', content, flags=re.MULTILINE)
                         if n1 > 0:
@@ -1793,6 +2678,17 @@ class TransmutationFactory:
         Generate a robust, universal Slackware host launcher wrapper script for a binary or application.
         """
         upper_app = actual_name.replace("-", "_").replace(".", "_").upper()
+        # 6A-12: the runtime libasound looks for plugins in /usr/lib/alsa-lib (32-bit on Slackware), so ALSA
+        # default/pipewire/pulse devices fail. Not for game launchers: their 32-bit children would inherit it.
+        if actual_name.lower() in GAME_LAUNCHER_APPS:
+            alsa_block = ""
+        else:
+            alsa_block = (
+                "# ALSA plugins (runtime libasound defaults to the 32-bit /usr/lib/alsa-lib on Slackware)\n"
+                "if [ -z \"${ALSA_PLUGIN_DIR:-}\" ] && [ -d /usr/lib64/alsa-lib ]; then\n"
+                "  export ALSA_PLUGIN_DIR=/usr/lib64/alsa-lib\n"
+                "fi\n"
+            )
         return f"""#!/bin/sh
 # --- [ Underpants Gnomes Launcher Wrapper for {bname} ] ---
 # Slackware Linux Host Sovereignty & Isolated Runtime Wrapper
@@ -1809,6 +2705,10 @@ export QT_SCALE_FACTOR_ROUNDING_POLICY="${{QT_SCALE_FACTOR_ROUNDING_POLICY:-Pass
 # Realtime & memory lock limits (DAWs / Audio engines / Ardour / Jack)
 ulimit -l unlimited 2>/dev/null || ulimit -l 1048576 2>/dev/null || true
 
+# 6A-14: apps with a private Python venv resolve their libraries through the RUNPATH set by patchelf.
+# Exporting LD_LIBRARY_PATH would leak the runtime's graphics libs (libGLX, libEGL, libdrm, libXrandr ...)
+# into everything the app starts, e.g. the Steam runtime container of a game.
+if [ ! -f "${{APP_ROOT}}/.venv/pyvenv.cfg" ]; then
 # Dynamic library isolation (Prefer app root, then isolated runtime, then common, then host with private subsystem dirs - 64-bit Multilib clean)
 export LD_LIBRARY_PATH="${{APP_ROOT}}/lib:${{APP_ROOT}}/lib64:/opt/underpants/runtime/lib:/opt/underpants/runtime/lib64:/opt/underpants/common/lib:/usr/lib64/libproxy:/usr/lib64/pulseaudio:/usr/lib64/pipewire-0.3:/usr/lib64/samba:${{LD_LIBRARY_PATH:-/usr/lib64}}"
 
@@ -1818,6 +2718,7 @@ for _nested_lib in "${{APP_ROOT}}/lib"/ghc-*/lib/* "${{APP_ROOT}}/lib"/ghc-* "${
     export LD_LIBRARY_PATH="${{_nested_lib}}:${{LD_LIBRARY_PATH}}"
   fi
 done
+fi
 
 # XDG data & resources (Preserve host /usr/local/share:/usr/share)
 export XDG_DATA_DIRS="${{APP_ROOT}}/share:/opt/underpants/runtime/share:/opt/underpants/common/share:${{XDG_DATA_DIRS:-/usr/local/share:/usr/share}}"
@@ -1825,7 +2726,7 @@ export XDG_DATA_DIRS="${{APP_ROOT}}/share:/opt/underpants/runtime/share:/opt/und
 # PipeWire & SPA plugin routing (Ensure audio event loops locate SPA plugins)
 export SPA_PLUGIN_DIR="${{APP_ROOT}}/lib/spa-0.2:/opt/underpants/runtime/lib/spa-0.2:/usr/lib64/spa-0.2:${{SPA_PLUGIN_DIR:-/usr/lib64/spa-0.2}}"
 export PIPEWIRE_MODULE_DIR="${{APP_ROOT}}/lib/pipewire-0.3:/opt/underpants/runtime/lib/pipewire-0.3:/usr/lib64/pipewire-0.3:${{PIPEWIRE_MODULE_DIR:-/usr/lib64/pipewire-0.3}}"
-
+{alsa_block}
 # GObject Introspection Typelib Path (Crucial for GTK/WebKit/GI apps)
 export GI_TYPELIB_PATH="${{APP_ROOT}}/lib/girepository-1.0:${{APP_ROOT}}/lib64/girepository-1.0:${{APP_ROOT}}/share/gir-1.0:/opt/underpants/runtime/lib/girepository-1.0:/opt/underpants/common/lib/girepository-1.0:${{GI_TYPELIB_PATH:-/usr/lib64/girepository-1.0}}"
 
@@ -1995,7 +2896,9 @@ for _d in "${{APP_ROOT}}"/lib/python*/site-packages \\
     _PY_DIRS="${{_PY_DIRS:+${{_PY_DIRS}}:}}${{_d}}"
   fi
 done
-if [ -n "${{_PY_DIRS}}" ]; then
+# 6A-10: apps with a private venv find their modules via ${{APP_ROOT}}/.venv/pyvenv.cfg; exporting
+# PYTHONPATH would leak the app's module dirs into every program it starts (games, other Pythons).
+if [ -n "${{_PY_DIRS}}" ] && [ ! -f "${{APP_ROOT}}/.venv/pyvenv.cfg" ]; then
   export PYTHONPATH="${{_PY_DIRS}}${{PYTHONPATH:+:${{PYTHONPATH}}}}"
 fi
 
@@ -2114,7 +3017,9 @@ fi
 
 # Smart Shebang & Hybrid Runtime Selector
 if [ -f "${{TARGET_BIN}}" ] && head -n1 "${{TARGET_BIN}}" 2>/dev/null | grep -qE '^#!.*python'; then
-  if [ -x "${{APP_ROOT}}/bin/python3" ]; then
+  if [ -x "${{APP_ROOT}}/.venv/bin/python3" ]; then
+    exec "${{APP_ROOT}}/.venv/bin/python3" "${{TARGET_BIN}}" "$@"
+  elif [ -x "${{APP_ROOT}}/bin/python3" ]; then
     exec "${{APP_ROOT}}/bin/python3" "${{TARGET_BIN}}" "$@"
   elif [ -x "/opt/underpants/runtime/bin/python3" ]; then
     exec "/opt/underpants/runtime/bin/python3" "${{TARGET_BIN}}" "$@"
@@ -2203,8 +3108,9 @@ exec "${{TARGET_BIN}}" "$@"
             filename = p.get("FILENAME") or os.path.basename(url)
             local_path = os.path.join(self.cache_pkg_dir, filename)
             expected_csize = int(p.get("CSIZE", 0))
+            expected_sha256 = p.get("SHA256SUM", "")
             if os.path.exists(local_path):
-                if self.is_valid_pkg_archive(local_path, expected_csize):
+                if self.is_valid_pkg_archive(local_path, expected_csize, expected_sha256):
                     downloaded_results.append((p, local_path))
                     completed_bytes[0] += os.path.getsize(local_path)
                     completed_count[0] += 1
@@ -2366,6 +3272,7 @@ exec "${{TARGET_BIN}}" "$@"
             local_path = os.path.join(self.cache_pkg_dir, filename)
             part_path = local_path + ".part"
             expected_csize = int(pkg_data.get("CSIZE", 0))
+            expected_sha256 = pkg_data.get("SHA256SUM", "")
             p_idx = pkg_data.get("_INDEX", 1)
 
             slot_id = None
@@ -2411,13 +3318,23 @@ exec "${{TARGET_BIN}}" "$@"
                             with open(part_path, "wb") as f:
                                 f.write(first_chunk)
                                 dl_cur = len(first_chunk)
+                                # 6A-35: the 25 s socket timeout only covers each single recv, so a mirror that trickles a
+                                # few bytes now and then never times out, and read(65536) does not return until 64 KiB
+                                # arrived. read1() returns as soon as data is there; a window check abandons this mirror
+                                # when less than DL_STALL_MIN_BYTES arrived in DL_STALL_WINDOW seconds (next mirror is tried).
+                                stall_mark_t, stall_mark_b = time.time(), dl_cur
+                                read_some = getattr(resp, "read1", resp.read)
                                 while True:
-                                    chunk = resp.read(65536)
+                                    chunk = read_some(65536)
                                     if not chunk:
                                         break
                                     f.write(chunk)
                                     dl_cur += len(chunk)
                                     now_c = time.time()
+                                    if now_c - stall_mark_t >= DL_STALL_WINDOW:
+                                        if dl_cur - stall_mark_b < DL_STALL_MIN_BYTES:
+                                            raise TimeoutError(f"download stalled: {filename} from {cand_url}")
+                                        stall_mark_t, stall_mark_b = now_c, dl_cur
                                     if slot_id is not None:
                                         with slot_lock:
                                             s_info = worker_status[slot_id]
@@ -2434,7 +3351,7 @@ exec "${{TARGET_BIN}}" "$@"
                                     with lock:
                                         active_parts[part_path] = dl_cur
 
-                        if os.path.exists(part_path) and self.is_valid_pkg_archive(part_path, expected_csize):
+                        if os.path.exists(part_path) and self.is_valid_pkg_archive(part_path, expected_csize, expected_sha256):
                             shutil.move(part_path, local_path)
                             download_success = True
                             got_404_all = False
@@ -2560,6 +3477,7 @@ exec "${{TARGET_BIN}}" "$@"
                         lp = os.path.join(self.cache_pkg_dir, fn)
                         pp = lp + ".part"
                         exp_sz = int(refreshed.get("CSIZE", 0))
+                        exp_sha = refreshed.get("SHA256SUM", "")
                         try:
                             req = urllib.request.Request(cand_url, headers=headers)
                             with urllib.request.urlopen(req, timeout=25) as resp:
@@ -2568,12 +3486,8 @@ exec "${{TARGET_BIN}}" "$@"
                                     continue
                                 with open(pp, "wb") as f:
                                     f.write(first_chunk)
-                                    while True:
-                                        chunk = resp.read(65536)
-                                        if not chunk:
-                                            break
-                                        f.write(chunk)
-                            if os.path.exists(pp) and self.is_valid_pkg_archive(pp, exp_sz):
+                                    copy_response_with_watchdog(resp, f, pp)
+                            if os.path.exists(pp) and self.is_valid_pkg_archive(pp, exp_sz, exp_sha):
                                 shutil.move(pp, lp)
                                 downloaded_results.append((refreshed, lp))
                                 recov_ok = True
@@ -2601,6 +3515,7 @@ exec "${{TARGET_BIN}}" "$@"
                 local_path = os.path.join(self.cache_pkg_dir, filename)
                 part_path = local_path + ".part"
                 expected_csize = int(p.get("CSIZE", 0))
+                expected_sha256 = p.get("SHA256SUM", "")
                 recov_success = False
 
                 for cand_url in candidates:
@@ -2615,12 +3530,8 @@ exec "${{TARGET_BIN}}" "$@"
                                     continue
                                 with open(part_path, "wb") as f:
                                     f.write(first_chunk)
-                                    while True:
-                                        chunk = resp.read(65536)
-                                        if not chunk:
-                                            break
-                                        f.write(chunk)
-                            if os.path.exists(part_path) and self.is_valid_pkg_archive(part_path, expected_csize):
+                                    copy_response_with_watchdog(resp, f, part_path)
+                            if os.path.exists(part_path) and self.is_valid_pkg_archive(part_path, expected_csize, expected_sha256):
                                 shutil.move(part_path, local_path)
                                 downloaded_results.append((p, local_path))
                                 recov_success = True
@@ -2656,60 +3567,523 @@ exec "${{TARGET_BIN}}" "$@"
         except Exception:
             return False
 
+    # --- [ P2/L1 (pacman master plan): glibc / libstdc++ / libgcc symbol headroom ] ---
+    # FACT 2026-10-13: Arch binaries already need GLIBC_2.44 and GLIBCXX_3.4.36, exactly what Slackware -current ships.
+    # The first Arch build against a newer glibc/gcc would fail at start-up ("version not found"). glibc can never be
+    # bundled (it is tied to the host loader), so such a package is held: not packaged, the installed version stays.
+    _HOST_SYMBOL_MAX: Optional[Dict[str, Tuple[int, ...]]] = None
+
+    @staticmethod
+    def _ver_tuple(v: str) -> Tuple[int, ...]:
+        return tuple(int(x) for x in re.findall(r"\d+", v))
+
+    @classmethod
+    def host_symbol_max(cls) -> Dict[str, Tuple[int, ...]]:
+        """Highest GLIBC_/GLIBCXX_/CXXABI_/GCC_ version the host libraries define (cached per process)."""
+        if cls._HOST_SYMBOL_MAX is not None:
+            return cls._HOST_SYMBOL_MAX
+        res: Dict[str, Tuple[int, ...]] = {}
+        try:
+            g = os.confstr("CS_GNU_LIBC_VERSION") or ""
+            m = re.search(r"([0-9]+\.[0-9]+)", g)
+            if m:
+                res["GLIBC"] = cls._ver_tuple(m.group(1))
+        except (ValueError, OSError):
+            pass
+        for lib, prefixes in (("libstdc++.so.6", ("GLIBCXX", "CXXABI")), ("libgcc_s.so.1", ("GCC",))):
+            path = next((os.path.join(d, lib) for d in ("/usr/lib64", "/lib64") if os.path.exists(os.path.join(d, lib))), "")
+            if not path:
+                continue
+            try:
+                out = subprocess.run(["readelf", "-V", "-W", path], capture_output=True, text=True, timeout=20).stdout
+            except (OSError, subprocess.SubprocessError):
+                continue
+            for pre in prefixes:
+                vers = [cls._ver_tuple(v) for v in re.findall(rf"\b{pre}_([0-9][0-9.]*)", out)]
+                if vers:
+                    res[pre] = max(vers)
+        cls._HOST_SYMBOL_MAX = res
+        return res
+
+    def check_symbol_headroom(self, target_dir: str) -> List[Tuple[str, str]]:
+        """Return (file, needed version) pairs that the host cannot satisfy. 64-bit ELF only (32-bit uses multilib)."""
+        host = self.host_symbol_max()
+        if "GLIBC" not in host or not shutil.which("readelf"):
+            return []
+        elf64: List[str] = []
+        for root, _, files in os.walk(target_dir):
+            for f in files:
+                fp = os.path.join(root, f)
+                try:
+                    if os.path.islink(fp) or not os.path.isfile(fp):
+                        continue
+                    with open(fp, "rb") as fh:
+                        head = fh.read(5)
+                    if head[:4] == b"\x7fELF" and head[4:5] == b"\x02":
+                        elf64.append(fp)
+                except OSError:
+                    continue
+        bad: List[Tuple[str, str]] = []
+        need_re = re.compile(r"Name:\s+(GLIBC|GLIBCXX|CXXABI|GCC)_([0-9][0-9.]*)")
+        for i in range(0, len(elf64), 200):
+            chunk = elf64[i:i + 200]
+            try:
+                out = subprocess.run(["readelf", "-V", "-W"] + chunk, capture_output=True, text=True, timeout=120).stdout
+            except (OSError, subprocess.SubprocessError):
+                continue
+            cur = chunk[0] if len(chunk) == 1 else ""
+            in_needs = False
+            for line in out.splitlines():
+                if line.startswith("File: "):
+                    cur, in_needs = line[6:].strip(), False
+                elif line.startswith("Version needs section"):
+                    in_needs = True
+                elif line.startswith("Version definition section") or line.startswith("Version symbols section"):
+                    in_needs = False
+                elif in_needs:
+                    m = need_re.search(line)
+                    if m and m.group(1) in host and self._ver_tuple(m.group(2)) > host[m.group(1)]:
+                        bad.append((cur, f"{m.group(1)}_{m.group(2)}"))
+        return bad
+
+    @staticmethod
+    def extract_pkg_archive(fpath: str, dest: str) -> Optional[str]:
+        """WP-7: unpack one Arch package; None on success, else one plain sentence. No shell, both pipe ends checked."""
+        name = os.path.basename(fpath)
+        try:
+            if fpath.endswith(".zst"):
+                z = subprocess.Popen(["zstd", "-d", "-c", "--", fpath], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+                t = subprocess.run(["tar", "-xf", "-", "-C", dest], stdin=z.stdout, stdout=subprocess.DEVNULL,
+                                   stderr=subprocess.PIPE, timeout=1800)
+                if z.stdout:
+                    z.stdout.close()
+                zrc = z.wait(timeout=60)
+                ok = zrc == 0 and t.returncode == 0
+            else:
+                t = subprocess.run(["tar", "-xf", fpath, "-C", dest], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+                                   timeout=1800)
+                ok = t.returncode == 0
+        except (OSError, subprocess.SubprocessError):
+            ok = False
+        if ok:
+            return None
+        return f"The download {name} is damaged and could not be unpacked, so nothing was built. Run the update again."
+
+    @staticmethod
+    def _report_merge_clashes(clash: List[Tuple[str, str, str]], label: str, verbose: bool) -> None:
+        """WP-7: files shipped by two packages with different content (the later package won). Reported, not fatal."""
+        if not clash:
+            return
+        trust_log([{"check": "merge", "label": label, "path": c[0], "first": c[1], "kept": c[2]} for c in clash[:200]])
+        if verbose:
+            print(f":: {len(clash)} file(s) in {label} came from two packages with different content; the later one was kept.")
+            for path, first, kept in clash[:3]:
+                print(f"   {os.path.basename(path)}: {first} / {kept}")
+
+    def trust_gate(self, downloaded: List[Tuple[Dict[str, Any], str]], verbose: bool = True) -> bool:
+        """WP-7: check every downloaded package's signature (%PGPSIG% from the repo DB) against the pinned keyrings.
+        Log mode (default): results go to the trust log only, nothing is held. Enforce mode: any package that is not
+        verified holds the whole build (False) with one plain sentence."""
+        # 6A-139: a DB entry without SHA256 is only checked by size and header; logged for now (owner decision WP-7)
+        trust_log([{"check": "sha256", "status": "missing", "name": pd.get("NAME", ""), "repo": pd.get("_REPO", "")}
+                   for pd, _ in downloaded if not str(pd.get("SHA256SUM", "") or "").strip()])
+        trust = trust_module()
+        if trust is None or not downloaded:
+            return True
+        mode = trust.trust_mode()
+
+        def one(item: Tuple[Dict[str, Any], str]) -> Any:
+            pdata, path = item
+            pgpsig = str(pdata.get("PGPSIG", "") or "")
+            sig: Optional[bytes] = None
+            if not pgpsig:
+                # Chaotic-AUR's database carries no %PGPSIG%: use the detached .sig next to the package (cached)
+                sig_path = path + ".sig"
+                try:
+                    if os.path.isfile(sig_path):
+                        with open(sig_path, "rb") as fh:
+                            sig = fh.read(16384)
+                    else:
+                        url = self.engine.get_download_url(pdata) or ""
+                        if url.startswith("https://"):
+                            sig = trust.fetch_signature(trust.sig_url(url))
+                            if sig:
+                                with open(sig_path, "wb") as fh:
+                                    fh.write(sig)
+                except OSError:
+                    pass
+            return trust.verify_package(path, sig, pdata.get("_REPO", ""), name=pdata.get("NAME", ""),
+                                        pgpsig_b64=pgpsig)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as ex:
+            results = list(ex.map(one, downloaded))
+        trust_log([dict(r.as_dict(), check="package", mode=mode) for r in results])
+        blocked = [r for r in results if r.blocks(mode)]
+        if blocked:
+            print(f":: {blocked[0].message(mode)}")
+            if len(blocked) > 1:
+                print(f"   {len(blocked) - 1} more package(s) could not be verified either.")
+            return False
+        return True
+
+    @staticmethod
+    def runtime_host_only_guard(opt_runtime_dir: str) -> List[str]:
+        """WP-3: remove every GPU/audio/TLS-trust file that slipped into the runtime (runtime contract). Returns the
+        removed runtime-relative paths. Never follows symlinks out of the tree."""
+        removed: List[str] = []
+        root = os.path.abspath(opt_runtime_dir)
+        for pat in RUNTIME_HOST_ONLY_FILES:
+            for fp in glob.glob(os.path.join(root, pat)):
+                if os.path.commonpath([root, os.path.abspath(fp)]) == root and (os.path.islink(fp) or os.path.isfile(fp)):
+                    try:
+                        os.unlink(fp)
+                        removed.append(os.path.relpath(fp, root))
+                    except OSError:
+                        pass
+        for d in RUNTIME_HOST_ONLY_DIRS:
+            dp = os.path.join(root, d)
+            if os.path.islink(dp):
+                os.unlink(dp)
+                removed.append(d)
+            elif os.path.isdir(dp):
+                shutil.rmtree(dp, ignore_errors=True)
+                removed.append(d + "/")
+        return sorted(removed)
+
+    _HOST_VERDEFS: Dict[str, Set[str]] = {}
+
+    @staticmethod
+    def host_soname_map() -> Dict[str, str]:
+        """64-bit sonames in the host ld.so.cache -> path."""
+        res: Dict[str, str] = {}
+        try:
+            out = subprocess.run(["/sbin/ldconfig", "-p"], capture_output=True, text=True, timeout=20).stdout
+        except (OSError, subprocess.SubprocessError):
+            return res
+        for line in out.splitlines():
+            m = re.match(r"\s*(\S+)\s+\(([^)]*)\)\s+=>\s+(\S+)", line)
+            if m and "x86-64" in m.group(2):
+                res.setdefault(m.group(1), m.group(3))
+        return res
+
+    @classmethod
+    def _host_verdefs(cls, path: str) -> Set[str]:
+        if path not in cls._HOST_VERDEFS:
+            names: Set[str] = set()
+            try:
+                out = subprocess.run(["readelf", "-V", "-W", path], capture_output=True, text=True, timeout=20).stdout
+                in_defs = False
+                for line in out.splitlines():
+                    if line.startswith("Version definition section"):
+                        in_defs = True
+                    elif line.startswith("Version needs section") or line.startswith("Version symbols section"):
+                        in_defs = False
+                    elif in_defs:
+                        m = re.search(r"Name:\s+(\S+)", line)
+                        if m:
+                            names.add(m.group(1))
+            except (OSError, subprocess.SubprocessError):
+                pass
+            cls._HOST_VERDEFS[path] = names
+        return cls._HOST_VERDEFS[path]
+
+    def _write_runtime_manifest(self, opt_runtime_dir: str, profile: str, version: str,
+                                downloaded: List[Tuple[Dict[str, Any], str]], plan: Dict[str, Any], removed: List[str]) -> None:
+        """WP-3: opt/underpants/runtime/.gnomes/manifest.json (schema 1), a package-owned file and the seed of the
+        per-package registry (WP-5/WP-6)."""
+        def sha256_file(fp: str) -> str:
+            h = hashlib.sha256()
+            try:
+                with open(fp, "rb") as fh:
+                    for chunk in iter(lambda: fh.read(1 << 20), b""):
+                        h.update(chunk)
+                return h.hexdigest()
+            except OSError:
+                return ""
+        repos: Dict[str, str] = {}
+        pkgs: List[Dict[str, Any]] = []
+        for pdata, fpath in downloaded:
+            repo = pdata.get("_REPO", "")
+            if repo and repo not in repos:
+                db = next((os.path.join(self.engine.db_dir, f) for f in sorted(os.listdir(self.engine.db_dir))
+                           if f.startswith(repo + ".db")), "")
+                repos[repo] = sha256_file(db) if db else ""
+            try:
+                with tarfile.open(fpath, "r:*") as tf:
+                    count = sum(1 for m in tf if m.isfile() or m.issym())
+            except (tarfile.TarError, OSError):
+                count = -1
+            pkgs.append({"name": pdata.get("NAME", ""), "version": pdata.get("VERSION", ""), "repo": repo,
+                         "sha256": pdata.get("SHA256SUM", "") or sha256_file(fpath),
+                         "provides": pdata.get("PROVIDES", []), "files": count})
+        host_only = []
+        hp = plan.get("host_provided", {}) if isinstance(plan, dict) else {}
+        pkgdb = FOOTPRINT_PKGDB
+        installed = os.listdir(pkgdb) if os.path.isdir(pkgdb) else []
+        for name, why in sorted(hp.items()):
+            if "runtime contract" not in str(why):
+                continue
+            host_pkg = next((n for n in installed if footprint_pkg_base(n) == name.lower()), "")
+            host_only.append({"package": name, "host_package": host_pkg})
+        manifest = {"schema": 1, "profile": profile, "version": version,
+                    "built": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                    "repo_db_sha256": repos, "packages": sorted(pkgs, key=lambda x: x["name"]),
+                    "host_only": host_only, "host_only_files_removed": removed}
+        mdir = os.path.join(opt_runtime_dir, ".gnomes")
+        os.makedirs(mdir, exist_ok=True)
+        with open(os.path.join(mdir, "manifest.json"), "w", encoding="utf-8") as fh:
+            json.dump(manifest, fh, indent=1, sort_keys=True)
+            fh.write("\n")
+
+    def host_fit_problems(self, target_dir: str) -> List[str]:
+        """WP-3 host-fit check: every host-only soname the tree needs must be a 64-bit library in the host ld.so.cache
+        that defines every symbol version asked for. Returns '<soname> <reason>' items (empty = fits)."""
+        if not shutil.which("readelf"):
+            return ["readelf missing (cannot check)"]
+        own = {f for _, _, fs in os.walk(os.path.join(target_dir, "lib")) for f in fs}
+        elf64: List[str] = []
+        for root, _, files in os.walk(target_dir):
+            for f in files:
+                fp = os.path.join(root, f)
+                try:
+                    if os.path.islink(fp) or not os.path.isfile(fp):
+                        continue
+                    with open(fp, "rb") as fh:
+                        head = fh.read(5)
+                    if head[:4] == b"\x7fELF" and head[4:5] == b"\x02":
+                        elf64.append(fp)
+                except OSError:
+                    continue
+        needed: Dict[str, Set[str]] = {}
+        for i in range(0, len(elf64), 200):
+            chunk = elf64[i:i + 200]
+            try:
+                out = subprocess.run(["readelf", "-d", "-V", "-W"] + chunk, capture_output=True, text=True, timeout=180).stdout
+            except (OSError, subprocess.SubprocessError):
+                return ["readelf failed (cannot check)"]
+            in_needs, cur_lib = False, ""
+            for line in out.splitlines():
+                m = re.search(r"\(NEEDED\)\s+Shared library: \[([^\]]+)\]", line)
+                if m:
+                    needed.setdefault(m.group(1), set())
+                    continue
+                if line.startswith("Version needs section"):
+                    in_needs = True
+                elif line.startswith("File: ") and not in_needs:
+                    continue
+                elif line.startswith("Version definition section") or line.startswith("Version symbols section") or line.startswith("File: /"):
+                    in_needs = False
+                elif in_needs:
+                    mf = re.search(r"File:\s+(\S+)\s+Cnt:", line)
+                    if mf:
+                        cur_lib = mf.group(1)
+                        continue
+                    mn = re.search(r"Name:\s+(\S+)", line)
+                    if mn and cur_lib:
+                        needed.setdefault(cur_lib, set()).add(mn.group(1))
+        host = self.host_soname_map()
+        problems: List[str] = []
+        for so, vers in sorted(needed.items()):
+            if so in own or not RUNTIME_HOST_ONLY_SONAME_RE.match(so):
+                continue
+            path = host.get(so)
+            if not path:
+                problems.append(f"{so} is not installed on this Slackware (64-bit)")
+                continue
+            missing = sorted(v for v in vers if v not in self._host_verdefs(path))
+            if missing:
+                problems.append(f"{so} on this Slackware lacks {', '.join(missing[:3])}")
+        return problems
+
+    @staticmethod
+    def held_file_paths() -> List[str]:
+        """Held list: root cache when running as root, the user's cache otherwise (both are read)."""
+        return [os.path.join(DEFAULT_CACHE_BASE, "held.json"), os.path.join(USER_CACHE_BASE, "held.json")]
+
+    @classmethod
+    def host_symbol_stamp(cls) -> str:
+        return ";".join(f"{k}={'.'.join(map(str, v))}" for k, v in sorted(cls.host_symbol_max().items()))
+
+    @classmethod
+    def load_held(cls) -> Dict[str, Dict[str, str]]:
+        held: Dict[str, Dict[str, str]] = {}
+        for fp in cls.held_file_paths():
+            try:
+                with open(fp, "r", encoding="utf-8") as fh:
+                    for k, v in json.load(fh).items():
+                        if isinstance(v, dict):
+                            held[k] = v
+            except (OSError, ValueError):
+                continue
+        return held
+
+    @classmethod
+    def record_held(cls, name: str, version: str, need: str, reason: str) -> None:
+        """Remember a held package so it is shown and not rebuilt every run until the host or the package changes."""
+        fp = cls.held_file_paths()[0 if os.geteuid() == 0 else 1]
+        try:
+            os.makedirs(os.path.dirname(fp), exist_ok=True)
+            data: Dict[str, Any] = {}
+            if os.path.exists(fp):
+                with open(fp, "r", encoding="utf-8") as fh:
+                    data = json.load(fh)
+            data[name] = {"version": version, "needs": need, "host": cls.host_symbol_stamp(), "reason": reason,
+                          "since": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
+            tmp = fp + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as fh:
+                json.dump(data, fh, indent=2)
+            os.replace(tmp, fp)
+        except (OSError, ValueError):
+            pass
+
+    def _headroom_refusal(self, target_dir: str, label: str, verbose: bool, name: str = "", version: str = "") -> bool:
+        """True (and one plain message) when the build must be held because the host libraries are too old."""
+        bad = self.check_symbol_headroom(target_dir)
+        if not bad:
+            return False
+        worst = max((b[1] for b in bad), key=lambda v: self._ver_tuple(v.split("_", 1)[1]))
+        fam = worst.split("_", 1)[0]
+        have = ".".join(str(x) for x in self.host_symbol_max().get(fam, ()))
+        if name:
+            self.record_held(name, version, worst, f"needs {worst}, host has {fam} {have}")
+        print(f"\n\033[1;33m:: {label} needs a newer system library ({worst}) than this Slackware has ({fam} {have}), "
+              f"so it was not installed and your current version stays. It will install once Slackware updates.\033[0m")
+        if verbose:
+            for f, v in bad[:5]:
+                print(f"   {v}  {os.path.relpath(f, target_dir)}")
+        return True
+
     def patch_elf_rpaths(self, target_dir: str, verbose: bool = True) -> int:
-        """Rewrite RUNPATH and sanitize absolute DT_NEEDED paths on all ELF binaries using patchelf."""
-        patched = 0
+        """Rewrite RUNPATH and sanitize absolute DT_NEEDED paths on all ELF binaries using patchelf in parallel."""
         has_patchelf = shutil.which("patchelf") is not None
         if not has_patchelf:
             if verbose:
                 print("  ⚠️  patchelf binary not found in PATH; skipping RUNPATH relocation.")
             return 0
 
-        rpath_val = "$ORIGIN/../lib:$ORIGIN/lib:$ORIGIN:/opt/underpants/common/lib:/opt/underpants/runtime/lib:/usr/lib64/pulseaudio:/usr/lib/pulseaudio:/usr/lib64/pipewire-0.3:/usr/lib/pipewire-0.3:/usr/lib64/samba"
+        # WP-3: no /opt/underpants/common (never existed) and no 32-bit /usr/lib/{pulseaudio,pipewire-0.3} (wrong ELF class)
+        rpath_val = "$ORIGIN/../lib:$ORIGIN/lib:$ORIGIN:/opt/underpants/runtime/lib:/usr/lib64/pulseaudio:/usr/lib64/pipewire-0.3:/usr/lib64/samba"
 
+        elf_files = []
+        # 6A-18: index every shared object in the tree so each ELF can get $ORIGIN-relative RUNPATH entries for the
+        # app dirs that hold its NEEDED libs (e.g. lib/inkscape/libinkscape_base.so, or lib/ libs needed by plugins in
+        # lib/<x>/modules). venv apps no longer export LD_LIBRARY_PATH or the nested lib loop (6A-14).
+        so_re = re.compile(r"\.so(\.[0-9]+)*$")
+        top_lib_dirs = [os.path.join(target_dir, "lib"), os.path.join(target_dir, "lib64")]
+        lib_dirs_by_name = {}
         for root, _, files in os.walk(target_dir):
             for fname in files:
                 fpath = os.path.join(root, fname)
+                if so_re.search(fname):
+                    lib_dirs_by_name.setdefault(fname, set()).add(root)
                 if self.is_elf_file(fpath):
+                    elf_files.append(fpath)
+
+        if not elf_files:
+            return 0
+
+        base_rpath = rpath_val.split(":")
+
+        def _private_rpath_entries(fpath: str, needed_list) -> list:
+            elf_dir = os.path.dirname(fpath)
+            reachable = {os.path.normpath(os.path.join(elf_dir, d)) for d in ("../lib", "lib", ".")}
+            extra = []
+            for needed in needed_list:
+                dirs = lib_dirs_by_name.get(os.path.basename(needed))
+                if not dirs:
+                    continue
+                if any(os.path.normpath(d) in reachable for d in dirs):
+                    continue
+                # top-level lib dirs first, then nested dirs in a stable order
+                for d in sorted(dirs, key=lambda x: (x not in top_lib_dirs, x)):
+                    entry = "$ORIGIN/" + os.path.relpath(d, elf_dir)
+                    if entry not in extra:
+                        extra.append(entry)
+            return extra
+
+        def _patch_single_elf(fpath: str):
+            # 6A-19: returns True (patched), None (nothing to patch: relocatable object or static binary),
+            # False (patchelf failed). Read-only files (e.g. perl XS modules, 0555) get u+w for the patch only.
+            orig_mode = None
+            try:
+                with open(fpath, "rb") as fh:
+                    hdr = fh.read(18)
+                if len(hdr) < 18 or int.from_bytes(hdr[16:18], "little" if hdr[5] == 1 else "big") not in (2, 3):
+                    return None
+                st_mode = os.stat(fpath).st_mode
+                if not st_mode & stat.S_IWUSR:
+                    orig_mode = stat.S_IMODE(st_mode)
+                    os.chmod(fpath, orig_mode | stat.S_IWUSR)
+                res = subprocess.run(
+                    ["patchelf", "--print-needed", fpath],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.DEVNULL,
+                    text=True,
+                    check=False
+                )
+                needed_list = []
+                if res.returncode == 0 and res.stdout:
+                    needed_list = [n.strip() for n in res.stdout.strip().splitlines() if n.strip()]
+                # 1. Set RUNPATH (app-private dirs go before the shared runtime pool)
+                extra = _private_rpath_entries(fpath, needed_list)
+                elf_rpath = ":".join(base_rpath[:3] + extra + base_rpath[3:]) if extra else rpath_val
+                set_res = subprocess.run(
+                    ["patchelf", "--set-rpath", elf_rpath, fpath],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    check=False
+                )
+                if set_res.returncode != 0:
+                    # no dynamic section (static binary) -> nothing to relocate; otherwise a real failure
+                    return None if res.returncode != 0 else False
+                # 2. Sanitize any DT_NEEDED containing absolute paths (e.g. /usr/lib/libtlottie.so -> libtlottie.so)
+                if needed_list:
+                    for needed in needed_list:
+                        if "/" in needed:
+                            bare_lib = os.path.basename(needed)
+                            if bare_lib:
+                                subprocess.run(
+                                    ["patchelf", "--replace-needed", needed, bare_lib, fpath],
+                                    stdout=subprocess.DEVNULL,
+                                    stderr=subprocess.DEVNULL,
+                                    check=False
+                                )
+                return True
+            except Exception:
+                return False
+            finally:
+                if orig_mode is not None:
                     try:
-                        # 1. Set RUNPATH
-                        subprocess.run(
-                            ["patchelf", "--set-rpath", rpath_val, fpath],
-                            stdout=subprocess.DEVNULL,
-                            stderr=subprocess.DEVNULL,
-                            check=False
-                        )
-                        # 2. Sanitize any DT_NEEDED containing absolute paths (e.g. /usr/lib/libtlottie.so -> libtlottie.so)
-                        res = subprocess.run(
-                            ["patchelf", "--print-needed", fpath],
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.DEVNULL,
-                            text=True,
-                            check=False
-                        )
-                        if res.returncode == 0 and res.stdout:
-                            for needed in res.stdout.strip().splitlines():
-                                needed = needed.strip()
-                                if "/" in needed:
-                                    bare_lib = os.path.basename(needed)
-                                    if bare_lib:
-                                        subprocess.run(
-                                            ["patchelf", "--replace-needed", needed, bare_lib, fpath],
-                                            stdout=subprocess.DEVNULL,
-                                            stderr=subprocess.DEVNULL,
-                                            check=False
-                                        )
-                        patched += 1
-                    except Exception:
+                        os.chmod(fpath, orig_mode)
+                    except OSError:
                         pass
-        return patched
+
+        max_workers = min(32, (os.cpu_count() or 4) + 4)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            results = list(executor.map(_patch_single_elf, elf_files))
+
+        failed = [os.path.relpath(f, target_dir) for f, r in zip(elf_files, results) if r is False]
+        if failed:
+            shown = ", ".join(failed[:3]) + (" ..." if len(failed) > 3 else "")
+            print(f":: Library paths could not be set in {len(failed)} file(s): {shown}")
+        return sum(1 for r in results if r)
 
     @staticmethod
     def _run_makepkg_with_progress(staging_pkg: str, txz_output_path: str, verbose: bool = True) -> bool:
         """Create genuine Slackware .txz package via direct high-speed Slackware tar pipeline."""
-        cmd = f"cd '{staging_pkg}' && find ./ | LC_COLLATE=C sort | sed '2,$s,^\\./,,' | tar --no-recursion -T - -cf - | xz -T0 -1 > '{txz_output_path}'"
+        # 2A/2B: Footprint Guard (enforce mode unless SLACKY_FOOTPRINT_MODE=report)
+        try:
+            footprint_guard(staging_pkg, os.path.basename(txz_output_path).replace(".txz", ""))
+        except Exception as fp_err:
+            if os.environ.get("SLACKY_FOOTPRINT_MODE", "enforce").strip().lower() != "report":
+                print(f":: Footprint check could not run ({fp_err}). Package not built.")
+                return False
+            print(f":: Footprint check could not run ({fp_err}).")
+        # 6A-139: pipefail, so a find/tar error fails the package instead of leaving a short archive; paths as arguments
+        cmd = ("set -o pipefail; cd \"$1\" && find ./ | LC_COLLATE=C sort | sed '2,$s,^\\./,,' | "
+               "tar --owner=0 --group=0 --numeric-owner --no-recursion -T - -cf - | xz -T0 -1 > \"$2\"")
 
-        p = subprocess.Popen(cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+        p = subprocess.Popen(["bash", "-c", cmd, "slacky-pack", staging_pkg, txz_output_path],
+                             stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
         is_tty = sys.stdout.isatty() and verbose
 
         if is_tty:
@@ -2733,6 +4107,10 @@ exec "${{TARGET_BIN}}" "$@"
         if p.returncode != 0 or not os.path.exists(txz_output_path) or os.path.getsize(txz_output_path) == 0:
             if verbose:
                 print(f"Error creating Slackware package: {stderr}")
+            try:
+                os.remove(txz_output_path)  # 6A-139: no short archive is left for an installer to pick up
+            except OSError:
+                pass
             return False
         return True
 
@@ -2743,7 +4121,7 @@ exec "${{TARGET_BIN}}" "$@"
         if not clean_targets:
             return None
 
-        # 1. Check all targets exist
+        # 1. Check all targets exist and enforce Host Sovereignty Shield
         valid_targets = []
         for t in clean_targets:
             p = self.engine.get_package(t)
@@ -2751,7 +4129,15 @@ exec "${{TARGET_BIN}}" "$@"
                 if verbose:
                     print(f"Error: Target package '{t}' not found in synced repositories.")
                 return None
-            valid_targets.append(p["NAME"])
+            target_name_resolved = p["NAME"]
+            if is_protected_host_binary(target_name_resolved):
+                if verbose:
+                    print(f"\n\033[1;31m🛑 Host Sovereignty Shield Activated!\033[0m")
+                    print(f"   '{target_name_resolved}' is a protected Slackware core system component.")
+                    print(f"   The Host Sovereignty Shield refuses to transmute or overwrite core distribution utilities.")
+                    print(f"   Please manage '{target_name_resolved}' natively using Slackware pkgtools or slackpkg.\n")
+                return None
+            valid_targets.append(target_name_resolved)
 
         # 2. Curated collision check
         for actual_name in valid_targets:
@@ -2776,6 +4162,11 @@ exec "${{TARGET_BIN}}" "$@"
         if not to_install:
             if verbose:
                 print("Error: No packages resolved.")
+            return None
+        # WP-2: refuse before downloading when the disk cannot hold the build
+        no_room = space_precheck(sum(int(p.get("ISIZE", 0) or 0) for p in to_install), build_dir_base(), ", ".join(valid_targets))
+        if no_room:
+            print(f":: {no_room}")
             return None
 
         if verbose:
@@ -2841,6 +4232,8 @@ exec "${{TARGET_BIN}}" "$@"
             if verbose:
                 print(f"Error: Only {len(downloaded_files)}/{len(to_install)} packages were downloaded successfully.")
             return None
+        if not self.trust_gate(downloaded_files, verbose):
+            return None
 
         # 4. For each target in valid_targets, stage and package it individually
         results = []
@@ -2871,6 +4264,15 @@ exec "${{TARGET_BIN}}" "$@"
         raw_version = pkg.get("VERSION", "1.0")
         clean_version = raw_version.replace(":", "_").replace("-", "_")
         desc = pkg.get("DESC", "Transmuted by Underpants Gnomes for Slackware Linux")
+
+        # Host Sovereignty Shield: Refuse to transmute core distribution utilities
+        if not is_runtime and is_protected_host_binary(actual_name):
+            if verbose:
+                print(f"\n\033[1;31m🛑 Host Sovereignty Shield Activated!\033[0m")
+                print(f"   '{actual_name}' is a protected Slackware core system component.")
+                print(f"   The Host Sovereignty Shield refuses to transmute or overwrite core distribution utilities.")
+                print(f"   Please manage '{actual_name}' natively using Slackware pkgtools or slackpkg.\n")
+            return None
 
         # Curated Slackware Package Collision Guard (Skip for internal runtime packages)
         if not is_runtime and not pre_downloaded:
@@ -2967,11 +4369,14 @@ exec "${{TARGET_BIN}}" "$@"
                 if verbose:
                     print(f"Error: Only {len(downloaded_files)}/{len(to_install)} packages were downloaded successfully.")
                 return None
+            if not self.trust_gate(downloaded_files, verbose):
+                return None
         else:
             downloaded_files = []
             for p in to_install:
                 candidates = self.engine.get_download_urls_candidates(p)
                 fname = p.get("FILENAME") or (os.path.basename(candidates[0]) if candidates else f"{p.get('NAME')}.pkg.tar.zst")
+                fname = os.path.basename(fname)  # 6A-139: never a path out of the cache dir
                 lpath = os.path.join(self.cache_pkg_dir, fname)
                 if os.path.exists(lpath):
                     downloaded_files.append((p, lpath))
@@ -2989,7 +4394,8 @@ exec "${{TARGET_BIN}}" "$@"
                             downloaded_files.append((p, res_dl))
 
         # Setup staging directory
-        staging_base = f"/tmp/transmute-gnomes-{actual_name}-{os.getpid()}"
+        # 6A-50: private staging dir (mkdtemp 0700), never a predictable /tmp path
+        staging_base = tempfile.mkdtemp(prefix=f"transmute-gnomes-{actual_name}-", dir=build_dir_base())
         staging_pkg = os.path.join(staging_base, "pkg")
         if is_runtime:
             opt_app_dir = os.path.join(staging_pkg, "opt", "underpants", "runtime")
@@ -3021,73 +4427,57 @@ exec "${{TARGET_BIN}}" "$@"
             # Track binaries and desktop entries belonging to the primary target package
             primary_binaries: Set[str] = {actual_name}
             primary_desktop_files: Set[str] = set()
+            primary_desktop_binaries: Set[str] = set()
+
+            # WP-7: which package put each staged file there; a different file from a second package is reported
+            merge_state: Dict[str, Any] = {"pkg": "", "owner": {}, "clash": []}
+
+            def _note_merge(d_f: str, s_f: str) -> None:
+                prev, cur = merge_state["owner"].get(d_f), merge_state["pkg"]
+                if prev and prev != cur:
+                    try:
+                        if os.path.islink(s_f) or os.path.islink(d_f):
+                            same = os.path.islink(s_f) and os.path.islink(d_f) and os.readlink(s_f) == os.readlink(d_f)
+                        else:
+                            import filecmp
+                            same = os.path.isfile(d_f) and filecmp.cmp(s_f, d_f, shallow=False)
+                    except OSError:
+                        same = False
+                    if not same:
+                        merge_state["clash"].append((d_f, prev, cur))
+                merge_state["owner"][d_f] = cur
 
             def _merge_tree(src_dir: str, dst_dir: str):
                 """Recursively merge src_dir into dst_dir without deleting existing non-conflicting files/subdirectories."""
-                if not os.path.isdir(src_dir):
-                    return
-                os.makedirs(dst_dir, exist_ok=True)
-                for root, dirs, files in os.walk(src_dir):
-                    rel = os.path.relpath(root, src_dir)
-                    target_dir = os.path.join(dst_dir, rel) if rel != "." else dst_dir
-                    os.makedirs(target_dir, exist_ok=True)
-                    for d in dirs:
-                        os.makedirs(os.path.join(target_dir, d), exist_ok=True)
-                    for f in files:
-                        s_f = os.path.join(root, f)
-                        d_f = os.path.join(target_dir, f)
-                        if os.path.islink(s_f):
-                            target = os.readlink(s_f)
-                            if os.path.islink(d_f) or os.path.exists(d_f):
-                                try:
-                                    os.remove(d_f)
-                                except Exception:
-                                    pass
-                            try:
-                                os.symlink(target, d_f)
-                            except Exception:
-                                pass
-                        elif os.path.isfile(s_f):
-                            try:
-                                shutil.copy2(s_f, d_f)
-                            except Exception:
-                                pass
+                # 6A-138: links stay links, no write through a destination link, a copy error stops the build
+                merge_tree_safe(src_dir, dst_dir, staging_pkg, _note_merge)
 
             # Extract all archives and recursively merge payloads
             for pdata, fpath in downloaded_files:
                 is_primary = (pdata.get("NAME") == actual_name)
                 tmp_extract = os.path.join(staging_base, f"extract_{pdata['NAME']}")
                 os.makedirs(tmp_extract, exist_ok=True)
-                if fpath.endswith(".zst"):
-                    subprocess.run(f"zstd -d -c '{fpath}' | tar -xf - -C '{tmp_extract}' 2>/dev/null", shell=True, check=False)
-                else:
-                    subprocess.run(f"tar -xf '{fpath}' -C '{tmp_extract}' 2>/dev/null", shell=True, check=False)
+                merge_state["pkg"] = pdata.get("NAME", "")
+                # WP-7: a broken or truncated archive stops the build (it was silently half-extracted before)
+                x_err = self.extract_pkg_archive(fpath, tmp_extract)
+                if x_err:
+                    print(f":: {x_err}")
+                    return None
 
                 # Merge binaries into opt_bin_dir
                 for cand_bin in ["usr/bin", "bin", "usr/sbin", "sbin"]:
                     src = os.path.join(tmp_extract, cand_bin)
-                    if os.path.isdir(src):
+                    # 6A-138: a linked bin dir (usr/sbin -> bin) is never followed out of the extracted package
+                    if os.path.isdir(src) and not os.path.islink(src):
                         for item in os.listdir(src):
                             s = os.path.join(src, item)
                             d = os.path.join(opt_bin_dir, item)
                             if is_primary:
                                 primary_binaries.add(item)
                             if os.path.islink(s):
-                                target = os.readlink(s)
-                                if os.path.islink(d) or os.path.exists(d):
-                                    try:
-                                        os.remove(d)
-                                    except Exception:
-                                        pass
-                                try:
-                                    os.symlink(target, d)
-                                except Exception:
-                                    pass
+                                _merge_place_link(s, d)
                             elif os.path.isfile(s):
-                                try:
-                                    shutil.copy2(s, d)
-                                except Exception:
-                                    pass
+                                _merge_copy_file(s, d)
                             elif os.path.isdir(s):
                                 _merge_tree(s, d)
 
@@ -3153,9 +4543,11 @@ exec "${{TARGET_BIN}}" "$@"
                                     for line in f:
                                         if line.startswith("Exec="):
                                             parts = line[5:].strip().split()
-                                            if parts:
-                                                prog = os.path.basename(parts[0])
+                                            idx = desktop_exec_program_index(parts) if parts else -1
+                                            if idx >= 0:
+                                                prog = os.path.basename(parts[idx])
                                                 if prog:
+                                                    primary_desktop_binaries.add(prog)
                                                     primary_binaries.add(prog)
                             except Exception:
                                 pass
@@ -3202,12 +4594,27 @@ exec "${{TARGET_BIN}}" "$@"
 
                 # Stage GSettings schemas, metainfo, mime, and app-specific private share directories into usr/share
                 if os.path.isdir(opt_share_dir):
+                    app_key = re.sub(r"-(bin|git|appimage)$", "", actual_name.lower())
                     for s_item in os.listdir(opt_share_dir):
                         s_item_path = os.path.join(opt_share_dir, s_item)
                         if not os.path.isdir(s_item_path):
                             continue
                         if s_item in ("applications", "icons", "pixmaps", "locale", "man", "doc", "info", "gtk-doc", "help", "bash-completion", "zsh", "fish"):
                             continue
+                        elif s_item in HOST_SHARE_SKIP:
+                            # 6A-20: build-only data and host sound-stack config stay in APP_ROOT/share (XDG_DATA_DIRS)
+                            continue
+                        elif s_item == "dbus-1":
+                            # 6A-20: only the app's own session service; bundled portal/dependency services would
+                            # replace the desktop-wide ones (claude-desktop/lutris shipped xdg-desktop-portal services)
+                            s_services = os.path.join(s_item_path, "services")
+                            if os.path.isdir(s_services):
+                                for svc in sorted(os.listdir(s_services)):
+                                    svc_path = os.path.join(s_services, svc)
+                                    if svc.endswith(".service") and app_key in svc.lower() and os.path.isfile(svc_path):
+                                        d_svc_dir = os.path.join(staging_pkg, "usr/share/dbus-1/services")
+                                        os.makedirs(d_svc_dir, exist_ok=True)
+                                        shutil.copy2(svc_path, os.path.join(d_svc_dir, svc))
                         elif s_item == "glib-2.0":
                             s_schemas = os.path.join(s_item_path, "schemas")
                             if os.path.isdir(s_schemas):
@@ -3222,6 +4629,7 @@ exec "${{TARGET_BIN}}" "$@"
                             # App-specific data assets (e.g. missioncenter, fastfetch, goverlay, mangohud, etc.)
                             _merge_tree(s_item_path, os.path.join(staging_pkg, "usr/share", s_item))
 
+            self._report_merge_clashes(merge_state["clash"], actual_name, verbose)
             # Universal text script and configuration path relocation pass
             self._relocate_text_and_symlink_paths(opt_app_dir, actual_name, staging_pkg)
 
@@ -3232,7 +4640,18 @@ exec "${{TARGET_BIN}}" "$@"
             if verbose:
                 print(f"  ✓ Relocated {patched_count} ELF binaries and shared objects.")
 
+            # P2/L1: hold the package when it needs newer glibc/libstdc++/libgcc symbols than the host provides
+            if self._headroom_refusal(opt_app_dir, actual_name, verbose, name=actual_name, version=raw_version):
+                self.safe_rmtree(staging_base)
+                return None
+
+            # 6A-10: private venv (after patchelf, so patchelf never follows the symlink into the runtime)
+            if not is_runtime:
+                self._create_python_venv(opt_app_dir, actual_name, verbose=verbose)
+
             # Remove sandboxed Glycin pixbuf loader and clean loaders.cache
+            # 6A-172: the cache must name the INSTALLED folder, never the build/staging folder
+            _final_lib = "/opt/underpants/runtime/lib/" if is_runtime else f"/opt/underpants/pkgs/{actual_name}/lib/"
             for root, _, files in os.walk(opt_app_dir):
                 for f in files:
                     if f == "libpixbufloader-glycin.so":
@@ -3259,36 +4678,63 @@ exec "${{TARGET_BIN}}" "$@"
                                         continue
                                     else:
                                         continue
-                                cleaned_lines.append(line.replace("/usr/lib64/", f"{opt_app_dir}/lib/").replace("/usr/lib/", f"{opt_app_dir}/lib/"))
+                                cleaned_lines.append(line.replace("/usr/lib64/", _final_lib).replace("/usr/lib/", _final_lib))
                             with open(lpath, "w", encoding="utf-8") as lf:
                                 lf.writelines(cleaned_lines)
                         except Exception:
                             pass
 
             # Discover primary package candidates to wrap into /usr/bin/ (strictly scoped to primary application targets)
-            raw_candidates: Set[str] = set(primary_binaries)
-            raw_candidates.add(actual_name)
-            raw_candidates.add(actual_name.replace("-", "").replace("_", ""))
-            if actual_name.endswith("-bin"):
-                raw_candidates.add(actual_name[:-4])
-                raw_candidates.add(actual_name[:-4].replace("-", "").replace("_", ""))
-            if actual_name.endswith("-appimage"):
-                raw_candidates.add(actual_name[:-9])
-            if actual_name.endswith("-desktop"):
-                raw_candidates.add(actual_name[:-8])
-                raw_candidates.add(actual_name[:-8].replace("-", "").replace("_", ""))
+            canon_name = self.engine.canonical_app_name(actual_name)
+            target_names = {actual_name.lower(), canon_name.lower()}
+            for suffix in ("-bin", "-appimage", "-desktop", "-git", "-nightly", "-beta", "-qt5", "-qt6", "-gtk3", "-gtk4", "-gui", "-cli"):
+                if actual_name.lower().endswith(suffix):
+                    target_names.add(actual_name.lower()[:-len(suffix)])
+            for t in list(target_names):
+                target_names.add(t.replace("-", "").replace("_", ""))
+
+            host_bins = HostLibraryScanner.get_host_binary_map()
 
             # Filter candidates so only genuine primary application executables are wrapped into /usr/bin
             def _is_clean_app_wrapper(name: str) -> bool:
                 if not name or name.startswith(".") or name.startswith("_"):
                     return False
-                if any(name.endswith(ext) for ext in [".kiface", ".so", ".a", ".la", ".o", ".pyc", ".pyo", ".h", ".hpp", ".conf", ".ini"]):
+                if any(name.endswith(ext) for ext in [".kiface", ".so", ".a", ".la", ".o", ".pyc", ".pyo", ".h", ".hpp", ".conf", ".ini", ".desktop"]):
                     return False
                 low = name.lower()
+                if is_protected_host_binary(name):
+                    return False
                 for ign in ["xdg-", "wx-", "wxrc", "argon", "pkg-config", "pkgconf", "update-", "libtool", "install-", "make", "bison", "flex", "m4", "gcore", "gdb", "test", "demo", "sample", "example"]:
-                    if (low.startswith(ign) or low == ign) and low != actual_name.lower():
+                    if (low.startswith(ign) or low == ign) and low not in target_names:
                         return False
+                # Never generate wrapper for existing native host binary unless target explicitly matches
+                if name in host_bins and low not in target_names:
+                    return False
                 return True
+
+            raw_candidates: Set[str] = set()
+
+            # 1. Add binaries from primary package that match target name variants
+            for b in primary_binaries:
+                b_low = b.lower()
+                if b_low in target_names or b_low.startswith(actual_name.lower() + "-") or b_low.startswith(canon_name.lower() + "-"):
+                    raw_candidates.add(b)
+
+            # 2. Add binaries explicitly registered in primary desktop entries
+            for db in primary_desktop_binaries:
+                if db in primary_binaries or os.path.exists(os.path.join(opt_bin_dir, db)):
+                    raw_candidates.add(db)
+
+            # 3. Always include actual_name and canon_name as candidates
+            raw_candidates.add(actual_name)
+            if canon_name:
+                raw_candidates.add(canon_name)
+
+            # 4. Fallback: If no candidate matched and primary package has a single binary, use it if safe
+            if not any(c in primary_binaries for c in raw_candidates) and len(primary_binaries) == 1:
+                single_b = next(iter(primary_binaries))
+                if _is_clean_app_wrapper(single_b):
+                    raw_candidates.add(single_b)
 
             candidates_to_wrap = {c for c in raw_candidates if _is_clean_app_wrapper(c)}
 
@@ -3296,6 +4742,9 @@ exec "${{TARGET_BIN}}" "$@"
             if os.path.isdir(opt_bin_dir):
                 for b in os.listdir(opt_bin_dir):
                     try:
+                        # 6A-173: a link that leaves the app folder is never followed (chmod would hit a host file)
+                        if os.path.islink(os.path.join(opt_bin_dir, b)) and not _merge_inside(os.path.join(opt_bin_dir, b), opt_app_dir):
+                            continue
                         os.chmod(os.path.join(opt_bin_dir, b), 0o755)
                     except Exception:
                         pass
@@ -3309,10 +4758,20 @@ exec "${{TARGET_BIN}}" "$@"
 
             # Create global runner wrapper scripts in /usr/bin/ ONLY for primary application targets
             created_binaries = []
+            try:
+                slack_owned = footprint_load_owners()
+            except Exception:
+                slack_owned = {}
             if not is_runtime:
                 for bname in sorted(all_targets):
-                    # Never overwrite core host system binaries unless the target package is explicitly that binary
-                    if bname in PROTECTED_HOST_BINARIES and bname != actual_name:
+                    # Never overwrite core host system binaries under any circumstance
+                    if is_protected_host_binary(bname):
+                        continue
+                    # 6A-11: never shadow a program a Slackware package owns (incl. doinst symlinks like
+                    # coreutils' /usr/bin/env, which the file-list based host map does not see)
+                    if f"usr/bin/{bname}" in slack_owned:
+                        if verbose:
+                            print(f"  ! Skipping wrapper '{bname}': /usr/bin/{bname} belongs to {slack_owned[f'usr/bin/{bname}']}.")
                         continue
                     # Skip internal modules, shared plugins, and non-executable extensions
                     if bname.startswith("_") or bname.startswith("."):
@@ -3337,16 +4796,23 @@ exec "${{TARGET_BIN}}" "$@"
                     df_path = os.path.join(usr_apps_dir, df)
                     if os.path.isfile(df_path):
                         try:
+                            # 6A-173: a desktop-file link that leaves the package tree is never rewritten
+                            if os.path.islink(df_path) and not _merge_inside(df_path, staging_pkg):
+                                continue
                             with open(df_path, "r", encoding="utf-8", errors="ignore") as f:
                                 dlines = f.readlines()
                             newlines = []
                             for l in dlines:
                                 if l.startswith("Exec="):
                                     parts = l[5:].strip().split()
-                                    if parts:
-                                        prog = os.path.basename(parts[0])
-                                        rest = " ".join(parts[1:])
-                                        newlines.append(f"Exec=/usr/bin/{prog} {rest}\n".rstrip() + "\n")
+                                    idx = desktop_exec_program_index(parts) if parts else -1
+                                    if idx >= 0:
+                                        # 6A-11: keep an `env VAR=...` prefix as is, rewrite only the program
+                                        prog = os.path.basename(parts[idx])
+                                        prefix = " ".join(parts[:idx])
+                                        rest = " ".join(parts[idx + 1:])
+                                        cmd = f"{prefix} /usr/bin/{prog} {rest}".strip()
+                                        newlines.append(f"Exec={cmd}\n")
                                     else:
                                         newlines.append(l)
                                 elif l.startswith("TryExec="):
@@ -3457,19 +4923,21 @@ fi
             # Write install/douninst.sh for safe service and hook teardown on removepkg
             if created_services:
                 douninst_path = os.path.join(install_dir, "douninst.sh")
+                # 6A-6c: removepkg runs douninst AFTER deleting the package's files. If /etc/rc.d/rc.SVC still exists
+                # this is an upgrade (or another package ships it): keep the hook and do not stop the running daemon.
+                # Otherwise remove the block safely: both markers required, sh -n before and after, temp file + .slacky-bak.
+                # (Before: an unconditional "stop" during upgrades and a sed range that deleted to EOF without the end marker.)
                 douninst_lines = [
                     "#!/bin/sh",
-                    "# Underpants Gnomes clean teardown of service hooks and daemons",
+                    "# Underpants Gnomes clean teardown of service hooks (spec: docs/rclocal_spec.md)",
+                    GNOMES_RC_REMOVE_SH,
                 ]
                 for svc in created_services:
-                    douninst_lines.append(f"if [ -x /etc/rc.d/rc.{svc} ]; then")
-                    douninst_lines.append(f"  /etc/rc.d/rc.{svc} stop 2>/dev/null || true")
+                    douninst_lines.append(f"if [ ! -e /etc/rc.d/rc.{svc} ]; then")
+                    douninst_lines.append(f"  for f in /etc/rc.d/rc.local /etc/rc.d/rc.local_shutdown; do")
+                    douninst_lines.append(f"    gnomes_rc_remove \"$f\" '# --- [ gnomes-service: {svc} ] ---' '# --- [ /gnomes-service: {svc} ] ---'")
+                    douninst_lines.append(f"  done")
                     douninst_lines.append(f"fi")
-                    douninst_lines.append(f"for f in /etc/rc.d/rc.local /etc/rc.d/rc.local_shutdown; do")
-                    douninst_lines.append(f"  if [ -f \"$f\" ]; then")
-                    douninst_lines.append(f"    sed -i '/# --- \\[ gnomes-service: {svc} \\] ---/,/# --- \\[ \\/gnomes-service: {svc} \\] ---/d' \"$f\" 2>/dev/null || true")
-                    douninst_lines.append(f"  fi")
-                    douninst_lines.append(f"done")
                 with open(douninst_path, "w", encoding="utf-8") as duf:
                     duf.write("\n".join(douninst_lines) + "\n")
                 os.chmod(douninst_path, 0o755)
@@ -3503,6 +4971,10 @@ fi
                 "binaries": created_binaries,
                 "services": created_services
             }
+        except MergeCopyError as e:
+            # 6A-138: a file that could not be staged stops the build; nothing half-built is packaged
+            print(f":: {e} The package was not built.")
+            return None
         finally:
             self.safe_rmtree(staging_base)
 
@@ -3517,7 +4989,10 @@ fi
 
         service_files = []
         for root, _, files in os.walk(opt_app_dir):
-            if "systemd/system" in root or "systemd/user" in root:
+            # Only system-level daemons belong in /etc/rc.d/. User session services
+            # (such as wireplumber, pipewire-pulse, xdg desktop portals) are managed
+            # within the user graphical session via XDG autostart or D-Bus activation.
+            if "systemd/system" in root and "systemd/user" not in root:
                 for f in files:
                     if f.endswith(".service") and "@" not in f:
                         service_files.append(os.path.join(root, f))
@@ -3533,7 +5008,13 @@ fi
                 svc_name = os.path.basename(s_path).replace(".service", "")
                 if svc_name.endswith("-wait-online") or svc_name.endswith("-shutdown") or "@" in svc_name:
                     continue
+                # Never convert user session audio or portals into root /etc/rc.d daemons
+                if svc_name in ("wireplumber", "pipewire", "pipewire-pulse") or "portal" in svc_name:
+                    continue
 
+                # 6A-173: a unit that is a link out of the app folder is never read
+                if not _merge_inside(s_path, opt_app_dir):
+                    continue
                 with open(s_path, "r", encoding="utf-8", errors="ignore") as f:
                     content = f.read()
 
@@ -3732,11 +5213,18 @@ esac
                 print(f"    • ({i:>2d}/{len(to_install)}) [{p.get('_REPO')}] {p.get('NAME')} ({p.get('VERSION')}) [{csize_mb:.2f} MB]")
             print()
 
+        no_room = space_precheck(sum(int(p.get("ISIZE", 0) or 0) for p in to_install), build_dir_base(), f"the {profile_name} runtime")
+        if no_room:
+            print(f":: {no_room}")
+            return None
+
         downloaded_files = self.download_packages_parallel(to_install, verbose=verbose)
         if len(downloaded_files) < len(to_install):
             return None
+        if not self.trust_gate(downloaded_files, verbose):
+            return None
 
-        staging_base = f"/tmp/transmute-gnomes-runtime-{profile_name}-{os.getpid()}"
+        staging_base = tempfile.mkdtemp(prefix=f"transmute-gnomes-runtime-{profile_name}-", dir=build_dir_base())
         staging_pkg = os.path.join(staging_base, "pkg")
         opt_runtime_dir = os.path.join(staging_pkg, "opt", "underpants", "runtime")
         opt_bin_dir = os.path.join(opt_runtime_dir, "bin")
@@ -3755,43 +5243,37 @@ esac
             if verbose:
                 print(f":: Extracting and staging runtime payloads into /opt/underpants/runtime/...")
 
+            # WP-7: which package put each staged file there; a different file from a second package is reported
+            merge_state: Dict[str, Any] = {"pkg": "", "owner": {}, "clash": []}
+
+            def _note_merge(d_f: str, s_f: str) -> None:
+                prev, cur = merge_state["owner"].get(d_f), merge_state["pkg"]
+                if prev and prev != cur:
+                    try:
+                        if os.path.islink(s_f) or os.path.islink(d_f):
+                            same = os.path.islink(s_f) and os.path.islink(d_f) and os.readlink(s_f) == os.readlink(d_f)
+                        else:
+                            import filecmp
+                            same = os.path.isfile(d_f) and filecmp.cmp(s_f, d_f, shallow=False)
+                    except OSError:
+                        same = False
+                    if not same:
+                        merge_state["clash"].append((d_f, prev, cur))
+                merge_state["owner"][d_f] = cur
+
             def _merge_tree(src_dir: str, dst_dir: str):
-                if not os.path.isdir(src_dir):
-                    return
-                os.makedirs(dst_dir, exist_ok=True)
-                for root, dirs, files in os.walk(src_dir):
-                    rel = os.path.relpath(root, src_dir)
-                    target_dir = os.path.join(dst_dir, rel) if rel != "." else dst_dir
-                    os.makedirs(target_dir, exist_ok=True)
-                    for d in dirs:
-                        os.makedirs(os.path.join(target_dir, d), exist_ok=True)
-                    for f in files:
-                        s_f = os.path.join(root, f)
-                        d_f = os.path.join(target_dir, f)
-                        if os.path.islink(s_f):
-                            target = os.readlink(s_f)
-                            if os.path.islink(d_f) or os.path.exists(d_f):
-                                try:
-                                    os.remove(d_f)
-                                except Exception:
-                                    pass
-                            try:
-                                os.symlink(target, d_f)
-                            except Exception:
-                                pass
-                        elif os.path.isfile(s_f):
-                            try:
-                                shutil.copy2(s_f, d_f)
-                            except Exception:
-                                pass
+                # 6A-138: links stay links, no write through a destination link, a copy error stops the build
+                merge_tree_safe(src_dir, dst_dir, staging_pkg, _note_merge)
 
             for pdata, fpath in downloaded_files:
                 tmp_extract = os.path.join(staging_base, f"extract_{pdata['NAME']}")
                 os.makedirs(tmp_extract, exist_ok=True)
-                if fpath.endswith(".zst"):
-                    subprocess.run(f"zstd -d -c '{fpath}' | tar -xf - -C '{tmp_extract}' 2>/dev/null", shell=True, check=False)
-                else:
-                    subprocess.run(f"tar -xf '{fpath}' -C '{tmp_extract}' 2>/dev/null", shell=True, check=False)
+                merge_state["pkg"] = pdata.get("NAME", "")
+                # WP-7: a broken or truncated archive stops the build (it was silently half-extracted before)
+                x_err = self.extract_pkg_archive(fpath, tmp_extract)
+                if x_err:
+                    print(f":: {x_err}")
+                    return None
 
                 for cand_bin in ["usr/bin", "bin", "usr/sbin", "sbin"]:
                     src = os.path.join(tmp_extract, cand_bin)
@@ -3815,7 +5297,16 @@ esac
 
                 src_etc = os.path.join(tmp_extract, "etc")
                 if os.path.isdir(src_etc):
-                    _merge_tree(src_etc, os.path.join(staging_pkg, "etc"))
+                    # 6A-36: the shared runtime never writes /etc on the host. Its packages' defaults (gnutls/config with
+                    # ktls=false, an MIT-example krb5.conf, tpm2-tss, sensord, ...) changed Slackware's own programs too.
+                    # They are kept for reference under /opt/underpants/runtime/etc; the libraries use built-in defaults.
+                    _merge_tree(src_etc, os.path.join(opt_runtime_dir, "etc"))
+
+            self._report_merge_clashes(merge_state["clash"], f"runtime-{profile_name}", verbose)
+            # WP-3: runtime contract, no GPU front-end, audio client or TLS trust stack in the runtime
+            host_only_removed = self.runtime_host_only_guard(opt_runtime_dir)
+            if verbose and host_only_removed:
+                print(f":: Left {len(host_only_removed)} graphics/audio/TLS file(s) to Slackware (runtime contract).")
 
             # Relocate text, symlink, and ELF paths
             self._relocate_text_and_symlink_paths(opt_runtime_dir, f"runtime-{profile_name}", staging_pkg)
@@ -3824,6 +5315,22 @@ esac
             patched_count = self.patch_elf_rpaths(opt_runtime_dir, verbose=verbose)
             if verbose:
                 print(f"  ✓ Relocated {patched_count} ELF binaries and shared objects.")
+
+            # P2/L1: never ship a runtime that needs newer glibc/libstdc++/libgcc symbols than the host provides
+            if self._headroom_refusal(opt_runtime_dir, f"The shared runtime ({profile_name})", verbose, name=f"runtime-{profile_name}"):
+                shutil.rmtree(staging_base, ignore_errors=True)
+                return None
+            # WP-3 host-fit: what the runtime now takes from Slackware must exist there with the needed symbol versions
+            unfit = self.host_fit_problems(opt_runtime_dir)
+            if unfit:
+                print(f"\n\033[1;33m:: The shared runtime ({profile_name}) needs a newer graphics, sound or TLS library than "
+                      f"this Slackware has, so it was not built and your current runtime stays.\033[0m")
+                for u in unfit[:5]:
+                    print(f"   {u}")
+                shutil.rmtree(staging_base, ignore_errors=True)
+                return None
+            self._write_runtime_manifest(opt_runtime_dir, profile_name, RUNTIME_PKG_VERSION, downloaded_files, plan,
+                                         host_only_removed)
 
             # Slackware package metadata
             tag = f"underpants-runtime-{profile_name}"
@@ -3837,7 +5344,7 @@ esac
                 f"# customary to leave one space after the ':'.",
                 f"",
                 f"       |-----handy-ruler------------------------------------------------------|",
-                f"{tag}: {tag} (v1.0)",
+                f"{tag}: {tag} (v{RUNTIME_PKG_VERSION})",
                 f"{tag}:",
                 f"{tag}: Underpants Gnomes Shared Isolated Runtime Pool ({profile_name})",
                 f"{tag}: Curated shared libraries staged into /opt/underpants/runtime/",
@@ -3903,7 +5410,7 @@ fi
                 dif.write(doinst_content)
             os.chmod(doinst_path, 0o755)
 
-            txz_filename = f"underpants-runtime-{profile_name}-1.0-x86_64-1_gnomes.txz"
+            txz_filename = f"underpants-runtime-{profile_name}-{RUNTIME_PKG_VERSION}-x86_64-1_gnomes.txz"
             txz_output_path = os.path.join(self.output_dir, txz_filename)
 
             if verbose:
@@ -3914,18 +5421,22 @@ fi
 
             pkg_size_mb = os.path.getsize(txz_output_path) / (1024 * 1024)
             if verbose:
-                print(f"\n\033[1;32m🎉 Bodacious! Successfully transmuted runtime profile '{profile_name}' into Slackware package!\033[0m")
+                print(f"\n\033[1;32m🧙 💰 PROFIT! Successfully transmuted runtime profile '{profile_name}' into Slackware package!\033[0m")
                 print(f"  Package File    : {txz_output_path} [{pkg_size_mb:.2f} MB]")
                 print(f"  Installed Root  : /opt/underpants/runtime/")
                 print(f"  Install Command : \033[1;36mupgradepkg --install-new {txz_output_path}\033[0m\n")
 
             return {
                 "name": f"runtime-{profile_name}",
-                "version": "1.0",
+                "version": RUNTIME_PKG_VERSION,
                 "txz_path": txz_output_path,
                 "size_bytes": os.path.getsize(txz_output_path),
                 "packages": [p["NAME"] for p in to_install]
             }
+        except MergeCopyError as e:
+            # 6A-138: a file that could not be staged stops the build; nothing half-built is packaged
+            print(f":: {e} The package was not built.")
+            return None
         finally:
             shutil.rmtree(staging_base, ignore_errors=True)
 
@@ -3958,9 +5469,12 @@ class RuntimeManager:
 
     PROFILES: Dict[str, List[str]] = {
         "core": ["python", "glib2", "sqlite", "openssl", "curl", "libxml2", "icu", "fmt", "onetbb"],
-        "gui": ["gtk3", "gtk4", "libadwaita", "librsvg", "gdk-pixbuf2", "shared-mime-info", "adwaita-icon-theme", "hicolor-icon-theme", "qt5-base", "qt5-wayland", "qt5-svg", "qt6-base", "qt6-wayland", "qt6-declarative", "qt6-svg", "qt6-webengine", "wxwidgets-gtk3", "libnotify", "webkit2gtk-4.1", "libspnav", "libmanette"],
-        "media": ["ffmpeg", "libva", "libvdpau", "pipewire", "alsa-lib", "gstreamer", "gst-plugins-base", "gst-plugins-good", "sdl2", "libsamplerate", "libebur128", "taglib", "wavpack", "chromaprint"],
-        "graphics": ["vulkan-icd-loader", "openxr", "embree", "hwloc", "onetbb", "libsquish", "libwslay", "miniupnpc", "glm", "freeglut", "glew", "glfw", "openal"],
+        # 6A-34: "breeze" + "plasma-integration" give gnomes Qt6 apps the KDE platform theme and Breeze style built for
+        # the runtime's Qt; the host plugins are built for Slackware's Qt and fail to load (light Fusion fallback).
+        "gui": ["gtk3", "gtk4", "libadwaita", "librsvg", "gdk-pixbuf2", "shared-mime-info", "adwaita-icon-theme", "hicolor-icon-theme", "qt5-base", "qt5-wayland", "qt5-svg", "qt6-base", "qt6-wayland", "qt6-declarative", "qt6-svg", "qt6-webengine", "wxwidgets-gtk3", "libnotify", "webkit2gtk-4.1", "libspnav", "libmanette", "breeze", "plasma-integration"],
+        # WP-3: libva, libvdpau, pipewire, alsa-lib and vulkan-icd-loader come from Slackware (RUNTIME_HOST_ONLY)
+        "media": ["ffmpeg", "gstreamer", "gst-plugins-base", "gst-plugins-good", "sdl2", "libsamplerate", "libebur128", "taglib", "wavpack", "chromaprint"],
+        "graphics": ["openxr", "embree", "hwloc", "onetbb", "libsquish", "libwslay", "miniupnpc", "glm", "freeglut", "glew", "glfw", "openal"],
         "cad": ["opencascade", "vtk", "ngspice", "verdict", "pugixml", "jsoncpp", "poppler", "mpdecimal", "cblas", "lapack", "openblas"],
         "mobile": ["libimobiledevice", "libimobiledevice-glue", "libplist", "libtatsu", "libusbmuxd", "usbmuxd", "libgpod", "sg3_utils"],
         "desktop": ["hyprland", "xdg-desktop-portal-hyprland", "hyprlock", "hypridle", "hyprpaper", "aquamarine", "hyprlang", "hyprcursor", "hyprgraphics", "hyprutils", "hyprpolkitagent", "ddcui", "wlr-randr", "nwg-displays"],
@@ -3968,9 +5482,9 @@ class RuntimeManager:
         "noctalia": ["noctalia", "hyprland", "xdg-desktop-portal-hyprland", "hyprlock", "hypridle", "hyprpaper", "aquamarine", "hyprlang", "hyprcursor", "hyprgraphics", "hyprutils", "hyprpolkitagent", "ddcui", "wlr-randr", "nwg-displays"],
         "all": [
             "python", "glib2", "sqlite", "openssl", "curl", "libxml2", "icu", "fmt", "onetbb",
-            "gtk3", "gtk4", "libadwaita", "librsvg", "gdk-pixbuf2", "shared-mime-info", "adwaita-icon-theme", "hicolor-icon-theme", "qt5-base", "qt5-wayland", "qt5-svg", "qt6-base", "qt6-wayland", "qt6-declarative", "qt6-svg", "qt6-webengine", "wxwidgets-gtk3", "libnotify", "webkit2gtk-4.1", "libspnav", "libmanette",
-            "ffmpeg", "libva", "libvdpau", "pipewire", "alsa-lib", "gstreamer", "gst-plugins-base", "gst-plugins-good", "sdl2", "libsamplerate", "libebur128", "taglib", "wavpack", "chromaprint",
-            "vulkan-icd-loader", "openxr", "embree", "hwloc", "libsquish", "libwslay", "miniupnpc", "glm", "freeglut", "glew", "glfw", "openal",
+            "gtk3", "gtk4", "libadwaita", "librsvg", "gdk-pixbuf2", "shared-mime-info", "adwaita-icon-theme", "hicolor-icon-theme", "qt5-base", "qt5-wayland", "qt5-svg", "qt6-base", "qt6-wayland", "qt6-declarative", "qt6-svg", "qt6-webengine", "wxwidgets-gtk3", "libnotify", "webkit2gtk-4.1", "libspnav", "libmanette", "breeze", "plasma-integration",
+            "ffmpeg", "gstreamer", "gst-plugins-base", "gst-plugins-good", "sdl2", "libsamplerate", "libebur128", "taglib", "wavpack", "chromaprint",
+            "openxr", "embree", "hwloc", "libsquish", "libwslay", "miniupnpc", "glm", "freeglut", "glew", "glfw", "openal",
             "opencascade", "vtk", "ngspice", "verdict", "pugixml", "jsoncpp", "poppler", "mpdecimal", "cblas", "lapack", "openblas",
             "libimobiledevice", "libimobiledevice-glue", "libplist", "libtatsu", "libusbmuxd", "usbmuxd", "libgpod", "sg3_utils"
         ]
@@ -4030,7 +5544,7 @@ class RuntimeManager:
             "available_profiles": list(self.PROFILES.keys())
         }
 
-    def install_profile(self, profile_name: str = "core", verbose: bool = True, output_dir: str = "/tmp") -> Optional[Dict[str, Any]]:
+    def install_profile(self, profile_name: str = "core", verbose: bool = True, output_dir: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """Transmute and generate underpants-runtime-<profile> Slackware package."""
         self.engine.ensure_loaded()
         factory = TransmutationFactory(self.engine, output_dir=output_dir)
@@ -4145,13 +5659,491 @@ class RuntimeManager:
         }
 
 
+# --- [ FOOTPRINT GUARD (roadmap 2A/2B/2C; mirror of Rust src/packages/footprint.rs, spec docs/footprint_spec.md) ] ---
+# Keeps our packages from overwriting files owned by Slackware packages and from shipping global-effect
+# files. Default mode is ENFORCE (owner decision 2026-10-11, after report mode would have shipped a
+# /usr/bin/env wrapper): offending files are removed from the staging tree before packaging, and the
+# package is not built if the check cannot run. SLACKY_FOOTPRINT_MODE=report only lists them.
+# 6A-6c: safe removal of a gnomes-service block (literal begin/end marker lines) for package douninst scripts.
+GNOMES_RC_REMOVE_SH = r'''gnomes_rc_remove() { # FILE BEGIN END
+  g_f=$(readlink -f "$1") || return 0; g_b=$2; g_e=$3
+  [ -f "$g_f" ] || return 0
+  grep -qxF "$g_b" "$g_f" || return 0
+  [ "$(grep -cxF "$g_b" "$g_f")" = "$(grep -cxF "$g_e" "$g_f")" ] || { echo "gnomes: unbalanced markers in $g_f, left unchanged" >&2; return 1; }
+  [ -z "$(sh -n "$g_f" 2>&1)" ] || { echo "gnomes: $g_f has a syntax error, left unchanged" >&2; return 1; }
+  g_t=$(mktemp "$g_f.gnomes.XXXXXX") || return 1
+  cp -p "$g_f" "$g_t" || { rm -f "$g_t"; return 1; }
+  awk -v b="$g_b" -v e="$g_e" 'skip { if ($0 == e) skip=0; next } $0 == b { skip=1; next } { print }' "$g_f" >"$g_t"
+  if [ -z "$(sh -n "$g_t" 2>&1)" ] && ! grep -qxF "$g_b" "$g_t"; then cp -p "$g_f" "$g_f.slacky-bak" && mv -f "$g_t" "$g_f"
+  else rm -f "$g_t"; echo "gnomes: result would be invalid, $g_f unchanged" >&2; return 1; fi
+}'''
+
+# 6A-35: download watchdog. A mirror that delivers less than DL_STALL_MIN_BYTES within DL_STALL_WINDOW seconds is
+# abandoned for the next one (one easyeffects build hung > 25 min without output on a trickling connection).
+DL_STALL_WINDOW = 60
+DL_STALL_MIN_BYTES = 32 * 1024
+
+
+def copy_response_with_watchdog(resp, fobj, label: str = "") -> int:
+    """6A-35: copy an HTTP response body to fobj, abandoning a stalled transfer (see DL_STALL_WINDOW)."""
+    read_some = getattr(resp, "read1", resp.read)
+    total = 0
+    mark_t, mark_b = time.time(), 0
+    while True:
+        chunk = read_some(65536)
+        if not chunk:
+            return total
+        fobj.write(chunk)
+        total += len(chunk)
+        now = time.time()
+        if now - mark_t >= DL_STALL_WINDOW:
+            if total - mark_b < DL_STALL_MIN_BYTES:
+                raise TimeoutError(f"download stalled: {label}")
+            mark_t, mark_b = now, total
+
+# 6A-20: share subdirs never mirrored to the host /usr/share. Build-only data (no app reads it at run time) and
+# config that the host sound stack, portal service or OpenXR loader would pick up (never "vulkan": gamescope needs its
+# WSI layer there). The app keeps them in APP_ROOT/share via XDG_DATA_DIRS.
+HOST_SHARE_SKIP = frozenset({
+    "aclocal", "cmake", "pkgconfig", "gir-1.0", "vala", "vala-0.56", "glade", "gettext", "devhelp",
+    "kdevappwizard", "qlogging-categories5", "qlogging-categories6", "lv2specgen", "PySide6", "PySide2",
+    "xdp-tools", "perl5", "libalpm", "systemd",
+    "pipewire", "wireplumber", "alsa-card-profile", "xdg-desktop-portal", "openxr",
+})
+
+# 6A-12: apps that start games (often 32-bit Wine/Proton); their wrappers do not set ALSA_PLUGIN_DIR.
+GAME_LAUNCHER_APPS = frozenset({
+    "faugus-launcher", "lutris", "heroic-games-launcher", "heroic-games-launcher-bin", "bottles", "steam",
+    "protonplus", "protonup-qt", "umu-launcher", "gamescope", "minigalaxy", "itch", "itch-setup-bin",
+})
+
+FOOTPRINT_PKGDB = "/var/lib/pkgtools/packages"
+FOOTPRINT_SCRIPTS = "/var/lib/pkgtools/scripts"
+FOOTPRINT_OWN_PREFIXES = ("underpants-", "cachyos-")
+FOOTPRINT_VETTED = {
+    "etc/cron.hourly/suse.de-snapper",
+    "etc/cron.hourly/snapper-cleanup", "etc/cron.hourly/snapper-cleanup.new",
+    "etc/cron.hourly/snapper-timeline", "etc/cron.hourly/snapper-timeline.new",
+    "etc/profile.d/nvidia-vaapi.sh", "etc/profile.d/nvidia-vaapi.csh",
+    "etc/profile.d/rocm.sh", "etc/profile.d/rocm.csh",
+    "etc/ld.so.conf.d/rocm.conf",
+    # our own app's files
+    "etc/cron.hourly/slacky-snapper-limine-sync",
+    "etc/cron.weekly/slacky-update-check",
+    "etc/profile.d/slacky-hidpi.sh", "etc/profile.d/slacky-hidpi.csh",
+}
+FOOTPRINT_OWN_DAEMONS = {
+    "rc.lact", "rc.scx", "rc.ananicy-cpp", "rc.gamemode", "rc.coolercontrol", "rc.asusd",
+    "rc.syncthing", "rc.spacenavd", "rc.dmemcg-booster",
+}
+_FOOTPRINT_LINK_RE = re.compile(r"\(\s*cd\s+(\S+)\s*;\s*ln\s+-sf\s+(\S+)\s+(\S+)\s*\)")
+
+
+def footprint_is_own_package(name: str) -> bool:
+    return name.startswith(FOOTPRINT_OWN_PREFIXES) or name.endswith("_slacky") or name.endswith("_gnomes")
+
+
+def footprint_load_owners(pkgdb: str = FOOTPRINT_PKGDB, scripts: str = FOOTPRINT_SCRIPTS) -> Dict[str, str]:
+    """Relative path -> owning Slackware package (file lists + doinst.sh symlinks). Read-only."""
+    owners: Dict[str, str] = {}
+    for name in os.listdir(pkgdb):  # raises if the pkgdb is missing: callers fail closed in enforce mode
+        if footprint_is_own_package(name):
+            continue
+        try:
+            with open(os.path.join(pkgdb, name), errors="replace") as fh:
+                in_list = False
+                for line in fh:
+                    if in_list:
+                        rel = line.strip()
+                        if rel and rel != "./" and not rel.endswith("/") and not rel.startswith("install/"):
+                            owners.setdefault(rel, name)
+                            # 6A-29: Slackware ships config files as X.new (doinst config() installs X); X is theirs too
+                            if rel.endswith(".new"):
+                                owners.setdefault(rel[:-4], name + " (config file)")
+                    elif line.startswith("FILE LIST:"):
+                        in_list = True
+        except OSError:
+            continue
+    if os.path.isdir(scripts):
+        for name in os.listdir(scripts):
+            if footprint_is_own_package(name):
+                continue
+            try:
+                with open(os.path.join(scripts, name), errors="replace") as fh:
+                    text = fh.read()
+            except OSError:
+                continue
+            for d, _target, link in _FOOTPRINT_LINK_RE.findall(text):
+                owners.setdefault(os.path.normpath(d + "/" + link), name + " (doinst symlink)")
+    return owners
+
+
+def footprint_judge(rel: str, owners: Dict[str, str]) -> Optional[str]:
+    """None = keep, otherwise the reason the file must not ship."""
+    rel = rel[2:] if rel.startswith("./") else rel
+    if rel.startswith("install/"):
+        return None
+    if rel not in FOOTPRINT_VETTED:
+        if rel.startswith("etc/ld.so.conf.d/"):
+            return "changes the system-wide linker search path"
+        if rel.startswith("etc/cron."):
+            return "installs a root cron job"
+        if rel.startswith("etc/profile.d/"):
+            return "changes the login environment for every user"
+        if rel.startswith("etc/rc.d/rc."):
+            base = os.path.basename(rel)
+            base = base[:-4] if base.endswith(".new") else base
+            if base not in FOOTPRINT_OWN_DAEMONS:
+                return "service script from a dependency"
+    if rel in owners:
+        return "owned by Slackware package " + owners[rel]
+    return None
+
+
+def footprint_guard(staging: str, label: str = "", enforce: Optional[bool] = None,
+                    owners: Optional[Dict[str, str]] = None, quiet: bool = False) -> Dict[str, Any]:
+    """Scans (and in enforce mode cleans) a package staging tree. Only files and symlinks are judged."""
+    if enforce is None:
+        enforce = os.environ.get("SLACKY_FOOTPRINT_MODE", "enforce").strip().lower() != "report"
+    if owners is None:
+        owners = footprint_load_owners()
+    staging = os.path.abspath(staging)
+    drops: List[Tuple[str, str]] = []
+    for root, dirs, files in os.walk(staging):
+        for name in files + [d for d in dirs if os.path.islink(os.path.join(root, d))]:
+            full = os.path.join(root, name)
+            rel = os.path.relpath(full, staging)
+            reason = footprint_judge(rel, owners)
+            if reason:
+                drops.append((rel, reason))
+    if enforce:
+        for rel, _ in drops:
+            target = os.path.join(staging, rel)
+            if os.path.commonpath([staging, os.path.abspath(target)]) != staging:
+                continue  # hard guard: never outside the staging tree
+            try:
+                os.unlink(target)
+            except OSError:
+                pass
+    details = ""
+    if drops:
+        cache = os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache")
+        out_dir = os.path.join(cache, "slacky-update", "footprint")
+        try:
+            os.makedirs(out_dir, exist_ok=True)
+            details = os.path.join(out_dir, (label or os.path.basename(staging)) + ".txt")
+            with open(details, "w") as fh:
+                for rel, reason in drops:
+                    fh.write(f"{rel}\t{reason}\n")
+        except OSError:
+            details = ""
+        if not quiet:
+            mode = "removed" if enforce else "would be removed (report only)"
+            where = f" Details: {details}" if details else ""
+            print(f":: Footprint check: {len(drops)} file(s) in {label or staging} {mode}.{where}")
+    return {"enforce": enforce, "drops": drops, "details": details}
+
+
+def footprint_archive_non_root(txz: str) -> List[str]:
+    """2C: archive entries not owned by root:root (empty list = safe to install)."""
+    bad: List[str] = []
+    with tarfile.open(txz, "r:*") as tf:
+        for m in tf:
+            if m.uid != 0 or m.gid != 0:
+                bad.append(m.name)
+    return bad
+
+
+def footprint_pkg_base(pkgid: str) -> str:
+    """name-version-arch-build -> name (Slackware package id or archive file name)."""
+    for ext in (".txz", ".tgz", ".tbz", ".tlz"):
+        if pkgid.endswith(ext):
+            pkgid = pkgid[: -len(ext)]
+    parts = pkgid.split("-")
+    return "-".join(parts[:-3]) if len(parts) > 3 else pkgid
+
+
+def host_path_owners(pkgdb: str = FOOTPRINT_PKGDB, scripts: str = FOOTPRINT_SCRIPTS,
+                     keep=None, wanted: Optional[Set[str]] = None) -> Dict[str, List[str]]:
+    """WP-1: host path -> every installed package that owns it (file lists, .new config twins, doinst symlinks).
+    Unlike footprint_load_owners it includes our own packages; keep(pkgid) -> bool selects which packages count;
+    wanted limits the result to those paths (fast path for one archive)."""
+    owners: Dict[str, List[str]] = {}
+
+    def add(rel: str, pkg: str) -> None:
+        if wanted is not None and rel not in wanted:
+            return
+        lst = owners.setdefault(rel, [])
+        if pkg not in lst:
+            lst.append(pkg)
+
+    wanted_b = None
+    if wanted is not None:
+        wanted_b = set()
+        for w in wanted:
+            wanted_b.add(w.encode("utf-8", "surrogateescape"))
+            wanted_b.add((w + ".new").encode("utf-8", "surrogateescape"))
+    for name in os.listdir(pkgdb):  # raises if the pkgdb is missing: the caller refuses (fail closed)
+        if keep is not None and not keep(name):
+            continue
+        try:
+            if wanted_b is not None:
+                # fast path: one C-level set intersection per package instead of a Python loop over 2M+ lines
+                with open(os.path.join(pkgdb, name), "rb") as fh:
+                    data = fh.read()
+                i = data.find(b"\nFILE LIST:\n")
+                if i < 0:
+                    continue
+                for hit in wanted_b.intersection(data[i + 12:].split(b"\n")):
+                    rel = hit.decode("utf-8", "surrogateescape")
+                    add(rel, name)
+                    if rel.endswith(".new"):
+                        add(rel[:-4], name)
+                continue
+            with open(os.path.join(pkgdb, name), errors="replace") as fh:
+                in_list = False
+                for line in fh:
+                    if in_list:
+                        rel = line.strip()
+                        if rel and rel != "./" and not rel.endswith("/") and not rel.startswith("install/"):
+                            add(rel, name)
+                            if rel.endswith(".new"):
+                                add(rel[:-4], name)
+                    elif line.startswith("FILE LIST:"):
+                        in_list = True
+        except OSError:
+            continue
+    if os.path.isdir(scripts):
+        for name in os.listdir(scripts):
+            if keep is not None and not keep(name):
+                continue
+            try:
+                with open(os.path.join(scripts, name), errors="replace") as fh:
+                    text = fh.read()
+            except OSError:
+                continue
+            for d, _target, link in _FOOTPRINT_LINK_RE.findall(text):
+                add(os.path.normpath(d + "/" + link), name)
+    return owners
+
+
+VULKAN_IMPLICIT_LAYER_DIR = "usr/share/vulkan/implicit_layer.d/"
+# Shared on purpose: licence texts of bundled libraries (several apps ship the same file; removepkg keeps a file
+# another package still owns, and the text is never executed or read by programs).
+HOST_PATH_SHAREABLE = ("usr/share/licenses/",)
+
+
+def archive_host_paths(txz: str) -> List[str]:
+    """Host paths an archive would create: files and symlinks outside opt/underpants/ and install/, plus the
+    symlinks its doinst.sh makes. Directories are shared by design and not listed."""
+    paths: List[str] = []
+    with tarfile.open(txz, "r:*") as tf:
+        for m in tf:
+            rel = m.name[2:] if m.name.startswith("./") else m.name
+            rel = rel.rstrip("/")
+            if not rel or m.isdir():
+                continue
+            if rel == "install/doinst.sh":
+                fh = tf.extractfile(m)
+                if fh is not None:
+                    text = fh.read().decode("utf-8", "replace")
+                    for d, _target, link in _FOOTPRINT_LINK_RE.findall(text):
+                        lp = os.path.normpath(d + "/" + link)
+                        if not lp.startswith("opt/underpants/"):
+                            paths.append(lp)
+                continue
+            if rel.startswith("install/") or rel.startswith("opt/underpants/"):
+                continue
+            paths.append(rel)
+    return paths
+
+
+def verify_host_paths(txz: str, mode: str = "gnomes", pkgdb: str = FOOTPRINT_PKGDB,
+                      scripts: str = FOOTPRINT_SCRIPTS) -> Dict[str, Any]:
+    """WP-1 install-time guard. mode "gnomes": no host path may belong to another package (Slackware, curated, other
+    gnomes); a curated package with the same name is never replaced by a gnomes build (curated wins).
+    mode "curated": no host path may belong to a gnomes package with another name.
+    The installed package with the same name (the one being replaced) is always allowed."""
+    base = footprint_pkg_base(os.path.basename(txz))
+    installed = [n for n in os.listdir(pkgdb) if footprint_pkg_base(n) == base]
+    refusals: List[str] = []
+    warnings: List[str] = []
+    if mode == "gnomes":
+        for n in installed:
+            if not n.endswith("_gnomes"):
+                refusals.append(f"{base} is already installed as {n}, which slacky-update looks after, so gnomes "
+                                f"will not replace it. Update it with slacky-update instead.")
+
+        def keep(n: str) -> bool:
+            return footprint_pkg_base(n) != base
+    else:
+        def keep(n: str) -> bool:
+            return n.endswith("_gnomes") and footprint_pkg_base(n) != base
+    paths = [p for p in archive_host_paths(txz) if not p.startswith(HOST_PATH_SHAREABLE)]
+    wanted = set(paths) | {p[:-4] for p in paths if p.endswith(".new")}
+    owners = host_path_owners(pkgdb, scripts, keep, wanted)
+    clash: Dict[str, List[str]] = {}
+    for rel in paths:
+        hits = list(owners.get(rel, []))
+        if rel.endswith(".new"):
+            hits += [o for o in owners.get(rel[:-4], []) if o not in hits]
+        for o in hits:
+            clash.setdefault(o, []).append(rel)
+        if not hits and rel.startswith(VULKAN_IMPLICIT_LAYER_DIR):
+            warnings.append(f"{rel} adds a Vulkan layer that every game and Vulkan program will load.")
+    for owner, rels in sorted(clash.items()):
+        if owner.endswith("_gnomes"):
+            fix = f"Remove that app first with: gnomes -R {footprint_pkg_base(owner).replace('underpants-', '', 1)}"
+        elif owner.endswith("_slacky") or footprint_is_own_package(owner):
+            fix = "That package is looked after by slacky-update."
+        else:
+            fix = "Files that belong to Slackware are never replaced."
+        refusals.append(f"{len(rels)} file(s) already belong to {owner} (for example /{rels[0]}). {fix}")
+    return {"package": os.path.basename(txz), "refusals": refusals, "warnings": warnings}
+
+
+# --- [ WP-2: ROLLBACK FROM SNAPSHOTS ] ---
+# Owner decision 2026-10-13: no second copy of every package (about 12 GB on the owner's machine). The previous version
+# of an app is rebuilt from the newest Btrfs/snapper snapshot that still has it; /opt, /usr and /var/lib are inside the
+# root snapshot, /boot is not, so kernels are refused automatically (their files are missing from the snapshot).
+SNAPSHOT_DIR = "/.snapshots"
+ROLLBACK_HOLDS = os.path.join(DEFAULT_CACHE_BASE, "rollback-holds.json")
+
+
+def _snapshot_info(snapdir: str, num: int) -> Dict[str, str]:
+    info = {"date": "", "description": ""}
+    try:
+        with open(os.path.join(snapdir, str(num), "info.xml"), errors="replace") as fh:
+            text = fh.read()
+        for key in info:
+            m = re.search(rf"<{key}>(.*?)</{key}>", text, re.S)
+            if m:
+                info[key] = m.group(1).strip()
+    except OSError:
+        pass
+    return info
+
+
+# Boot chain: rolling back only the package would leave the ESP, initramfs or signatures out of step with it. These go
+# back with the whole system (the snapshot entries in the Limine menu), never one package at a time.
+ROLLBACK_REFUSED = ("limine", "sbctl", "snapper", "kernel", "nvidia", "linux-cachyos", "dkms", "grub", "shim")
+
+
+def rollback_refusal(base: str) -> Optional[str]:
+    short = base.replace("underpants-", "", 1).replace("cachyos-gnome-", "", 1).replace("cachyos-", "", 1)
+    if any(short == r or short.startswith(r + "-") or short.startswith(r) and r in ("kernel", "nvidia", "linux-cachyos")
+           for r in ROLLBACK_REFUSED):
+        return (f"{base} is part of the boot chain, so it is never rolled back on its own. Boot the snapshot entry "
+                f"from the Limine menu instead, or let slacky-update install the next version.")
+    return None
+
+
+def _rollback_aliases(base: str) -> Set[str]:
+    """Same app under the names it had before a rename (cachyos-gnome-X became underpants-X)."""
+    short = base.replace("underpants-", "", 1).replace("cachyos-gnome-", "", 1)
+    return {base, "underpants-" + short, "cachyos-gnome-" + short}
+
+
+def rollback_candidates(base: str, snapdir: str = SNAPSHOT_DIR, pkgdb: str = FOOTPRINT_PKGDB) -> Tuple[Optional[str], List[Dict[str, Any]]]:
+    """(installed package id, snapshots holding another version of the same package, newest first). Only the same kind
+    of build counts: a curated package never goes back to a gnomes build of the same app, or the other way round."""
+    current = next((n for n in sorted(os.listdir(pkgdb)) if footprint_pkg_base(n) == base), None)
+    found: List[Dict[str, Any]] = []
+    if current is None:
+        return current, found
+    names = _rollback_aliases(base)
+    gnomes_kind = current.endswith("_gnomes")
+    try:
+        nums = sorted((int(d) for d in os.listdir(snapdir) if d.isdigit()), reverse=True)
+    except OSError:
+        return current, found
+    for num in nums:
+        root = os.path.join(snapdir, str(num), "snapshot")
+        try:
+            ids = [n for n in os.listdir(os.path.join(root, "var/lib/pkgtools/packages"))
+                   if footprint_pkg_base(n) in names and n.endswith("_gnomes") == gnomes_kind]
+        except OSError:
+            continue
+        for pid in ids:
+            if pid != current:
+                found.append({"snapshot": num, "pkgid": pid, "root": root, **_snapshot_info(snapdir, num)})
+    return current, found
+
+
+def build_from_snapshot(cand: Dict[str, Any], out_dir: str) -> str:
+    """Rebuild the package cand["pkgid"] exactly as the snapshot has it installed: its FILE LIST, its doinst/douninst
+    scripts and description; everything root:root. Raises ValueError with one plain sentence when that is not possible."""
+    pid, root = cand["pkgid"], cand["root"]
+    if not footprint_is_own_package(pid):
+        raise ValueError(f"{pid} is not a slacky-update or gnomes package; Slackware's own packages are rolled back with slackpkg.")
+    with open(os.path.join(root, "var/lib/pkgtools/packages", pid), errors="replace") as fh:
+        lines = fh.read().splitlines()
+    try:
+        fl = lines.index("FILE LIST:")
+    except ValueError:
+        raise ValueError(f"The snapshot's record of {pid} has no file list.")
+    desc: List[str] = []
+    if "PACKAGE DESCRIPTION:" in lines:
+        desc = [l for l in lines[lines.index("PACKAGE DESCRIPTION:") + 1:fl] if l.strip()]
+    # var/lib/pkgtools/... entries (the registered douninst.sh) are recreated by installpkg itself, never shipped
+    entries = [e for e in lines[fl + 1:] if e and e != "./" and not e.startswith("install/") and e != "install"
+               and not e.startswith("var/lib/pkgtools/")]
+    missing = [e for e in entries if not e.endswith("/") and not os.path.lexists(os.path.join(root, e))]
+    if missing:
+        raise ValueError(f"The snapshot does not hold all files of {pid} ({len(missing)} missing, for example /{missing[0]}).")
+    os.makedirs(out_dir, exist_ok=True)
+    inst = os.path.join(out_dir, "meta")
+    os.makedirs(os.path.join(inst, "install"), exist_ok=True)
+    with open(os.path.join(inst, "install", "slack-desc"), "w") as fh:
+        fh.write("\n".join(desc) + "\n")
+    meta = ["install", "install/slack-desc"]
+    for src, name in (("var/lib/pkgtools/scripts", "doinst.sh"), ("var/lib/pkgtools/douninst.sh", "douninst.sh")):
+        sp = os.path.join(root, src, pid)
+        if os.path.isfile(sp):
+            shutil.copyfile(sp, os.path.join(inst, "install", name))
+            os.chmod(os.path.join(inst, "install", name), 0o755)
+            meta.append("install/" + name)
+    listf = os.path.join(out_dir, "files.list")
+    with open(listf, "w") as fh:
+        fh.write(".\n" + "\n".join(e.rstrip("/") for e in entries) + "\n")
+    tar_path = os.path.join(out_dir, pid + ".tar")
+    common = ["tar", "--owner=0", "--group=0", "--numeric-owner", "--no-recursion", "--verbatim-files-from"]
+    subprocess.run(common + ["-C", root, "-T", listf, "-cf", tar_path], check=True)
+    subprocess.run(common + ["-C", inst, "-rf", tar_path] + meta, check=True)
+    subprocess.run(["xz", "-T0", "-1", "-f", tar_path], check=True)
+    txz = os.path.join(out_dir, pid + ".txz")
+    os.replace(tar_path + ".xz", txz)
+    return txz
+
+
+def load_rollback_holds(path: str = ROLLBACK_HOLDS) -> Dict[str, Dict[str, str]]:
+    try:
+        with open(path, encoding="utf-8") as fh:
+            data = json.load(fh)
+        return {k: v for k, v in data.items() if isinstance(v, dict)}
+    except (OSError, ValueError):
+        return {}
+
+
+def record_rollback_hold(base: str, skip_version: str, path: str = ROLLBACK_HOLDS) -> None:
+    """The version rolled back from is not offered again; any newer release is (the hold then ends by itself)."""
+    data = load_rollback_holds(path)
+    data[base] = {"skip_version": skip_version, "since": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as fh:
+        json.dump(data, fh, indent=2)
+    os.chmod(tmp, 0o644)
+    os.replace(tmp, path)
+
+
 # --- [ CLI INTERACTION INTERFACE ] ---
 
 def main():
     """CLI dispatcher for shell integration and testing."""
     if len(sys.argv) < 2:
         print("Underpants Gnomes Pacman Engine v1.0_RC2 ('Dark Star')")
-        print("Usage: gnomes_pacman.py [sync|search|info|deps|transmute|runtime|url|check-host|list-repos|list-installed] [args...]")
+        print("Usage: gnomes_pacman.py [sync|search|info|deps|transmute|runtime|heal|url|check-host|list-repos|list-installed] [args...]")
         sys.exit(0)
 
     cmd = sys.argv[1]
@@ -4253,7 +6245,7 @@ def main():
 
     elif cmd == "transmute":
         targets = []
-        out_dir = "/tmp"
+        out_dir = None  # 6A-139: default is build_dir_base(), not /tmp
         as_json = "--json" in sys.argv
         force = "--force" in sys.argv or "-f" in sys.argv
         noconfirm = "--noconfirm" in sys.argv or "-y" in sys.argv or "--yes" in sys.argv
@@ -4321,12 +6313,20 @@ def main():
                 print("\nInstall a profile with: gnomes runtime install <profile>")
         elif sub == "install":
             prof_name = "core"
-            out_dir = "/tmp"
+            out_dir = None  # 6A-139: default is build_dir_base(), not /tmp
+            # 6A-50: the value after --output-dir is never taken as the profile name
+            prof_set = False
+            skip_next = False
             for i, a in enumerate(sys.argv[3:], 3):
-                if not a.startswith("-") and prof_name == "core":
-                    prof_name = a
-                elif a == "--output-dir" and i + 1 < len(sys.argv):
+                if skip_next:
+                    skip_next = False
+                    continue
+                if a == "--output-dir" and i + 1 < len(sys.argv):
                     out_dir = sys.argv[i + 1]
+                    skip_next = True
+                elif not a.startswith("-") and not prof_set:
+                    prof_name = a
+                    prof_set = True
             res = mgr.install_profile(profile_name=prof_name, verbose=not as_json, output_dir=out_dir)
             if as_json:
                 print(json.dumps(res, indent=2))
@@ -4361,11 +6361,17 @@ def main():
             print(f"  • Space freed   : \033[1;32m{human_str}\033[0m")
 
     elif cmd == "list-updates":
-        if "--sync" in sys.argv or "-y" in sys.argv or "-Sy" in sys.argv:
+        no_sync = "--no-sync" in sys.argv
+        if no_sync:
+            # 6A-139: read the system cache when it has databases (a user cache is often empty); nothing is downloaded
+            sys_db = os.path.join(DEFAULT_CACHE_BASE, "db")
+            if os.path.isdir(sys_db) and any(n.endswith((".db.tar.zst", ".db.tar.gz")) for n in os.listdir(sys_db)):
+                engine = GnomesPacmanEngine(cache_dir=DEFAULT_CACHE_BASE)
+        elif "--sync" in sys.argv or "-y" in sys.argv or "-Sy" in sys.argv:
             engine.sync_repositories(force=True, verbose=False)
         as_json = "--json" in sys.argv
         as_count = "--count" in sys.argv
-        updates = engine.list_updates()
+        updates = engine.list_updates(allow_sync=not no_sync)
         if as_count:
             print(len(updates))
         elif as_json:
@@ -4378,6 +6384,84 @@ def main():
                 for u in updates:
                     print(f"  • \033[1;36m{u['name']:<20}\033[0m : {u['installed_version']} -> \033[1;32m{u['upstream_version']}\033[0m [{u['repo']}]")
                 print("")
+
+    elif cmd == "rollback":
+        # rollback --plan <base> | --build <base> --snapshot N --output-dir DIR | --hold <base> <version>  (root)
+        args = sys.argv[2:]
+        if "--hold" in args:
+            i = args.index("--hold")
+            record_rollback_hold(args[i + 1], args[i + 2])
+            sys.exit(0)
+        base = args[args.index("--plan") + 1] if "--plan" in args else args[args.index("--build") + 1]
+        snapdir = args[args.index("--snapshots") + 1] if "--snapshots" in args else SNAPSHOT_DIR
+        pkgdb = args[args.index("--pkgdb") + 1] if "--pkgdb" in args else FOOTPRINT_PKGDB
+        refusal = rollback_refusal(base)
+        if refusal:
+            print(f":: {refusal}")
+            sys.exit(3)
+        current, cands = rollback_candidates(base, snapdir, pkgdb)
+        if not current:
+            print(f":: {base} is not installed.")
+            sys.exit(3)
+        if not cands:
+            print(f":: No snapshot holds another version of {base}, so there is nothing to go back to.")
+            sys.exit(3)
+        if "--plan" in args:
+            c = cands[0]
+            print(f"{current}|{c['pkgid']}|{c['snapshot']}|{c['date']}|{c['description']}")
+            sys.exit(0)
+        num = int(args[args.index("--snapshot") + 1])
+        cand = next((c for c in cands if c["snapshot"] == num), None)
+        if cand is None:
+            print(f":: Snapshot #{num} does not hold another version of {base}.")
+            sys.exit(3)
+        try:
+            print(build_from_snapshot(cand, args[args.index("--output-dir") + 1]))
+        except (ValueError, OSError, subprocess.CalledProcessError) as exc:
+            print(f":: Could not rebuild {cand['pkgid']} from snapshot #{num}: {exc}")
+            sys.exit(3)
+        sys.exit(0)
+
+    elif cmd == "footprint-guard":
+        # footprint-guard <staging_dir> [--label NAME] [--enforce]  |  footprint-guard --verify-archive <txz>
+        args = sys.argv[2:]
+        if "--verify-host-paths" in args:
+            # WP-1: footprint-guard --verify-host-paths <txz> [--mode gnomes|curated] [--pkgdb DIR] [--scripts DIR]
+            txz = args[args.index("--verify-host-paths") + 1]
+            mode = args[args.index("--mode") + 1] if "--mode" in args else "gnomes"
+            pkgdb = args[args.index("--pkgdb") + 1] if "--pkgdb" in args else FOOTPRINT_PKGDB
+            scripts = args[args.index("--scripts") + 1] if "--scripts" in args else FOOTPRINT_SCRIPTS
+            if mode not in ("gnomes", "curated"):
+                print(f":: Unknown mode {mode}. Not installing.")
+                sys.exit(2)
+            try:
+                res = verify_host_paths(txz, mode, pkgdb, scripts)
+            except (OSError, tarfile.TarError) as exc:
+                print(f":: Could not check {os.path.basename(txz)} against the installed packages ({exc}). Not installing.")
+                sys.exit(4)  # 6A-135: 3 means "refused", a check that could not run is an error
+            for w in res["warnings"]:
+                print(f":: Note: {w}")
+            if res["refusals"]:
+                print(f":: Not installing {res['package']}: it would overwrite files of another package.")
+                for r in res["refusals"]:
+                    print(f"   {r}")
+                sys.exit(3)
+            sys.exit(0)
+        if "--verify-archive" in args:
+            txz = args[args.index("--verify-archive") + 1]
+            bad = footprint_archive_non_root(txz)
+            if bad:
+                print(f":: {os.path.basename(txz)} has {len(bad)} entr(ies) not owned by root:root. Not installing.")
+                for b in bad[:5]:
+                    print(f"   {b}")
+                sys.exit(1)
+            sys.exit(0)
+        if not args:
+            print("Usage: gnomes_pacman.py footprint-guard <staging_dir> [--label NAME] [--enforce]")
+            sys.exit(2)
+        label = args[args.index("--label") + 1] if "--label" in args else ""
+        res = footprint_guard(args[0], label, enforce=True if "--enforce" in args else None)
+        sys.exit(0)
 
     elif cmd == "check-collision":
         if len(sys.argv) < 3:
@@ -4419,6 +6503,18 @@ def main():
             print(f"  Host Glibc Symbol Support  : GLIBC <= {glibc[0]}.{glibc[1]}")
             print(f"  Host Shared Libraries      : {len(libs)} sonames indexed in host cache")
 
+    elif cmd == "held":
+        # P2/L1: packages waiting for a newer Slackware glibc/libstdc++ (shown, never rebuilt until something changes)
+        held = TransmutationFactory.load_held()
+        if "--json" in sys.argv:
+            print(json.dumps(held, indent=2))
+        elif not held:
+            print(":: No packages are waiting for newer system libraries.")
+        else:
+            print(f":: Waiting for a newer Slackware ({len(held)}):")
+            for k, v in sorted(held.items()):
+                print(f"  • {k} {v.get('version', '')}: {v.get('reason', '')} (since {v.get('since', '?')})")
+
     elif cmd == "list-installed":
         as_json = "--json" in sys.argv
         installed = engine.list_installed_gnomes_packages()
@@ -4437,6 +6533,41 @@ def main():
             rname = r["name"]
             count = len(engine.repo_packages.get(rname, {}))
             print(f"  • {rname:<20} (Priority: {r.get('priority', 0):>3}) : {count} packages")
+
+    elif cmd in ("heal", "heal-host", "audit-wrappers"):
+        dry_run = "--dry-run" in sys.argv or "-n" in sys.argv
+        as_json = "--json" in sys.argv
+        res = GnomesPacmanEngine.heal_host_sovereignty(dry_run=dry_run, verbose=not as_json)
+        if as_json:
+            print(json.dumps(res, indent=2))
+            # 6A-137: a heal that could not finish is not reported as success
+            if res.get("errors"):
+                sys.exit(2)
+        else:
+            purged = res["purged_wrappers"]
+            kept = res.get("kept_stock_owned", [])
+            if kept:
+                # 6A-154: advice only; legacy never reinstalls a Slackware package by itself
+                print(":: Launchers kept because they hide a file of a Slackware package (nothing was deleted):")
+                for k in kept:
+                    print(f"    - \033[1;31m{k['name']}\033[0m ({k['path']})")
+                for pk in sorted({k["package"] for k in kept if k["package"]}):
+                    print(f"    To restore the original, run: \033[1;36mslackpkg reinstall {pk}\033[0m")
+            kept_prot = res.get("kept_protected", [])
+            for k in kept_prot:
+                print(":: " + localized_sentence("GNOMES_WRAPPER_PROTECTED",
+                      "A launcher named {name} sits where a system program belongs. Nothing was changed; check it by hand.").replace("{name}", k["name"]))
+            if not purged and not kept and not kept_prot:
+                print(":: Host Sovereignty Verification: All /usr/bin/ wrappers are healthy and strictly scoped.")
+                print("   Zero rogue wrappers or native package conflicts detected.")
+            elif purged:
+                print(f":: Host Sovereignty Healer ({'DRY RUN' if dry_run or res.get('errors') else 'EXECUTED'}):")
+                print(f"  • Rogue wrappers purged from /usr/bin : {len(purged)}")
+                for wpath, bname, app, owner in purged:
+                    owner_str = f" [Native owner: {owner}]" if owner else ""
+                    print(f"    - \033[1;31m{bname}\033[0m (from {app}){owner_str}")
+            if res.get("errors"):
+                sys.exit(2)
 
     elif cmd in ("purge-service", "purge-hooks"):
         if len(sys.argv) < 3:

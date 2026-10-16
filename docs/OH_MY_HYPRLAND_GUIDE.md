@@ -1,11 +1,11 @@
 # 🖥️ Oh My Hyprland Guide
 ### *Curated & DIY Wayland Desktop Environments for Slackware Linux*
-#### `v1.0_RC2` — *"Dark Star"* (Stability & Hardware Release Candidate)
+#### `v1.0 LTS` — *"Dark Star"* (Official Long-Term Support Release)
 
 ---
 
 > [!IMPORTANT]
-> **TARGET DISTRIBUTION REQUIREMENT**  
+> **TARGET DISTRIBUTION REQUIREMENT & VERSION MANDATE**  
 > **Hyprland suites in Slacky-Update are engineered strictly for Slackware 15+ (`slackware-current` / `Slackware 16 alpha`).**  
 > Legacy Slackware 15.0 is unsupported due to older Wayland, Mesa, Seatd, and PipeWire shared libraries.
 
@@ -16,18 +16,41 @@
 ---
 
 ## 📑 Table of Contents
-1. [The Two Flavors: Curated vs DIY](#the-two-flavors-curated-vs-diy)
-2. [Non-Intrusive Updates & Fallback Recovery](#non-intrusive-updates--fallback-recovery)
-3. [Modular Lua Architecture (`hyprland.lua`)](#modular-lua-architecture-hyprlandlua)
-4. [GUI Configuration with HyprMod & nwg-displays](#gui-configuration-with-hyprmod--nwg-displays)
-5. [Manual Configuration Guide](#manual-configuration-guide)
-6. [Troubleshooting Common Hyprland Issues](#troubleshooting-common-hyprland-issues)
-7. [Complete Keybindings Reference Table](#complete-keybindings-reference-table)
-
+1. [Core Philosophy: The Sacred Slackware Base & The Five Pillars](#1-core-philosophy-the-sacred-slackware-base--the-five-pillars)
+2. [🧒 ELI5: What is Hyprland and Wayland?](#2-eli5-what-is-hyprland-and-wayland)
+3. [The Two Flavors: Curated vs DIY](#3-the-two-flavors-curated-vs-diy)
+4. [Non-Intrusive Updates & Fallback Recovery](#4-non-intrusive-updates--fallback-recovery)
+5. [Modular Lua Architecture (`hyprland.lua`)](#5-modular-lua-architecture-hyprlandlua)
+6. [GUI Configuration with HyprMod & nwg-displays](#6-gui-configuration-with-hyprmod--nwg-displays)
+7. [Manual Configuration Guide](#7-manual-configuration-guide)
+8. [Troubleshooting Common Hyprland Issues](#8-troubleshooting-common-hyprland-issues)
+9. [Complete Keybindings Reference Table](#9-complete-keybindings-reference-table)
 
 ---
 
-## 1. The Two Flavors: Curated vs DIY {#the-two-flavors-curated-vs-diy}
+## 1. Core Philosophy: The Sacred Slackware Base & The Five Pillars
+
+The Hyprland desktop integration within Slacky-Update is strictly anchored in **The Sacred Slackware Base System** and **The Five Engineering Pillars**:
+* **The Sacred Slackware Base System:** Official Slackware desktop environments (KDE Plasma, XFCE) and native system libraries remain **100% untouched and functional**. Hyprland packages are deployed cleanly through isolated packages in `/opt/underpants/` and native Slackware `.txz` packages registered in `/var/log/packages/`.
+* **⚡ Speed:** Hardware-accelerated direct scanout with `immediate = true` tearing support for gaming; blazing 200ms bezier animations.
+* **🛋️ Comfort:** Complete out-of-the-box Mac-like desktop with floating dock, spotlight launcher, volume/brightness overlays, and status notifier tray integration.
+* **🛡️ Safety:** Automated PipeWire `setcap -r` privilege normalization preventing DBus session drops; non-destructive user configuration model where updates never overwrite `~/.config/hypr/`.
+* **🎨 UI Design:** Frosted glass aesthetics, rounded window corners, tasteful icon sets, and smooth fluid animations.
+* **🤝 Ease of Use:** 1-Click GUI configuration through HyprMod (`hyprmod`), visual multi-monitor management via `nwg-displays`, and universal `(ESC)` navigation across all menus.
+
+---
+
+## 2. 🧒 ELI5: What is Hyprland and Wayland?
+
+> [!NOTE]
+> ### 🧩 ELI5 (Explain Like I'm 5)
+> Think of your computer screen like a theater stage. For 30 years, Linux used an old stage director named **X11** who shouted through megaphones, had trouble synchronizing lighting, and sometimes let actors walk through walls (screen tearing).  
+> **Wayland** is the modern stage director who coordinates everything smoothly with laser timing so there is zero screen flicker or lag.  
+> **Hyprland** is the state-of-the-art stage manager who arranges your windows automatically like neat puzzle pieces, adds elegant animations, and keeps gaming framerates high!
+
+---
+
+## 3. The Two Flavors: Curated vs DIY
 
 Slacky-Update offers two distinct Hyprland deployment choices:
 
@@ -44,7 +67,7 @@ Slacky-Update offers two distinct Hyprland deployment choices:
 │  Config Architecture        │ Modular Lua (`modules/*.lua`)│ Stock / Custom  │
 │  Visual Settings Editor     │ HyprMod (GTK4/Libadwaita)   │ Manual editing  │
 │  Display Management         │ nwg-displays + ddcui        │ wlr-randr / CLI │
-│  Hardware Color Modes       │ Auto (8-bit default, optional 10-bit) │ User-configured │
+│  Hardware Color Modes       │ Auto (8-bit default, 10-bit)│ User-configured │
 │  Audio / Screen Sharing     │ Automated PipeWire Shield   │ User-configured │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -68,7 +91,7 @@ Slacky-Update offers two distinct Hyprland deployment choices:
 
 ---
 
-## 2. Non-Intrusive Updates & Fallback Recovery {#non-intrusive-updates--fallback-recovery}
+## 4. Non-Intrusive Updates & Fallback Recovery
 
 ### Zero Configuration Overwrite Guarantee
 When you update Hyprland via Slacky-Update, the engine guarantees that **your personal customizations in `~/.config/hypr/` will NEVER be overwritten or deleted**.
@@ -91,7 +114,7 @@ Because Slacky-Update protects existing user files with `[ ! -f ]` guards, movin
 
 ---
 
-## 3. Modular Lua Architecture (`hyprland.lua`) {#modular-lua-architecture-hyprlandlua}
+## 5. Modular Lua Architecture (`hyprland.lua`)
 
 ### Why Lua Instead of Static `.conf` Files?
 Traditional Hyprland setups use a single, monolithic 1,500-line `hyprland.conf` file. Slacky-Update adopts a **modular Lua architecture**:
@@ -129,7 +152,7 @@ Traditional Hyprland setups use a single, monolithic 1,500-line `hyprland.conf` 
 
 ---
 
-## 4. GUI Configuration with HyprMod & nwg-displays {#gui-configuration-with-hyprmod--nwg-displays}
+## 6. GUI Configuration with HyprMod & nwg-displays
 
 ### HyprMod: GTK4 & Libadwaita Visual Editor
 **HyprMod** (`underpants-hyprmod`) provides a native graphical settings interface for Hyprland:
@@ -160,7 +183,7 @@ Drag and arrange your displays visually, click **Apply**, and your layout will b
 
 ---
 
-## 5. Manual Configuration Guide {#manual-configuration-guide}
+## 7. Manual Configuration Guide
 
 If you prefer editing files directly in your favorite text editor (`nano`, `vim`, `kate`):
 
@@ -193,7 +216,7 @@ wallpaper = ,/usr/share/wallpapers/my_wallpaper.png
 
 ---
 
-## 6. Troubleshooting Common Hyprland Issues {#troubleshooting-common-hyprland-issues}
+## 8. Troubleshooting Common Hyprland Issues
 
 ### 1. NVIDIA Black Screen or Frozen Cursor on Boot
 * **Cause:** NVIDIA DRM modesetting is not enabled in kernel boot arguments, or `GBM_BACKEND` is misconfigured.
@@ -216,8 +239,7 @@ wallpaper = ,/usr/share/wallpapers/my_wallpaper.png
 
 ---
 
-## 7. Complete Keybindings Reference Table {#complete-keybindings-reference-table}
-
+## 9. Complete Keybindings Reference Table
 
 The `hyprland-noctalia` curated suite comes pre-configured with intuitive keyboard shortcuts:
 
@@ -268,5 +290,7 @@ The `hyprland-noctalia` curated suite comes pre-configured with intuitive keyboa
 
 ---
 
-## 📜 Summary
-The Slacky-Update Hyprland suite brings desktop ergonomics, tear-free gaming, and aesthetic elegance to Slackware Linux while keeping the underlying operating system clean and sovereign. Enjoy your desktop!
+<div align="center">
+<b>Slacky-Update Oh My Hyprland Guide</b><br>
+<i>Canonical Source: <a href="https://github.com/TuxOfValhalla/slacky-update">GitHub</a> | Secondary Mirror: <a href="https://codeberg.org/TuxOfValhalla/slacky-update">Codeberg</a></i>
+</div>

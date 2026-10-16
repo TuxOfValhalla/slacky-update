@@ -7,6 +7,158 @@
 
 set -euo pipefail
 
+# --- [ -1. SS-1/SS-2 (6A-88, 6A-95): never write behind an unmounted /boot; our snapshots never pass 48 hours ] ---
+if [ "$(id -u)" -eq 0 ]; then
+    CRON_LIB_DIR="/usr/share/slacky-update/lib"
+    [ -d "${CRON_LIB_DIR}" ] || CRON_LIB_DIR="/usr/local/lib/slacky-update"
+    if [ -f "${CRON_LIB_DIR}/common.sh" ]; then
+        # own shell: the library must not change this job's options or variables
+        # 6A-117: hardware profile; a change leaves a notice that the next run shows in plain words
+        PYTHONSAFEPATH=1 python3 -I "${CRON_LIB_DIR}/spidersense_hw.py" boot >/dev/null 2>&1 || true
+        if ! bash -c 'source "$1/common.sh" >/dev/null 2>&1; ss_boot_ready' _ "${CRON_LIB_DIR}" 2>/dev/null; then
+            exit 0   # the markers stay; the next hour (or a run) serves them once /boot is mounted
+        fi
+        if ! { [ -e "/run/lock/slacky-update.lock" ] && ! flock -n "/run/lock/slacky-update.lock" true 2>/dev/null; }; then
+            # a deleted snapshot that was in the menu leaves the reseal marker, served right below in this same hour
+            bash -c 'source "$1/common.sh" >/dev/null 2>&1; APP_DIR="$1"; LOG_FILE=/var/log/slacky-update.log; ss_prune_our_snapshots' \
+                _ "${CRON_LIB_DIR}" >/dev/null 2>&1 || true
+        fi
+    fi
+fi
+
+# --- [ 0. REPAIR AN INTERRUPTED UPDATE (6A-43: always, independent of the opt-in below) ] ---
+# 6A-8c marker: boot files changed but the startup menu was not resealed (closed terminal, crash, power loss).
+# The repair must not depend on ENABLE_AUTO_SNAPPER_SYNC, which is off by default.
+REPAIR_MARKER="/var/cache/slacky-update/boot-reseal-pending"
+REPAIR_TRIES="/var/cache/slacky-update/boot-reseal-attempts"
+TX_STATE="/var/lib/slacky-update/tx-state"
+RUN_LOCK_BUSY=0
+if [ -e "/run/lock/slacky-update.lock" ] && ! flock -n "/run/lock/slacky-update.lock" true 2>/dev/null; then
+    RUN_LOCK_BUSY=1
+fi
+if [ "$(id -u)" -eq 0 ] && [ "${RUN_LOCK_BUSY}" -eq 0 ]; then
+    LIMINE_MANAGED=0
+    if [ -f "${CRON_LIB_DIR:-/usr/share/slacky-update/lib}/mod_limine.sh" ] \
+       && bash -c 'source "$1/common.sh" >/dev/null 2>&1 && source "$1/mod_limine.sh" >/dev/null 2>&1 \
+                   && [ "$(is_limine_installed 2>/dev/null || echo false)" = "true" ]' _ "${CRON_LIB_DIR:-/usr/share/slacky-update/lib}" 2>/dev/null; then
+        LIMINE_MANAGED=1
+    fi
+    # 6A-147 (LTS B2): a run that was cut off (journal not "done", no run holding the lock) may have left new kernels
+    # behind an old menu, even when it died before it could set the marker
+    # 6A-152: a reseal order from slacky-update-rs (shared spec path) is served like our own marker
+    SHARED_MARKER="/var/lib/slacky-boot/reseal-pending"
+    if [ -f "${SHARED_MARKER}" ] && [ ! -L "${SHARED_MARKER}" ]; then
+        if [ "${LIMINE_MANAGED}" -eq 1 ]; then
+            touch "${REPAIR_MARKER}" 2>/dev/null || true
+        else
+            rm -f "${SHARED_MARKER}" 2>/dev/null || true
+        fi
+    fi
+    if [ "${LIMINE_MANAGED}" -eq 1 ] && [ -f "${TX_STATE}" ]; then
+        case "$(head -n1 "${TX_STATE}" 2>/dev/null)" in
+            started-*) touch "${REPAIR_MARKER}" 2>/dev/null || true ;;
+        esac
+    fi
+    # 6A-147 (M1): the marker means "reseal Limine"; on other boot loaders there is nothing to reseal, so it must not
+    # keep the hourly rebuild and the snapshot pruner waiting for ever
+    if [ "${LIMINE_MANAGED}" -eq 0 ] && [ -f "${REPAIR_MARKER}" ]; then
+        rm -f "${REPAIR_MARKER}" "${REPAIR_TRIES}" 2>/dev/null || true
+    fi
+    [ -f "${REPAIR_MARKER}" ] || rm -f "${REPAIR_TRIES}" 2>/dev/null || true
+fi
+if [ -f "${REPAIR_MARKER}" ] && [ "$(id -u)" -eq 0 ]; then
+    # an update in progress holds the run lock and reseals itself
+    [ "${RUN_LOCK_BUSY}" -eq 0 ] || exit 0
+    # 6A-148 (L1 M3): a repair that keeps failing rebuilt every startup image every hour; after 3 failed tries wait a day
+    TRIES=0; LAST=0
+    read -r TRIES LAST < "${REPAIR_TRIES}" 2>/dev/null || true
+    case "${TRIES}" in ''|*[!0-9]*) TRIES=0 ;; esac
+    case "${LAST}" in ''|*[!0-9]*) LAST=0 ;; esac
+    NOW=$(date +%s)
+    if [ "${TRIES}" -ge 3 ] && [ $(( NOW - LAST )) -lt 86400 ]; then
+        exit 0
+    fi
+    mkdir -p /run/lock 2>/dev/null || true
+    exec 200>"/run/lock/boot-partition.lock"
+    flock -n 200 || exit 0
+    export SLACKY_BOOT_LOCK_HELD=1
+    for b in "/usr/bin/slacky-update" "/usr/local/bin/slacky-update"; do
+        if [ -x "${b}" ]; then
+            # --sync-boot regenerates limine.conf, enrolls and signs; it clears the marker after a verified commit
+            NON_INTERACTIVE=1 "${b}" --sync-boot >/dev/null 2>&1 || true
+            break
+        fi
+    done
+    if [ -f "${REPAIR_MARKER}" ]; then
+        printf '%s %s\n' "$(( TRIES + 1 ))" "${NOW}" > "${REPAIR_TRIES}" 2>/dev/null || true
+        if [ $(( TRIES + 1 )) -ge 3 ]; then
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] [WARN] The boot menu could not be repaired 3 times in a row; the next try is in 24 hours or at the next update." >> /var/log/slacky-update.log 2>/dev/null || true
+        fi
+    else
+        rm -f "${REPAIR_TRIES}" 2>/dev/null || true
+        # the repaired run is now complete
+        [ -f "${TX_STATE}" ] && printf 'done %s\n' "${NOW}" > "${TX_STATE}" 2>/dev/null || true
+    fi
+    exit 0
+fi
+
+# --- [ 0a. TAMPER REPORT (6A-157 / C29: read-only, one plain line, never reseals a foreign edit) ] ---
+# Compares the live limine.conf with the record the last trusted commit left (/var/lib/slacky-boot/limine-committed).
+# No record, an unreadable or untrusted record, a reseal marker, or a running update = no judgement, no output.
+LIMINE_RECORD="${LIMINE_RECORD:-/var/lib/slacky-boot/limine-committed}"
+limine_tamper_report() {
+    [ "$(id -u)" -eq 0 ] || return 0
+    [ "${RUN_LOCK_BUSY}" -eq 0 ] || return 0
+    [ -f "${LIMINE_RECORD}" ] && [ ! -L "${LIMINE_RECORD}" ] || return 0
+    [ ! -e "/var/cache/slacky-update/boot-reseal-pending" ] && [ ! -e "/var/lib/slacky-boot/reseal-pending" ] || return 0
+    [ "$(stat -c %u "${LIMINE_RECORD}" 2>/dev/null)" = "0" ] || return 0
+    local mode rec rb conf="" cand live
+    mode=$(stat -c %a "${LIMINE_RECORD}" 2>/dev/null || echo 777)
+    case "${mode}" in *[2367]) return 0 ;; esac
+    case "${mode}" in ?[2367]?) return 0 ;; esac
+    rec=$(head -n1 "${LIMINE_RECORD}" 2>/dev/null || true)
+    case "${rec}" in *'"v":1'*) ;; *) return 0 ;; esac
+    rb=$(printf '%s' "${rec}" | sed -n 's/.*"blake2b":"\([0-9a-f]\{128\}\)".*/\1/p')
+    [ -n "${rb}" ] || return 0
+    for cand in /boot /boot/efi /boot/EFI /efi /limine; do
+        [ -f "${cand}/limine.conf" ] && { conf="${cand}/limine.conf"; break; }
+    done
+    [ -n "${conf}" ] || return 0
+    live=$(b2sum "${conf}" 2>/dev/null | awk '{print $1}')
+    [ -n "${live}" ] || return 0
+    [ "${live}" != "${rb}" ] || { rm -f /var/cache/slacky-update/limine-foreign-reported 2>/dev/null || true; return 0; }
+    # one line per distinct foreign state, not one per hour
+    [ "$(cat /var/cache/slacky-update/limine-foreign-reported 2>/dev/null || true)" != "${live}" ] || return 0
+    printf '%s\n' "${live}" > /var/cache/slacky-update/limine-foreign-reported 2>/dev/null || true
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] [WARN] The boot menu (${conf}) was changed by something other than slacky-update. Nothing was changed; if you did this yourself, run slacky-update --sync-boot to seal it." >> /var/log/slacky-update.log 2>/dev/null || true
+}
+limine_tamper_report || true
+
+# --- [ 0b. SERVE A MENU ORDER (SS-4 6A-105/106: always, independent of the opt-in below) ] ---
+# snapper's limine-snapper-sync plugin (our build) leaves this order instead of writing the menu while an update runs or
+# while the boot lock is busy. The generator claims it (.taken) and the verified commit clears it; a .taken file left
+# behind means that rebuild did not finish, so it is still an order.
+MENU_ORDER="/var/cache/slacky-update/boot-menu-pending"
+if { [ -f "${MENU_ORDER}" ] || [ -f "${MENU_ORDER}.taken" ]; } && [ "$(id -u)" -eq 0 ]; then
+    # an update in progress holds the run lock; its own boot commit (or the next hour) serves the order
+    if [ -e "/run/lock/slacky-update.lock" ] && ! flock -n "/run/lock/slacky-update.lock" true 2>/dev/null; then
+        exit 0
+    fi
+    mkdir -p /run/lock 2>/dev/null || true
+    exec 200>"/run/lock/boot-partition.lock"
+    # fail closed: never write the menu without the boot lock; the order stays for the next hour
+    flock -n 200 || exit 0
+    export SLACKY_BOOT_LOCK_HELD=1
+    for b in "/usr/bin/slacky-update" "/usr/local/bin/slacky-update"; do
+        if [ -x "${b}" ]; then
+            # --sync-snapper: one rebuild + BLAKE2B enroll + sign; the commit clears the order and saves the fingerprint
+            NON_INTERACTIVE=1 "${b}" --sync-snapper >/dev/null 2>&1 || true
+            break
+        fi
+    done
+    exit 0
+fi
+
 # --- [ 1. OPT-IN GUARDRAIL (Default: Disabled / Strictly Opt-In) ] ---
 CFG_FILE="/etc/default/limine"
 ENABLE_AUTO="no"
@@ -68,10 +220,11 @@ fi
 
 # --- [ 3. COLLISION MUTEX LOCK ] ---
 LOCK_FILE="/run/lock/boot-partition.lock"
-SLACKY_LOCK="/tmp/slacky-update-running.lock"
+SLACKY_LOCK="/run/lock/slacky-update.lock"
 
-# If an interactive slacky-update session is running, defer silently
-if [ -f "${SLACKY_LOCK}" ]; then
+# If a slacky-update run is in progress, defer silently (6A-47: flock run lock in /run/lock, released on exit, so a
+# crash never disables the reseal and no other user can block it with a file in /tmp)
+if [ -e "${SLACKY_LOCK}" ] && ! flock -n "${SLACKY_LOCK}" true 2>/dev/null; then
     exit 0
 fi
 
@@ -81,21 +234,37 @@ if ! flock -n 200; then
     # Partition or upgrade lock held by another process; exit silently and wait for next cron run
     exit 0
 fi
+# 6A-8d: our child (slacky-update --sync-snapper) must not wait for the lock this job already holds
+export SLACKY_BOOT_LOCK_HELD=1
 
-# --- [ 4. SMART DELTA FINGERPRINT (Zero ESP Flash Wear) ] ---
+# --- [ 4. MENU INPUT FINGERPRINT (6A-55: reseal only when the menu would change) ] ---
+# Before: a hash over the time stamps of ALL snapshots, so every hourly timeline snapshot rewrote limine.conf, re-enrolled
+# and re-signed the boot loader (24 boot loader writes a day). Now: the snapshots the menu policy selects plus the kernel
+# and initramfs files and /etc/default/limine (limine_menu_input_fingerprint in mod_limine.sh). The verified commit
+# saves the same hash, so a run or a manual --sync-snapper also counts.
 CACHE_DIR="/var/cache/slacky-update"
 mkdir -p "${CACHE_DIR}" 2>/dev/null || true
 FINGERPRINT_FILE="${CACHE_DIR}/snapper_limine_fingerprint"
 
-CURRENT_FP=$(find "${SNAP_DIR}" -maxdepth 2 -name "info.xml" -printf '%P %T@\n' 2>/dev/null | sort | md5sum 2>/dev/null | awk '{print $1}')
-if [ -z "${CURRENT_FP}" ]; then
-    CURRENT_FP=$(find "${SNAP_DIR}" -maxdepth 1 -mindepth 1 -type d -name "[0-9]*" -printf '%f %T@\n' 2>/dev/null | sort | md5sum 2>/dev/null | awk '{print $1}')
+FP_LIB_DIR="/usr/share/slacky-update/lib"
+[ ! -d "${FP_LIB_DIR}" ] && FP_LIB_DIR="/usr/local/lib/slacky-update"
+CURRENT_FP=""
+if [ -f "${FP_LIB_DIR}/common.sh" ] && [ -f "${FP_LIB_DIR}/mod_limine.sh" ]; then
+    # own shell: the libraries must not change this job's options or variables
+    CURRENT_FP=$(bash -c 'source "$1/common.sh" >/dev/null 2>&1 && source "$1/mod_limine.sh" >/dev/null 2>&1 \
+        && limine_menu_input_fingerprint' _ "${FP_LIB_DIR}" 2>/dev/null || true)
 fi
+# an empty answer counts as "changed" (the reseal is the safe side); nothing is saved for it below
+CURRENT_FP=$(printf '%s' "${CURRENT_FP}" | tr -cd '0-9a-f')
 
-if [ -f "${FINGERPRINT_FILE}" ]; then
+# 6A-8c: an interrupted update left boot files without a reseal -> reseal now, whatever the fingerprint says
+if [ -f "${CACHE_DIR}/boot-reseal-pending" ]; then
+    rm -f "${FINGERPRINT_FILE}" 2>/dev/null || true
+fi
+if [ -f "${FINGERPRINT_FILE}" ] && [ -n "${CURRENT_FP}" ]; then
     PREV_FP=$(cat "${FINGERPRINT_FILE}" 2>/dev/null || true)
-    if [ "${CURRENT_FP}" = "${PREV_FP}" ] && [ -n "${CURRENT_FP}" ]; then
-        # Snapshots have not changed. Exit in 0ms with zero disk writes to ESP!
+    if [ "${CURRENT_FP}" = "${PREV_FP}" ]; then
+        # the menu would come out the same: no write to the boot partition, no re-signing
         exit 0
     fi
 fi
@@ -109,8 +278,9 @@ for b in "/usr/bin/slacky-update" "/usr/local/bin/slacky-update"; do
     fi
 done
 
+SYNC_OK=0
 if [ -n "${SLACKY_BIN}" ]; then
-    "${SLACKY_BIN}" --sync-snapper >/dev/null 2>&1 || true
+    "${SLACKY_BIN}" --sync-snapper >/dev/null 2>&1 && SYNC_OK=1
 else
     # Fallback to direct library sourcing if binary path is customized
     APP_DIR="/usr/share/slacky-update/lib"
@@ -120,13 +290,15 @@ else
         source "${APP_DIR}/common.sh"
         # shellcheck source=/dev/null
         source "${APP_DIR}/mod_limine.sh"
-        generate_limine_configuration >/dev/null 2>&1 || true
-        enroll_and_sign_limine >/dev/null 2>&1 || true
+        generate_limine_configuration >/dev/null 2>&1 && enroll_and_sign_limine >/dev/null 2>&1 && SYNC_OK=1
     fi
 fi
 
-# Flush filesystem buffers and save updated delta fingerprint
-echo "${CURRENT_FP}" > "${FINGERPRINT_FILE}" 2>/dev/null || true
-sync -f "${FINGERPRINT_FILE}" 2>/dev/null || sync 2>/dev/null || true
+# 6A-8d: the fingerprint is saved only after a successful reseal, so a failed one is retried next hour.
+# 6A-55: the verified commit saves it itself (enroll_limine_config_hash); this is the fallback for that write.
+if [ "${SYNC_OK}" = "1" ] && [ -n "${CURRENT_FP}" ] && [ ! -s "${FINGERPRINT_FILE}" ]; then
+    echo "${CURRENT_FP}" > "${FINGERPRINT_FILE}" 2>/dev/null || true
+    sync -f "${FINGERPRINT_FILE}" 2>/dev/null || sync 2>/dev/null || true
+fi
 
 exit 0

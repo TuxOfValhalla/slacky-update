@@ -1,11 +1,11 @@
 # 🛠️ Slacky-Update Technical Companion Guide: Under the Hood & Engine Architecture
-### *A Deep-Dive Architectural Whitepaper & Technical Reference for Slackware Linux 15.0 & -current*
-#### `v1.0_RC2` — *"Dark Star"* (Stability & Hardware Release Candidate)
+### *A Deep-Dive Architectural Whitepaper & Technical Reference for Slackware Linux 15+*
+#### `v1.0 LTS` — *"Dark Star"* (Official Long-Term Support Release)
 
 ---
 
 > [!IMPORTANT]
-> **TARGET DISTRIBUTION REQUIREMENT & VERSION DISCLAIMER**  
+> **TARGET DISTRIBUTION REQUIREMENT & VERSION MANDATE**  
 > **Slacky-Update is engineered strictly for Slackware 15+ (`slackware-current` / `Slackware 16 alpha`).**  
 > It is **NOT** compatible with or supported on legacy **Slackware 15.0 (stable)**. Legacy 15.0 systems feature older core packages, toolchains, and shared libraries (such as older glibc, GCC, Wayland/Mesa, PipeWire, and kernel headers) that cause package and soname conflicts which cannot be safely detected or resolved. Running Slacky-Update on Slackware 15.0 is unsupported. Users on Slackware 15.0 must migrate to `slackware-current` before using this suite.
 
@@ -20,39 +20,41 @@
 ---
 
 ## 📑 Table of Contents
-1. [1. Philosophical Manifesto: Harmony with Slackware](#1-philosophical-manifesto-harmony-with-slackware)
-   - [100% Respect for Slackware Core](#100-respect-for-slackware-core)
+1. [Philosophical Manifesto: The Sacred Slackware Base & The Five Pillars](#1-philosophical-manifesto-the-sacred-slackware-base--the-five-pillars)
+   - [The Sacred Slackware Base System](#the-sacred-slackware-base-system)
+   - [The Five Engineering Pillars](#the-five-engineering-pillars)
    - [The Zero-Rootfs Compilation Rule (Sandboxing)](#the-zero-rootfs-compilation-rule-sandboxing)
    - [Coexistence vs. Replacement](#coexistence-vs-replacement)
-   - [Zero-Binary Policy & Transparent Source](#zero-binary-policy--transparent-source)
-2. [2. Master Architecture Overview](#2-master-architecture-overview)
-3. [3. The Master Internal Engines: Detailed Breakdown](#3-the-master-internal-engines-detailed-breakdown)
-   - [Engine 1: Core Orchestration & Lifecycle Controller](#engine-1-core-orchestration--lifecycle-controller)
-   - [Engine 2: 10-Worker Asynchronous Turbo Pre-Fetcher](#engine-2-10-worker-asynchronous-turbo-pre-fetcher)
-   - [Engine 3: Sandboxed Transmutation & App-Bundle Engine](#engine-3-sandboxed-transmutation--app-bundle-engine)
-   - [Engine 4: CachyOS Kernel Lifecycle & CPU Microarchitecture](#engine-4-cachyos-kernel-lifecycle--cpu-microarchitecture)
-   - [Engine 5: NVIDIA Driver & DKMS Pipeline](#engine-5-nvidia-driver--dkms-pipeline)
-   - [Engine 6: System Performance, Memory Architecture & 1M Resource Limits](#engine-6-system-performance-memory-architecture--1m-resource-limits)
-   - [Engine 7: AMD ROCm & HIP Compute Engine](#engine-7-amd-rocm--hip-compute-engine)
-   - [Engine 8: Limine Two-Zone & Cryptographic Armor Engine](#engine-8-limine-two-zone--cryptographic-armor-engine)
-   - [Engine 9: SBo SlackBuilds & sbotools Integration Engine](#engine-9-sbo-slackbuilds--sbotools-integration-engine)
-   - [Engine 10: Real-Time System Tray Telemetry & Notifications](#engine-10-real-time-system-tray-telemetry--notifications)
-   - [Engine 11: Internationalization & Fallback Engine (i18n)](#engine-11-internationalization--fallback-engine-i18n)
-   - [Engine 12: Documentation & Groff PDF / QR Export Engine](#engine-12-documentation--groff-pdf--qr-export-engine)
-   - [Engine 13: Universal HiDPI & Wayland Scaling Engine](#engine-13-universal-hidpi--wayland-scaling-engine)
-   - [Engine 14: Fast-Race Chaotic-AUR Probing & Self-Healing 404 Engine](#engine-14-fast-race-chaotic-aur-probing--self-healing-404-engine)
-   - [Engine 15: Gaming Overlay TrueType Compatibility Mesh](#engine-15-gaming-overlay-truetype-compatibility-mesh)
-4. [4. Security, Sandboxing & Privilege Model](#4-security-sandboxing--privilege-model)
-5. [5. Data Layout & State Management](#5-data-layout--state-management)
-6. [6. Auditing, Transparency & Debugging](#6-auditing-transparency--debugging)
+2. [Master Architecture Overview](#2-master-architecture-overview)
+3. [The Master Internal Engines: Detailed Breakdown](#3-the-master-internal-engines-detailed-breakdown)
+   - [Engine 1: Core Orchestration, In-Flight Transaction Armor & Lifecycle Controller](#engine-1-core-orchestration-in-flight-transaction-armor--lifecycle-controller)
+   - [Engine 2: Pure Python Standard Library TUI Engine](#engine-2-pure-python-standard-library-tui-engine)
+   - [Engine 3: 10-Worker Asynchronous Turbo Pre-Fetcher](#engine-3-10-worker-asynchronous-turbo-pre-fetcher)
+   - [Engine 4: Underpants Gnomes Transmutation & Host Sovereignty Engine](#engine-4-underpants-gnomes-transmutation--host-sovereignty-engine)
+   - [Engine 5: CachyOS Kernel Lifecycle, Multi-Flavor & CPU Microarchitecture](#engine-5-cachyos-kernel-lifecycle-multi-flavor--cpu-microarchitecture)
+   - [Engine 6: NVIDIA Driver & DKMS Pipeline](#engine-6-nvidia-driver--dkms-pipeline)
+   - [Engine 7: System Performance, Memory Architecture & 9 Granular Tweaks](#engine-7-system-performance-memory-architecture--9-granular-tweaks)
+   - [Engine 8: FastBoot & Turbo Shutdown Acceleration Engine](#engine-8-fastboot--turbo-shutdown-acceleration-engine)
+   - [Engine 9: AMD ROCm & HIP Compute Engine](#engine-9-amd-rocm--hip-compute-engine)
+   - [Engine 10: Limine Two-Zone & Guided Secure Boot Engine](#engine-10-limine-two-zone--guided-secure-boot-engine)
+   - [Engine 11: SBo SlackBuilds & sbotools Integration Engine](#engine-11-sbo-slackbuilds--sbotools-integration-engine)
+   - [Engine 12: Real-Time System Tray Telemetry & Notifications](#engine-12-real-time-system-tray-telemetry--notifications)
+   - [Engine 13: Internationalization & Fallback Engine (24 Locales)](#engine-13-internationalization--fallback-engine-24-locales)
+   - [Engine 14: Documentation & Groff PDF / QR Export Engine](#engine-14-documentation--groff-pdf--qr-export-engine)
+   - [Engine 15: Universal HiDPI & Wayland Scaling Engine](#engine-15-universal-hidpi--wayland-scaling-engine)
+   - [Engine 16: Fast-Race Chaotic-AUR Probing & Self-Healing 404 Engine](#engine-16-fast-race-chaotic-aur-probing--self-healing-404-engine)
+   - [Engine 17: Gaming Overlay TrueType Compatibility Mesh](#engine-17-gaming-overlay-truetype-compatibility-mesh)
+4. [Security, Sandboxing & Privilege Model](#4-security-sandboxing--privilege-model)
+5. [Data Layout & State Management](#5-data-layout--state-management)
+6. [Auditing, Transparency & Debugging](#6-auditing-transparency--debugging)
 
 ---
 
-## 1. Philosophical Manifesto: Harmony with Slackware
+## 1. Philosophical Manifesto: The Sacred Slackware Base & The Five Pillars
 
 > [!NOTE]
 > ### 🧩 ELI5 — What is Slackware harmony and why do you care?
-> Slackware is legendary for being clean, predictable, and indestructible. Our golden rule is that Slacky-Update must never behave like a reckless package manager that clobbers system files. We package everything as clean, native Slackware packages (`.txz`), never build software directly on your root filesystem, and always preserve your stock Slackware fallback kernels and bootloaders.
+> Slackware is legendary for being clean, predictable, and indestructible. Our golden rule is that Slacky-Update must never behave like a reckless modernization script that clobbers system files. We package everything as clean, native Slackware packages (`.txz`), never build software directly on your root filesystem, and always preserve your stock Slackware fallback kernels and bootloaders.
 
 Slacky-Update was engineered with a strict guiding principle: **augment Slackware without ever violating its unix philosophy, package management integrity, or system initialization purity.**
 
@@ -71,16 +73,26 @@ Slacky-Update was engineered with a strict guiding principle: **augment Slackwar
 │  SLACKY-UPDATE COMPANION LAYER (Zero-Destruction Augmentation)              │
 │  ├── Isolated Builds          (Sandboxed in /tmp/slacky-build-XXXXXX)      │
 │  ├── Isolated Workstation Apps (Contained in /opt/<app>/)                   │
+│  ├── Host Sovereignty Shield  (/opt/underpants/ with private RPATH)         │
 │  ├── Non-Destructive Boot     (Limine + GRUB Coexistence Mode)              │
 │  └── Pure Native Packaging    (100% native .txz with slack-desc & doinst)   │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 100% Respect for Slackware Core
+### 🏛️ The Sacred Slackware Base System
 * **Native Tooling is Master**: Slacky-Update does not replace `pkgtools` (`installpkg`, `upgradepkg`, `removepkg`) or `slackpkg`. It acts as an orchestrator and companion around them.
 * **No Foreign Package Managers**: No `apt`, `dnf`, or `pacman` binaries are ever installed or executed on the host system.
 * **Canonical Logging**: Every package installed by Slacky-Update is registered in `/var/log/packages/` as a first-class citizen with standard `slack-desc` metadata.
 * **BSD-Style SysVinit Integration**: All background services deploy standard `/etc/rc.d/rc.<service>` scripts with clean `chmod +x` / `chmod -x` semantics.
+* **Preserved Stock Fallbacks**: Official Slackware kernels (`vmlinuz-generic`, `vmlinuz-huge`), stock initrds, and default bootloaders (GRUB, ELILO) are preserved untouched so recovery is always a reboot away.
+
+### 🌟 The Five Engineering Pillars
+Every feature, routine, and interface in Slacky-Update is continuously measured against five strict standards:
+1. **⚡ Speed:** Multi-core parallel zstd `-1 -T0` dracut decompression (<20ms boot), NVMe direct I/O hardware bypass (`none` scheduler), 10GB persistent shader disk cache, and instant sub-millisecond TUI responsiveness.
+2. **🛋️ Comfort:** Automated ChangeLog tracking, background tray telemetry, dynamic terminal adaptation, and native mouse text selection for effortless clipboard sharing with LLMs.
+3. **🛡️ Safety:** In-flight signal traps (`trap '' INT QUIT TSTP`) preventing broken states midway, non-destructive boot coexistence (GRUB/ELILO preserved), active kernel armor (`[ACTIVE - CANNOT REMOVE]`), and Btrfs Snapper snapshots.
+4. **🎨 UI Design:** Clean Dark Star aesthetics, absolute cursor row positioning (`\033[{row};1H\033[2K`) eliminating staircase defects, dynamic multi-column package status, and intuitive visual hierarchy.
+5. **🤝 Ease of Use:** 1-line automated installs, guided Secure Boot setup, universal `(ESC)` navigation across all menus, and clear human-readable confirmation prompts.
 
 ### The Zero-Rootfs Compilation Rule (Sandboxing)
 > [!IMPORTANT]
@@ -92,136 +104,183 @@ Slacky-Update was engineered with a strict guiding principle: **augment Slackwar
 4. **Standard Installation**: The resulting `.txz` is handed over to `upgradepkg --install-new`, guaranteeing complete tracking in `/var/log/packages/`.
 5. **Guaranteed Sandbox Destruction**: POSIX signal traps (`trap cleanup INT TERM EXIT`) automatically wipe `/tmp/slacky-build-XXXXXX` even if an operation is aborted midway.
 
+### Coexistence vs. Replacement
+Slacky-Update operates strictly on a model of non-destructive coexistence rather than wholesale replacement:
+* **Dual Bootloader Coexistence:** Limine is deployed alongside existing bootloaders (GRUB, ELILO) without overwriting NVRAM entries or destroying configuration files.
+* **Kernel Preservation:** Official Slackware kernels (`vmlinuz-generic`, `vmlinuz-huge`) and stock initramfs images are permanently retained. High-performance CachyOS kernels live alongside native kernels.
+* **Workstation Isolation:** Third-party applications and runtime dependencies reside in `/opt/<app>/` and `/opt/underpants/`, guaranteeing zero conflict with host system libraries in `/lib64` and `/usr/lib64`.
+
 ---
 
 ## 2. Master Architecture Overview
 
 > [!NOTE]
 > ### 🧩 ELI5 — What is the master architecture and why do you care?
-> Think of Slacky-Update like a modular high-end stereo rack. Each component (the turbo downloader, the kernel manager, the graphics orchestrator, the bootloader manager) sits in its own dedicated chassis with its own isolated cables, so tuning your graphics card never interferes with your web browser or audio drivers.
+> Think of Slacky-Update like a modular high-end stereo rack. Each component (the turbo downloader, the TUI engine, the kernel manager, the graphics orchestrator, the bootloader manager) sits in its own dedicated chassis with its own isolated cables, so tuning your graphics card never interferes with your web browser or audio drivers.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                          SLACKY-UPDATE SUBSYSTEMS                           │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │  CLI INTERFACE (bin/slacky-update)       TRAY APPLET (bin/slacky-update-tray)│
-│  └── common.sh & check_backend.sh        └── PyQt5 Event Loop & D-Bus / XDG │
+│  └── common.sh & check_backend.sh        └── PyQt6 Event Loop & D-Bus / XDG │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  TUI INTERACTION ENGINE (lib/slacky_tui.py)                                 │
+│  ├── Absolute Cursor Addressing          ├── Dynamic Screen Budgeting       │
+│  ├── Native Mouse Selection for LLMs     └── Universal (ESC) Navigation     │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │  TRANSACTION & PACKAGE ORCHESTRATION                                        │
-│  ├── Parallel Pre-fetcher (10 Streams)  ├── .new Config Reconciler          │
-│  ├── Multi-Pass Resume Controller       └── AlienBOB Multilib Health Guard  │
+│  ├── Parallel Pre-fetcher (10 Streams)  ├── In-Flight Signal Armor (SIGINT) │
+│  ├── Multi-Pass Resume Controller       └── .new Config Reconciler          │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │  GRAPHICS, COMPUTE & WORKSTATION SUBSYSTEMS                                 │
 │  ├── NVIDIA CachyOS Master & DKMS       ├── AMD ROCm / HIP Creator Toolkit  │
-│  ├── VRAM Booster (615+ Preserver)      └── Underpants Gnomes App-Bundler   │
+│  ├── 10GB Shader Cache & VRAM Preserver └── Underpants Gnomes App-Bundler   │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │  KERNEL & BOOTLOADER INFRASTRUCTURE                                         │
 │  ├── CachyOS Kernel & CPU Tiering       ├── Limine Two-Zone Generator       │
-│  ├── Dracut Hardware Guard (lib64)      └── sbctl / MOK Secure Boot Armor   │
+│  ├── Dracut FastBoot (-1 -T0 zstd)      └── Guided MOK Secure Boot Engine   │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 3. The 12 Internal Engines: Detailed Breakdown
+## 3. The Master Internal Engines: Detailed Breakdown
 
 > [!NOTE]
-> ### 🧩 ELI5 — What are the 12 engines and why do you care?
-> Under the hood, Slacky-Update runs 12 specialized robotic engines, each laser-focused on one job: one downloads at lightning speed, one tunes your CPU instructions, one maintains your GPU drivers, and one ensures your PC always boots. Below is the full engineering breakdown of each engine.
+> ### 🧩 ELI5 — What are the engines and why do you care?
+> Under the hood, Slacky-Update runs specialized robotic engines, each laser-focused on one job: one downloads at lightning speed, one renders menus without flicker, one tunes your CPU instructions, one maintains your GPU drivers, and one ensures your PC always boots. Below is the full engineering breakdown of each engine.
 
 ---
 
-### Engine 1: Core Orchestration & Lifecycle Controller
+### Engine 1: Core Orchestration, In-Flight Transaction Armor & Lifecycle Controller
 * **Source Files**: `bin/slacky-update`, `lib/common.sh`, `lib/mod_packages.sh`
 * **Role**: Coordinates CLI argument parsing, transaction sequencing, `slackpkg` integration, and `.new` configuration file reconciliation.
+* **In-Flight Transaction Armor**: During package extraction, kernel generation, or initramfs builds, POSIX traps temporarily ignore interrupt signals (`trap '' INT QUIT TSTP`). This prevents catastrophic half-installed kernel or library states if a user accidentally hits `Ctrl+C`.
+* **TTY Input Purging**: Flushes residual unread keypresses (`tcflush`) before and after transactions to prevent phantom keystrokes from spilling into subsequent menus.
 
 ---
 
-### Engine 2: 10-Worker Asynchronous Turbo Pre-Fetcher
+### Engine 2: Pure Python Standard Library TUI Engine
+* **Source File**: `lib/slacky_tui.py`
+* **Role**: Renders interactive single-select and multi-select checklist menus with zero third-party dependencies (Python standard library only: `sys`, `termios`, `tty`, `os`, `signal`, `shutil`).
+* **Absolute Cursor Addressing**: Employs `\033[{row};1H\033[2K` row-by-row updates instead of relative cursor jumps, completely eliminating terminal "staircase" tearing across resizes.
+* **Dynamic Screen Height Budgeting**: Reads terminal rows and columns via `shutil.get_terminal_size()`, reserving exact line allowances for headers, menu items, action docks, and status grids.
+* **Native Mouse Text Selection for LLMs**: Avoids capturing mouse reporting events (`\033[?1000h`), leaving the terminal emulator's native drag-to-select and copy-to-clipboard functionality 100% active for instant clipboard sharing with LLM coding agents.
+* **Universal (ESC) Navigation**: Explicitly maps the Escape key (`\x1b`) to return to previous menus or exit cleanly.
+
+---
+
+### Engine 3: 10-Worker Asynchronous Turbo Pre-Fetcher
 * **Source File**: `lib/mod_packages.sh`
-* **Role**: Spawns 10 concurrent `curl` download workers using HTTP range resume (`-C -`) to pre-populate `/var/cache/packages/` before package installation starts.
+* **Role**: Spawns 10 concurrent `curl` download workers using HTTP range resume (`-C -`) to pre-populate `/var/cache/slacky-update/packages/` before package installation starts.
+* **Network Saturation**: Maximizes high-bandwidth connections by saturating gigabit pipes during the pre-fetch phase so `pkgtools` operations run entirely from local NVMe storage.
 
 ---
 
-#### Engine 3: Sandboxed Transmutation & App-Bundle Engine (Underpants Gnomes)
-* **Source Files**: `lib/mod_gaming.sh`
-* **Role**: Transmutes 51 upstream workstation packages, 9 OBS streamer plugins, and 6 DKMS hardware drivers into native `.txz` archives with GPG validation, `/opt/<app>/` directory isolation, interactive 2-column TUI workstation manager, and timestamp-paced animated Gnome download progress bar.
+### Engine 4: Underpants Gnomes Transmutation & Host Sovereignty Engine
+* **Source Files**: `bin/gnomes`, `lib/gnomes_pacman.py`, `lib/mod_gaming.sh`
+* **Role**: In-memory pure Python streaming engine (`lib/gnomes_pacman.py`) that downloads upstream Arch Linux, CachyOS, and Chaotic-AUR package archives (`.pkg.tar.zst`), decompresses them directly in RAM with `zstandard`, and repackages them into authentic namespaced Slackware `.txz` packages (`underpants-*.txz`). Zero foreign package manager binaries (`pacman`, `apt`, `dnf`, `libalpm`) are installed or executed on the host.
+* **Host Sovereignty Shielding**: Installs binary runtimes and shared objects into `/opt/underpants/` and `/opt/<app>/`, setting explicit `RPATH`/`RUNPATH` binaries so host system libraries (`/lib64`, `/usr/lib64`, `glibc`, PAM) are 100% shielded and sovereign, never contaminated or overridden.
+* **Canonical Registration & Protection**: Every transmuted package is installed via `upgradepkg --install-new` and logs cleanly under `/var/log/packages/underpants-*` for clean removal via standard `removepkg` (or `gnomes -R`). Native Slackware base packages are 100% shielded and never overwritten.
 
 ---
 
-### Engine 4: CachyOS Kernel Lifecycle & CPU Microarchitecture
+### Engine 5: CachyOS Kernel Lifecycle, Multi-Flavor & CPU Microarchitecture
 * **Source Files**: `lib/mod_kernel.sh`, `lib/mod_limine.sh`
-* **Role**: Inspects host CPU features (x86_64_v4, v3, v2) and deploys optimized CachyOS kernels across 9 scheduler flavors (`standard`, `bore`, `lto`, `eevdf`, `bmq`, `deckify`, `rt-bore`, `rc`, `lts`) with a universal multi-kernel DKMS compilation engine, smart Realtek 2.5GbE (`r8125`) detection, and deterministic 2-kernel retention policy.
+* **Role**: Inspects host CPU features (x86_64_v4, v3, v2) and deploys optimized CachyOS kernels across 10 scheduler flavors (`standard`, `bore`, `lto`, `eevdf`, `bmq`, `deckify`, `rt-bore`, `rc`, `lts`, `zen`).
+* **Active Kernel Armor**: Identifies the currently booted kernel (`uname -r`) and protects it with `[ACTIVE - CANNOT REMOVE]` badges to ensure a user never deletes their live operating kernel.
+* **Multi-Kernel DKMS**: Rebuilds third-party kernel modules (NVIDIA, ZFS, OpenRGB, VirtualBox) automatically across all installed kernel versions.
 
 ---
 
-### Engine 5: NVIDIA Driver & DKMS Pipeline
+### Engine 6: NVIDIA Driver & DKMS Pipeline
 * **Source File**: `lib/mod_nvidia.sh`
 * **Role**: Deploys pre-compiled modules for CachyOS kernels, DKMS for standard Slackware kernels, purges stale modules, and aligns 32-bit multilib drivers with strict DKMS collision shielding.
+* **VRAM Booster & Preserver**: Enforces `nvidia.NVreg_PreserveVideoMemoryAllocations=1` and hooks systemd/SysVinit suspend-resume scripts to preserve VRAM state across sleep cycles.
 
 ---
 
-### Engine 6: System Performance, Memory Architecture & 1M Resource Limits
+### Engine 7: System Performance, Memory Architecture & 9 Granular Tweaks
 * **Source File**: `lib/mod_tweaks.sh`
-* **Role**: Applies 1 million file descriptor limits, PipeWire realtime priority (`rtprio 95`), Transparent HugePages (`madvise + defer`), TCP BBR, and KDE Plasma Wayland Dynamic VRAM Leak Guard & Memory Compaction.
+* **Role**: Provides 9 independently toggleable and fully reversible performance optimizations:
+  1. **1 Million File Descriptors**: Eliminates `EMFILE` limits for Wine, Proton, and ESync/FSync.
+  2. **THP & Memory Tuning**: Enforces `madvise` with deferred defragmentation (`defer`), sets `max_map_count=2147483642`, and lowers `swappiness=10`.
+  3. **TCP BBR Congestion Control**: Replaces Cubic with Google BBR and Fair Queuing (`fq`) for lower network bufferbloat.
+  4. **NTSYNC Gaming Synchronization**: Sets udev permissions (`0666`) on `/dev/ntsync` for ultra-low latency Wine threading.
+  5. **Gamepad & Controller Forcefield**: Installs universal udev rules for DualSense, Xbox, Switch Pro, and Steam Deck controllers.
+  6. **Turbo Boot & Fast Shutdown**: Strips legacy SysVinit delays and applies parallel zstd level 1 dracut initramfs generation.
+  7. **NVMe Direct I/O Scheduler (`none`)**: Bypasses CPU-bound software I/O queues for hardware NVMe controllers.
+  8. **10GB Shader Disk Cache**: Expands NVIDIA OpenGL/Vulkan shader cache to 10GB (`__GL_SHADER_DISK_CACHE_SIZE=10737418240`), eliminating stutter.
+  9. **PipeWire 256 Low-Latency Audio**: Drops audio buffer quantum from 1024 to 256 (5.3ms latency) via `/etc/pipewire/pipewire.conf.d/` drop-in.
 
 ---
 
-### Engine 7: AMD ROCm & HIP Compute Engine
+### Engine 8: FastBoot & Turbo Shutdown Acceleration Engine
+* **Source Files**: `lib/mod_tweaks.sh`, `/etc/rc.d/rc.6`
+* **Role**: Shaves 10 to 15 seconds off system boot and shutdown:
+  - **PCMCIA & Inactive NFS Removal**: Disables legacy PCMCIA probes (5-second sleep) and skips unmounted NFS unmount loops.
+  - **NetworkManager Sovereignty**: Prevents redundant `rc.inet1` DHCP timeout blocking when NetworkManager manages interfaces.
+  - **tmpfs `/tmp`**: Mounts `/tmp` in RAM for instantaneous ephemeral I/O.
+  - **Dracut Multi-Core Compression**: Enforces `zstd -1 -T0` parallel compression, reducing kernel decompression time to under 20ms.
+
+---
+
+### Engine 9: AMD ROCm & HIP Compute Engine
 * **Source File**: `lib/mod_rocm.sh`
-* **Role**: Deploys full ROCm OpenCL/HIP compute runtimes for DaVinci Resolve Studio and purges conflicting Mesa OpenCL libraries.
+* **Role**: Deploys full ROCm OpenCL/HIP compute runtimes for DaVinci Resolve Studio and Blender, cleanly isolating compute libraries from conflicting Mesa OpenCL drivers.
 
 ---
 
-### Engine 8: Limine Two-Zone & Cryptographic Armor Engine
+### Engine 10: Limine Two-Zone & Guided Secure Boot Engine
 * **Source Files**: `lib/mod_limine.sh`, `lib/mod_secureboot.sh`
-* **Role**: Generates `/boot/limine.conf` preserving Zone A (user settings) while atomically recalculating Zone B (kernels, BLAKE2B hashes, Snapper snapshots, and `sbctl` signing).
+* **Role**: Generates `/boot/limine.conf` preserving Zone A (user custom entries) while atomically recalculating Zone B (kernels, BLAKE2B cryptographic hashes, Snapper snapshots, and Secure Boot signing).
+* **Guided MOK Setup**: Provides clear, step-by-step guidance for enrolling custom Machine Owner Keys (`sbctl` / `mokutil`) in UEFI firmware. Once enrolled, all subsequent kernel updates and initramfs builds are signed **100% automatically**.
+* **Split-Lock Mitigation Toggle**: Includes a dedicated CMDLINE toggle for `split_lock_mitigate=0` to prevent micro-stutters in heavy gaming workloads.
 
 ---
 
-### Engine 9: SBo SlackBuilds & `sbotools` Integration Engine
+### Engine 11: SBo SlackBuilds & `sbotools` Integration Engine
 * **Source File**: `lib/mod_sbo.sh`
-* **Role**: Auto-routes recipes to Ponce's git repository on `-current` or standard SBo on `15.0`, enforces `JOBS=$(nproc)`, and provides 26 curated recipes (including Plasticity 3D CAD).
+* **Role**: Auto-routes recipes to Ponce's git repository on `-current` or standard SBo on `15.0`, enforces `JOBS=$(nproc)`, and provides curated workstation builds.
 
 ---
 
-### Engine 10: Real-Time System Tray Telemetry & Notifications
+### Engine 12: Real-Time System Tray Telemetry & Notifications
 * **Source Files**: `bin/slacky-update-tray`, `lib/slacky-update-tray`, `lib/check_backend.sh`
 * **Role**: Lightweight PyQt6 background monitor polling on-demand and on schedule, featuring cascading submenus for Underpants Gnomes (TUI/GUI) and triggering D-Bus desktop notifications.
 
 ---
 
-### Engine 11: Internationalization & Fallback Engine (i18n)
+### Engine 13: Internationalization & Fallback Engine (24 Locales)
 * **Source Files**: `lib/slacky_update_i18n.py`, `locales/*.json`
-* **Role**: High-performance multi-language translation engine providing 100% key parity across 24 global languages (213 keys each) with 90s pop-culture Radical Editions.
+* **Role**: High-performance multi-language translation engine providing 100% key parity across 24 global languages (262 keys each) with English fallback and 90s pop-culture Radical Editions.
 
 ---
 
-### Engine 12: Documentation & Groff PDF / QR Export Engine
+### Engine 14: Documentation & Groff PDF / QR Export Engine
 * **Source File**: `lib/mod_docs.sh`
 * **Role**: Compiles Markdown documentation into professional Groff/Troff PDFs in `~/Documents/` and starts an ephemeral Wi-Fi QR web server for mobile reading during BIOS setup.
 
 ---
 
-### Engine 13: Universal HiDPI & Wayland Scaling Engine
+### Engine 15: Universal HiDPI & Wayland Scaling Engine
 * **Source Files**: `assets/profile.d/slacky-hidpi.sh`, `assets/profile.d/slacky-hidpi.csh`, `desktop/slacky-update.desktop`, `bin/slacky-update`, `lib/slacky-update-tray`
-* **Role**: Configures system-wide Qt5, Qt6, and GTK environment defaults for modern high-resolution displays (4K/1440p) under Wayland and X11 sessions. Deploys `QT_ENABLE_HIGHDPI_SCALING=1`, `QT_AUTO_SCREEN_SCALE_FACTOR=1`, `QT_SCALE_FACTOR_ROUNDING_POLICY=PassThrough`, and routes Wayland compositor backends (`QT_QPA_PLATFORM="wayland;xcb"`, `GDK_BACKEND="wayland,x11,*"`). Initializes `QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)` in the PyQt tray monitor and ensures terminals and dialogs spawn with pixel-perfect integer/fractional scaling.
+* **Role**: Configures system-wide Qt5, Qt6, and GTK environment defaults for modern high-resolution displays (4K/1440p) under Wayland and X11 sessions (`QT_ENABLE_HIGHDPI_SCALING=1`, `QT_SCALE_FACTOR_ROUNDING_POLICY=PassThrough`, `GDK_BACKEND="wayland,x11,*"`).
 
 ---
 
-### Engine 14: Fast-Race Chaotic-AUR Probing & Self-Healing 404 Engine
+### Engine 16: Fast-Race Chaotic-AUR Probing & Self-Healing 404 Engine
 * **Source Files**: `lib/mod_gaming.sh`, `lib/gnomes_pacman.py`
-* **Role**: Parallel, non-blocking latency evaluator and repository integrity recovery engine. 
-  - **Fast-Race Mirror Benchmarking**: Evaluates Chaotic-AUR global mirrors simultaneously using `concurrent.futures.as_completed` with aggressive 750ms cutoffs. Employs an instant-win short-circuit mechanism (sub-55ms response) to select the fastest mirror immediately without stalling on dead or high-latency nodes.
-  - **Self-Healing 404 Recovery**: Dynamically intercepts upstream mirror 404 HTTP errors when package versions bump during database TTL intervals. Automatically triggers a silent resynchronization pass (`sync_repositories(force=True, verbose=False)`), updates target tarball URIs, and transparently retries the download in-flight without user intervention.
+* **Role**: Parallel, non-blocking latency evaluator and repository integrity recovery engine:
+  - **Fast-Race Mirror Benchmarking**: Evaluates global mirrors simultaneously using `concurrent.futures.as_completed` with aggressive 750ms cutoffs and sub-55ms short-circuit instant selection.
+  - **Self-Healing 404 Recovery**: Intercepts upstream mirror 404 errors when upstream package versions bump, automatically re-syncs database metadata, and retries in-flight.
 
 ---
 
-### Engine 15: Gaming Overlay TrueType Compatibility Mesh
+### Engine 17: Gaming Overlay TrueType Compatibility Mesh
 * **Source Files**: `lib/mod_gaming.sh`
-* **Role**: Dynamic font indexer, symlinking orchestrator, and parser validation mesh for Vulkan/OpenGL gaming overlays (MangoHud, GOverlay).
-  - **Hierarchical Font Mesh**: Automatically discovers all system-installed TTF and OTF fonts across `/usr/share/fonts/` and `/usr/local/share/fonts/` and constructs synchronized symlink trees in `~/.local/share/fonts/` and subdirectories (`TTF`, `OTF`, `truetype`, `opentype`).
-  - **stb_truetype Engine Compatibility**: Eliminates GOverlay absolute path rendering errors and ensures MangoHud's Dear ImGui `stb_truetype` font rasterizer loads custom TrueType fonts natively without bitmap fallbacks.
+* **Role**: Dynamic font indexer, symlinking orchestrator, and parser validation mesh for Vulkan/OpenGL gaming overlays (MangoHud, GOverlay), eliminating font rendering errors in Dear ImGui `stb_truetype` font rasterizers.
 
 ---
 
@@ -266,7 +325,7 @@ Slacky-Update was engineered with a strict guiding principle: **augment Slackwar
 | `/var/cache/slacky-update/` | Download cache, SlackBuild recipes, update status | Root (0755) |
 | `/var/cache/slacky-update/backup/` | Offline backup of stock kernels and drivers | Root (0700) |
 | `/usr/share/slacky-update/keys/` | Machine Owner Keys (MOK) and vendor GPG keys | Root (0644) |
-| `/usr/share/slacky-update/locales/` | 24 JSON language translation files | Root (0644) |
+| `/usr/share/slacky-update/locales/` | 24 JSON language translation files (262 keys each) | Root (0644) |
 | `/usr/share/slacky-update/docs/` | System manuals, Survival Guide, Companion Guide | Root (0644) |
 | `/etc/boot/hooks/post.d/` | Post-kernel installation hooks (Limine hash enrollment) | Root (0755) |
 
@@ -300,9 +359,9 @@ sbctl status
 ```
 
 For disaster recovery procedures:
-👉 **See [docs/TROUBLESHOOTING_GUIDE.md](docs/TROUBLESHOOTING_GUIDE.md)**  
+👉 **See [docs/TROUBLESHOOTING_GUIDE.md](TROUBLESHOOTING_GUIDE.md)**  
 For disk partitioning and ESP setup:
-👉 **See [docs/LIMINE_SECUREBOOT_FIELD_GUIDE.md](docs/LIMINE_SECUREBOOT_FIELD_GUIDE.md)**
+👉 **See [docs/LIMINE_SECUREBOOT_FIELD_GUIDE.md](LIMINE_SECUREBOOT_FIELD_GUIDE.md)**
 
 ---
 

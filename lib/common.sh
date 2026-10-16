@@ -72,7 +72,24 @@ CURL_CONNECT_TIMEOUT=10
 CURL_SPEED_LIMIT=1024
 CURL_SPEED_TIME=25
 
+# 6A-118: SpiderSense hardware facts, probed live once per run (~20 ms incl. python start) and shared as HW_* variables.
+# Every hardware question (laptop? NVIDIA? which GPU drives the screen? CPU level?) is answered from here; the old
+# per-module probes stay below only as the fallback when the profile cannot run.
+ss_hw_load() {
+    [ "${SLACKY_HW_LOADED:-0}" = "1" ] && return 0
+    local py="${APP_DIR:-/usr/share/slacky-update/lib}/spidersense_hw.py" out line
+    [ -f "${py}" ] || py="/usr/share/slacky-update/lib/spidersense_hw.py"
+    [ -f "${py}" ] || return 1
+    out=$(PYTHONSAFEPATH=1 python3 -I "${py}" get shell 2>/dev/null) || return 1
+    while IFS= read -r line; do
+        case "${line}" in HW_[A-Z_]*=*) export "${line?}" ;; esac
+    done <<< "${out}"
+    [ -n "${HW_CHASSIS:-}" ] || return 1
+    export SLACKY_HW_LOADED=1
+}
+
 is_laptop_chassis() {
+    if ss_hw_load; then [ "${HW_LAPTOP}" = "true" ]; return; fi
     local chassis
     chassis=$(cat /sys/class/dmi/id/chassis_type 2>/dev/null || echo "")
     if [[ "${chassis}" =~ ^(8|9|10|14|30|31|32)$ ]]; then
@@ -85,6 +102,53 @@ is_laptop_chassis() {
     fi
     return 1
 }
+
+detect_cpu_tier() {
+    if ss_hw_load && [ -n "${HW_CPU_TIER:-}" ]; then echo "${HW_CPU_TIER}"; return 0; fi
+    local cpuinfo="/proc/cpuinfo"
+    if [ ! -r "${cpuinfo}" ]; then
+        echo "generic"
+        return 0
+    fi
+    if grep -q "avx512f" "${cpuinfo}" && \
+       grep -q "avx512bw" "${cpuinfo}" && \
+       grep -q "avx512cd" "${cpuinfo}" && \
+       grep -q "avx512dq" "${cpuinfo}" && \
+       grep -q "avx512vl" "${cpuinfo}"; then
+        if grep -q "AuthenticAMD" "${cpuinfo}"; then
+            echo "znver4"
+        else
+            echo "v4"
+        fi
+    elif grep -q "avx2" "${cpuinfo}" && \
+         grep -q "fma" "${cpuinfo}" && \
+         grep -q "bmi1" "${cpuinfo}" && \
+         grep -q "bmi2" "${cpuinfo}"; then
+        echo "v3"
+    else
+        echo "generic"
+    fi
+}
+
+get_cachyos_repo_url() {
+    local tier="${1:-${SLACKY_CPU_TIER:-generic}}"
+    case "${tier}" in
+        znver4)
+            echo "https://mirror.cachyos.org/repo/x86_64_v4/cachyos-znver4/"
+            ;;
+        v4)
+            echo "https://mirror.cachyos.org/repo/x86_64_v4/cachyos-v4/"
+            ;;
+        v3)
+            echo "https://mirror.cachyos.org/repo/x86_64_v3/cachyos-v3/"
+            ;;
+        *)
+            echo "https://mirror.cachyos.org/repo/x86_64/cachyos/"
+            ;;
+    esac
+}
+
+export SLACKY_CPU_TIER="${SLACKY_CPU_TIER:-$(detect_cpu_tier)}"
 
 compare_versions_strictly_greater() {
     local v1="$1"
@@ -128,17 +192,281 @@ sys.exit(1)
 " 2>/dev/null && echo "true" || echo "false"
 }
 
+# Cleanly drop every DKMS registration for one kernel so a later reinstall
+# does not show a ghost "installed" state. `dkms remove -k <kver> --all` is
+# invalid (needs -m/-v), so enumerate `dkms status` and remove per module.
+# Overridable for tests: DKMS_BIN, DKMS_ROOT, DKMS_SUDO (empty = no sudo).
+dkms_purge_kernel() {
+    local kver="${1:-}"
+    [ -n "${kver}" ] || return 0
+    [ "${kver}" != "source" ] && [ "${kver}" != "build" ] || return 0
+    [ "${kver}" != "$(uname -r)" ] || return 0   # never touch the booted kernel
+
+    local dkms_bin="${DKMS_BIN:-$(command -v dkms 2>/dev/null || echo /usr/sbin/dkms)}"
+    local root="${DKMS_ROOT:-/var/lib/dkms}"
+    local sudo_cmd="${DKMS_SUDO-sudo}"
+
+    if [ -x "${dkms_bin}" ]; then
+        local line m v k
+        while IFS= read -r line; do
+            line="${line%%:*}"
+            read -r m v k _ <<< "$(printf '%s' "${line}" | tr '/,' '  ')"
+            [ -n "${m}" ] && [ -n "${v}" ] && [ "${k:-}" = "${kver}" ] || continue
+            ${sudo_cmd} "${dkms_bin}" remove -m "${m}" -v "${v}" -k "${kver}" --force >/dev/null 2>&1 || true
+        done < <("${dkms_bin}" status 2>/dev/null || true)
+    fi
+
+    # Leftover ghost entries: per-kernel build dirs and kernel-<kver>-* symlinks
+    local p
+    for p in "${root}"/*/kernel-"${kver}"-* "${root}"/*/*/"${kver}"; do
+        if [ -L "${p}" ]; then
+            ${sudo_cmd} rm -f "${p}" 2>/dev/null || true
+        elif [ -d "${p}" ]; then
+            ${sudo_cmd} rm -rf "${p}" 2>/dev/null || true
+        fi
+    done
+    # Dangling /usr/src/linux-<flavor> links left by removed kernels
+    local src_root="${DKMS_SRC_ROOT:-/usr/src}"
+    for p in "${src_root}"/linux-*; do
+        if [ -L "${p}" ] && [ ! -e "${p}" ]; then
+            ${sudo_cmd} rm -f "${p}" 2>/dev/null || true
+        fi
+    done
+    return 0
+}
+
+# Automatically purge orphaned DKMS registrations for kernels that no longer
+# exist in /lib/modules or /usr/lib/modules (safe garbage collector; never touches uname -r),
+# and self-heal dead module version registrations whose source tree has been removed.
+dkms_purge_orphaned_ghosts() {
+    local root="${DKMS_ROOT:-/var/lib/dkms}"
+    local mod_root="${MODULES_ROOT:-/lib/modules}"
+    local sudo_cmd="${DKMS_SUDO-sudo}"
+    local active_k
+    active_k="$(uname -r 2>/dev/null || echo '')"
+    [ -d "${root}" ] || return 0
+
+    # 1. Purge registrations for kernels that no longer exist in /lib/modules
+    local checked=()
+    local p kver
+    for p in "${root}"/*/kernel-*-* "${root}"/*/*/*; do
+        [ -e "${p}" ] || [ -L "${p}" ] || continue
+        kver=""
+        if [[ "${p}" =~ kernel-(.+)-[^-]+$ ]]; then
+            kver="${BASH_REMATCH[1]}"
+        elif [ -d "${p}" ]; then
+            kver=$(basename "${p}")
+        fi
+        [ -n "${kver}" ] || continue
+        [ "${kver}" != "source" ] && [ "${kver}" != "build" ] || continue
+        [ "${kver}" != "${active_k}" ] || continue
+        [[ " ${checked[*]:-} " =~ [[:space:]]${kver}[[:space:]] ]] && continue
+        checked+=("${kver}")
+
+        # If kernel modules directory does NOT exist on the filesystem, it is an orphaned ghost!
+        if [ ! -d "${mod_root}/${kver}" ] && [ ! -d "/usr/lib/modules/${kver}" ]; then
+            dkms_purge_kernel "${kver}"
+        fi
+    done
+
+    # 2. Self-heal dead module registrations where source tree or dkms.conf is missing
+    local mod_dir
+    for mod_dir in "${root}"/*; do
+        [ -d "${mod_dir}" ] || continue
+        local mod_name
+        mod_name=$(basename "${mod_dir}")
+        local ver_dir
+        for ver_dir in "${mod_dir}"/*; do
+            [ -d "${ver_dir}" ] || continue
+            local v_name
+            v_name=$(basename "${ver_dir}")
+            [[ "${v_name}" =~ ^kernel- ]] && continue
+
+            # Check if source tree or dkms.conf is missing
+            if [ ! -f "${ver_dir}/source/dkms.conf" ] && [ ! -f "${ver_dir}/dkms.conf" ]; then
+                ${sudo_cmd} rm -rf "${ver_dir}" 2>/dev/null || true
+                for ksym in "${mod_dir}"/kernel-*-*; do
+                    if [ -L "${ksym}" ]; then
+                        local target
+                        target=$(readlink "${ksym}" 2>/dev/null || true)
+                        if [[ "${target}" =~ ^${v_name}/ ]]; then
+                            ${sudo_cmd} rm -f "${ksym}" 2>/dev/null || true
+                        fi
+                    fi
+                done
+            fi
+        done
+    done
+}
+
+# Compute list of custom CachyOS/Arch kernels beyond retention (or older RC kernels)
+# that are slated for removal, so DKMS and module sync never waste I/O compiling for them.
+get_obsolete_cachyos_kernels() {
+    python3 -c "
+import os, re
+from collections import defaultdict
+
+def get_flavor(k_str):
+    if '-cachyos-bore-lto' in k_str or '-cachyos-lto' in k_str:
+        return 'lto'
+    elif '-cachyos-rt-bore' in k_str or '-cachyos-rt' in k_str:
+        return 'rt-bore'
+    elif '-cachyos-bore' in k_str:
+        return 'bore'
+    elif '-cachyos-eevdf' in k_str:
+        return 'eevdf'
+    elif '-cachyos-bmq' in k_str:
+        return 'bmq'
+    elif '-cachyos-deckify' in k_str:
+        return 'deckify'
+    elif '-cachyos-rc' in k_str:
+        return 'rc'
+    elif '-cachyos-lts' in k_str:
+        return 'lts'
+    elif '-cachyos' in k_str:
+        return 'standard'
+    elif '-zen' in k_str or k_str.endswith('-zen'):
+        return 'zen'
+    elif '-arch' in k_str:
+        return 'arch'
+    return 'other'
+
+def parse_ver(v_str):
+    nums = [int(x) for x in re.findall(r'\d+', v_str)]
+    return nums if nums else [0]
+
+def is_custom_k(name):
+    return ('cachyos' in name or '-zen' in name or '-arch' in name or name in ('vmlinuz-linux', 'vmlinuz-linux-zen', 'linux', 'linux-zen'))
+
+custom_kernels = set()
+if os.path.exists('/boot'):
+    try:
+        for f in os.listdir('/boot'):
+            if is_custom_k(f) and f.startswith('vmlinuz-') and not os.path.islink(os.path.join('/boot', f)):
+                custom_kernels.add(f.replace('vmlinuz-', ''))
+    except Exception:
+        pass
+
+for mdir in ('/lib/modules', '/usr/lib/modules'):
+    if os.path.exists(mdir):
+        for d in os.listdir(mdir):
+            if is_custom_k(d):
+                custom_kernels.add(d)
+
+active = os.uname().release
+by_flavor = defaultdict(list)
+for k in custom_kernels:
+    flv = get_flavor(k)
+    if flv != 'other':
+        by_flavor[flv].append(k)
+
+to_keep = set()
+if active in custom_kernels:
+    to_keep.add(active)
+
+for flv, klist in by_flavor.items():
+    sorted_k = sorted(klist, key=parse_ver, reverse=True)
+    if flv == 'rc':
+        to_keep.update(sorted_k[:1])
+    else:
+        to_keep.update(sorted_k[:2])
+
+to_remove = [k for k in custom_kernels if k not in to_keep]
+for k in to_remove:
+    print(k)
+" 2>/dev/null || true
+}
+
+# --- [ ROOT FILESYSTEM & DEVICE RESOLUTION ] ---
+detect_root_filesystem_details() {
+    local root_dev root_fs root_uuid root_flags
+
+    # 1. Device resolution
+    root_dev=$(findmnt -n -o SOURCE / 2>/dev/null || true)
+    if [ -z "${root_dev}" ]; then
+        root_dev=$(awk '$2 == "/" {print $1}' /proc/mounts 2>/dev/null | head -n1 || true)
+    fi
+    # Strip any Btrfs subvolume brackets like /dev/nvme1n1p7[/@] -> /dev/nvme1n1p7
+    root_dev="${root_dev%%\[*}"
+    root_dev=${root_dev:-"/dev/root"}
+
+    # 2. Filesystem type resolution
+    root_fs=$(findmnt -n -o FSTYPE / 2>/dev/null || true)
+    if [ -z "${root_fs}" ]; then
+        root_fs=$(awk '$2 == "/" {print $3}' /proc/mounts 2>/dev/null | head -n1 || true)
+    fi
+    root_fs=${root_fs:-"ext4"}
+
+    # 3. UUID resolution (preferred for reliable boot args)
+    root_uuid=$(findmnt -n -o UUID / 2>/dev/null || true)
+    if [ -z "${root_uuid}" ] && command -v blkid >/dev/null 2>&1 && [ -b "${root_dev}" ]; then
+        root_uuid=$(blkid -s UUID -o value "${root_dev}" 2>/dev/null || true)
+    fi
+
+    # 4. Subvolume / mount options resolution (for Btrfs)
+    root_flags=""
+    if [ "${root_fs}" = "btrfs" ]; then
+        local mnt_opts
+        mnt_opts=$(findmnt -n -o OPTIONS / 2>/dev/null || awk '$2 == "/" {print $4}' /proc/mounts 2>/dev/null | head -n1 || true)
+        local subvol_val subvol_id
+        subvol_val=$(echo "${mnt_opts}" | tr ',' '\n' | grep -E '^subvol=' | head -n1 | cut -d'=' -f2 || true)
+        subvol_id=$(echo "${mnt_opts}" | tr ',' '\n' | grep -E '^subvolid=' | head -n1 | cut -d'=' -f2 || true)
+        if [ -n "${subvol_val}" ] && [ "${subvol_val}" != "/" ] && [ "${subvol_id}" != "5" ]; then
+            root_flags="rootflags=subvol=${subvol_val}"
+        fi
+    fi
+
+    echo "${root_dev}|${root_fs}|${root_uuid}|${root_flags}"
+}
+
+# Resolve reliable bootloader root parameter with multi-tier fallbacks and zero-brick assertions
+resolve_boot_root_cmd() {
+    local root_dev="" root_fs="" root_uuid="" root_flags=""
+    if type detect_root_filesystem_details >/dev/null 2>&1; then
+        IFS='|' read -r root_dev root_fs root_uuid root_flags <<< "$(detect_root_filesystem_details)"
+    fi
+
+    if [ -z "${root_uuid}" ] && [ -z "${root_dev}" ]; then
+        root_dev=$(findmnt -n -o SOURCE / 2>/dev/null || awk '$2 == "/" {print $1}' /proc/mounts 2>/dev/null | head -n1 || true)
+        root_dev="${root_dev%%\[*}"
+        root_uuid=$(findmnt -n -o UUID / 2>/dev/null || true)
+        root_fs=$(findmnt -n -o FSTYPE / 2>/dev/null || echo "ext4")
+    fi
+
+    local root_cmd=""
+    if [ -n "${root_uuid}" ]; then
+        root_cmd="root=UUID=${root_uuid}"
+    elif [ -n "${root_dev}" ] && [ "${root_dev}" != "/dev/root" ]; then
+        root_cmd="root=${root_dev}"
+    else
+        local proc_root
+        proc_root=$(grep -o -E 'root=[^ ]+' /proc/cmdline 2>/dev/null | head -n1 || true)
+        if [ -n "${proc_root}" ] && [ "${proc_root}" != "root=" ]; then
+            root_cmd="${proc_root}"
+        else
+            echo "ERROR"
+            return 1
+        fi
+    fi
+
+    echo "${root_cmd}|${root_flags}|${root_fs}|${root_dev}|${root_uuid}"
+}
+
 set_terminal_title() {
     local title="${1:-slacky-update v${CURRENT_VERSION:-0.10}}"
-    if [ -t 1 ] || [ -n "${TERM:-}" ]; then
+    if [ -t 1 ]; then
         printf "\033]0;%s\007\033]2;%s\007\033]30;%s\007" "${title}" "${title}" "${title}" 2>/dev/null || true
     fi
 }
 
 get_user_staging_dir() {
     local staging_dir="${HOME:-/tmp}/.cache/slacky-update/staging"
-    mkdir -p "${staging_dir}" 2>/dev/null || staging_dir="/tmp/slacky-staging-${UID:-0}"
-    mkdir -p "${staging_dir}" 2>/dev/null || true
+    # 6A-149 (L2 MINOR 5): no predictable /tmp fallback that another user could create first; never an empty path
+    # (callers append "/dkms" etc.)
+    if ! mkdir -p -m 0700 "${staging_dir}" 2>/dev/null; then
+        local private_dir
+        private_dir=$(mktemp -d "${TMPDIR:-/tmp}/slacky-staging.XXXXXX" 2>/dev/null) && staging_dir="${private_dir}"
+    fi
     echo "${staging_dir}"
 }
 
@@ -308,25 +636,64 @@ try:
 except Exception:
     print('999999')
 " 2>/dev/null || echo "999999")
-            if [ "${age}" -gt 120 ]; then
+            if [ "${age}" -gt 900 ]; then
                 should_check=1
             fi
         fi
     fi
 
     if [ "${should_check}" -eq 1 ] && [ -n "${chk_bin}" ]; then
-        if [ -t 1 ]; then
-            echo -ne "\033[1;36m$(_ PREFLIGHT_SCOUTING)\033[0m"
-            if "${chk_bin}" >/dev/null 2>&1; then
+        if [ "${force}" -eq 1 ] || [ -z "${status_f}" ] || [ ! -f "${status_f}" ]; then
+            if [ -t 1 ]; then
+                local cur_loc
+                cur_loc=$(get_active_locale 2>/dev/null || echo "en")
+                local spinner_frames=('⏳' '⌛')
+                if [[ "${cur_loc}" =~ (en-ca|ca) ]]; then
+                    spinner_frames=($'\033[2;31m🍁\033[0m' $'\033[1;31m🍁\033[0m' $'\033[1;37m🍁\033[0m' $'\033[1;31m🍁\033[0m')
+                elif [[ "${cur_loc}" =~ radical ]]; then
+                    spinner_frames=($'\033[2;33m⚡\033[0m' $'\033[1;33m⚡\033[0m' $'\033[1;37m⚡\033[0m' $'\033[1;33m✨\033[0m')
+                fi
+
+                "${chk_bin}" >/dev/null 2>&1 &
+                local chk_pid=$!
+                local spin_idx=0
+                while kill -0 "${chk_pid}" 2>/dev/null; do
+                    local spin_char="${spinner_frames[spin_idx % ${#spinner_frames[@]}]}"
+                    echo -ne "\r\033[K\033[1;36m$(_ PREFLIGHT_SCOUTING) ${spin_char}\033[0m"
+                    spin_idx=$(( spin_idx + 1 ))
+                    sleep 0.25
+                done
+                wait "${chk_pid}" 2>/dev/null || true
                 echo -e "\r\033[K\033[1;32m✓ $(_ PREFLIGHT_DONE)\033[0m"
             else
-                echo -e "\r\033[K"
+                echo "$(_ PREFLIGHT_SCOUTING)"
+                "${chk_bin}" >/dev/null 2>&1 || true
             fi
         else
-            echo "$(_ PREFLIGHT_SCOUTING)"
-            "${chk_bin}" >/dev/null 2>&1 || true
+            nohup "${chk_bin}" </dev/null >/dev/null 2>&1 &
+            # 6A-150: remembered so a full update can wait for it before it records what it updated (otherwise this
+            # check, started before the update, finished after it and wrote the old list back: the badge stayed)
+            SLACKY_BG_CHECK_PID=$!
+            disown 2>/dev/null || true
         fi
     fi
+}
+
+# 6A-150: let a status check that this run started in the background finish before the run records its results, so
+# the check's (older) view never lands on top of them. A check that is still running after 60 s is stopped.
+ss_wait_background_check() {
+    local pid="${SLACKY_BG_CHECK_PID:-}" waited=0
+    [ -n "${pid}" ] || return 0
+    while kill -0 "${pid}" 2>/dev/null && [ "${waited}" -lt 120 ]; do
+        sleep 0.5
+        waited=$(( waited + 1 ))
+    done
+    if kill -0 "${pid}" 2>/dev/null; then
+        pkill -TERM -P "${pid}" 2>/dev/null || true
+        kill -TERM "${pid}" 2>/dev/null || true
+    fi
+    SLACKY_BG_CHECK_PID=""
+    return 0
 }
 
 reconcile_post_update_status() {
@@ -422,29 +789,54 @@ if nvidia_done == "1":
 base_data["last_check_ts"] = int(time.time())
 base_data["last_check"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
-def write_in_place(path, uid=None, gid=None):
+def _status_atomic(p, text):
+    d = os.path.dirname(p)
+    os.makedirs(d, exist_ok=True)
+    if os.path.islink(d):
+        return
+    import tempfile
+    fd, tmp = tempfile.mkstemp(prefix=".status.", dir=d)
     try:
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(base_data, f, indent=2)
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(text)
             f.flush()
             os.fsync(f.fileno())
-        if uid is not None and gid is not None:
-            try:
-                os.chown(path, uid, gid)
-            except Exception:
-                pass
-        try:
-            os.chmod(path, 0o666 if "/var/cache" in path else 0o644)
-        except Exception:
-            pass
+        os.chmod(tmp, 0o644)
+        os.replace(tmp, p)
     except Exception:
-        pass
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
+
+def write_status_safely(path, data_obj, uid=None, gid=None):
+    """6A-48: never follow a symlink as root. The system cache is written atomically (0644, was 0666); a user's cache
+    is written by a child that first drops to that user's uid/gid, so a planted symlink gains nothing."""
+    text = json.dumps(data_obj, indent=2)
+    try:
+        if os.geteuid() == 0 and uid is not None and gid is not None:
+            pid = os.fork()
+            if pid == 0:
+                try:
+                    os.setgroups([])
+                    os.setgid(gid)
+                    os.setuid(uid)
+                    _status_atomic(path, text)
+                    os._exit(0)
+                except BaseException:
+                    os._exit(1)
+            _, st = os.waitpid(pid, 0)
+            return st == 0
+        _status_atomic(path, text)
+        return True
+    except Exception:
+        return False
 
 for c in set(candidates):
     u = sudo_uid if (sudo_path and c == sudo_path) else None
     g = sudo_gid if (sudo_path and c == sudo_path) else None
-    write_in_place(c, u, g)
+    write_status_safely(c, base_data, u, g)
 PYRECON
 
     for sp in "/var/cache/slacky-update/status.json" "${HOME:-/tmp}/.cache/slacky-update/status.json"; do
@@ -507,7 +899,7 @@ verify_cachyos_gpg_signature() {
     [ "${gpg_tmp}" != "/tmp" ] && rm -rf "${gpg_tmp}" 2>/dev/null || true
 
     if [ "${verify_res}" -eq 1 ]; then
-        echo "[$(date '+%Y-%m-%d %H:%M:%S')] [SUCCESS] GPG cryptographic signature verified for $(basename "${payload}")" >> "${LOG_FILE}" 2>/dev/null || true
+        { echo "[$(date '+%Y-%m-%d %H:%M:%S')] [SUCCESS] GPG cryptographic signature verified for $(basename "${payload}")" >> "${LOG_FILE}"; } 2>/dev/null || true
         return 0
     else
         log_error "GPG signature verification FAILED for $(basename "${payload}")! Untrusted or corrupt package."
@@ -551,7 +943,7 @@ verify_microsoft_uefi_authenticode() {
     fi
 
     if "${sbverify_bin}" --cert "${ca_cert}" "${efi_file}" >/dev/null 2>&1; then
-        echo "[$(date '+%Y-%m-%d %H:%M:%S')] [SUCCESS] Microsoft 3rd Party UEFI CA signature verified for $(basename "${efi_file}")" >> "${LOG_FILE}" 2>/dev/null || true
+        { echo "[$(date '+%Y-%m-%d %H:%M:%S')] [SUCCESS] Microsoft 3rd Party UEFI CA signature verified for $(basename "${efi_file}")" >> "${LOG_FILE}"; } 2>/dev/null || true
         return 0
     else
         log_error "Microsoft UEFI CA Authenticode verification FAILED for $(basename "${efi_file}")!"
@@ -562,26 +954,458 @@ verify_microsoft_uefi_authenticode() {
 log_info() {
     local msg="$1"
     echo -e "  ${CYAN}•${RESET} ${msg}"
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] [INFO] ${msg}" >> "${LOG_FILE}" 2>/dev/null || true
+    { echo "[$(date '+%Y-%m-%d %H:%M:%S')] [INFO] ${msg}" >> "${LOG_FILE}"; } 2>/dev/null || true
 }
 
 log_success() {
     local msg="$1"
     echo -e "${GREEN}✓${RESET} ${msg}"
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] [SUCCESS] ${msg}" >> "${LOG_FILE}" 2>/dev/null || true
+    { echo "[$(date '+%Y-%m-%d %H:%M:%S')] [SUCCESS] ${msg}" >> "${LOG_FILE}"; } 2>/dev/null || true
 }
 
 log_warn() {
     local msg="$1"
     echo -e "${YELLOW}⚠️${RESET}  ${msg}"
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] [WARN] ${msg}" >> "${LOG_FILE}" 2>/dev/null || true
+    { echo "[$(date '+%Y-%m-%d %H:%M:%S')] [WARN] ${msg}" >> "${LOG_FILE}"; } 2>/dev/null || true
 }
 
 log_error() {
     local msg="$1"
     echo -e "${RED}✗${RESET} ${msg}"
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] [ERROR] ${msg}" >> "${LOG_FILE}" 2>/dev/null || true
+    { echo "[$(date '+%Y-%m-%d %H:%M:%S')] [ERROR] ${msg}" >> "${LOG_FILE}"; } 2>/dev/null || true
 }
+
+# --- [ ATOMIC TRANSACTION & INPUT PROTECTION ] ---
+# Secure prompt input inside update routines:
+# Disallows ESC keypresses so accidental ESC cannot skip, cancel, or corrupt updates.
+read_update_prompt() {
+    local prompt_msg="$1"
+    local default_val="${2:-Y}"
+    local var_name="$3"
+    local user_input=""
+
+    while true; do
+        # SS-3 test 4g: a stop request (Ctrl-C/TERM) interrupts read; it must mean "no", never the default "yes"
+        read -r -p "${prompt_msg}" user_input || { [ "${SS_ABORT:-0}" -gt 0 ] && user_input="n" || user_input="${default_val}"; }
+        user_input="${user_input:-$default_val}"
+        if [[ "${user_input}" =~ $'\033' ]] || [[ "${user_input}" =~ $'\x1b' ]] || [[ "${user_input}" == *$'\e'* ]]; then
+            echo -e "\n${YELLOW}[!] ESC is disabled during update transactions. Please enter [Y/n] or your choice:${RESET}" >&2
+            continue
+        fi
+        break
+    done
+    [ "${SS_ABORT:-0}" -gt 0 ] && user_input="n"
+    printf -v "${var_name}" "%s" "${user_input}"
+}
+
+# 6A-8d: one lock for everything that writes boot files (kernels, initramfs, limine.conf, Limine EFI), shared with the
+# hourly snapper/Limine cron job, so a cron reseal can never interleave with an update (conf and enrolled hash must match).
+# Held until this process exits; SLACKY_BOOT_LOCK_HELD stops nested calls (and the cron job's own child) from waiting
+# on themselves.
+SLACKY_BOOT_LOCK="/run/lock/boot-partition.lock"
+acquire_boot_lock() {
+    [ "${SLACKY_BOOT_LOCK_HELD:-0}" = "1" ] && return 0
+    command -v flock >/dev/null 2>&1 || return 0
+    if [ ! -e "${SLACKY_BOOT_LOCK}" ]; then
+        if [ "$(id -u)" -eq 0 ]; then
+            install -m 0644 -o root -g root /dev/null "${SLACKY_BOOT_LOCK}" 2>/dev/null || true
+        else
+            sudo install -m 0644 -o root -g root /dev/null "${SLACKY_BOOT_LOCK}" 2>/dev/null || true
+        fi
+    fi
+    # 6A-56: brace group so only the open is silenced; a bare "exec 9<f 2>/dev/null" made 2>/dev/null permanent for
+    # the whole shell (read -p prompts and every error message vanished after the lock was taken)
+    { exec 9<"${SLACKY_BOOT_LOCK}"; } 2>/dev/null || { log_error "Cannot open the boot lock ${SLACKY_BOOT_LOCK}."; return 1; }
+    if ! flock -n 9; then
+        log_info "Waiting for another boot update to finish..."
+        if ! flock -w 300 9; then
+            log_error "Another boot update is still running. Try again in a few minutes."
+            exec 9<&-
+            return 1
+        fi
+    fi
+    export SLACKY_BOOT_LOCK_HELD=1
+    # 6A-102: remember that this process opened fd 9, so release_boot_lock may close it (never a lock held by a parent)
+    SS_BOOT_LOCK_OURS=1
+}
+
+# 6A-102: the full update holds the boot lock only for its boot-chain step and releases it before the post snapshot
+release_boot_lock() {
+    [ "${SS_BOOT_LOCK_OURS:-0}" = "1" ] || return 0
+    exec 9<&-
+    SS_BOOT_LOCK_OURS=0
+    export SLACKY_BOOT_LOCK_HELD=0
+}
+
+# 6A-8c: "boot files changed, Limine not resealed yet". Set before kernels or limine.conf change, cleared after the
+# conf + EFI pair was swapped in. The hourly cron job reseals while it exists, so an update killed by a closed terminal,
+# SIGKILL or power loss is repaired without the user noticing.
+SLACKY_BOOT_PENDING="/var/cache/slacky-update/boot-reseal-pending"
+# 6A-152: the shared marker of the SpiderSense spec v0.3 (written by slacky-update-rs); served and cleared here too
+SLACKY_BOOT_PENDING_SHARED="/var/lib/slacky-boot/reseal-pending"
+mark_boot_reseal_pending() {
+    if [ "$(id -u)" -eq 0 ]; then
+        touch "${SLACKY_BOOT_PENDING}" 2>/dev/null || true
+    else
+        sudo touch "${SLACKY_BOOT_PENDING}" 2>/dev/null || true
+    fi
+}
+clear_boot_reseal_pending() {
+    if [ "$(id -u)" -eq 0 ]; then
+        rm -f "${SLACKY_BOOT_PENDING}" "${SLACKY_BOOT_PENDING_SHARED}" 2>/dev/null || true
+    else
+        sudo rm -f "${SLACKY_BOOT_PENDING}" "${SLACKY_BOOT_PENDING_SHARED}" 2>/dev/null || true
+    fi
+}
+
+# 6A-97/6A-98/6A-99 (SpiderSense SS-3, order-book gates): while DEFER_BOOT_SYNC=1 the code in the middle of an update
+# records what the boot chain must do instead of writing boot files itself. The owner of the deferral (the full update's
+# boot-chain step, or update_cachyos_kernels run on its own) carries the orders out once, in a fixed order. The orders
+# live in this shell only; each one also sets the reseal marker, so if the run dies the hourly job repairs the chain.
+SS_INITRD_ORDERS=()
+SS_MENU_ORDER=0
+SS_BOOT_DIRTY=0
+ss_mark_if_limine() {
+    SS_BOOT_DIRTY=1
+    # 6A-147 (verifier MAJOR-1): with /boot unmounted the Limine EFI file is invisible; a configured Limine still gets
+    # the marker so the hourly check repairs it once /boot is back (the cron gate re-checks before it serves it)
+    if ! ss_boot_ready 2>/dev/null && { [ -f /etc/default/limine ] || [ -f /boot/limine.conf ]; }; then
+        mark_boot_reseal_pending
+        return 0
+    fi
+    command -v is_limine_installed >/dev/null 2>&1 || return 0
+    [ "$(is_limine_installed 2>/dev/null || echo false)" = "true" ] || return 0
+    mark_boot_reseal_pending
+}
+ss_order_initrd() {
+    local k="${1:-}"
+    [ -n "${k}" ] || return 0
+    ss_initrd_ordered "${k}" || SS_INITRD_ORDERS+=("${k}")
+    ss_mark_if_limine
+}
+ss_initrd_ordered() {
+    case " ${SS_INITRD_ORDERS[*]:-} " in *" ${1:-} "*) return 0 ;; esac
+    return 1
+}
+ss_order_menu() {
+    SS_MENU_ORDER=1
+    ss_mark_if_limine
+}
+
+# 6A-98: true when the live Limine menu still lists kernel <kver> (exact name, also generic-<kver> / huge-<kver>)
+ss_live_menu_lists_kernel() {
+    local k="${1:-}" esp conf n
+    [ -n "${k}" ] || return 1
+    esp=$(detect_limine_esp_path 2>/dev/null || echo "/boot")
+    for conf in "${esp}/limine.conf" "/boot/limine.conf"; do
+        sudo test -f "${conf}" 2>/dev/null || continue
+        while IFS= read -r n; do
+            n="${n#vmlinuz-}"
+            if [ "${n}" = "${k}" ] || [ "${n}" = "generic-${k}" ] || [ "${n}" = "huge-${k}" ]; then
+                return 0
+            fi
+        done < <(sudo grep -oE 'vmlinuz-[^#[:space:]]+' "${conf}" 2>/dev/null || true)
+    done
+    return 1
+}
+
+# 6A-98: every kernel the retention rules will remove (CachyOS beyond retention + old Slackware stock kernels), one per line
+ss_purge_set() {
+    if command -v get_obsolete_cachyos_kernels >/dev/null 2>&1; then
+        get_obsolete_cachyos_kernels 2>/dev/null || true
+    fi
+    if command -v get_obsolete_slackware_kernels >/dev/null 2>&1; then
+        get_obsolete_slackware_kernels 2>/dev/null | cut -d'|' -f1 || true
+    fi
+}
+
+# 6A-102 (SpiderSense SS-3): stop requests during a full update. Ctrl-C keeps being ignored by the update and by every
+# package tool it runs (a package must never be cut in half); a tiny relay turns it into a stop request for this shell
+# only. TERM is a stop request too. Before the boot-chain step: the remaining suites are skipped and, if boot files
+# changed, the chain still runs once so the startup menu matches. During the chain: the request waits until it is done.
+# A second request before the chain: stop now; the startup files were not touched, the marker tells the hourly job
+# to finish them.
+SS_ABORT=0
+SS_BOOT_COMMIT=0
+SS_ABORT_RELAY=""
+ss_abort_signal() {
+    SS_ABORT=$(( ${SS_ABORT:-0} + 1 ))
+    if [ "${SS_BOOT_COMMIT:-0}" = "1" ]; then
+        [ "${SS_ABORT}" -eq 1 ] && log_warn "Stopping as soon as the startup files are finished."
+        return 0
+    fi
+    if [ "${SS_ABORT}" -eq 1 ]; then
+        log_warn "Stopping after the current step. Press Ctrl-C again to stop at once."
+        return 0
+    fi
+    ss_disarm_abort_handler
+    if [ -f "${SLACKY_BOOT_PENDING}" ]; then
+        echo -e "${RED}${BOLD}The update was stopped. Do not restart yet; your computer finishes the startup files within the hour, or run: sudo slacky-update --sync-boot${RESET}"
+        exit 30
+    fi
+    if [ "${SS_BOOT_DIRTY:-0}" = "1" ]; then
+        echo -e "${RED}${BOLD}The update was stopped. Do not restart yet; first run: sudo slacky-update --sync-boot${RESET}"
+        exit 30
+    fi
+    echo -e "${YELLOW}The update was stopped. The startup files were not changed, so restarting is safe.${RESET}"
+    exit 130
+}
+ss_arm_abort_handler() {
+    SS_ABORT=0
+    trap 'ss_abort_signal' TERM
+    # the relay closes the lock descriptors (fd 8 run lock, fd 9 boot lock) so it never keeps a lock alive
+    if [ -t 0 ] && env --default-signal=INT true >/dev/null 2>&1; then
+        env --default-signal=INT bash -c 'trap "kill -TERM $1 2>/dev/null" INT; while kill -0 "$1" 2>/dev/null; do sleep 1; done' \
+            ss-abort-relay "$$" </dev/null >/dev/null 2>&1 8<&- 9<&- &
+        SS_ABORT_RELAY=$!
+    fi
+}
+ss_disarm_abort_handler() {
+    trap - TERM
+    if [ -n "${SS_ABORT_RELAY}" ]; then
+        kill "${SS_ABORT_RELAY}" 2>/dev/null || true
+        SS_ABORT_RELAY=""
+    fi
+}
+ss_continue() {
+    [ "${SS_ABORT:-0}" -eq 0 ]
+}
+
+# 6A-47 (SpiderSense phase 1, spec 4.5): run lock. flock on a root-owned file in /run/lock (0755 root, so no other user
+# can create or pre-claim it); released automatically when the process exits, so a crash or power loss never leaves a
+# stale lock. Replaces /tmp/slacky-update-running.lock, which any local user could create to silence the cron reseal.
+SLACKY_RUN_LOCK="/run/lock/slacky-update.lock"
+acquire_run_lock() {
+    [ "${SLACKY_RUN_LOCK_HELD:-0}" = "1" ] && return 0
+    command -v flock >/dev/null 2>&1 || return 0
+    if [ ! -e "${SLACKY_RUN_LOCK}" ]; then
+        if [ "$(id -u)" -eq 0 ]; then
+            install -m 0644 -o root -g root /dev/null "${SLACKY_RUN_LOCK}" 2>/dev/null || true
+        else
+            sudo install -m 0644 -o root -g root /dev/null "${SLACKY_RUN_LOCK}" 2>/dev/null || true
+        fi
+    fi
+    # 6A-90: another package tool (or a hand-run slackpkg) changing the system right now
+    local foreign
+    foreign=$(pgrep -x -l 'slackpkg|installpkg|upgradepkg|removepkg|sbopkg|sboinstall|sboupgrade' 2>/dev/null | awk '{print $2}' | sort -u | head -n 3 | tr '\n' ' ')
+    if [ -n "${foreign}" ]; then
+        log_warn "Another package tool (${foreign% }) is changing this system right now. Wait until it has finished, then try again."
+        return 1
+    fi
+    { exec 8<"${SLACKY_RUN_LOCK}"; } 2>/dev/null || return 0
+    if ! flock -n 8; then
+        log_warn "Another slacky-update is already updating this system. Wait until it has finished, then try again."
+        exec 8<&-
+        return 1
+    fi
+    export SLACKY_RUN_LOCK_HELD=1
+}
+
+# True (0) when ANOTHER process holds the run lock (cron, kernel hook and the status check stay out of its way).
+slacky_update_is_running() {
+    [ "${SLACKY_RUN_LOCK_HELD:-0}" = "1" ] && return 1
+    [ -e "${SLACKY_RUN_LOCK}" ] || return 1
+    command -v flock >/dev/null 2>&1 || return 1
+    flock -n "${SLACKY_RUN_LOCK}" true 2>/dev/null && return 1
+    return 0
+}
+
+# 6A-88 (SS-1): /boot must be mounted read-write when /etc/fstab declares a separate /boot; otherwise kernels, initramfs
+# images and the boot menu would be written into the root filesystem behind the real boot partition. No /boot line in
+# fstab = /boot lives on the root filesystem and is fine.
+ss_boot_ready() {
+    local want
+    want=$(awk '!/^[[:space:]]*#/ && $2=="/boot" {print $3; exit}' /etc/fstab 2>/dev/null)
+    [ -n "${want}" ] || return 0
+    local got opts
+    got=$(findmnt -n -o FSTYPE --mountpoint /boot 2>/dev/null | head -n1)
+    opts=$(findmnt -n -o OPTIONS --mountpoint /boot 2>/dev/null | head -n1)
+    [ -n "${got}" ] || return 1
+    case ",${opts}," in *,rw,*) ;; *) return 1 ;; esac
+    [ "${want}" = "auto" ] || [ "${got}" = "${want}" ] || return 1
+    return 0
+}
+
+# 6A-89 (SS-1): keep the sudo ticket alive for the whole run (a long update must not stop for the password again)
+SLACKY_SUDO_KEEPALIVE_PID=""
+start_sudo_keepalive() {
+    [ "$(id -u)" -eq 0 ] && return 0
+    [ -n "${SLACKY_SUDO_KEEPALIVE_PID}" ] && return 0
+    ( trap '' HUP; while sleep 50; do sudo -n -v 2>/dev/null || exit 0; kill -0 "$$" 2>/dev/null || exit 0; done ) &
+    SLACKY_SUDO_KEEPALIVE_PID=$!
+}
+stop_sudo_keepalive() {
+    [ -n "${SLACKY_SUDO_KEEPALIVE_PID}" ] && kill "${SLACKY_SUDO_KEEPALIVE_PID}" 2>/dev/null || true
+    SLACKY_SUDO_KEEPALIVE_PID=""
+}
+
+# 6A-93 (SS-1): interrupted-transaction journal. One root-owned file names the stage that is running; a stage that is
+# still "started" at the next run means the last update was cut off (power loss, killed). Detection is read-only.
+SLACKY_TX_STATE="/var/lib/slacky-update/tx-state"
+ss_tx_mark() {
+    local line="$1 $(date +%s)"
+    if [ "$(id -u)" -eq 0 ]; then
+        mkdir -p -m 0755 "${SLACKY_TX_STATE%/*}" && printf '%s\n' "${line}" > "${SLACKY_TX_STATE}"
+    else
+        sudo mkdir -p -m 0755 "${SLACKY_TX_STATE%/*}" && printf '%s\n' "${line}" | sudo tee "${SLACKY_TX_STATE}" >/dev/null
+    fi
+    sync 2>/dev/null || true
+}
+ss_tx_check_interrupted() {
+    [ -f "${SLACKY_TX_STATE}" ] || return 0
+    local state stage
+    state=$(head -n1 "${SLACKY_TX_STATE}" 2>/dev/null)
+    stage=${state%% *}
+    case "${stage}" in
+        done|"") return 0 ;;
+    esac
+    log_warn "The last update was interrupted (${stage#started-}). It is finished now; packages that were cut off are checked."
+    # an upgradepkg cut off between installing the new and removing the old version leaves two entries of one package
+    local dups
+    # 6A-147 (L1 M2): also upgradepkg's own leftovers ("-upgraded-<date>"); the message no longer promises a repair
+    dups=$( { ls /var/lib/pkgtools/packages 2>/dev/null | grep -v -- '-upgraded-' | sed -E 's/-[^-]+-[^-]+-[^-]+$//' | sort | uniq -d
+              ls /var/lib/pkgtools/packages 2>/dev/null | grep -- '-upgraded-' | sed -E 's/-upgraded-.*$//; s/-[^-]+-[^-]+-[^-]+$//'; } \
+            | sort -u | head -n 5 | tr '\n' ' ')
+    if [ -n "${dups}" ]; then
+        log_warn "These packages were cut off half-way and should be reinstalled: ${dups% }"
+        export SLACKY_TX_DUPLICATES="${dups}"
+    fi
+    return 1
+}
+
+# 6A-117: SpiderSense hardware profile. Shows changes found at boot or by the hourly check (hw-changed notice) and any
+# change since then, in plain sentences, and stores the current profile. Read-only towards the system; ~20 ms.
+SLACKY_HW_NOTICE="/var/cache/slacky-update/spidersense/hw-changed"
+ss_hw_check() {
+    local py="${APP_DIR:-/usr/share/slacky-update/lib}/spidersense_hw.py"
+    [ -f "${py}" ] || return 0
+    local lines="" line
+    if [ -s "${SLACKY_HW_NOTICE}" ]; then
+        lines=$(cat "${SLACKY_HW_NOTICE}" 2>/dev/null)
+    fi
+    local now
+    if [ "$(id -u)" -eq 0 ]; then
+        now=$(PYTHONSAFEPATH=1 python3 -I "${py}" check --save 2>/dev/null) || true
+        rm -f "${SLACKY_HW_NOTICE}" 2>/dev/null || true
+    else
+        now=$(sudo env PYTHONSAFEPATH=1 python3 -I "${py}" check --save 2>/dev/null) || true
+        sudo rm -f "${SLACKY_HW_NOTICE}" 2>/dev/null || true
+    fi
+    [ -n "${now}" ] && lines="${lines:+${lines}
+}${now}"
+    [ -n "${lines}" ] || return 0
+    printf '%s\n' "${lines}" | awk '!seen[$0]++' | while IFS= read -r line; do
+        [ -n "${line}" ] && log_warn "SpiderSense: ${line}"
+    done
+    { printf '%s\n' "${lines}" | sed "s/^/[$(date '+%Y-%m-%d %H:%M:%S')] [INFO] SpiderSense hardware: /" >> "${LOG_FILE}"; } 2>/dev/null || true
+    return 0
+}
+
+# 6A-95 (SS-2): remove OUR snapshots before they reach 48 hours (owner rule). The decision is lib/spidersense_snap.py
+# (pure, tested); this executor only deletes what it names. Nothing is deleted while a gnomes rollback reads the
+# snapshots, while the boot menu still waits for a reseal, or when the clock looks wrong. Pairs go together. A deleted
+# snapshot that is still in the Limine menu leaves a reseal order (the commit or the hourly check rebuilds the menu).
+SLACKY_ROLLBACK_LOCK="/run/lock/slacky-rollback.lock"
+ss_prune_our_snapshots() {
+    [ "$(findmnt -n -o FSTYPE / 2>/dev/null)" = "btrfs" ] || return 0
+    command -v snapper >/dev/null 2>&1 || return 0
+    local py="${APP_DIR:-/usr/share/slacky-update/lib}/spidersense_snap.py"
+    [ -f "${py}" ] || return 0
+    [ -e "${SLACKY_BOOT_PENDING}" ] && return 0
+    [ -e "${SLACKY_BOOT_PENDING_SHARED}" ] && return 0   # 6A-152
+    if [ -e "${SLACKY_ROLLBACK_LOCK}" ] && ! flock -n "${SLACKY_ROLLBACK_LOCK}" true 2>/dev/null; then
+        return 0
+    fi
+    local plan
+    if [ "$(id -u)" -eq 0 ]; then
+        plan=$(PYTHONSAFEPATH=1 python3 -I "${py}" plan 2>/dev/null) || return 0
+    else
+        plan=$(sudo env PYTHONSAFEPATH=1 python3 -I "${py}" plan 2>/dev/null) || return 0
+    fi
+    case "${plan}" in ""|HOLD*|ERROR*) return 0 ;; esac
+    local n in_menu=0 conf confs=(/boot/limine.conf)
+    if declare -F detect_limine_esp_path >/dev/null; then
+        conf="$(detect_limine_esp_path 2>/dev/null || true)"
+        [ -n "${conf}" ] && [ "${conf%/}/limine.conf" != /boot/limine.conf ] && confs+=("${conf%/}/limine.conf")
+    fi
+    for n in ${plan}; do
+        for conf in "${confs[@]}"; do
+            # both layouts mod_limine.sh writes: <root subvol>/.snapshots/N (nested) and /@snapshots/N (own subvolume, 6A-120)
+            if sudo grep -qE "(/\.snapshots|@snapshots)/${n}/snapshot" "${conf}" 2>/dev/null; then in_menu=1; fi
+        done
+    done
+    if sudo snapper -c root delete ${plan} >/dev/null 2>&1; then
+        { echo "[$(date '+%Y-%m-%d %H:%M:%S')] [INFO] SpiderSense: removed our snapshots older than 48 hours: ${plan}" >> "${LOG_FILE}"; } 2>/dev/null || true
+        [ "${in_menu}" -eq 1 ] && ss_mark_if_limine
+    fi
+    return 0
+}
+
+# SpiderSense phase 1 (spec 4.4): snapshot lifeline around a full update. snapper pre/post pair (linked by snapper
+# itself, "undo this update"), cleanup algorithm "number" so snapper's own NUMBER_LIMIT keeps the count bounded;
+# this code never deletes snapshots. Returns 0 = created, 1 = failed, 2 = not a Btrfs root with a snapper root config.
+SLACKY_SNAP_PRE=""
+create_pre_update_snapshot() {
+    SLACKY_SNAP_PRE=""
+    [ "$(findmnt -n -o FSTYPE / 2>/dev/null)" = "btrfs" ] || return 2
+    command -v snapper >/dev/null 2>&1 || return 2
+    [ -f /etc/snapper/configs/root ] || return 2
+    local n
+    # 6A-94: tagged as ours, no snapper cleanup algorithm (our 48-hour pruner removes it; the owner's numbered
+    # snapshots no longer share snapper's NUMBER_LIMIT with ours)
+    SLACKY_TX_ID="${SLACKY_TX_ID:-$(date +%Y%m%d%H%M%S)-$$}"
+    n=$(sudo snapper -c root create --type pre \
+        --description "slacky-update: before full update" \
+        --userdata "slacky=1,slacky-app=legacy,slacky-kind=pre,slacky-tx=${SLACKY_TX_ID}" --print-number 2>/dev/null) || return 1
+    n=$(printf '%s' "${n}" | tr -cd '0-9')
+    [ -n "${n}" ] || return 1
+    SLACKY_SNAP_PRE="${n}"
+    { echo "[$(date '+%Y-%m-%d %H:%M:%S')] [INFO] SpiderSense: pre-update snapshot #${n}" >> "${LOG_FILE}"; } 2>/dev/null || true
+    return 0
+}
+create_post_update_snapshot() {
+    [ -n "${SLACKY_SNAP_PRE}" ] || return 0
+    if sudo snapper -c root create --type post --pre-number "${SLACKY_SNAP_PRE}" \
+        --description "slacky-update: after full update" \
+        --userdata "slacky=1,slacky-app=legacy,slacky-kind=post,slacky-tx=${SLACKY_TX_ID:-}" >/dev/null 2>&1; then
+        { echo "[$(date '+%Y-%m-%d %H:%M:%S')] [INFO] SpiderSense: post-update snapshot paired with #${SLACKY_SNAP_PRE}" >> "${LOG_FILE}"; } 2>/dev/null || true
+    else
+        log_warn "The after-update snapshot could not be created; the before-update snapshot #${SLACKY_SNAP_PRE} is still there."
+    fi
+}
+
+# Atomic update transaction protection:
+# Prevents accidental ESC or signal interruption from corrupting or breaking
+# in-flight package transactions, kernel builds, or initramfs generations.
+begin_atomic_transaction() {
+    local tx_name="${1:-package transaction}"
+    log_info "Locking execution state for ${tx_name} (abort disabled)..."
+    # 6A-89: closing the terminal (SIGHUP) must not kill a half-done package transaction
+    trap '' INT QUIT TSTP HUP
+    # 6A-47 / 6A-149: no transaction without the run lock (before: "|| true" let --clean prune kernels during an update)
+    if ! acquire_run_lock; then
+        trap - INT QUIT TSTP HUP
+        return 1
+    fi
+    ss_safe_output_on
+}
+
+end_atomic_transaction() {
+    trap - INT QUIT TSTP HUP
+    ss_safe_output_off
+}
+
+# 6A-145 (LTS B1): HUP is ignored, but once the terminal is gone every write to it fails (EIO) and under set -e the
+# first failing echo/printf ended the run before the boot chain. During a transaction these two builtins never fail
+# the script; what matters also goes to the log file. Children keep the inherited HUP-ignore.
+ss_safe_output_on() {
+    echo() { builtin echo "$@" 2>/dev/null || true; }
+    printf() { builtin printf "$@" 2>/dev/null || true; }
+}
+ss_safe_output_off() {
+    unset -f echo printf 2>/dev/null || true
+}
+
 
 check_slacky_update_self_update() {
     local current_ver="${1:-${CURRENT_VERSION:-0.10}}"
@@ -591,7 +1415,7 @@ check_slacky_update_self_update() {
 
     local update_info
     update_info=$(echo "${rel_json}" | python3 -c "
-import json, sys, re
+import json, sys, re, os
 
 def parse_v(v_str):
     return [int(x) for x in re.findall(r'\d+', v_str)]
@@ -605,6 +1429,7 @@ try:
         tag_newer = bool(tag and parse_v(tag) > parse_v(cur))
         
         dl_url = ''
+        dl_digest = ''
         asset_newer = False
         asset_display_tag = tag
         pkg_pattern = re.compile(r'slacky-update-([0-9a-zA-Z._]+)-noarch-(\d+)')
@@ -612,6 +1437,7 @@ try:
             name = asset.get('name', '')
             if name.endswith(('.txz', '.tgz')):
                 dl_url = asset.get('browser_download_url', '')
+                dl_digest = asset.get('digest') or ''
                 m = pkg_pattern.search(name)
                 if m:
                     a_ver, a_build = m.group(1), int(m.group(2))
@@ -623,14 +1449,14 @@ try:
                             lm = pkg_pattern.search(local_name)
                             if lm and int(lm.group(2)) < a_build:
                                 asset_newer = True
-                                asset_display_tag = f"{tag}-build{a_build}"
+                                asset_display_tag = '{}-build{}'.format(tag, a_build)
                 if dl_url:
                     break
         if not dl_url:
             dl_url = data.get('tarball_url', '')
 
         if tag_newer or asset_newer:
-            print(f'UPDATE|{asset_display_tag}|{dl_url}')
+            print(f'UPDATE|{asset_display_tag}|{dl_url}|{dl_digest}')
             sys.exit(0)
 except Exception:
     pass
@@ -641,27 +1467,63 @@ print(f'UP_TO_DATE|{cur}')
     IFS='|' read -r status_type rest <<< "${update_info}"
 
     if [ "${status_type}" = "UPDATE" ]; then
-        local new_tag dl_url
-        IFS='|' read -r new_tag dl_url <<< "${rest}"
+        local new_tag dl_url dl_digest
+        IFS='|' read -r new_tag dl_url dl_digest <<< "${rest}"
 
         echo ""
         echo -e "${YELLOW}${BOLD}⚡ New Slacky-Update Release Available: v${new_tag} (Current: v${current_ver})${RESET}"
         read -r -p "$(_ PROMPT_SELF_UPDATE)" reply_update
         reply_update=${reply_update:-Y}
         if [[ "$reply_update" =~ ^[YyJjSsOo]$ ]]; then
-            validate_privileges
+            # 6A-40: download as the user into a private dir, accept only a release asset of this project,
+            # verify it against the SHA256 digest GitHub publishes for the asset, check root ownership,
+            # and use root only for upgradepkg. No digest = no install (tell the user how to update by hand).
+            local rel_prefix="https://github.com/TuxOfValhalla/slacky-update/releases/download/"
+            local asset_name="${dl_url##*/}"
+            if [[ ! "${new_tag}" =~ ^[0-9A-Za-z._-]+$ ]] || [[ "${dl_url}" != "${rel_prefix}"* ]] \
+                || [[ ! "${asset_name}" =~ ^slacky-update-[0-9A-Za-z._]+-noarch-[0-9]+_slacky\.t[gx]z$ ]]; then
+                log_warn "The new release could not be checked, so it was not installed. Download it from https://github.com/TuxOfValhalla/slacky-update/releases and install it with upgradepkg."
+                return 0
+            fi
+            local want_sha="${dl_digest#sha256:}"
+            if [[ "${dl_digest}" != sha256:* ]] || [[ ! "${want_sha}" =~ ^[0-9a-f]{64}$ ]]; then
+                log_warn "The new release has no checksum, so it was not installed. Download it from https://github.com/TuxOfValhalla/slacky-update/releases and install it with upgradepkg."
+                return 0
+            fi
             log_info "Downloading Slacky-Update v${new_tag}..."
-            local tmp_pkg="/tmp/slacky-update-${new_tag}.txz"
-            if [[ "${dl_url}" =~ \.txz$|\.tgz$ ]]; then
-                sudo curl -sSL -o "${tmp_pkg}" "${dl_url}"
-                if [ -f "${tmp_pkg}" ] && [ -s "${tmp_pkg}" ]; then
-                    sudo "${PKG_UPGRADE_CMD}" --reinstall "${tmp_pkg}"
-                    sudo rm -f "${tmp_pkg}"
-                    log_success "Slacky-Update upgraded to v${new_tag}!"
-                    killall slacky-update-tray 2>/dev/null || pkill -f slacky-update-tray || true
-                    nohup "$(command -v slacky-update-tray 2>/dev/null || echo "/usr/local/bin/slacky-update-tray")" >/dev/null 2>&1 &
-                    exec "$(command -v slacky-update 2>/dev/null || echo "/usr/local/bin/slacky-update")" "$@"
-                fi
+            local su_dir
+            su_dir=$(mktemp -d /tmp/slacky-selfupdate-XXXXXX) || return 0
+            local tmp_pkg="${su_dir}/${asset_name}"
+            if ! curl -fsSL -m 300 -o "${tmp_pkg}" "${dl_url}"; then
+                log_warn "Downloading the new release failed. Nothing was changed."
+                rm -rf "${su_dir}"
+                return 0
+            fi
+            if [ "$(sha256sum "${tmp_pkg}" | cut -d' ' -f1)" != "${want_sha}" ]; then
+                log_error "The downloaded release does not match its checksum. Nothing was changed."
+                rm -rf "${su_dir}"
+                return 0
+            fi
+            # list once into a variable: with pipefail, "tar | grep -q" would fail on SIGPIPE for a valid package
+            local pkg_list=""
+            pkg_list=$(tar --numeric-owner -tvf "${tmp_pkg}" 2>/dev/null) || pkg_list=""
+            if [ -z "${pkg_list}" ] || [ -n "$(awk '$2 != "0/0"' <<< "${pkg_list}")" ] \
+                || ! grep -q ' usr/bin/slacky-update$' <<< "${pkg_list}"; then
+                log_error "The downloaded release is not a valid slacky-update package. Nothing was changed."
+                rm -rf "${su_dir}"
+                return 0
+            fi
+            chmod 644 "${tmp_pkg}"
+            validate_privileges
+            if sudo "${PKG_UPGRADE_CMD}" --reinstall "${tmp_pkg}"; then
+                rm -rf "${su_dir}"
+                log_success "Slacky-Update upgraded to v${new_tag}!"
+                killall slacky-update-tray 2>/dev/null || pkill -f slacky-update-tray || true
+                nohup "$(command -v slacky-update-tray 2>/dev/null || echo "/usr/local/bin/slacky-update-tray")" >/dev/null 2>&1 &
+                exec "$(command -v slacky-update 2>/dev/null || echo "/usr/local/bin/slacky-update")" "$@"
+            else
+                log_error "Installing the new release failed. The current version is still installed."
+                rm -rf "${su_dir}"
             fi
         fi
     else
@@ -685,29 +1547,46 @@ trigger_silent_background_refresh() {
     fi
 }
 
+# 6A-17: the system cache is root-only (root:root 0755) and the log is 0644. Anything written without root goes to the
+# user's cache (~/.cache/slacky-update); readers already pick the newest status.json from both. Before, this dir was
+# made 1777 and the log 0666, so any local user could plant files that root later read or wrote (mirror list, status).
 init_storage() {
-    # If running as root, enforce strict storage permissions and directory layout
+    local run=""
+    if [ "$(id -u)" -ne 0 ]; then
+        sudo -n true 2>/dev/null && run="sudo -n"
+    fi
+    if [ "$(id -u)" -eq 0 ] || [ -n "${run}" ]; then
+        ${run} install -d -m 0755 -o root -g root "${CACHE_DIR}" "${CACHE_DIR}/kernel" "${CACHE_DIR}/nvidia" "${CACHE_DIR}/slacky-slackbuilds" 2>/dev/null || true
+        # One-time repair of an old world-writable or user-owned cache (chown/chmod -R never follow symlinks)
+        if [ -n "$(${run} find "${CACHE_DIR}" \( ! -user root -o ! -group root -o -perm -0002 \) -print -quit 2>/dev/null)" ]; then
+            ${run} chown -R root:root "${CACHE_DIR}" 2>/dev/null || true
+            ${run} chmod -R go-w "${CACHE_DIR}" 2>/dev/null || true
+        fi
+        # 6A-57: only the system log path; LOG_FILE may already point at the user's cache after an earlier call, and
+        # `sudo touch/chown root` on it left a root-owned file in the home directory ("Permission denied" on every log line)
+        ${run} touch /var/log/slacky-update.log 2>/dev/null || true
+        ${run} chown root:root /var/log/slacky-update.log 2>/dev/null || true
+        ${run} chmod 0644 /var/log/slacky-update.log 2>/dev/null || true
+    fi
+    if [ "$(id -u)" -ne 0 ]; then
+        local user_cache="${XDG_CACHE_HOME:-${HOME:-/tmp}/.cache}/slacky-update"
+        mkdir -p "${user_cache}" 2>/dev/null || true
+        # 6A-57 repair: a log file not owned by this user in our own cache dir is removed (allowed: the dir is ours)
+        if [ -L "${user_cache}/slacky-update.log" ] || { [ -e "${user_cache}/slacky-update.log" ] && [ ! -O "${user_cache}/slacky-update.log" ]; }; then
+            rm -f "${user_cache}/slacky-update.log" 2>/dev/null || true
+        fi
+        [ -w "${LOG_FILE}" ] || LOG_FILE="${user_cache}/slacky-update.log"
+    fi
+}
+
+# 6A-27: called by the --hyprland*/--hyprmod/--mactahoe-*/--whitesur-* shortcuts (added in 1e1e25c) but never defined.
+# Creates the cache dir root-owned 0755 when it is missing; an existing dir is left as it is (permissions: 6A-17).
+ensure_cache_dir() {
+    [ -d "${CACHE_DIR}" ] && return 0
     if [ "$(id -u)" -eq 0 ]; then
-        mkdir -p "${CACHE_DIR}/kernel" "${CACHE_DIR}/nvidia" "${CACHE_DIR}/slacky-slackbuilds" 2>/dev/null || true
-        chmod 1777 "${CACHE_DIR}" 2>/dev/null || true
-        chmod 0755 "${CACHE_DIR}/kernel" "${CACHE_DIR}/nvidia" "${CACHE_DIR}/slacky-slackbuilds" 2>/dev/null || true
-        touch "${LOG_FILE}" 2>/dev/null || true
-        chmod 0666 "${LOG_FILE}" 2>/dev/null || true
+        install -d -m 0755 -o root -g root "${CACHE_DIR}"
     else
-        # Unprivileged caller: attempt local user cache or silent non-blocking sudo if passwordless
-        mkdir -p "${CACHE_DIR}" 2>/dev/null || {
-            if sudo -n true 2>/dev/null; then
-                sudo mkdir -p "${CACHE_DIR}/kernel" "${CACHE_DIR}/nvidia" "${CACHE_DIR}/slacky-slackbuilds" 2>/dev/null || true
-                sudo chmod 1777 "${CACHE_DIR}" 2>/dev/null || true
-                sudo chmod 0755 "${CACHE_DIR}/kernel" "${CACHE_DIR}/nvidia" "${CACHE_DIR}/slacky-slackbuilds" 2>/dev/null || true
-            fi
-        }
-        touch "${LOG_FILE}" 2>/dev/null || {
-            if sudo -n true 2>/dev/null; then
-                sudo touch "${LOG_FILE}" 2>/dev/null || true
-                sudo chmod 0666 "${LOG_FILE}" 2>/dev/null || true
-            fi
-        }
+        sudo install -d -m 0755 -o root -g root "${CACHE_DIR}"
     fi
 }
 
@@ -727,6 +1606,14 @@ probe_gpu_hardware() {
     HAS_INTEL=false
     IS_LAPTOP=false
     IS_HYBRID_GPU=false
+
+    # 6A-118: one SpiderSense answer (sysfs, display classes only, the GPU that drives the screen decides "hybrid": a
+    # desktop with its iGPU switched on is no longer called hybrid). lspci below is the fallback only.
+    if ss_hw_load; then
+        HAS_NVIDIA="${HW_HAS_NVIDIA}"; HAS_AMD="${HW_HAS_AMD}"; HAS_INTEL="${HW_HAS_INTEL}"
+        IS_LAPTOP="${HW_LAPTOP}"; IS_HYBRID_GPU="${HW_HYBRID}"
+        return 0
+    fi
 
     if is_laptop_chassis; then
         IS_LAPTOP=true
@@ -750,6 +1637,8 @@ probe_gpu_hardware() {
         if ls -d /sys/bus/pci/devices/* 1>/dev/null 2>&1; then
             for vfile in /sys/bus/pci/devices/*/vendor; do
                 [ -f "${vfile}" ] || continue
+                # 6A-78: display devices only (class 0x03xxxx); chipsets and network cards of the same vendor are not GPUs
+                case "$(cat "${vfile%/vendor}/class" 2>/dev/null)" in 0x03*) ;; *) continue ;; esac
                 local v_id
                 v_id=$(cat "${vfile}" 2>/dev/null | tr '[:upper:]' '[:lower:]' || true)
                 case "${v_id}" in
@@ -898,15 +1787,9 @@ check_and_shield_mirror_freshness() {
         fi
     fi
 
-    # Auto-GPG Shield for slackpkgplus if multilib or AlienBOB repositories are present
-    if [ -f "/etc/slackpkg/slackpkgplus.conf" ]; then
-        if grep -E "REPOPLUS=.*(multilib|alienbob|restricted)" /etc/slackpkg/slackpkgplus.conf >/dev/null 2>&1; then
-            if grep -E "^STRICTGPG=on" /etc/slackpkg/slackpkgplus.conf >/dev/null 2>&1; then
-                log_info "Auto-GPG Shield: Adjusting STRICTGPG=off in slackpkgplus.conf to prevent third-party signature aborts..."
-                sudo sed -i 's/^STRICTGPG=on/STRICTGPG=off/' /etc/slackpkg/slackpkgplus.conf 2>/dev/null || true
-            fi
-        fi
-    fi
+    # 6A-5: slackpkgplus.conf is the user's configuration and is no longer edited here. This used to switch
+    # STRICTGPG=on to off silently (packages from one repository could then be signed by any imported key). Repositories
+    # such as multilib and alienbob each have their own key; `slackpkg update gpg` imports them, so strict checking works.
 }
 
 run_slackpkg() {
@@ -935,7 +1818,9 @@ run_slackpkg() {
     #   2. Strips ALL VT100/ANSI/DEC/OSC escape sequences — not just cursor-up.
     #   3. Filters spinner-only lines (|/-\ and whitespace).
     #   4. Filters intermediate progress percentages; keeps 100% and real output.
-    (cd "${_sp_tmpdir}" && sudo "${slackpkg_bin}" "$@" 2>&1) | python3 -u -c '
+    # 6A-89: slackpkg ignores SIGHUP (closed terminal) and the filter below keeps draining its output even when the
+    # terminal is gone, so slackpkg never dies on a broken pipe in the middle of upgradepkg.
+    (cd "${_sp_tmpdir}" && sudo /bin/sh -c 'trap "" HUP; exec "$@"' sh "${slackpkg_bin}" "$@" 2>&1) | python3 -u -c '
 import sys, re
 
 if hasattr(sys.stdin, "reconfigure"):
@@ -968,6 +1853,19 @@ spinner_re = re.compile(r"^[|/\\\\\-\s]*$")
 # wget background-mode plumbing noise: "Redirecting output to 'wget-log.N'."
 wget_redirect_re = re.compile(r"^Redirecting output to ")
 
+import signal
+signal.signal(signal.SIGHUP, signal.SIG_IGN)  # 6A-89: a closed terminal must not stop the drain
+_out_dead = False
+def out(text):
+    global _out_dead
+    if _out_dead:
+        return
+    try:
+        sys.stdout.write(text)
+        sys.stdout.flush()
+    except (OSError, ValueError):
+        _out_dead = True
+
 buf = []
 while True:
     try:
@@ -991,16 +1889,14 @@ while True:
                 continue
             if ch == "\r" and prog_re.search(clean) and "100%" not in clean:
                 continue
-            sys.stdout.write(clean + "\n")
-            sys.stdout.flush()
+            out(clean + "\n")
         else:
             buf.append(ch)
 
 if buf:
     clean = ansi_re.sub("", "".join(buf)).strip()
     if clean and not spinner_re.match(clean):
-        sys.stdout.write(clean + "\n")
-        sys.stdout.flush()
+        out(clean + "\n")
 ' || rc=$?
 
     rm -rf "${_sp_tmpdir}"
@@ -1039,7 +1935,11 @@ run_post_update_smoke_test() {
 
     echo ""
     echo -e "${CYAN}${BOLD}=== 🎸 POST-UPDATE SUBSYSTEM HEALTH CHECK ===${RESET}"
-    echo -e "  ${GREEN}[✓]${RESET} 64-bit Slackware Core : ${GREEN}Up-to-date & healthy${RESET}"
+    if [ "${1:-}" = "SKIPPED_MIRROR_ERROR" ] || [ "${SLACK_CORE_STATUS:-}" = "SKIPPED_MIRROR_ERROR" ]; then
+        echo -e "  ${YELLOW}[⚠]${RESET} 64-bit Slackware Core : ${YELLOW}Skipped (Repository mirror error on slackware.nl)${RESET}"
+    else
+        echo -e "  ${GREEN}[✓]${RESET} 64-bit Slackware Core : ${GREEN}Up-to-date & healthy${RESET}"
+    fi
     echo -e "  ${GREEN}[✓]${RESET} Kernel & Video Driver : ${GREEN}${kver} / ${active_driver}${RESET}"
     if [ "${multi_ok}" -eq 1 ]; then
         echo -e "  ${GREEN}[✓]${RESET} 32-bit Multilib Armor : ${GREEN}${multi_status}${RESET}"
@@ -1051,13 +1951,23 @@ run_post_update_smoke_test() {
     echo -e "${CYAN}${BOLD}=============================================${RESET}"
 }
 
+# 6A-180..182: folder that holds slacky_mirrors.py (the shared mirror lists and fall-back); empty when it is missing,
+# and then the single given mirror is used as before.
+slacky_mirrors_lib_dir() {
+    local d
+    for d in "${GNOMES_PY:+$(dirname "${GNOMES_PY}")}" "${APP_DIR:-}" "${SCRIPT_DIR:-}/../lib" "${SCRIPT_DIR:-}" /usr/share/slacky-update/lib /usr/local/lib/slacky-update; do
+        [ -n "${d}" ] && [ -f "${d}/slacky_mirrors.py" ] && { printf '%s' "${d}"; return 0; }
+    done
+    return 0
+}
+
 download_parallel_pacman() {
     local label="$1"
     shift
     local items=("$@")
     [ ${#items[@]} -gt 0 ] || return 0
 
-    python3 - "${label}" "${items[@]}" << 'PYPACMAN'
+    SLACKY_LIB_DIR="$(slacky_mirrors_lib_dir)" python3 - "${label}" "${items[@]}" << 'PYPACMAN'
 import os
 import sys
 import time
@@ -1067,6 +1977,17 @@ import concurrent.futures
 
 label = sys.argv[1] if len(sys.argv) > 1 else "Downloading"
 raw_items = sys.argv[2:]
+
+# 6A-181: shared mirror fall-back (Chaotic-AUR, Arch, CachyOS); without the module the given url is the only one
+_sm = None
+try:
+    _lib = os.environ.get("SLACKY_LIB_DIR", "")
+    if _lib and os.path.isfile(os.path.join(_lib, "slacky_mirrors.py")):
+        sys.path.insert(0, _lib)
+        import slacky_mirrors as _sm
+except Exception:
+    _sm = None
+failed_sentences = set()
 
 if not raw_items:
     sys.exit(0)
@@ -1445,14 +2366,52 @@ def download_item_wrapper(args):
 
     global completed_bytes, success_count, fail_count
     try:
-        curl_args = ["curl", "-sSL", "-f", "--connect-timeout", "15", "-m", "1800", "--speed-time", "45", "--speed-limit", "1000"]
-        res = subprocess.run(curl_args + ["-C", "-", "-o", part_file, url], capture_output=True)
-        if res.returncode != 0:
+        curl_args = ["curl", "-sSL", "-f", "-w", "%{http_code}", "--connect-timeout", "15", "-m", "1800", "--speed-time", "45", "--speed-limit", "1000"]
+
+        def fetch_part(u):
+            """(ok, mirror_trouble). A 4xx (file not on this mirror yet) moves on without blaming the mirror."""
+            res = subprocess.run(curl_args + ["-C", "-", "-o", part_file, u], capture_output=True)
+            if res.returncode != 0:
+                if os.path.exists(part_file):
+                    try: os.remove(part_file)
+                    except Exception: pass
+                res = subprocess.run(curl_args + ["-o", part_file, u], capture_output=True)
+            if res.returncode == 0 and os.path.exists(part_file) and os.path.getsize(part_file) > 0:
+                # a package from a known repo family must be a zstd file; an error page from a broken mirror is not
+                if _sm is not None and u.endswith(".pkg.tar.zst") and _sm.locate(u):
+                    with open(part_file, "rb") as pf:
+                        if pf.read(4) != b"\x28\xb5\x2f\xfd":
+                            try: os.remove(part_file)
+                            except Exception: pass
+                            return False, True
+                return True, False
+            code = (res.stdout or b"").decode("ascii", "ignore").strip()[-3:]
+            return False, not (res.returncode == 22 and code.startswith("4"))
+
+        # fastest known mirror of the repo first, the next ones when it fails (bounded); only the host changes, the
+        # signature check by the caller is the same for every mirror, and a bad signature is never retried elsewhere
+        tries = _sm.alternatives(url) if _sm is not None else [url]
+        served = None
+        for cand in tries:
+            ok, trouble = fetch_part(cand)
+            if ok:
+                served = cand
+                if _sm is not None:
+                    _sm.note_success(cand)   # 6A-201: clears the failure streak in the mirror health history
+                break
             if os.path.exists(part_file):
                 try: os.remove(part_file)
                 except Exception: pass
-            res = subprocess.run(curl_args + ["-o", part_file, url], capture_output=True)
-        if res.returncode == 0 and os.path.exists(part_file) and os.path.getsize(part_file) > 0:
+            if trouble and _sm is not None:
+                _sm.note_failure(cand)
+        if served is None and _sm is not None and len(tries) > 1:
+            sentence = _sm.all_failed_sentence(url)
+            if sentence:
+                with state_lock:
+                    failed_sentences.add(sentence)
+        if served is not None:
+            if sig_url and sig_dest and sig_url == url + ".sig":
+                sig_url = served + ".sig"  # the signature from the mirror that served the file
             if sig_url and sig_dest:
                 curl_sig = ["curl", "-sSL", "-f", "--connect-timeout", "15", "-m", "120", "--speed-time", "45", "--speed-limit", "1000"]
                 res_sig = subprocess.run(curl_sig + ["-o", part_sig, sig_url], capture_output=True)
@@ -1530,6 +2489,8 @@ if is_tty:
 
 show_cursor()
 
+for _sentence in sorted(failed_sentences):
+    print(_sentence)
 if fail_count > 0:
     print(f"\033[1;33m⚠️ Turbo Parallel Pre-fetch finished: {success_count}/{total_items} files ({format_size(completed_bytes)}) cached in {int(total_elapsed)}s ({fail_count} failed).\033[0m\n")
     sys.exit(1)

@@ -6,31 +6,30 @@ set -euo pipefail
 PRGNAM="slacky-update"
 VERSION="1.0_RC2"
 ARCH="noarch"
-BUILD="7_slacky"
+BUILD="86_slacky"
 
 SRC_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-BUILD_DIR="/tmp/build-${PRGNAM}"
-PKG_DIR="/tmp/package-${PRGNAM}"
 OUTPUT_DIR="${OUTPUT_DIR:-${SRC_DIR}/../slacky-updates_releases}"
+# 6A-149 (L lifecycle 4): no fallback to /tmp; a package root installs must never come from a world-writable place
 if ! mkdir -p "${OUTPUT_DIR}" 2>/dev/null || [ ! -w "${OUTPUT_DIR}" ]; then
-    OUTPUT_DIR="/tmp"
+    echo "ERROR: output directory ${OUTPUT_DIR} is not writable; set OUTPUT_DIR to a private directory." >&2
+    exit 1
 fi
+# private, unpredictable build and staging dirs (were fixed /tmp names)
+BUILD_DIR="$(mktemp -d "${TMPDIR:-/tmp}/build-${PRGNAM}.XXXXXX")"
+PKG_DIR="$(mktemp -d "${TMPDIR:-/tmp}/package-${PRGNAM}.XXXXXX")"
+chmod 0755 "${PKG_DIR}"   # the package root entry "./" must stay 0755
 
 PKG_NAME="${PRGNAM}-${VERSION}-${ARCH}-${BUILD}.txz"
 
 # --- [ CLEANUP PREVIOUS BUILDS ] ---
-rm -rf "${BUILD_DIR}" "${PKG_DIR}"
-rm -f "/tmp/${PRGNAM}-"*.txz 2>/dev/null || true
-mkdir -p "${BUILD_DIR}" "${PKG_DIR}" "${OUTPUT_DIR}"
+mkdir -p "${OUTPUT_DIR}"
 
 # --- [ STAGING FILES ] ---
 mkdir -p "${PKG_DIR}/usr/bin"
-mkdir -p "${PKG_DIR}/usr/local/bin"
-mkdir -p "${PKG_DIR}/usr/local/lib/slacky-update"
 mkdir -p "${PKG_DIR}/usr/share/slacky-update/lib"
 mkdir -p "${PKG_DIR}/usr/share/slacky-update/locales"
 mkdir -p "${PKG_DIR}/usr/share/slacky-update/docs"
-mkdir -p "${PKG_DIR}/usr/local/lib/slacky-update/docs"
 mkdir -p "${PKG_DIR}/usr/share/applications"
 mkdir -p "${PKG_DIR}/usr/share/icons/hicolor/128x128/apps"
 mkdir -p "${PKG_DIR}/etc/xdg/autostart"
@@ -40,39 +39,40 @@ mkdir -p "${PKG_DIR}/etc/cron.weekly"
 mkdir -p "${PKG_DIR}/etc/kernel/postinst.d"
 mkdir -p "${PKG_DIR}/etc/boot/hooks/pre.d"
 mkdir -p "${PKG_DIR}/etc/boot/hooks/post.d"
+mkdir -p "${PKG_DIR}/etc/sysctl.d"
 mkdir -p "${PKG_DIR}/var/cache/slacky-update"
 mkdir -p "${PKG_DIR}/install"
 
-chmod 1777 "${PKG_DIR}/var/cache/slacky-update"
+chmod 0755 "${PKG_DIR}/var/cache/slacky-update"   # 6A-149: root-only cache from the start (doinst repairs old 1777)
 
 # --- [ FILE INSTALLATION ] ---
 install -m 0755 "${SRC_DIR}/bin/slacky-update" "${PKG_DIR}/usr/bin/"
 install -m 0755 "${SRC_DIR}/bin/slacky-update-tray" "${PKG_DIR}/usr/bin/"
-
-install -m 0755 "${SRC_DIR}/bin/slacky-update" "${PKG_DIR}/usr/local/bin/"
-install -m 0755 "${SRC_DIR}/bin/slacky-update-tray" "${PKG_DIR}/usr/local/bin/"
+install -m 0755 "${SRC_DIR}/bin/slacky-prime-run" "${PKG_DIR}/usr/bin/"
 if [ -f "${SRC_DIR}/bin/gnomes" ]; then
     install -m 0755 "${SRC_DIR}/bin/gnomes" "${PKG_DIR}/usr/bin/"
-    install -m 0755 "${SRC_DIR}/bin/gnomes" "${PKG_DIR}/usr/local/bin/"
 fi
 
-install -m 0755 "${SRC_DIR}"/lib/*.sh "${PKG_DIR}/usr/local/lib/slacky-update/"
 install -m 0755 "${SRC_DIR}"/lib/*.sh "${PKG_DIR}/usr/share/slacky-update/lib/"
 install -m 0755 "${SRC_DIR}/lib/slacky-update-tray" "${PKG_DIR}/usr/share/slacky-update/lib/" 2>/dev/null || true
-install -m 0755 "${SRC_DIR}/lib/slacky-update-tray" "${PKG_DIR}/usr/local/lib/slacky-update/" 2>/dev/null || true
 install -m 0755 "${SRC_DIR}/lib/gnomes_pacman.py" "${PKG_DIR}/usr/share/slacky-update/lib/"
-install -m 0755 "${SRC_DIR}/lib/gnomes_pacman.py" "${PKG_DIR}/usr/local/lib/slacky-update/"
+install -m 0644 "${SRC_DIR}/lib/gnomes_trust.py" "${PKG_DIR}/usr/share/slacky-update/lib/"
+install -m 0644 "${SRC_DIR}/lib/slacky_vendor_fetch.py" "${PKG_DIR}/usr/share/slacky-update/lib/"
+install -m 0644 "${SRC_DIR}/lib/slacky_mirrors.py" "${PKG_DIR}/usr/share/slacky-update/lib/"
+install -m 0644 "${SRC_DIR}/lib/slacky_sentinel.py" "${PKG_DIR}/usr/share/slacky-update/lib/"
+install -m 0644 "${SRC_DIR}/lib/spidersense_snap.py" "${PKG_DIR}/usr/share/slacky-update/lib/"
+install -m 0644 "${SRC_DIR}/lib/spidersense_hw.py" "${PKG_DIR}/usr/share/slacky-update/lib/"
 install -m 0644 "${SRC_DIR}/lib/pacman_candy.py" "${PKG_DIR}/usr/share/slacky-update/lib/"
-install -m 0644 "${SRC_DIR}/lib/pacman_candy.py" "${PKG_DIR}/usr/local/lib/slacky-update/"
 install -m 0755 "${SRC_DIR}/lib/rank_mirrors.py" "${PKG_DIR}/usr/share/slacky-update/lib/"
-install -m 0755 "${SRC_DIR}/lib/rank_mirrors.py" "${PKG_DIR}/usr/local/lib/slacky-update/"
+install -m 0755 "${SRC_DIR}/lib/slacky_config.py" "${PKG_DIR}/usr/share/slacky-update/lib/"
+install -m 0755 "${SRC_DIR}/lib/slacky_heal.py" "${PKG_DIR}/usr/share/slacky-update/lib/"
 install -m 0644 "${SRC_DIR}/lib/slacky_update_i18n.py" "${PKG_DIR}/usr/share/slacky-update/lib/"
-install -m 0644 "${SRC_DIR}/lib/slacky_update_i18n.py" "${PKG_DIR}/usr/local/lib/slacky-update/"
+install -m 0755 "${SRC_DIR}/lib/slacky_tui.py" "${PKG_DIR}/usr/share/slacky-update/lib/"
+install -m 0755 "${SRC_DIR}/lib/slacky_doctor.py" "${PKG_DIR}/usr/share/slacky-update/lib/"
 install -m 0644 "${SRC_DIR}"/locales/*.json "${PKG_DIR}/usr/share/slacky-update/locales/"
 
 if [ -d "${SRC_DIR}/docs" ]; then
     install -m 0644 "${SRC_DIR}"/docs/*.md "${PKG_DIR}/usr/share/slacky-update/docs/" 2>/dev/null || true
-    install -m 0644 "${SRC_DIR}"/docs/*.md "${PKG_DIR}/usr/local/lib/slacky-update/docs/" 2>/dev/null || true
 fi
 
 install -m 0644 "${SRC_DIR}/desktop/slacky-update.desktop" "${PKG_DIR}/usr/share/applications/"
@@ -81,6 +81,8 @@ install -m 0644 "${SRC_DIR}/desktop/slacky-update-tray.desktop" "${PKG_DIR}/etc/
 
 install -m 0755 "${SRC_DIR}/cron/slacky-snapper-limine-sync" "${PKG_DIR}/etc/cron.hourly/"
 install -m 0755 "${SRC_DIR}/cron/slacky-update-check" "${PKG_DIR}/etc/cron.weekly/"
+# 6A-28: base hardening, shipped as .new so a file the user changed (protect-links off) survives upgrades
+install -m 0644 "${SRC_DIR}/assets/sysctl.d/50-slacky-protect-links.conf" "${PKG_DIR}/etc/sysctl.d/50-slacky-protect-links.conf.new"
 
 if [ -d "${SRC_DIR}/assets/profile.d" ]; then
     install -m 0755 "${SRC_DIR}"/assets/profile.d/* "${PKG_DIR}/etc/profile.d/" 2>/dev/null || true
@@ -138,10 +140,31 @@ cat << 'DOINST_EOF' > "${PKG_DIR}/install/doinst.sh"
 #!/bin/sh
 # NOLOCK
 
-mkdir -p /var/cache/slacky-update
-chmod 1777 /var/cache/slacky-update 2>/dev/null || true
-touch /var/cache/slacky-update/status.json 2>/dev/null || true
-chmod 0666 /var/cache/slacky-update/status.json 2>/dev/null || true
+# 6A-17: the system cache is root-only; user-mode checks write to ~/.cache/slacky-update. Repairs an old 1777 cache once.
+install -d -m 0755 -o root -g root /var/cache/slacky-update
+if [ -n "$(find /var/cache/slacky-update \( ! -user root -o ! -group root -o -perm -0002 \) -print -quit 2>/dev/null)" ]; then
+    chown -R root:root /var/cache/slacky-update 2>/dev/null || true
+    chmod -R go-w /var/cache/slacky-update 2>/dev/null || true
+fi
+if [ -f /var/log/slacky-update.log ]; then
+    chown root:root /var/log/slacky-update.log 2>/dev/null || true
+    chmod 0644 /var/log/slacky-update.log 2>/dev/null || true
+fi
+
+# 6A-28: link protection (on by default; keep the user's file if they changed it)
+config() {
+  NEW="$1"
+  OLD="$(dirname "$NEW")/$(basename "$NEW" .new)"
+  if [ ! -r "$OLD" ]; then
+    mv "$NEW" "$OLD"
+  elif [ "$(md5sum < "$OLD")" = "$(md5sum < "$NEW")" ]; then
+    rm "$NEW"
+  fi
+}
+config etc/sysctl.d/50-slacky-protect-links.conf.new
+if [ -x /sbin/sysctl ] && [ -r etc/sysctl.d/50-slacky-protect-links.conf ]; then
+    /sbin/sysctl -q -p etc/sysctl.d/50-slacky-protect-links.conf >/dev/null 2>&1 || true
+fi
 
 mkdir -p /etc/boot/hooks/pre.d /etc/boot/hooks/post.d 2>/dev/null || true
 if [ -d /usr/lib64/limine ] && [ ! -d /usr/lib/limine ] && [ ! -L /usr/lib/limine ]; then
@@ -154,17 +177,8 @@ if [ -x /usr/bin/limine-reset-enroll ] && [ ! -e /etc/boot/hooks/pre.d/10-limine
     ln -sf /usr/bin/limine-reset-enroll /etc/boot/hooks/pre.d/10-limine-reset-enroll 2>/dev/null || true
 fi
 
-if [ -f /etc/cron.hourly/slacky-snapper-limine-sync ]; then
-    chmod 0755 /etc/cron.hourly/slacky-snapper-limine-sync 2>/dev/null || true
-fi
-
-if [ -f /etc/cron.weekly/slacky-update-check ]; then
-    chmod 0755 /etc/cron.weekly/slacky-update-check 2>/dev/null || true
-fi
-
-if [ -f /etc/kernel/postinst.d/slacky-limine-hook ]; then
-    chmod 0755 /etc/kernel/postinst.d/slacky-limine-hook 2>/dev/null || true
-fi
+# 6A-149 (L lifecycle 7): no chmod of the cron jobs and the kernel hook here; the archive carries their modes, and an
+# admin who switched a job off with chmod -x keeps it off across upgrades
 
 if [ -x /usr/bin/update-desktop-database ]; then
     /usr/bin/update-desktop-database -q /usr/share/applications >/dev/null 2>&1 || true
@@ -174,17 +188,70 @@ if [ -x /usr/bin/gtk-update-icon-cache ]; then
     /usr/bin/gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor >/dev/null 2>&1 || true
 fi
 
+# 6A-39: repair group/other-writable dirs left by older builds (assets/udev was 0777)
+for d in usr/share/slacky-update usr/local/lib/slacky-update; do
+    [ -d "$d" ] && find "$d" ! -type l -perm /022 -exec chmod go-w {} + 2>/dev/null || true
+done
+
+# 6A-117: SpiderSense learns the hardware at every boot (background, never delays the boot; read-only probe, writes only
+# its own cache). Marked block in rc.local; refused unchanged when rc.local is invalid or ends with "exit".
+install -d -m 0755 -o root -g root var/cache/slacky-update/spidersense
+RCL=etc/rc.d/rc.local
+if [ -f "$RCL" ] && ! grep -q '^# >>> slacky-update:hwprofile >>>$' "$RCL" && [ -z "$(sh -n "$RCL" 2>&1)" ] \
+   && ! grep -v '^[[:space:]]*\(#.*\)\{0,1\}$' "$RCL" | tail -n 1 | grep -q '^[[:space:]]*exit\([[:space:]]\|$\)'; then
+    T="$(mktemp "$RCL.slacky.XXXXXX")" && cp -p "$RCL" "$T" && {
+        [ -n "$(tail -c 1 "$RCL")" ] && printf '\n'
+        printf '\n# >>> slacky-update:hwprofile >>>\n'
+        printf 'if [ -f /usr/share/slacky-update/lib/spidersense_hw.py ]; then ( /usr/bin/python3 -I /usr/share/slacky-update/lib/spidersense_hw.py boot >/dev/null 2>&1 & ); fi\n'
+        printf '# <<< slacky-update:hwprofile <<<\n'
+    } >> "$T" && [ -z "$(sh -n "$T" 2>&1)" ] && cp -p "$RCL" "$RCL.slacky-bak" && mv -f "$T" "$RCL" || rm -f "$T"
+fi
+[ -f /usr/bin/python3 ] && ( /usr/bin/python3 -I usr/share/slacky-update/lib/spidersense_hw.py boot >/dev/null 2>&1 || true )
+
 exit 0
 DOINST_EOF
 chmod 755 "${PKG_DIR}/install/doinst.sh"
 
+# 6A-117: the boot block goes only when slacky-update itself is removed (during an upgrade the new files exist)
+cat << 'DOUNINST_EOF' > "${PKG_DIR}/install/douninst.sh"
+#!/bin/sh
+RCL=etc/rc.d/rc.local
+if [ ! -f usr/share/slacky-update/lib/spidersense_hw.py ] && [ -f "$RCL" ] && grep -q '^# >>> slacky-update:hwprofile >>>$' "$RCL"; then
+    T="$(mktemp "$RCL.slacky.XXXXXX")" && cp -p "$RCL" "$T" \
+      && awk '$0=="# >>> slacky-update:hwprofile >>>"{s=1;next} s&&$0=="# <<< slacky-update:hwprofile <<<"{s=0;next} !s' "$RCL" > "$T" \
+      && [ -z "$(sh -n "$T" 2>&1)" ] && cp -p "$RCL" "$RCL.slacky-bak" && mv -f "$T" "$RCL" || rm -f "$T"
+fi
+exit 0
+DOUNINST_EOF
+chmod 755 "${PKG_DIR}/install/douninst.sh"
+
 # --- [ PACKAGE COMPILATION ] ---
 cd "${PKG_DIR}"
+# 6A-39: never ship group/other-writable files or directories (source assets/udev was 0777, so the installed
+# udev rule dir became world-writable and root copied rules from it). Symlinks keep their 0777 link mode.
+find "${PKG_DIR}" ! -type l -perm /022 -exec chmod go-w {} +
 MAKEPKG_BIN=$(command -v makepkg 2>/dev/null || echo "/sbin/makepkg")
-XZ_OPT="-T0" "${MAKEPKG_BIN}" -l y -c n "${OUTPUT_DIR}/${PKG_NAME}"
+# Built as a normal user: force root:root in the archive (makepkg calls GNU tar, which honours
+# TAR_OPTIONS). Without this, installing the package chowns /, /etc, /usr ... to the build user.
+XZ_OPT="-T0" TAR_OPTIONS="--owner=0 --group=0 --numeric-owner" "${MAKEPKG_BIN}" -l y -c n "${OUTPUT_DIR}/${PKG_NAME}"
+
+# Ownership gate: refuse to ship any archive entry that is not 0/0 (root:root).
+BAD_OWNERS="$(tar --numeric-owner -tvJf "${OUTPUT_DIR}/${PKG_NAME}" | awk '$2 != "0/0"')"
+if [ -n "${BAD_OWNERS}" ]; then
+    rm -f "${OUTPUT_DIR}/${PKG_NAME}"
+    echo "ERROR: ${PKG_NAME} contains entries not owned by root:root; package removed." >&2
+    printf '%s\n' "${BAD_OWNERS}" | head -5 >&2 || true
+    exit 1
+fi
+# 6A-39 mode gate: refuse any non-symlink entry that is group- or other-writable.
+BAD_MODES="$(tar -tvJf "${OUTPUT_DIR}/${PKG_NAME}" | awk 'substr($1,1,1) != "l" && (substr($1,6,1) == "w" || substr($1,9,1) == "w")')"
+if [ -n "${BAD_MODES}" ]; then
+    rm -f "${OUTPUT_DIR}/${PKG_NAME}"
+    echo "ERROR: ${PKG_NAME} contains group/other-writable entries; package removed." >&2
+    printf '%s\n' "${BAD_MODES}" | head -5 >&2 || true
+    exit 1
+fi
 cp -f "${OUTPUT_DIR}/${PKG_NAME}" "${OUTPUT_DIR}/${PRGNAM}.txz" 2>/dev/null || true
-cp -f "${OUTPUT_DIR}/${PKG_NAME}" "/tmp/${PKG_NAME}" 2>/dev/null || true
-cp -f "${OUTPUT_DIR}/${PKG_NAME}" "/tmp/${PRGNAM}.txz" 2>/dev/null || true
 
 rm -rf "${BUILD_DIR}" "${PKG_DIR}"
 echo "==> Package build completed: ${OUTPUT_DIR}/${PKG_NAME}"

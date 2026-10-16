@@ -1,16 +1,50 @@
+# Packages & Archives
 *.txz
 *.tar.gz
 *.tar.xz
+*.pkg.tar.zst
+*.rpm
+*.deb
+
+# Cryptographic Keys & Signatures
 *.key
 *.priv
 *.pem
 *.der
 *.sig
+
+# Build & Temporary Directories
 /tmp/
+build_out/
+scratch/
+releases/
+slacky-updates_releases/
 __pycache__/
 *.pyc
+*.pyo
+.pytest_cache/
+.coverage
+
+# Editor & System Artifacts
 .DS_Store
+*.swp
+*.swo
+*~
+*.bak
+*.old
+*.orig
+*.rej
+README.old
+README.md.old
+README.md.bak
+
+# Internal Development & Roadmap Logs
 LOG.md
 log.md
 docs/RELEASE_NOTES*
-
+docs/log_nb.md
+tests/
+legacy_roadmap.md
+roadmap.md
+rs_roadmap.md
+rs_and_legacy_roadmap.md

@@ -4,6 +4,8 @@
 set -euo pipefail
 
 audit_secure_boot_readiness() {
+    # 6A-134 (L3 B3): "--report-only" (the full-update pipeline, cron, no terminal) never asks and never creates keys
+    local audit_mode="${1:-}"
     resolve_mok_keypair
 
     # If we already have a valid MOK keypair (from existing signed kernels or /etc/mok), we are ready to sign!
@@ -28,6 +30,10 @@ audit_secure_boot_readiness() {
     fi
 
     if [ -z "${MOK_CERT}" ] || [ -z "${MOK_KEY}" ] || [ "${is_enrolled}" -eq 0 ]; then
+        if [ "${audit_mode}" = "--report-only" ] || [ ! -t 0 ] || [ "${NON_INTERACTIVE:-0}" = "1" ]; then
+            log_warn "Secure Boot is on but no module signing key is set up; run slacky-update in a terminal to create one." >&2
+            return 0
+        fi
         echo -e "\n${YELLOW}${BOLD}$(_ SB_ACTIVE_NO_MOK)${RESET}"
         read -r -p "$(_ PROMPT_CREATE_MOK)" reply_mok
         reply_mok=${reply_mok:-Y}
@@ -81,6 +87,20 @@ provision_mok_keypair() {
     resolve_mok_keypair
 }
 
+# 6A-8h: sign one uncompressed module and prove it: sign-file must succeed AND the module must now carry
+# our MOK signer name. Anything else counts as a failure (the caller keeps the original module).
+_armor_sign_file() {
+    local sign_bin="$1" cert="$2" file="$3" expected_cn="$4"
+    sudo "${sign_bin}" sha256 "${MOK_KEY}" "${cert}" "${file}" 2>/dev/null || return 1
+    _armor_signed_by_us "${file}" "${expected_cn}"
+}
+
+_armor_signed_by_us() {
+    local signer
+    signer=$(sudo modinfo -F signer "$1" 2>/dev/null || true)
+    [ -n "${signer}" ] && { [ -z "$2" ] || [ "${signer}" = "$2" ]; }
+}
+
 sign_modules_for_kernel() {
     local target_kver="$1"
     resolve_mok_keypair
@@ -117,7 +137,9 @@ sign_modules_for_kernel() {
     [ ${#search_dirs[@]} -gt 0 ] || return 0
 
     local sign_workdir
-    sign_workdir=$(mktemp -d /tmp/slacky-sign-XXXXXX)
+    # 6A-134 (L2 M4): root owns the signing dir; root decompresses, signs and moves files here, so a user-owned dir
+    # could be swapped under it by another process of the same user. No dir = no signing (signing is optional).
+    sign_workdir=$(sudo mktemp -d /tmp/slacky-sign-XXXXXX 2>/dev/null) || { log_warn "Cannot create a private folder for module signing, so modules were not signed." >&2; return 0; }
     trap 'sudo rm -rf "${sign_workdir:-}" 2>/dev/null || true' INT TERM
 
     local expected_cn=""
@@ -129,6 +151,9 @@ sign_modules_for_kernel() {
     local newly_signed=0
     while IFS= read -r mod; do
         [ -f "${mod}" ] || continue
+        # 6A-8h: a symlink (CachyOS kernel/drivers/video -> extramodules) is never replaced by a file; its target
+        # is in the same tree and signed on its own
+        [ -L "${mod}" ] && continue
 
         found_modules=1
 
@@ -160,8 +185,12 @@ sign_modules_for_kernel() {
                 sudo rm -f "${mod}" 2>/dev/null || true
                 continue
             fi
-            newly_signed=1
-            sudo "${sign_bin}" sha256 "${MOK_KEY}" "${cert_for_sign}" "${mod}" 2>/dev/null || true
+            if _armor_sign_file "${sign_bin}" "${cert_for_sign}" "${mod}" "${expected_cn}"; then
+                newly_signed=1
+            else
+                ARMOR_SIGN_FAILED+=("${target_kver}")
+                log_warn "Could not sign ${mod##*/} for kernel ${target_kver}. Signing is optional and not needed to boot." >&2
+            fi
             continue
         fi
 
@@ -171,7 +200,7 @@ sign_modules_for_kernel() {
             # Ensure stale uncompressed twin in module directory is purged
             sudo rm -f "${mod%.zst}" 2>/dev/null || true
             local decomp_ok=0
-            if sudo sh -c "unzstd -c '${mod}' > '${sign_workdir}/${base_name}' 2>/dev/null" && [ -s "${sign_workdir}/${base_name}" ]; then
+            if sudo sh -c "unzstd -c '${mod}' > '${sign_workdir}/${base_name}' 2>/dev/null" && sudo test -s "${sign_workdir}/${base_name}"; then
                 decomp_ok=1
             else
                 # Self-healing: Strip trailing signature bytes appended to raw zstd stream
@@ -197,11 +226,19 @@ except Exception:
                 fi
             fi
 
-            if [ "${decomp_ok}" -eq 1 ] && [ -s "${sign_workdir}/${base_name}" ]; then
-                sudo "${sign_bin}" sha256 "${MOK_KEY}" "${cert_for_sign}" "${sign_workdir}/${base_name}" 2>/dev/null || true
-                if sudo zstd -f -q "${sign_workdir}/${base_name}" -o "${sign_workdir}/${base_name}.zst" 2>/dev/null; then
-                    sudo mv -f "${sign_workdir}/${base_name}.zst" "${mod}"
+            if [ "${decomp_ok}" -ne 1 ] || ! sudo test -s "${sign_workdir}/${base_name}"; then
+                ARMOR_SIGN_FAILED+=("${target_kver}")
+                log_warn "Could not unpack ${mod##*/} for kernel ${target_kver} to sign it. Signing is optional and not needed to boot." >&2
+            else
+                # 6A-8h: only a verified signed copy replaces the module; a failure keeps the original and is reported
+                if _armor_sign_file "${sign_bin}" "${cert_for_sign}" "${sign_workdir}/${base_name}" "${expected_cn}" \
+                    && sudo zstd -f -q "${sign_workdir}/${base_name}" -o "${sign_workdir}/${base_name}.zst" 2>/dev/null \
+                    && _armor_signed_by_us "${sign_workdir}/${base_name}.zst" "${expected_cn}" \
+                    && sudo mv -f "${sign_workdir}/${base_name}.zst" "${mod}"; then
                     newly_signed=1
+                else
+                    ARMOR_SIGN_FAILED+=("${target_kver}")
+                    log_warn "Could not sign ${mod##*/} for kernel ${target_kver}. Signing is optional and not needed to boot." >&2
                 fi
                 sudo rm -f "${sign_workdir}/${base_name}" "${sign_workdir}/${base_name}.zst" 2>/dev/null || true
             fi
@@ -209,28 +246,47 @@ except Exception:
             local base_name
             base_name=$(basename "${mod%.xz}")
             sudo rm -f "${mod%.xz}" 2>/dev/null || true
-            if sudo sh -c "unxz -c '${mod}' > '${sign_workdir}/${base_name}' 2>/dev/null" && [ -s "${sign_workdir}/${base_name}" ]; then
-                sudo "${sign_bin}" sha256 "${MOK_KEY}" "${cert_for_sign}" "${sign_workdir}/${base_name}" 2>/dev/null || true
-                if sudo xz -f -q "${sign_workdir}/${base_name}" 2>/dev/null; then
-                    sudo mv -f "${sign_workdir}/${base_name}.xz" "${mod}"
+            if sudo sh -c "unxz -c '${mod}' > '${sign_workdir}/${base_name}' 2>/dev/null" && sudo test -s "${sign_workdir}/${base_name}"; then
+                # 6A-8h: only a verified signed copy replaces the module; a failure keeps the original and is reported
+                if _armor_sign_file "${sign_bin}" "${cert_for_sign}" "${sign_workdir}/${base_name}" "${expected_cn}" \
+                    && sudo xz -f -q "${sign_workdir}/${base_name}" 2>/dev/null \
+                    && _armor_signed_by_us "${sign_workdir}/${base_name}.xz" "${expected_cn}" \
+                    && sudo mv -f "${sign_workdir}/${base_name}.xz" "${mod}"; then
                     newly_signed=1
+                else
+                    ARMOR_SIGN_FAILED+=("${target_kver}")
+                    log_warn "Could not sign ${mod##*/} for kernel ${target_kver}. Signing is optional and not needed to boot." >&2
                 fi
                 sudo rm -f "${sign_workdir}/${base_name}" "${sign_workdir}/${base_name}.xz" 2>/dev/null || true
+            else
+                ARMOR_SIGN_FAILED+=("${target_kver}")
+                log_warn "Could not unpack ${mod##*/} for kernel ${target_kver} to sign it. Signing is optional and not needed to boot." >&2
             fi
         elif [[ "${mod}" =~ \.ko\.gz$ ]]; then
             local base_name
             base_name=$(basename "${mod%.gz}")
             sudo rm -f "${mod%.gz}" 2>/dev/null || true
-            if sudo sh -c "gunzip -c '${mod}' > '${sign_workdir}/${base_name}' 2>/dev/null" && [ -s "${sign_workdir}/${base_name}" ]; then
-                sudo "${sign_bin}" sha256 "${MOK_KEY}" "${cert_for_sign}" "${sign_workdir}/${base_name}" 2>/dev/null || true
-                if sudo gzip -f -q "${sign_workdir}/${base_name}" 2>/dev/null; then
-                    sudo mv -f "${sign_workdir}/${base_name}.gz" "${mod}"
+            if sudo sh -c "gunzip -c '${mod}' > '${sign_workdir}/${base_name}' 2>/dev/null" && sudo test -s "${sign_workdir}/${base_name}"; then
+                # 6A-8h: only a verified signed copy replaces the module; a failure keeps the original and is reported
+                if _armor_sign_file "${sign_bin}" "${cert_for_sign}" "${sign_workdir}/${base_name}" "${expected_cn}" \
+                    && sudo gzip -f -q "${sign_workdir}/${base_name}" 2>/dev/null \
+                    && _armor_signed_by_us "${sign_workdir}/${base_name}.gz" "${expected_cn}" \
+                    && sudo mv -f "${sign_workdir}/${base_name}.gz" "${mod}"; then
                     newly_signed=1
+                else
+                    ARMOR_SIGN_FAILED+=("${target_kver}")
+                    log_warn "Could not sign ${mod##*/} for kernel ${target_kver}. Signing is optional and not needed to boot." >&2
                 fi
                 sudo rm -f "${sign_workdir}/${base_name}" "${sign_workdir}/${base_name}.gz" 2>/dev/null || true
+            else
+                ARMOR_SIGN_FAILED+=("${target_kver}")
+                log_warn "Could not unpack ${mod##*/} for kernel ${target_kver} to sign it. Signing is optional and not needed to boot." >&2
             fi
         fi
-    done < <(find "${search_dirs[@]}" -name "nvidia*.ko*" 2>/dev/null || true)
+    # 6A-8h: only the NVIDIA driver's own modules; in-tree kernel modules such as nvidia-wmi-ec-backlight are signed by
+    # the kernel build key and belong to the kernel package
+    done < <(find "${search_dirs[@]}" -regextype posix-extended \
+                -regex '.*/nvidia(-drm|-modeset|-uvm|-peermem)?\.ko(\.zst|\.xz|\.gz)?' 2>/dev/null || true)
 
     sudo rm -rf "${sign_workdir}" 2>/dev/null || true
     trap - INT TERM
@@ -286,7 +342,9 @@ if os.path.exists('/boot'):
             fi
         fi
         if [ "${needs_sign}" -eq 1 ] && [ -x "${sbverify_bin}" ]; then
-            if sudo "${sbverify_bin}" --list "${kernel}" 2>/dev/null | grep -qi "signature"; then
+            # 6A-8e: "--list | grep signature" also matched "No signature table present" (unsigned counted as signed)
+            # and any foreign signature; only a signature that verifies against our MOK certificate counts.
+            if sudo "${sbverify_bin}" --cert "${MOK_CRT}" "${kernel}" >/dev/null 2>&1; then
                 needs_sign=0
             fi
         fi
@@ -294,7 +352,8 @@ if os.path.exists('/boot'):
         if [ "${needs_sign}" -eq 1 ]; then
             log_info "Signing kernel image with MOK: ${k_base}..."
             local signed_tmp="${kernel}.signed"
-            if sudo "${sbsign_bin}" --key "${MOK_KEY}" --cert "${MOK_CRT}" "${kernel}" --output "${signed_tmp}" 2>/dev/null; then
+            if sudo "${sbsign_bin}" --key "${MOK_KEY}" --cert "${MOK_CRT}" "${kernel}" --output "${signed_tmp}" 2>/dev/null \
+                && { [ ! -x "${sbverify_bin}" ] || sudo "${sbverify_bin}" --cert "${MOK_CRT}" "${signed_tmp}" >/dev/null 2>&1; }; then
                 sudo mv -f "${signed_tmp}" "${kernel}"
                 sudo chmod 0644 "${kernel}"
                 log_success "Applied MOK signature to kernel image: ${k_base}"
@@ -311,7 +370,12 @@ if os.path.exists('/boot'):
 enforce_secure_boot_armor() {
     local mode="${1:-}"
     validate_privileges
-    audit_secure_boot_readiness
+    # 6A-134: pipeline mode or no terminal = report only (the prompt was hidden inside $(...) and EOF meant "yes")
+    if [ "${mode}" = "--pipeline" ] || [ ! -t 0 ]; then
+        audit_secure_boot_readiness --report-only
+    else
+        audit_secure_boot_readiness
+    fi
     resolve_mok_keypair
 
     if [ -z "${MOK_KEY}" ] || { [ -z "${MOK_CRT}" ] && [ -z "${MOK_DER}" ]; }; then
@@ -332,6 +396,7 @@ enforce_secure_boot_armor() {
 
     ARMOR_NEWLY_SIGNED=0
     local ARMOR_SIGNED_LIST=()
+    local ARMOR_SIGN_FAILED=()
 
     # 1. Sign kernel binaries in /boot (only if unsigned)
     sign_kernel_images
@@ -346,22 +411,34 @@ enforce_secure_boot_armor() {
         done
     fi
 
+    # 6A-8h: a failed module signature is never reported as "signed"
+    # 6A-37: module signing is optional (the kernel does not require it); the texts say so plainly
+    local failed_kvers=""
+    if [ "${#ARMOR_SIGN_FAILED[@]}" -gt 0 ]; then
+        failed_kvers=$(printf '%s\n' "${ARMOR_SIGN_FAILED[@]}" | sort -u | paste -sd ',' - | sed 's/,/, /g')
+    fi
+
     if [ "${ARMOR_PIPELINE_MODE}" -eq 1 ]; then
-        if [ "${#ARMOR_SIGNED_LIST[@]}" -gt 0 ]; then
+        if [ -n "${failed_kvers}" ]; then
+            echo "Could not sign NVIDIA modules for ${failed_kvers} (optional, not needed to boot)"
+        elif [ "${#ARMOR_SIGNED_LIST[@]}" -gt 0 ]; then
             local joined
             joined=$(IFS=', '; echo "${ARMOR_SIGNED_LIST[*]}")
-            echo "Signed kernel modules (${joined})"
+            echo "Signed NVIDIA modules for ${joined} with your MOK (optional, not needed to boot)"
         else
-            echo "Verified signed with active MOK"
+            echo "NVIDIA modules already signed with your MOK (optional, not needed to boot)"
         fi
     else
-        if [ "${ARMOR_NEWLY_SIGNED}" -eq 0 ]; then
-            log_info "All kernel images and modules are verified signed with active MOK."
+        if [ -n "${failed_kvers}" ]; then
+            log_warn "Could not sign NVIDIA modules for ${failed_kvers}. Signing is optional and not needed to boot."
+        elif [ "${ARMOR_NEWLY_SIGNED}" -eq 0 ]; then
+            log_info "Kernel images and NVIDIA modules are already signed with your MOK. Module signing is optional and not needed to boot."
         fi
     fi
 
     # 3. Synchronize bootloader if kernel binaries were newly signed
-    if [ "${ARMOR_NEWLY_SIGNED}" -eq 1 ] && command -v sync_bootloader_configuration >/dev/null 2>&1; then
+    # 6A-8e: inside the full update the reseal happens once in [5/5] (initramfs and sbctl signing still change boot files)
+    if [ "${ARMOR_NEWLY_SIGNED}" -eq 1 ] && [ "${DEFER_BOOT_SYNC:-0}" != "1" ] && command -v sync_bootloader_configuration >/dev/null 2>&1; then
         sync_bootloader_configuration "$(uname -r)"
     fi
 
@@ -490,13 +567,16 @@ fetch_official_signed_shim_interactive() {
 
     log_info "Fetching official Microsoft-signed Shim and GRUB from Fedora repositories to user staging..."
     local efi_staging
-    efi_staging="$(get_user_staging_dir)/efi-bootstrap"
-    rm -rf "${efi_staging}"
-    mkdir -p "${efi_staging}"
+    efi_staging=$(mktemp -d "$(get_user_staging_dir)/efi-bootstrap-XXXXXX")
     pushd "${efi_staging}" >/dev/null
 
-    local shim_url="https://kojipkgs.fedoraproject.org/packages/shim/15.8/3/x86_64/shim-x64-15.8-3.x86_64.rpm"
-    local grub_url="https://kojipkgs.fedoraproject.org/packages/grub2/2.12/9.fc41/x86_64/grub2-efi-x64-2.12-9.fc41.x86_64.rpm"
+    # 6A-38: current Fedora builds (shim 16.1-7 = F45 stable, SBAT shim,4; grub2 2.12-81.fc45 = SBAT grub,5).
+    # Old pins (shim 15.8-3, grub 2.12-9.fc41) risk SBAT revocation by Windows updates. shimx64.efi is signed by
+    # Microsoft UEFI CA 2011 AND 2023 (boots on old and new firmware). RPMs are pinned by SHA256.
+    local shim_url="https://kojipkgs.fedoraproject.org/packages/shim/16.1/7/x86_64/shim-x64-16.1-7.x86_64.rpm"
+    local shim_sha256="0a119f3488e5da27ca55c1864ee8e131afa5ecf27689385ba09b805eb00dd608"
+    local grub_url="https://kojipkgs.fedoraproject.org/packages/grub2/2.12/81.fc45/x86_64/grub2-efi-x64-2.12-81.fc45.x86_64.rpm"
+    local grub_sha256="30d2b7b28c338db39cba72f88112defcd32bcff9f5f1ce454fc1420368599e9d"
 
     local dl_ok=true
     if ! curl -sSL --fail --connect-timeout 10 --speed-limit 1024 --speed-time 25 -o shim.rpm "${shim_url}"; then
@@ -507,29 +587,38 @@ fetch_official_signed_shim_interactive() {
     fi
 
     if [ "${dl_ok}" = "true" ]; then
-        bsdtar -xf shim.rpm ./boot/efi/EFI/fedora/shimx64.efi ./boot/efi/EFI/fedora/mmx64.efi 2>/dev/null || \
+        if [ "$(sha256sum shim.rpm | cut -d' ' -f1)" != "${shim_sha256}" ] || [ "$(sha256sum grub.rpm | cut -d' ' -f1)" != "${grub_sha256}" ]; then
+            log_error "The downloaded Shim or GRUB package does not match its checksum. Nothing was changed."
+            popd >/dev/null
+            rm -rf "${efi_staging}" 2>/dev/null || true
+            return 1
+        fi
         bsdtar -xf shim.rpm 2>/dev/null || true
-
-        bsdtar -xf grub.rpm ./boot/efi/EFI/fedora/grubx64.efi 2>/dev/null || \
         bsdtar -xf grub.rpm 2>/dev/null || true
 
-        if [ -f "boot/efi/EFI/fedora/shimx64.efi" ]; then
-            if ! verify_microsoft_uefi_authenticode "boot/efi/EFI/fedora/shimx64.efi"; then
-                log_error "Authenticode verification failed for shimx64.efi! Aborting deployment to protect Secure Boot integrity."
-                popd >/dev/null
-                rm -rf "${efi_staging}" 2>/dev/null || true
-                return 1
-            fi
-            validate_privileges
-            sudo mkdir -p "${target_efi_dir}"
-            sudo cp -af "boot/efi/EFI/fedora/shimx64.efi" "${target_efi_dir}/shimx64.efi"
-            sudo cp -af "boot/efi/EFI/fedora/mmx64.efi" "${target_efi_dir}/mmx64.efi"
+        # Fedora moved the EFI files from boot/efi/EFI/fedora to usr/lib/efi/<pkg>/<ver>/EFI/fedora
+        local shim_efi mm_efi grub_efi
+        shim_efi=$(find . -path '*/EFI/fedora/shimx64.efi' -type f 2>/dev/null | head -n1)
+        mm_efi=$(find . -path '*/EFI/fedora/mmx64.efi' -type f 2>/dev/null | head -n1)
+        grub_efi=$(find . -path '*/EFI/fedora/grubx64.efi' -type f 2>/dev/null | head -n1)
+
+        if [ -z "${shim_efi}" ] || [ -z "${mm_efi}" ] || [ -z "${grub_efi}" ]; then
+            log_error "Shim, MokManager or GRUB is missing from the Fedora packages. Nothing was changed."
+            popd >/dev/null
+            rm -rf "${efi_staging}" 2>/dev/null || true
+            return 1
         fi
-        if [ -f "boot/efi/EFI/fedora/grubx64.efi" ]; then
-            validate_privileges
-            sudo mkdir -p "${target_efi_dir}"
-            sudo cp -af "boot/efi/EFI/fedora/grubx64.efi" "${target_efi_dir}/grubx64.efi"
+        if ! verify_microsoft_uefi_authenticode "${shim_efi}"; then
+            log_error "Authenticode verification failed for shimx64.efi! Aborting deployment to protect Secure Boot integrity."
+            popd >/dev/null
+            rm -rf "${efi_staging}" 2>/dev/null || true
+            return 1
         fi
+        validate_privileges
+        sudo mkdir -p "${target_efi_dir}"
+        sudo cp -f "${shim_efi}" "${target_efi_dir}/shimx64.efi"
+        sudo cp -f "${mm_efi}" "${target_efi_dir}/mmx64.efi"
+        sudo cp -f "${grub_efi}" "${target_efi_dir}/grubx64.efi"
         log_success "Official Microsoft-signed Shim & GRUB deployed to ${target_efi_dir}!"
     else
         log_warn "Could not download official Shim RPMs. Checking local fallback paths..."
@@ -653,9 +742,9 @@ GCFG_EOF
         if [ -n "${esp_source}" ]; then
             local esp_disk=""
             local esp_part=""
-            if [[ "${esp_source}" =~ (/dev/nvme[0-9]+n[0-9]+)p([0-9]+) ]]; then
+            if [[ "${esp_source}" =~ (/dev/(nvme[0-9]+n[0-9]+|mmcblk[0-9]+|nbd[0-9]+))p([0-9]+) ]]; then
                 esp_disk="${BASH_REMATCH[1]}"
-                esp_part="${BASH_REMATCH[2]}"
+                esp_part="${BASH_REMATCH[3]}"
             elif [[ "${esp_source}" =~ (/dev/[a-z]+)([0-9]+) ]]; then
                 esp_disk="${BASH_REMATCH[1]}"
                 esp_part="${BASH_REMATCH[2]}"

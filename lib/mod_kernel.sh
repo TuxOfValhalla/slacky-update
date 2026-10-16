@@ -5,6 +5,8 @@ set -euo pipefail
 
 # --- [ ARCHITECTURE DETECTION ] ---
 detect_cpu_tier() {
+    # 6A-118: SpiderSense answer first (same rules); this copy is the fallback
+    if command -v ss_hw_load >/dev/null 2>&1 && ss_hw_load && [ -n "${HW_CPU_TIER:-}" ]; then echo "${HW_CPU_TIER}"; return 0; fi
     local cpuinfo="/proc/cpuinfo"
     if grep -q "avx512f" "${cpuinfo}" && \
        grep -q "avx512bw" "${cpuinfo}" && \
@@ -27,6 +29,8 @@ detect_cpu_tier() {
 }
 
 is_laptop_chassis() {
+    # 6A-118: SpiderSense answer first (a mouse or headset battery no longer makes a laptop); this copy is the fallback
+    if command -v ss_hw_load >/dev/null 2>&1 && ss_hw_load; then [ "${HW_LAPTOP}" = "true" ]; return; fi
     [ -d "/sys/class/power_supply" ] && ls /sys/class/power_supply/BAT* >/dev/null 2>&1 && return 0
     local chassis
     chassis=$(cat /sys/class/dmi/id/chassis_type 2>/dev/null || echo "")
@@ -407,7 +411,7 @@ nv_pref = k_pref + '-nvidia-open'
 r8125_pref = k_pref + '-r8125'
 
 def get_cache_dir():
-    for d in ['/var/cache/slacky-update', os.path.expanduser('~/.cache/slacky-update'), '/tmp/slacky-update-cache']:
+    for d in ['/var/cache/slacky-update', os.path.expanduser('~/.cache/slacky-update')]:
         try:
             os.makedirs(d, exist_ok=True)
             test_f = os.path.join(d, '.write_test')
@@ -416,11 +420,12 @@ def get_cache_dir():
             return d
         except Exception:
             continue
-    return '/tmp'
+    # 6A-17: no fixed /tmp fallback (predictable path, lost on reboot); a private temp dir instead
+    return __import__('tempfile').mkdtemp(prefix='slacky-update-cache.')
 
 cache_dir = get_cache_dir()
 
-def fetch_url_cached(url, cdir, ttl=1800):
+def fetch_url_cached(url, cdir, ttl=300):
     url_hash = hashlib.sha256(url.encode('utf-8')).hexdigest()[:16]
     cache_file = os.path.join(cdir, f'repo_idx_{url_hash}.html')
     now = time.time()
@@ -531,7 +536,7 @@ flavors = [f.strip() for f in sys.argv[2].split() if f.strip()]
 tier_urls = sys.argv[3:]
 
 def get_cache_dir():
-    for d in ['/var/cache/slacky-update', os.path.expanduser('~/.cache/slacky-update'), '/tmp/slacky-update-cache']:
+    for d in ['/var/cache/slacky-update', os.path.expanduser('~/.cache/slacky-update')]:
         try:
             os.makedirs(d, exist_ok=True)
             test_f = os.path.join(d, '.write_test')
@@ -540,11 +545,12 @@ def get_cache_dir():
             return d
         except Exception:
             continue
-    return '/tmp'
+    # 6A-17: no fixed /tmp fallback (predictable path, lost on reboot); a private temp dir instead
+    return __import__('tempfile').mkdtemp(prefix='slacky-update-cache.')
 
 cache_dir = get_cache_dir()
 
-def fetch_url_cached(url, cdir, ttl=1800):
+def fetch_url_cached(url, cdir, ttl=300):
     url_hash = hashlib.sha256(url.encode('utf-8')).hexdigest()[:16]
     cache_file = os.path.join(cdir, f'repo_idx_{url_hash}.html')
     now = time.time()
@@ -646,7 +652,8 @@ deploy_cachyos_kernel_flavor() {
         if command -v detect_nvidia_gpu >/dev/null 2>&1; then
             gpu_arch=$(detect_nvidia_gpu)
         fi
-        if [ "${gpu_arch}" = "PASCAL" ] || [ "${gpu_arch}" = "LEGACY" ]; then
+        # 6A-130: an unreadable card model (UNKNOWN) is refused too
+        if [ "${gpu_arch}" != "MODERN" ]; then
             log_error "Safety Guardrail: CachyOS Release Candidate (RC) kernels require minimum RTX 20-series (Turing) with precompiled open drivers and do not support Pascal or DKMS."
             return 1
         fi
@@ -665,16 +672,19 @@ deploy_cachyos_kernel_flavor() {
 
     log_info "Deploying CachyOS ${flavor} kernel (v${latest_ver})..."
     deploy_cachyos_kernel_packages "${latest_ver}" "${k_url}" "${h_url}" "${flavor}" "${nv_url}" "${target_r8125}"
-    if command -v purge_old_cachyos_kernels >/dev/null 2>&1; then
-        if [ "${DEFER_BOOT_SYNC:-0}" = "1" ]; then
-            purge_old_cachyos_kernels --no-sync
-        else
-            purge_old_cachyos_kernels
-        fi
+    # 6A-98: inside a deferred run the old kernels are removed only after the boot chain has a verified menu without
+    # them (done by the owner of the deferral); removing them here left the live menu pointing at deleted files
+    if [ "${DEFER_BOOT_SYNC:-0}" != "1" ] && command -v purge_old_cachyos_kernels >/dev/null 2>&1; then
+        purge_old_cachyos_kernels
     fi
 
     # Smart Prompt: Check if system is eligible for pure CachyOS transition
-    prompt_stock_kernel_removal_if_eligible "${flavor}"
+    # 6A-103: never in the middle of a full update (it removes kernels before the menu is rebuilt); asked from the menu
+    if [ "${SLACKY_UPDATE_RUNNING:-0}" = "1" ]; then
+        { echo "[$(date '+%Y-%m-%d %H:%M:%S')] [INFO] SpiderSense: stock kernel removal is offered from the kernel menu, not during a full update" >> "${LOG_FILE}"; } 2>/dev/null || true
+    else
+        prompt_stock_kernel_removal_if_eligible "${flavor}"
+    fi
 }
 
 update_cachyos_kernels() {
@@ -743,7 +753,7 @@ update_cachyos_kernels() {
         download_parallel_pacman "CachyOS Kernel Suite (${#flavors_to_update[@]} flavors)" "${dl_items[@]}" || true
     fi
 
-    # Execute single-pass batch deployment: extract all flavors with deferred boot/DKMS sync, then seal in one atomic pass
+    local was_boot_sync_deferred="${DEFER_BOOT_SYNC:-0}"
     export DEFER_BOOT_SYNC=1
     for flv in "${flavors_to_update[@]}"; do
         deploy_cachyos_kernel_flavor "${flv}"
@@ -756,37 +766,91 @@ update_cachyos_kernels() {
 
     if [ "${HAS_NVIDIA}" = "true" ]; then
         if command -v ensure_cachyos_nvidia_duties >/dev/null 2>&1; then
-            ensure_cachyos_nvidia_duties
+            # 6A-132: an honest failure must not stop the image and boot-menu steps below
+            ensure_cachyos_nvidia_duties || log_warn "The NVIDIA driver could not be confirmed for every kernel; see the log."
         fi
     fi
-    unset DEFER_BOOT_SYNC || true
 
-    # Generate initramfs for all active installed kernels
-    local all_installed_cachyos
-    all_installed_cachyos=$(get_installed_cachyos_flavors 2>/dev/null || echo "")
-    for flv in ${all_installed_cachyos}; do
-        local kver_full
-        kver_full=$(get_installed_cachyos_flavor_version "${flv}" 2>/dev/null || echo "")
-        if [ -n "${kver_full}" ] && [ "${kver_full}" != "NONE" ]; then
-            # Resolve exact kernel directory under /usr/lib/modules
-            local mod_dir
-            mod_dir=$(find /usr/lib/modules -maxdepth 1 -type d -name "*${flv}*" 2>/dev/null | sort -V | tail -n 1 || true)
-            if [ -n "${mod_dir}" ] && [ -d "${mod_dir}" ]; then
-                generate_kernel_initramfs "$(basename "${mod_dir}")"
+    # Generate initramfs for updated installed kernels unless deferred to pipeline matrix
+    if [ "${was_boot_sync_deferred}" != "1" ]; then
+        local target_flavors=()
+        if [ ${#flavors_to_update[@]} -gt 0 ]; then
+            target_flavors=("${flavors_to_update[@]}")
+        else
+            read -r -a target_flavors <<< "$(get_installed_cachyos_flavors 2>/dev/null || echo "")"
+        fi
+
+        local ss_built=()
+        for flv in "${target_flavors[@]}"; do
+            [ -n "${flv}" ] || continue
+            local kver_full
+            kver_full=$(get_installed_cachyos_flavor_version "${flv}" 2>/dev/null || echo "")
+            if [ -n "${kver_full}" ] && [ "${kver_full}" != "NONE" ]; then
+                # Resolve exact kernel directory under /usr/lib/modules
+                local mod_dir=""
+                if [ "${flv}" = "standard" ]; then
+                    mod_dir=$(find /usr/lib/modules -maxdepth 1 -type d -name "*-cachyos" ! -name "*-bore" ! -name "*-lts" ! -name "*-rc*" ! -name "*-hardened" 2>/dev/null | sort -V | tail -n 1 || true)
+                else
+                    mod_dir=$(find /usr/lib/modules -maxdepth 1 -type d -name "*${flv}*" 2>/dev/null | sort -V | tail -n 1 || true)
+                fi
+                if [ -n "${mod_dir}" ] && [ -d "${mod_dir}" ]; then
+                    generate_kernel_initramfs "$(basename "${mod_dir}")"
+                    ss_built+=("$(basename "${mod_dir}")")
+                fi
             fi
-        fi
-    done
-
-    if command -v enforce_secure_boot_armor >/dev/null 2>&1; then
-        enforce_secure_boot_armor
+        done
+        # 6A-97: kernels whose NVIDIA module changed above while DEFER_BOOT_SYNC was set get their one image build here
+        local ss_purge_now ok_k
+        ss_purge_now=" $(ss_purge_set | tr '\n' ' ') "
+        for ok_k in "${SS_INITRD_ORDERS[@]:-}"; do
+            [ -n "${ok_k}" ] || continue
+            { [ -d "/lib/modules/${ok_k}" ] || [ -d "/usr/lib/modules/${ok_k}" ]; } || continue
+            case " ${ss_built[*]:-} " in *" ${ok_k} "*) continue ;; esac
+            case "${ss_purge_now}" in *" ${ok_k} "*) continue ;; esac
+            generate_kernel_initramfs "${ok_k}"
+        done
+        SS_INITRD_ORDERS=()
     fi
-    sync_bootloader_configuration
+
+    if [ "${was_boot_sync_deferred}" = "1" ]; then
+        log_info "Bootloader sync & Secure Boot reseal deferred to final post-upgrade hardening matrix."
+    else
+        unset DEFER_BOOT_SYNC || true
+        if command -v enforce_secure_boot_armor >/dev/null 2>&1; then
+            enforce_secure_boot_armor
+        fi
+        # 6A-98: with Limine the menu is built from the kernels that stay, and the old ones are removed only after that
+        # menu was enrolled and verified. Without Limine the old order stays (GRUB scans /boot, so remove first).
+        if [ "$(is_limine_installed 2>/dev/null || echo false)" = "true" ]; then
+            export SS_KEEP_SET_MENU=1
+            export SLACKY_LIMINE_SEALED=0
+            sync_bootloader_configuration
+            if [ "${SLACKY_LIMINE_SEALED:-0}" = "1" ] && command -v purge_old_cachyos_kernels >/dev/null 2>&1; then
+                purge_old_cachyos_kernels --no-sync
+            fi
+            unset SS_KEEP_SET_MENU || true
+        else
+            if command -v purge_old_cachyos_kernels >/dev/null 2>&1; then
+                purge_old_cachyos_kernels --no-sync
+            fi
+            sync_bootloader_configuration
+        fi
+    fi
 
     log_success "CachyOS kernel upgrade completed (Single-Pass Batch)."
 }
 
 remove_stock_slackware_kernels() {
     validate_privileges
+
+    # 6A-133 (L2 M1): never while a stock kernel is running, and only after a CachyOS kernel has booted successfully
+    # (the running kernel is one); otherwise the running kernel's modules would be gone before anything else was proven.
+    local running_k
+    running_k=$(uname -r)
+    if [[ ! "${running_k}" =~ cachyos ]]; then
+        log_error "The stock kernels were kept because this computer is not running a CachyOS kernel; restart into one first."
+        return 1
+    fi
 
     # HARD BOOT-VALIDATION GUARDRAIL:
     # Ensure at least one verified, bootable CachyOS vmlinuz (>5MB) and matching initramfs/initrd (>5MB) exist before removing stock kernels
@@ -802,7 +866,7 @@ try:
             kpath = os.path.join('/boot', fname)
             if os.path.getsize(kpath) > 5000000:
                 ksuffix = fname.replace('vmlinuz-', '')
-                for icand in [f'/boot/initramfs-{ksuffix}.img', f'/boot/initrd-{ksuffix}.img', f'/boot/initramfs-{ksuffix}', f'/boot/initrd.gz']:
+                for icand in [f'/boot/initramfs-{ksuffix}.img', f'/boot/initrd-{ksuffix}.img', f'/boot/initramfs-{ksuffix}']:
                     if os.path.exists(icand) and os.path.getsize(icand) > 5000000:
                         valid = True
                         found_kernel = fname
@@ -832,9 +896,10 @@ print(f'{1 if valid else 0}|{found_kernel}')
     sudo mkdir -p "${backup_dir}"
 
     local stock_pkgs=("kernel-generic" "kernel-huge" "kernel-modules" "kernel-source")
+    local rm_failed=0
     for pkg in "${stock_pkgs[@]}"; do
         local installed
-        installed=$(ls /var/log/packages/${pkg}-* 2>/dev/null || true)
+        installed=$(ls "${PKGDB_DIR:-/var/log/packages}"/${pkg}-* 2>/dev/null || true)
         if [ -n "${installed}" ]; then
             for p in ${installed}; do
                 local base_p
@@ -842,10 +907,17 @@ print(f'{1 if valid else 0}|{found_kernel}')
                 # Save log package metadata to backup directory for offline recovery tracking
                 sudo cp -f "${p}" "${backup_dir}/${base_p}" 2>/dev/null || true
                 log_info "Removing stock Slackware package: ${base_p}..."
-                sudo "${PKG_REMOVE_CMD}" "${base_p}" 2>/dev/null || true
+                sudo "${PKG_REMOVE_CMD}" "${base_p}" 2>/dev/null || rm_failed=1
             done
         fi
     done
+
+    # 6A-133: no success message and no blacklist entry when removepkg failed
+    if [ "${rm_failed}" -eq 1 ]; then
+        log_error "Some stock kernel packages could not be removed; the boot menu is refreshed, but nothing was blacklisted."
+        sync_bootloader_configuration "$(uname -r)"
+        return 1
+    fi
 
     # Add to blacklist if not already present
     local blacklist_file="/etc/slackpkg/blacklist"
@@ -918,6 +990,8 @@ prompt_stock_kernel_removal_if_eligible() {
         has_stock=1
     fi
     [ "${has_stock}" -eq 1 ] || return 0
+    # 6A-133: not offered until a CachyOS kernel has booted (the removal itself refuses it too)
+    [[ "$(uname -r)" =~ cachyos ]] || return 0
 
     local installed_flavors
     installed_flavors=$(get_installed_cachyos_flavors)
@@ -942,7 +1016,7 @@ prompt_stock_kernel_removal_if_eligible() {
         fi
         reply_remove=${reply_remove:-N}
         if [[ "${reply_remove}" =~ ^[YyJjSsOo]$ ]]; then
-            remove_stock_slackware_kernels
+            remove_stock_slackware_kernels || true
         fi
     fi
 }
@@ -1032,27 +1106,76 @@ for k, data in sorted(kernels.items()):
             k_types+=("${k_type}")
             k_sizes+=("${k_sz}")
             k_active+=("${k_act}")
-
-            local status_badge=""
-            if [ "${k_act}" -eq 1 ]; then
-                status_badge="${GREEN}${BOLD}[ACTIVE - CANNOT REMOVE]${RESET}"
-            elif [ "${k_type}" = "stock" ]; then
-                status_badge="${BLUE}[STOCK]${RESET}"
-            else
-                status_badge="${CYAN}[CACHY]${RESET}"
-            fi
-
-            echo -e "  \033[1;33m${idx}.\033[0m ${k_name} (${k_sizes[$((idx-1))]}) ${status_badge}"
         done <<< "${kernels_raw}"
 
         local exit_idx=$((idx + 1))
-        echo -e "  \033[1;33m${exit_idx}.\033[0m $(_ CACHY_PICKER_EXIT | sed -E 's/^[0-9]+\.\s*//')"
-        echo ""
-        echo -n "$(_ SELECT_OPERATION_RANGE range="1-${exit_idx}") "
-        local sel
-        read -r sel || sel="${exit_idx}"
+        local exit_label
+        exit_label="$(_ CACHY_PICKER_EXIT | sed -E 's/^[0-9]+\.\s*//')"
 
-        if [ "${sel}" = "${exit_idx}" ] || [ -z "${sel}" ]; then
+        local tui_script="${REPO_ROOT:-}/lib/slacky_tui.py"
+        [ ! -f "${tui_script}" ] && [ -f "${SCRIPT_DIR}/../lib/slacky_tui.py" ] && tui_script="${SCRIPT_DIR}/../lib/slacky_tui.py"
+        [ ! -f "${tui_script}" ] && [ -f "/usr/share/slacky-update/lib/slacky_tui.py" ] && tui_script="/usr/share/slacky-update/lib/slacky_tui.py"
+
+        local sel=""
+        if [ -t 0 ] && [ -t 1 ] && [ -f "${tui_script}" ] && command -v python3 >/dev/null 2>&1; then
+            local items_json
+            items_json=$(python3 -c "
+import json, sys
+raw_lines = sys.argv[1].strip().splitlines()
+exit_lbl = sys.argv[2]
+items = []
+for i, line in enumerate(raw_lines, start=1):
+    parts = line.split('|')
+    if len(parts) >= 4:
+        k_name, k_type, k_sz, k_act = parts[0], parts[1], parts[2], parts[3]
+        badge = '[ACTIVE - CANNOT REMOVE]' if k_act == '1' else ('[STOCK]' if k_type == 'stock' else '[CACHY]')
+        items.append({
+            'id': str(i),
+            'label': f'{i}. {k_name} ({k_sz})',
+            'badge': badge
+        })
+exit_idx = len(items) + 1
+items.append({
+    'id': str(exit_idx),
+    'label': f'{exit_idx}. {exit_lbl}'
+})
+print(json.dumps(items))
+" "${kernels_raw}" "${exit_label}" 2>/dev/null || echo "[]")
+
+            if [ -n "${items_json}" ] && [ "${items_json}" != "[]" ]; then
+                sel=$(python3 "${tui_script}" --mode kernel-prune --items "${items_json}" || true)
+            fi
+        fi
+
+        if [ -z "${sel}" ]; then
+            echo ""
+            echo -e "${CYAN}============================================================${RESET}"
+            echo -e "${YELLOW}${BOLD}$(_ KERNEL_REMOVAL_TITLE)${RESET}"
+            echo -e "${CYAN}============================================================${RESET}"
+
+            for ((i=1; i<=idx; i++)); do
+                local k_name="${k_list[$((i-1))]}"
+                local k_sz="${k_sizes[$((i-1))]}"
+                local k_act="${k_active[$((i-1))]}"
+                local k_type="${k_types[$((i-1))]}"
+                local status_badge=""
+                if [ "${k_act}" -eq 1 ]; then
+                    status_badge="${GREEN}${BOLD}[ACTIVE - CANNOT REMOVE]${RESET}"
+                elif [ "${k_type}" = "stock" ]; then
+                    status_badge="${BLUE}[STOCK]${RESET}"
+                else
+                    status_badge="${CYAN}[CACHY]${RESET}"
+                fi
+                echo -e "  \033[1;33m${i}.\033[0m ${k_name} (${k_sz}) ${status_badge}"
+            done
+
+            echo -e "  \033[1;33m${exit_idx}.\033[0m ${exit_label}"
+            echo ""
+            echo -n "$(_ SELECT_OPERATION_RANGE range="1-${exit_idx}") "
+            read -r sel || sel="${exit_idx}"
+        fi
+
+        if [ "${sel}" = "${exit_idx}" ] || [ -z "${sel}" ] || [ "${sel}" = "q" ] || [ "${sel}" = "Q" ]; then
             return 0
         fi
 
@@ -1096,7 +1219,7 @@ for k, data in sorted(kernels.items()):
             read -r -p "Confirm removal [y/N]: " conf_stock
             conf_stock=${conf_stock:-N}
             if [[ "${conf_stock}" =~ ^[YyJjSsOo]$ ]]; then
-                remove_stock_slackware_kernels
+                remove_stock_slackware_kernels || true
             fi
             echo ""
             read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
@@ -1145,11 +1268,7 @@ for k, data in sorted(kernels.items()):
         sudo rm -rf "/usr/lib/modules/${chosen_k}" 2>/dev/null || true
         sudo rm -rf "/usr/src/linux-headers-${chosen_k}" 2>/dev/null || true
 
-        local dkms_bin
-        dkms_bin=$(command -v dkms 2>/dev/null || echo "/usr/sbin/dkms")
-        if [ -x "${dkms_bin}" ]; then
-            sudo "${dkms_bin}" remove -k "${chosen_k}" --all >/dev/null 2>&1 || true
-        fi
+        dkms_purge_kernel "${chosen_k}"
 
         log_success "Kernel ${chosen_k} removed successfully."
 
@@ -1162,12 +1281,12 @@ for k, data in sorted(kernels.items()):
             restore_stock_slackware_kernels
             if [ "${HAS_NVIDIA}" = "true" ] && command -v rollback_cachyos_to_slackware_nvidia >/dev/null 2>&1; then
                 log_info "Migrating NVIDIA graphics driver to native Slackware standalone driver..."
-                rollback_cachyos_to_slackware_nvidia
+                rollback_cachyos_to_slackware_nvidia || true
             fi
         elif [ -z "${remaining_cachy_now}" ] && [ "${has_stock_now}" -eq 1 ]; then
             if [ "${HAS_NVIDIA}" = "true" ] && command -v rollback_cachyos_to_slackware_nvidia >/dev/null 2>&1; then
                 log_info "No CachyOS kernels remain. Migrating NVIDIA graphics driver to native Slackware standalone driver..."
-                rollback_cachyos_to_slackware_nvidia
+                rollback_cachyos_to_slackware_nvidia || true
             fi
         fi
 
@@ -1226,37 +1345,64 @@ cachyos_kernel_picker_interactive() {
             rc_tag="\033[1;31m[UNSUPPORTED ON PASCAL/LEGACY GPU]\033[0m"
         fi
 
-        echo ""
-        echo -e "${CYAN}============================================================${RESET}"
-        echo -e "${YELLOW}${BOLD}$(_ CACHY_PICKER_TITLE)${RESET}"
-        echo -e "${CYAN}============================================================${RESET}"
-        echo -e "  1. \033[1;34mlinux-cachyos\033[0m ${st_tag}"
-        echo -e "     $(_ CACHY_FLAVOR_STANDARD)"
-        echo -e "  2. \033[1;34mlinux-cachyos-bore\033[0m ${bo_tag}"
-        echo -e "     $(_ CACHY_FLAVOR_BORE)"
-        echo -e "  3. \033[1;34mlinux-cachyos-bore-lto\033[0m ${lto_tag}"
-        echo -e "     $(_ CACHY_FLAVOR_LTO)"
-        echo -e "  4. \033[1;34mlinux-cachyos-eevdf\033[0m ${eevdf_tag}"
-        echo -e "     $(_ CACHY_FLAVOR_EEVDF)"
-        echo -e "  5. \033[1;34mlinux-cachyos-bmq\033[0m ${bmq_tag}"
-        echo -e "     $(_ CACHY_FLAVOR_BMQ)"
-        echo -e "  6. \033[1;34mlinux-cachyos-deckify\033[0m ${deck_tag}"
-        echo -e "     $(_ CACHY_FLAVOR_DECKIFY)"
-        echo -e "  7. \033[1;34mlinux-cachyos-rt-bore\033[0m ${rtbore_tag}"
-        echo -e "     $(_ CACHY_FLAVOR_RT_BORE)"
-        echo -e "  8. \033[1;34mlinux-cachyos-rc\033[0m ${rc_tag}"
-        echo -e "     $(_ CACHY_FLAVOR_RC)"
-        echo -e "  9. \033[1;34mlinux-cachyos-lts\033[0m ${lts_tag}"
-        echo -e "     $(_ CACHY_FLAVOR_LTS)"
-        echo -e " 10. \033[1;34mlinux-zen\033[0m ${zen_tag}"
-        echo -e "     $(_ CACHY_FLAVOR_ZEN)"
-        echo -e " 11. \033[1;34mlinux\033[0m ${arch_tag}"
-        echo -e "     $(_ CACHY_FLAVOR_ARCH)"
-        echo -e " 12. $(_ CACHY_PICKER_EXIT | sed -E 's/^[0-9]+\.\s*//')"
-        echo ""
-        echo -n "$(_ SELECT_OPERATION_RANGE range="1-12") "
-        local pchoice
-        read -r pchoice || pchoice="12"
+        local tui_script="${REPO_ROOT:-}/lib/slacky_tui.py"
+        [ ! -f "${tui_script}" ] && [ -f "${SCRIPT_DIR}/../lib/slacky_tui.py" ] && tui_script="${SCRIPT_DIR}/../lib/slacky_tui.py"
+        [ ! -f "${tui_script}" ] && [ -f "/usr/share/slacky-update/lib/slacky_tui.py" ] && tui_script="/usr/share/slacky-update/lib/slacky_tui.py"
+
+        local pchoice=""
+        if [ -t 0 ] && [ -t 1 ] && [ -f "${tui_script}" ] && command -v python3 >/dev/null 2>&1; then
+            local badges_json
+            badges_json=$(python3 -c "import json, sys
+data = {
+    'standard': sys.argv[1],
+    'bore': sys.argv[2],
+    'lto': sys.argv[3],
+    'eevdf': sys.argv[4],
+    'bmq': sys.argv[5],
+    'deckify': sys.argv[6],
+    'rt-bore': sys.argv[7],
+    'rc': sys.argv[8],
+    'lts': sys.argv[9],
+    'zen': sys.argv[10],
+    'arch': sys.argv[11]
+}
+print(json.dumps(data))" "${st_tag}" "${bo_tag}" "${lto_tag}" "${eevdf_tag}" "${bmq_tag}" "${deck_tag}" "${rtbore_tag}" "${rc_tag}" "${lts_tag}" "${zen_tag}" "${arch_tag}" 2>/dev/null || echo "{}")
+
+            pchoice=$(python3 "${tui_script}" --mode kernel-picker --pkg-badges "${badges_json}" || true)
+        fi
+
+        if [ -z "${pchoice}" ]; then
+            echo ""
+            echo -e "${CYAN}============================================================${RESET}"
+            echo -e "${YELLOW}${BOLD}$(_ CACHY_PICKER_TITLE)${RESET}"
+            echo -e "${CYAN}============================================================${RESET}"
+            echo -e "  1. \033[1;34mlinux-cachyos\033[0m ${st_tag}"
+            echo -e "     $(_ CACHY_FLAVOR_STANDARD)"
+            echo -e "  2. \033[1;34mlinux-cachyos-bore\033[0m ${bo_tag}"
+            echo -e "     $(_ CACHY_FLAVOR_BORE)"
+            echo -e "  3. \033[1;34mlinux-cachyos-bore-lto\033[0m ${lto_tag}"
+            echo -e "     $(_ CACHY_FLAVOR_LTO)"
+            echo -e "  4. \033[1;34mlinux-cachyos-eevdf\033[0m ${eevdf_tag}"
+            echo -e "     $(_ CACHY_FLAVOR_EEVDF)"
+            echo -e "  5. \033[1;34mlinux-cachyos-bmq\033[0m ${bmq_tag}"
+            echo -e "     $(_ CACHY_FLAVOR_BMQ)"
+            echo -e "  6. \033[1;34mlinux-cachyos-deckify\033[0m ${deck_tag}"
+            echo -e "     $(_ CACHY_FLAVOR_DECKIFY)"
+            echo -e "  7. \033[1;34mlinux-cachyos-rt-bore\033[0m ${rtbore_tag}"
+            echo -e "     $(_ CACHY_FLAVOR_RT_BORE)"
+            echo -e "  8. \033[1;34mlinux-cachyos-rc\033[0m ${rc_tag}"
+            echo -e "     $(_ CACHY_FLAVOR_RC)"
+            echo -e "  9. \033[1;34mlinux-cachyos-lts\033[0m ${lts_tag}"
+            echo -e "     $(_ CACHY_FLAVOR_LTS)"
+            echo -e " 10. \033[1;34mlinux-zen\033[0m ${zen_tag}"
+            echo -e "     $(_ CACHY_FLAVOR_ZEN)"
+            echo -e " 11. \033[1;34mlinux\033[0m ${arch_tag}"
+            echo -e "     $(_ CACHY_FLAVOR_ARCH)"
+            echo -e " 12. $(_ CACHY_PICKER_EXIT | sed -E 's/^[0-9]+\.\s*//')"
+            echo ""
+            echo -n "$(_ SELECT_OPERATION_RANGE range="1-12") "
+            read -r pchoice || pchoice="12"
+        fi
 
         case "${pchoice}" in
             1)
@@ -1329,7 +1475,7 @@ cachyos_kernel_picker_interactive() {
                 echo ""
                 read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
                 ;;
-            12)
+            12|[Qq])
                 return 0
                 ;;
             *)
@@ -1341,18 +1487,28 @@ cachyos_kernel_picker_interactive() {
 }
 
 manage_system_kernels_interactive() {
+    local tui_script="${REPO_ROOT:-}/lib/slacky_tui.py"
+    [ ! -f "${tui_script}" ] && [ -f "${SCRIPT_DIR}/../lib/slacky_tui.py" ] && tui_script="${SCRIPT_DIR}/../lib/slacky_tui.py"
+    [ ! -f "${tui_script}" ] && [ -f "/usr/share/slacky-update/lib/slacky_tui.py" ] && tui_script="/usr/share/slacky-update/lib/slacky_tui.py"
+
     while true; do
-        echo ""
-        echo -e "${CYAN}============================================================${RESET}"
-        echo -e "${YELLOW}${BOLD}$(_ KERNEL_MANAGE_SYSTEM_TITLE)${RESET}"
-        echo -e "${CYAN}============================================================${RESET}"
-        echo -e "  1. $(_ KERNEL_MANAGE_OPTION_REMOVE | sed -E 's/^[0-9]+\.\s*//')"
-        echo -e "  2. $(_ KERNEL_MANAGE_OPTION_RESTORE | sed -E 's/^[0-9]+\.\s*//')"
-        echo -e "  3. $(_ MOK_OPTION_RETURN | sed -E 's/^[0-9]+\.\s*//')"
-        echo ""
-        echo -n "$(_ SELECT_OPERATION_RANGE range="1-3") "
-        local mchoice
-        read -r mchoice || mchoice="3"
+        local mchoice=""
+        if [ -t 0 ] && [ -t 1 ] && [ -f "${tui_script}" ] && command -v python3 >/dev/null 2>&1; then
+            mchoice=$(python3 "${tui_script}" --mode kernel-manage || true)
+        fi
+
+        if [ -z "${mchoice}" ]; then
+            echo ""
+            echo -e "${CYAN}============================================================${RESET}"
+            echo -e "${YELLOW}${BOLD}$(_ KERNEL_MANAGE_SYSTEM_TITLE)${RESET}"
+            echo -e "${CYAN}============================================================${RESET}"
+            echo -e "  1. $(_ KERNEL_MANAGE_OPTION_REMOVE | sed -E 's/^[0-9]+\.\s*//')"
+            echo -e "  2. $(_ KERNEL_MANAGE_OPTION_RESTORE | sed -E 's/^[0-9]+\.\s*//')"
+            echo -e "  3. $(_ MOK_OPTION_RETURN | sed -E 's/^[0-9]+\.\s*//')"
+            echo ""
+            echo -n "$(_ SELECT_OPERATION_RANGE range="1-3") "
+            read -r mchoice || mchoice="3"
+        fi
 
         case "${mchoice}" in
             1)
@@ -1365,7 +1521,7 @@ manage_system_kernels_interactive() {
                 echo ""
                 read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
                 ;;
-            3)
+            3|[Qq])
                 return 0
                 ;;
             *)
@@ -1607,12 +1763,18 @@ sync_bootloader_configuration() {
         required_params="nvidia_drm.modeset=1 nvidia_drm.fbdev=1 nvidia.NVreg_PreserveVideoMemoryAllocations=1"
     fi
 
-    local root_dev root_fs root_uuid root_flags
-    IFS='|' read -r root_dev root_fs root_uuid root_flags <<< "$(detect_root_filesystem_details)"
+    local root_res
+    root_res=$(resolve_boot_root_cmd 2>/dev/null || echo "ERROR")
+    if [ "${root_res}" = "ERROR" ] || [ -z "${root_res}" ]; then
+        log_error "FATAL: Root filesystem device or UUID resolution failed! Aborting GRUB synchronization."
+        return 1
+    fi
+    local root_cmd root_flags root_fs root_dev root_uuid
+    IFS='|' read -r root_cmd root_flags root_fs root_dev root_uuid <<< "${root_res}"
 
-    local root_cmd="root=${root_dev}"
-    if [ -n "${root_uuid}" ]; then
-        root_cmd="root=UUID=${root_uuid}"
+    if [ -z "${root_cmd}" ] || [ "${root_cmd}" = "root=" ]; then
+        log_error "FATAL: Empty or invalid root= parameter resolved! Aborting GRUB synchronization."
+        return 1
     fi
 
     local root_extra=""
@@ -1687,37 +1849,30 @@ PYGRUB
             fi
         fi
         if [ "${lim_ok}" = "true" ] && command -v enroll_and_sign_limine >/dev/null 2>&1; then
+            # 6A-8b: a failed enroll/sign is an error, not a warning (the live EFI is left as it was)
             if ! enroll_and_sign_limine; then
-                log_warn "Limine enrollment or Secure Boot signing completed with warnings."
+                lim_ok=false
+                log_error "Limine enrollment or Secure Boot signing failed. Do not reboot; run: sudo slacky-update --sync-boot"
+            fi
+        fi
+        if [ "${lim_ok}" = "true" ] && command -v verify_limine_seal >/dev/null 2>&1; then
+            if ! verify_limine_seal; then
+                lim_ok=false
+                log_error "Limine seal check failed after the reseal. Do not reboot; run: sudo slacky-update --sync-boot"
             fi
         fi
         if [ "${lim_ok}" = "true" ]; then
+            export SLACKY_LIMINE_SEALED=1
             local esp_path
             esp_path=$(detect_limine_esp_path 2>/dev/null || echo "/boot")
             log_success "Limine bootloader matrix: BLAKE2B enrolled & Secure Boot signed (${esp_path}/limine.conf)."
         fi
     fi
 
-    # 3. ELILO Bootloader Configuration (Standard Slackware UEFI)
-    local elilo_cfg="/boot/efi/EFI/Slackware/elilo.conf"
-    if [ -f "${elilo_cfg}" ] && [ ! -f "/boot/grub/grub.cfg" ] && [ ! -f "/boot/grub2/grub.cfg" ]; then
-        log_info "ELILO bootloader detected at ${elilo_cfg}."
-        echo -n "Would you like to sync ELILO with kernel ${kver_full}? [Y/n]: "
-        read -r reply_elilo
-        reply_elilo=${reply_elilo:-Y}
-        if [[ "${reply_elilo}" =~ ^[YyJjSsOo]$ ]]; then
-            validate_privileges
-            log_info "Deploying ${kver_full} kernel and initrd to /boot/efi/EFI/Slackware/..."
-            sudo cp -f "/boot/vmlinuz-${kver_full}" /boot/efi/EFI/Slackware/vmlinuz 2>/dev/null || true
-            sudo cp -f "/boot/${initrd_target:-initramfs-${kver_full}.img}" /boot/efi/EFI/Slackware/initrd.gz 2>/dev/null || true
-            local elilo_bin
-            elilo_bin=$(command -v elilo 2>/dev/null || echo "/sbin/elilo")
-            if [ -x "${elilo_bin}" ]; then
-                sudo "${elilo_bin}" 2>/dev/null || true
-            fi
-            log_success "ELILO updated successfully with ${kver_full}."
-        fi
-    fi
+    # 3./4. ELILO and LILO: 6A-133 (LTS B7, L2 M6, L3 M3) hands-off. The old ELILO sync prompted even under cron, copied
+    # onto the ESP with "cp -f || true" (no space check, no verify) and ran an "elilo" binary that does not exist. Now one
+    # reminder line; the user runs lilo or eliloconfig, as stock Slackware expects.
+    print_boot_loader_reminder
 }
 
 verify_cachyos_package_integrity() {
@@ -1762,6 +1917,59 @@ check_boot_disk_space() {
     return 0
 }
 
+# 6A-8g: blocking space check before boot files are written. Kernels and initramfs images go to /boot, whatever
+# filesystem that is (the root partition with GRUB, a small /boot partition, or the ESP with Limine). The ESP is only
+# checked as well when Limine is in use AND it is a different filesystem, because Limine then gets its own copy.
+# Better to stop before anything changes than to leave a cut-short kernel or initramfs (a cut-short file can still get
+# a valid hash, and the old file is already gone by then).
+largest_boot_initramfs_mb() {
+    local b
+    b=$(sudo find /boot -maxdepth 1 -type f \( -name 'initramfs-*' -o -name 'initrd*' \) -printf '%s\n' 2>/dev/null | sort -n | tail -n1)
+    echo $(( ${b:-0} / 1048576 ))
+}
+
+# Margin scales with the system: max(16 MB, a quarter of the largest initramfs) (about 16 MB with small mkinitrd images)
+boot_space_margin_mb() {
+    local largest="${1:-0}" q
+    q=$(( largest / 4 ))
+    [ "${q}" -gt 16 ] && echo "${q}" || echo 16
+}
+
+# Kernels under /boot that have no initramfs/initrd yet (these need a full new image, the rest are overwritten in place)
+count_kernels_without_initramfs() {
+    local n=0 v k
+    for v in $(sudo find /boot -maxdepth 1 -type f -name 'vmlinuz-*' -printf '%f\n' 2>/dev/null); do
+        k="${v#vmlinuz-}"
+        if ! sudo test -f "/boot/initramfs-${k}.img" && ! sudo test -f "/boot/initrd-${k}.gz" && ! sudo test -f "/boot/initrd-${k}.img"; then
+            n=$((n + 1))
+        fi
+    done
+    echo "${n}"
+}
+
+require_boot_space() {
+    local need_mb="$1" what="${2:-boot files}" m free_kb free_mb
+    local mounts=("/boot")
+    if command -v is_limine_installed >/dev/null 2>&1 && [ "$(is_limine_installed 2>/dev/null)" = "true" ] \
+        && command -v detect_limine_esp_path >/dev/null 2>&1; then
+        local esp
+        esp=$(detect_limine_esp_path 2>/dev/null || true)
+        if [ -n "${esp}" ] && [ -d "${esp}" ] && [ "$(stat -c %d "${esp}" 2>/dev/null)" != "$(stat -c %d /boot 2>/dev/null)" ]; then
+            mounts+=("${esp}")
+        fi
+    fi
+    for m in "${mounts[@]}"; do
+        free_kb=$(df -Pk "${m}" 2>/dev/null | awk 'NR==2 {print $4}')
+        [ -n "${free_kb}" ] || continue
+        free_mb=$(( free_kb / 1024 ))
+        if [ "${free_mb}" -lt "${need_mb}" ]; then
+            log_error "Not enough free space on ${m} for the ${what}: ${free_mb} MB free, ${need_mb} MB needed. Nothing was changed. Remove an old kernel and try again."
+            return 1
+        fi
+    done
+    return 0
+}
+
 # --- [ MULTI-KERNEL DKMS ENGINE & ANTI-RACE-CONDITION SHIELD ] ---
 build_dkms_modules_for_all_kernels() {
     local target_mod="${1:-all}"
@@ -1795,6 +2003,12 @@ build_dkms_modules_for_all_kernels() {
         return 0
     fi
 
+    # 6A-98: kernels slated for removal keep existing until after the boot chain; never build modules for them
+    local ss_dying=""
+    if command -v get_obsolete_cachyos_kernels >/dev/null 2>&1; then
+        ss_dying=" $(get_obsolete_cachyos_kernels 2>/dev/null | tr '\n' ' ') "
+    fi
+
     # Retrieve registered DKMS modules
     local dkms_modules=()
     if [ "${target_mod}" != "all" ] && [ -n "${target_ver}" ]; then
@@ -1813,9 +2027,20 @@ build_dkms_modules_for_all_kernels() {
     log_info "⚡ DKMS Multi-Kernel Engine: Auditing modules across ${#target_kernels[@]} kernel trees..."
 
     for kver in "${target_kernels[@]}"; do
+        case "${ss_dying}" in *" ${kver} "*) continue ;; esac
         local has_precompiled_nvidia=false
         if find "/lib/modules/${kver}" "/usr/lib/modules/${kver}" -name "nvidia*.ko*" 2>/dev/null | grep -q "nvidia"; then
             has_precompiled_nvidia=true
+        fi
+
+        # Compiler & series detection for target kernel
+        local is_clang_kernel=false
+        if [ -f "/lib/modules/${kver}/build/.config" ] && grep -q '^CONFIG_CC_IS_CLANG=y' "/lib/modules/${kver}/build/.config" 2>/dev/null; then
+            is_clang_kernel=true
+        fi
+        local is_lts_kernel=false
+        if [[ "${kver}" =~ -lts ]]; then
+            is_lts_kernel=true
         fi
 
         for mod_entry in "${dkms_modules[@]}"; do
@@ -1823,9 +2048,31 @@ build_dkms_modules_for_all_kernels() {
             local m_name m_ver
             IFS='/' read -r m_name m_ver <<< "${mod_entry}"
 
-            # Safety Shield: Never compile NVIDIA DKMS if precompiled nvidia modules are present in kernel tree
-            if [ "${m_name}" = "nvidia" ] && [ "${has_precompiled_nvidia}" = "true" ]; then
-                continue
+            # Safety Shield: Never compile NVIDIA DKMS if:
+            # 1. Kernel is an RC kernel (RC kernels require precompiled open modules only)
+            # 2. Precompiled nvidia modules are already present in kernel tree
+            # 3. Kernel already has an nvidia.ko matching m_ver
+            # 4. Kernel is marked for retention exclusion / slated for deletion
+            if [ "${m_name}" = "nvidia" ]; then
+                if [[ "${kver}" =~ -rc ]] || [ "${has_precompiled_nvidia}" = "true" ]; then
+                    continue
+                fi
+                if command -v get_obsolete_cachyos_kernels >/dev/null 2>&1; then
+                    local obs_k
+                    obs_k=$(get_obsolete_cachyos_kernels 2>/dev/null || true)
+                    if [[ " ${obs_k} " =~ [[:space:]]${kver}[[:space:]] ]]; then
+                        continue
+                    fi
+                fi
+                local ex_mod
+                ex_mod=$(find -L "/lib/modules/${kver}" "/usr/lib/modules/${kver}" -name "nvidia.ko*" 2>/dev/null | head -n 1 || true)
+                if [ -n "${ex_mod}" ] && command -v get_nvidia_module_version >/dev/null 2>&1; then
+                    local cur_nv_v
+                    cur_nv_v=$(get_nvidia_module_version "${ex_mod}")
+                    if [ "${cur_nv_v}" = "${m_ver}" ]; then
+                        continue
+                    fi
+                fi
             fi
 
             # Check if already installed for this kernel
@@ -1833,11 +2080,28 @@ build_dkms_modules_for_all_kernels() {
                 continue
             fi
 
-            log_info "Building DKMS module ${m_name} (v${m_ver}) for kernel ${kver}..."
-            sudo dkms build -m "${m_name}" -v "${m_ver}" -k "${kver}" >/dev/null 2>&1 || {
-                log_warn "DKMS build warning for ${m_name} on ${kver}"
+            # Toolchain & compatibility guard: bcachefs requires GCC + modern in-tree Rust and cannot compile under Clang or on LTS series
+            if [ "${m_name}" = "bcachefs" ] && { [ "${is_clang_kernel}" = "true" ] || [ "${is_lts_kernel}" = "true" ]; }; then
+                if [ "${is_clang_kernel}" = "true" ]; then
+                    log_info "$(_ DKMS_SKIPPED_CLANG mod="${m_name}" kver="${kver}" 2>/dev/null || echo "DKMS module ${m_name} skipped on ${kver} (requires GCC; kernel compiled with Clang)")"
+                else
+                    log_info "$(_ DKMS_SKIPPED_LTS mod="${m_name}" kver="${kver}" 2>/dev/null || echo "DKMS module ${m_name} skipped on ${kver} (incompatible with LTS kernel series)")"
+                fi
+                sudo dkms remove -m "${m_name}" -v "${m_ver}" -k "${kver}" --force >/dev/null 2>&1 || true
                 continue
-            }
+            fi
+
+            log_info "Building DKMS module ${m_name} (v${m_ver}) for kernel ${kver}..."
+            local build_out
+            if ! build_out=$(sudo dkms build -m "${m_name}" -v "${m_ver}" -k "${kver}" 2>&1); then
+                if echo "${build_out}" | grep -qE "BUILD_EXCLUSIVE|does not match this kernel"; then
+                    log_info "$(_ DKMS_SKIPPED_INCOMPATIBLE mod="${m_name}" kver="${kver}" 2>/dev/null || echo "DKMS module ${m_name} skipped on ${kver} (incompatible with kernel version)")"
+                else
+                    log_warn "$(_ DKMS_BUILD_WARN mod="${m_name}" kver="${kver}" 2>/dev/null || echo "DKMS build warning for ${m_name} on ${kver}")"
+                fi
+                sudo dkms remove -m "${m_name}" -v "${m_ver}" -k "${kver}" --force >/dev/null 2>&1 || true
+                continue
+            fi
             sudo dkms install -m "${m_name}" -v "${m_ver}" -k "${kver}" >/dev/null 2>&1 || {
                 log_warn "DKMS install warning for ${m_name} on ${kver}"
             }
@@ -1906,6 +2170,17 @@ deploy_cachyos_kernel_packages() {
         rm -f "${k_file}" "${h_file}" "${k_sig_file}" "${h_sig_file}" 2>/dev/null || true
         return 1
     fi
+    # 6A-8f: the matching NVIDIA module and r8125 packages are extracted as root into / and then MOK-signed; their
+    # .sig was downloaded but never checked. Same fail-closed rule as kernel and headers, before anything is written.
+    local extra_pkg
+    for extra_pkg in "${nv_file}" "${r8125_file}"; do
+        [ -n "${extra_pkg}" ] && [ -f "${extra_pkg}" ] || continue
+        if ! verify_cachyos_gpg_signature "${extra_pkg}" "${extra_pkg}.sig"; then
+            log_error "GPG signature check failed for $(basename "${extra_pkg}")! Aborting kernel deployment."
+            rm -f "${k_file}" "${h_file}" "${k_sig_file}" "${h_sig_file}" "${nv_file}" "${nv_file}.sig" "${r8125_file}" "${r8125_file}.sig" 2>/dev/null || true
+            return 1
+        fi
+    done
 
     if ! verify_cachyos_package_integrity "${k_file}" || ! verify_cachyos_package_integrity "${h_file}"; then
         log_error "Kernel package integrity verification failed! Aborting deployment to prevent system corruption."
@@ -1922,12 +2197,21 @@ deploy_cachyos_kernel_packages() {
 
     # Root transaction phase
     validate_privileges
-    if ! check_boot_disk_space 250; then
-        log_warn "Proceeding with caution, but /boot partition is running very low on disk space."
+    check_boot_disk_space 250 || true
+    # 6A-8g: kernel image + one initramfs of the current largest size (32 MB if none yet) + scaled margin, before any write
+    local vm_pkg_kb need_boot_mb
+    vm_pkg_kb=$(tar --zstd -tvf "${k_file}" 2>/dev/null | awk '$NF ~ /(^|\/)vmlinuz(-[^\/]*)?$/ {print int($3/1024); exit}')
+    local largest_mb
+    largest_mb=$(largest_boot_initramfs_mb)
+    [ "${largest_mb}" -gt 0 ] 2>/dev/null || largest_mb=32
+    need_boot_mb=$(( ${vm_pkg_kb:-20480} / 1024 + largest_mb + $(boot_space_margin_mb "${largest_mb}") ))
+    if ! require_boot_space "${need_boot_mb}" "new kernel"; then
+        rm -f "${k_file}" "${h_file}" "${k_sig_file}" "${h_sig_file}" 2>/dev/null || true
+        return 1
     fi
 
-    sudo tar --zstd -xf "${k_file}" -C /
-    sudo tar --zstd -xf "${h_file}" -C /
+    sudo tar --zstd --exclude=.PKGINFO --exclude=.BUILDINFO --exclude=.MTREE --exclude=.INSTALL --exclude=.CHANGELOG -xf "${k_file}" -C /
+    sudo tar --zstd --exclude=.PKGINFO --exclude=.BUILDINFO --exclude=.MTREE --exclude=.INSTALL --exclude=.CHANGELOG -xf "${h_file}" -C /
 
     if [ -z "${kver_full}" ]; then
         local ver_clean
@@ -1987,37 +2271,46 @@ deploy_cachyos_kernel_packages() {
         fi
     fi
 
+    # 6A-8c: boot files change from here on; cron reseals if this run never reaches the reseal
+    mark_boot_reseal_pending
     # Copy vmlinuz image dynamically
-    local vmlinuz_in_pkg=""
+    local vmlinuz_in_pkg="" vm_src=""
     vmlinuz_in_pkg=$(tar --zstd -tf "${k_file}" 2>/dev/null | grep -E '^boot/vmlinuz-' | head -n 1 | sed 's|^|/|' || true)
     if [ -n "${vmlinuz_in_pkg}" ] && [ -f "${vmlinuz_in_pkg}" ]; then
-        sudo cp -f "${vmlinuz_in_pkg}" "/boot/vmlinuz-${kver_full}"
+        vm_src="${vmlinuz_in_pkg}"; sudo cp -f "${vm_src}" "/boot/vmlinuz-${kver_full}"
     elif [ -f "/boot/vmlinuz-linux-cachyos-bore-lto" ] && [ "${flavor}" = "lto" ]; then
-        sudo cp -f "/boot/vmlinuz-linux-cachyos-bore-lto" "/boot/vmlinuz-${kver_full}"
+        vm_src="/boot/vmlinuz-linux-cachyos-bore-lto"; sudo cp -f "${vm_src}" "/boot/vmlinuz-${kver_full}"
     elif [ -f "/boot/vmlinuz-linux-cachyos-bore" ] && [ "${flavor}" = "bore" ]; then
-        sudo cp -f "/boot/vmlinuz-linux-cachyos-bore" "/boot/vmlinuz-${kver_full}"
+        vm_src="/boot/vmlinuz-linux-cachyos-bore"; sudo cp -f "${vm_src}" "/boot/vmlinuz-${kver_full}"
     elif [ -f "/boot/vmlinuz-linux-cachyos-eevdf" ] && [ "${flavor}" = "eevdf" ]; then
-        sudo cp -f "/boot/vmlinuz-linux-cachyos-eevdf" "/boot/vmlinuz-${kver_full}"
+        vm_src="/boot/vmlinuz-linux-cachyos-eevdf"; sudo cp -f "${vm_src}" "/boot/vmlinuz-${kver_full}"
     elif [ -f "/boot/vmlinuz-linux-cachyos-bmq" ] && [ "${flavor}" = "bmq" ]; then
-        sudo cp -f "/boot/vmlinuz-linux-cachyos-bmq" "/boot/vmlinuz-${kver_full}"
+        vm_src="/boot/vmlinuz-linux-cachyos-bmq"; sudo cp -f "${vm_src}" "/boot/vmlinuz-${kver_full}"
     elif [ -f "/boot/vmlinuz-linux-cachyos-deckify" ] && [ "${flavor}" = "deckify" ]; then
-        sudo cp -f "/boot/vmlinuz-linux-cachyos-deckify" "/boot/vmlinuz-${kver_full}"
+        vm_src="/boot/vmlinuz-linux-cachyos-deckify"; sudo cp -f "${vm_src}" "/boot/vmlinuz-${kver_full}"
     elif [ -f "/boot/vmlinuz-linux-cachyos-rt-bore" ] && [ "${flavor}" = "rt-bore" ]; then
-        sudo cp -f "/boot/vmlinuz-linux-cachyos-rt-bore" "/boot/vmlinuz-${kver_full}"
+        vm_src="/boot/vmlinuz-linux-cachyos-rt-bore"; sudo cp -f "${vm_src}" "/boot/vmlinuz-${kver_full}"
     elif [ -f "/boot/vmlinuz-linux-cachyos-rc" ] && [ "${flavor}" = "rc" ]; then
-        sudo cp -f "/boot/vmlinuz-linux-cachyos-rc" "/boot/vmlinuz-${kver_full}"
+        vm_src="/boot/vmlinuz-linux-cachyos-rc"; sudo cp -f "${vm_src}" "/boot/vmlinuz-${kver_full}"
     elif [ -f "/boot/vmlinuz-linux-cachyos-lts" ] && [ "${flavor}" = "lts" ]; then
-        sudo cp -f "/boot/vmlinuz-linux-cachyos-lts" "/boot/vmlinuz-${kver_full}"
+        vm_src="/boot/vmlinuz-linux-cachyos-lts"; sudo cp -f "${vm_src}" "/boot/vmlinuz-${kver_full}"
     elif [ -f "/boot/vmlinuz-linux-cachyos" ] && [ "${flavor}" = "standard" ]; then
-        sudo cp -f "/boot/vmlinuz-linux-cachyos" "/boot/vmlinuz-${kver_full}"
+        vm_src="/boot/vmlinuz-linux-cachyos"; sudo cp -f "${vm_src}" "/boot/vmlinuz-${kver_full}"
     elif [ -f "/boot/vmlinuz-linux-zen" ] && [ "${flavor}" = "zen" ]; then
-        sudo cp -f "/boot/vmlinuz-linux-zen" "/boot/vmlinuz-${kver_full}"
+        vm_src="/boot/vmlinuz-linux-zen"; sudo cp -f "${vm_src}" "/boot/vmlinuz-${kver_full}"
     elif [ -f "/boot/vmlinuz-linux" ] && [ "${flavor}" = "arch" ]; then
-        sudo cp -f "/boot/vmlinuz-linux" "/boot/vmlinuz-${kver_full}"
+        vm_src="/boot/vmlinuz-linux"; sudo cp -f "${vm_src}" "/boot/vmlinuz-${kver_full}"
     elif [ -f "/usr/lib/modules/${kver_full}/vmlinuz" ]; then
-        sudo cp -f "/usr/lib/modules/${kver_full}/vmlinuz" "/boot/vmlinuz-${kver_full}"
+        vm_src="/usr/lib/modules/${kver_full}/vmlinuz"; sudo cp -f "${vm_src}" "/boot/vmlinuz-${kver_full}"
     elif [ -f "/lib/modules/${kver_full}/vmlinuz" ]; then
-        sudo cp -f "/lib/modules/${kver_full}/vmlinuz" "/boot/vmlinuz-${kver_full}"
+        vm_src="/lib/modules/${kver_full}/vmlinuz"; sudo cp -f "${vm_src}" "/boot/vmlinuz-${kver_full}"
+    fi
+
+    # 6A-8g: the copied kernel must be byte-identical to its source before it is hashed and sealed
+    if [ -n "${vm_src}" ] && ! sudo cmp -s "${vm_src}" "/boot/vmlinuz-${kver_full}"; then
+        log_error "The new kernel image on /boot is incomplete (disk full or write error). It was removed; your current kernels are unchanged."
+        sudo rm -f "/boot/vmlinuz-${kver_full}" 2>/dev/null || true
+        return 1
     fi
 
     if [ -n "${headers_dir}" ] && [ -d "${headers_dir}" ]; then
@@ -2032,7 +2325,7 @@ deploy_cachyos_kernel_packages() {
     if [ -n "${r8125_file}" ] && [ -f "${r8125_file}" ]; then
         if verify_cachyos_package_integrity "${r8125_file}"; then
             log_info "Deploying matching Realtek 2.5GbE (r8125) module for ${kver_full}..."
-            sudo tar --zstd -xf "${r8125_file}" -C /
+            sudo tar --zstd --exclude=.PKGINFO --exclude=.BUILDINFO --exclude=.MTREE --exclude=.INSTALL --exclude=.CHANGELOG -xf "${r8125_file}" -C /
             log_success "$(_ R8125_DEPLOY_SUCCESS version="${kver_full}" 2>/dev/null || echo "Realtek r8125 module successfully deployed for kernel ${kver_full}.")"
         else
             log_warn "Realtek r8125 package integrity verification failed! Skipping module extraction."
@@ -2040,7 +2333,9 @@ deploy_cachyos_kernel_packages() {
     fi
 
     # Fetch and deploy matching CachyOS NVIDIA driver if on supported NVIDIA GPU
-    if [ "${HAS_NVIDIA}" = "true" ]; then
+    # 6A-131 (B6/F2/F3): only Turing+ cards that run (or chose) the NVIDIA driver; the Pascal 580xx path below is
+    # therefore not reached in LTS (it had an HTML scrape, curl without -f and no signature check)
+    if [ "${HAS_NVIDIA}" = "true" ] && command -v nvidia_generation_supported >/dev/null 2>&1 && nvidia_generation_supported; then
         local gpu_arch="MODERN"
         if command -v detect_nvidia_gpu >/dev/null 2>&1; then
             gpu_arch=$(detect_nvidia_gpu)
@@ -2063,7 +2358,7 @@ deploy_cachyos_kernel_packages() {
                     log_error "DKMS package integrity verification failed! Skipping extraction."
                     sudo rm -f "${dkms_file}" 2>/dev/null || true
                 else
-                    sudo tar --zstd -xf "${dkms_file}" -C /
+                    sudo tar --zstd --exclude=.PKGINFO --exclude=.BUILDINFO --exclude=.MTREE --exclude=.INSTALL --exclude=.CHANGELOG -xf "${dkms_file}" -C /
                     if command -v dkms >/dev/null 2>&1; then
                         local dkms_ver
                         dkms_ver=$(dkms status 2>/dev/null | grep -E '^nvidia/' | awk -F'[,/]' '{print $2}' | tr -d ' ' | head -n 1 || echo "580.178.04")
@@ -2084,11 +2379,18 @@ deploy_cachyos_kernel_packages() {
                     log_info "Modern NVIDIA GPU detected. Downloading prebuilt matching CachyOS NVIDIA Open driver (${nv_filename})..."
                     curl -sSL --connect-timeout 10 --speed-limit 1024 --speed-time 25 -o "${nv_file}" "${nv_url}" 2>/dev/null || sudo curl -sSL --connect-timeout 10 --speed-limit 1024 --speed-time 25 -o "${nv_file}" "${nv_url}"
                 fi
-                if ! verify_cachyos_package_integrity "${nv_file}"; then
+                # 6A-8f: this fallback download had no signature at all
+                if [ -f "${nv_file}" ] && [ ! -f "${nv_file}.sig" ]; then
+                    curl -sSL --connect-timeout 10 -o "${nv_file}.sig" "${nv_url}.sig" 2>/dev/null || sudo curl -sSL --connect-timeout 10 -o "${nv_file}.sig" "${nv_url}.sig" 2>/dev/null || true
+                fi
+                if ! verify_cachyos_gpg_signature "${nv_file}" "${nv_file}.sig"; then
+                    log_error "NVIDIA driver package GPG signature check failed! Skipping extraction."
+                    sudo rm -f "${nv_file}" "${nv_file}.sig" 2>/dev/null || true
+                elif ! verify_cachyos_package_integrity "${nv_file}"; then
                     log_error "NVIDIA driver package integrity verification failed! Skipping extraction."
                     sudo rm -f "${nv_file}" 2>/dev/null || true
                 else
-                    sudo tar --zstd -xf "${nv_file}" -C /
+                    sudo tar --zstd --exclude=.PKGINFO --exclude=.BUILDINFO --exclude=.MTREE --exclude=.INSTALL --exclude=.CHANGELOG -xf "${nv_file}" -C /
                     local act_nv_ver=""
                     if command -v detect_cachyos_nvidia_upstream_version >/dev/null 2>&1; then
                         act_nv_ver=$(detect_cachyos_nvidia_upstream_version)
@@ -2136,7 +2438,10 @@ deploy_cachyos_kernel_packages() {
     log_success "Kernel & headers deployed: ${kver_full}"
 
     # 1. Build DKMS out-of-tree modules (v4l2loopback, broadcom-wl, VirtualBox, NVIDIA, etc.)
-    if ! command -v dkms >/dev/null 2>&1; then
+    # 6A-103: no question in the middle of a full update; the offer is made when kernels are managed from the menu
+    if ! command -v dkms >/dev/null 2>&1 && [ "${SLACKY_UPDATE_RUNNING:-0}" = "1" ]; then
+        { echo "[$(date '+%Y-%m-%d %H:%M:%S')] [INFO] SpiderSense: DKMS is not installed; the offer to install it is made from the kernel menu" >> "${LOG_FILE}"; } 2>/dev/null || true
+    elif ! command -v dkms >/dev/null 2>&1; then
         log_info "DKMS is not installed. DKMS automates module rebuilding for v4l2loopback, broadcom-wl, VirtualBox, and out-of-tree drivers across kernel updates."
         if command -v sboinstall >/dev/null 2>&1 || [ -d /var/lib/sbopkg ]; then
             echo -n "Would you like to install DKMS from SlackBuilds now? [y/N]: "
@@ -2158,16 +2463,16 @@ deploy_cachyos_kernel_packages() {
             build_dkms_modules_for_all_kernels
         fi
 
-        if [ "${HAS_NVIDIA}" = "true" ]; then
+        if [ "${HAS_NVIDIA}" = "true" ] && command -v nvidia_generation_supported >/dev/null 2>&1 && nvidia_generation_supported; then
             if [ ! -d "/usr/lib/modules/${kver_full}/kernel/drivers/video" ] && [ ! -d "/lib/modules/${kver_full}/kernel/drivers/video" ]; then
                 if command -v build_nvidia_modules >/dev/null 2>&1; then
-                    build_nvidia_modules "${kver_full}"
+                    build_nvidia_modules "${kver_full}" || true
                 fi
             fi
 
             # Synchronize CachyOS NVIDIA user-space package and any stock Slackware kernels unless deferred
             if command -v ensure_cachyos_nvidia_duties >/dev/null 2>&1; then
-                ensure_cachyos_nvidia_duties
+                ensure_cachyos_nvidia_duties || log_warn "The NVIDIA driver could not be confirmed for every kernel; see the log."
             fi
         fi
     fi
@@ -2205,13 +2510,148 @@ can_run_parallel_dracut() {
     return 0
 }
 
+# 6A-119 (SpiderSense): how many initramfs builds may run at once. One dracut build uses a few threads for compression
+# and up to about 2 GB of RAM, so the limit is max(1, min(threads/4, RAM GB/2, kernels)): 16 threads + 31 GB -> 4.
+# Reads the SpiderSense hardware profile; falls back to nproc and /proc/meminfo.
+ss_dracut_jobs() {
+    local kernels="$1" threads ram n
+    if ss_hw_load; then
+        threads="${HW_CPU_THREADS:-1}"; ram="${HW_RAM_GB:-0}"
+    else
+        threads=$(nproc 2>/dev/null || echo 1)
+        ram=$(awk '/^MemTotal:/{print int($2/1048576)}' /proc/meminfo 2>/dev/null || echo 0)
+    fi
+    [[ "${threads}" =~ ^[0-9]+$ ]] || threads=1
+    [[ "${ram}" =~ ^[0-9]+$ ]] || ram=0
+    [[ "${kernels}" =~ ^[0-9]+$ ]] || kernels=1
+    n=$(( threads / 4 ))
+    [ $(( ram / 2 )) -lt "${n}" ] && n=$(( ram / 2 ))
+    [ "${kernels}" -lt "${n}" ] && n="${kernels}"
+    [ "${n}" -ge 1 ] || n=1
+    echo "${n}"
+}
+
+# 6A-119: build one initramfs in the foreground. Uses the caller's dracut_bin, dracut_args, is_laptop, HAS_INTEL, HAS_AMD.
+ss_dracut_build_one() {
+    local skver="$1" tmp_initrd="$2" has_k_nv=false
+    if find "/lib/modules/${skver}" "/usr/lib/modules/${skver}" -name "nvidia.ko*" 2>/dev/null | grep -q "nvidia"; then
+        has_k_nv=true
+    fi
+    local k_dracut_args=("${dracut_args[@]}")
+    if [ "${has_k_nv}" = "true" ]; then
+        if [ "${is_laptop}" -eq 1 ] && [ "${HAS_INTEL}" = "true" ]; then
+            k_dracut_args+=(--force-drivers "i915 nvidia nvidia_modeset nvidia_uvm nvidia_drm")
+        elif [ "${is_laptop}" -eq 1 ] && [ "${HAS_AMD}" = "true" ]; then
+            k_dracut_args+=(--force-drivers "amdgpu nvidia nvidia_modeset nvidia_uvm nvidia_drm")
+        else
+            k_dracut_args+=(--add-drivers "nvidia nvidia_modeset nvidia_uvm nvidia_drm")
+        fi
+    fi
+    sudo env -i PATH="/usr/local/sbin:/usr/local/bin:/sbin:/usr/sbin:/bin:/usr/bin" "${dracut_bin}" "${k_dracut_args[@]}" "${tmp_initrd}" "${skver}" >/dev/null 2>&1
+}
+
+# 6A-119: a quiet line for the log file only (silent on screen).
+ss_note() {
+    { echo "[$(date '+%Y-%m-%d %H:%M:%S')] [SPIDERSENSE] $1" >> "${LOG_FILE}"; } 2>/dev/null || true
+}
+
+# 6A-42 (SpiderSense phase 1): move a freshly built image onto /boot safely. Lock + reseal marker BEFORE /boot changes
+# (Limine checks a hash of every image: an interrupted run must be repaired by the cron job), copy to <out>.new on the
+# same filesystem, sync, then one rename, so the live image is never half-written. The build dir is private (mktemp -d
+# as root), never a predictable /tmp name. Returns 1 and keeps the previous image on any failure.
+# 6A-133 (LTS B7): boot-loader facts for the initrd rules. Limine is the only loader whose images this tool manages;
+# on LILO/ELILO (and Limine not active) the stock Slackware kernels' initrds belong to geninitrd and the user's loader.
+slacky_boot_dir() { echo "${SLACKY_BOOT_DIR:-/boot}"; }
+limine_is_active_loader() {
+    command -v is_limine_installed >/dev/null 2>&1 || return 1
+    [ "$(is_limine_installed 2>/dev/null || echo false)" = "true" ]
+}
+# Prints "lilo" or "elilo" when that loader is configured and Limine is not active; prints nothing otherwise.
+hands_off_boot_loader() {
+    limine_is_active_loader && return 0
+    local etc="${SLACKY_ETC_DIR:-/etc}" b
+    b=$(slacky_boot_dir)
+    if [ -f "${etc}/lilo.conf" ]; then
+        echo "lilo"
+    elif sudo test -f "${b}/efi/EFI/Slackware/elilo.conf" 2>/dev/null || sudo test -f "${b}/EFI/Slackware/elilo.conf" 2>/dev/null; then
+        echo "elilo"
+    fi
+    return 0
+}
+# One plain reminder line for LILO/ELILO machines (the bin/slacky-update boot chain may call this after a kernel change).
+print_boot_loader_reminder() {
+    case "$(hands_off_boot_loader)" in
+        lilo) log_warn "Your computer starts with LILO, which this tool leaves alone; run 'lilo' as root before restarting so it finds the new kernel." ;;
+        elilo) log_warn "Your computer starts with ELILO, which this tool leaves alone; run 'eliloconfig' as root before restarting so it copies the new kernel." ;;
+    esac
+    return 0
+}
+# A stock Slackware kernel (kernel-generic/huge): not CachyOS, zen or arch.
+is_stock_slackware_kver() { [[ ! "$1" =~ (cachyos|-zen|-arch) ]]; }
+# True when some symlink directly in /boot resolves to this file (geninitrd: initrd.gz -> initrd-<k>.img).
+boot_symlink_points_to() {
+    local f="$1" b real l
+    b=$(slacky_boot_dir)
+    real=$(sudo readlink -f "${f}" 2>/dev/null || echo "${f}")
+    while IFS= read -r l; do
+        [ -n "${l}" ] || continue
+        [ "$(sudo readlink -f "${l}" 2>/dev/null)" = "${real}" ] && return 0
+    done < <(sudo find "${b}" -maxdepth 1 -type l 2>/dev/null || true)
+    return 1
+}
+
+install_initramfs_image() {
+    local tmp="$1" out="$2" kv="$3" sz min_sz="${4:-5000000}"
+    sz=$(sudo stat -c%s "${tmp}" 2>/dev/null || echo 0)
+    if [ "${sz}" -le "${min_sz}" ] 2>/dev/null; then
+        sudo rm -f "${tmp}" 2>/dev/null || true
+        log_warn "The new startup image for kernel ${kv} did not build correctly (${sz} bytes), so the previous one is kept."
+        return 1
+    fi
+    if [ "$(is_limine_installed 2>/dev/null || echo false)" = "true" ]; then
+        acquire_boot_lock || return 1
+        mark_boot_reseal_pending
+    fi
+    if sudo cp -f "${tmp}" "${out}.new" && sudo chmod 600 "${out}.new" && sudo sync && sudo mv -f "${out}.new" "${out}"; then
+        sudo rm -f "${tmp}" 2>/dev/null || true
+        # 6A-133 (LTS B7): old initrd-<k> files are removed only when Limine is the managed loader, never the image just
+        # written, and never a file a /boot symlink points to (geninitrd's initrd-<k>.img behind initrd.gz, used by LILO)
+        if limine_is_active_loader; then
+            local old b
+            b=$(slacky_boot_dir)
+            for old in "${b}/initrd-${kv}.img" "${b}/initrd-${kv}.gz" "${b}/initrd-${kv}"; do
+                [ "${old}" = "${out}" ] && continue
+                sudo test -f "${old}" || continue
+                boot_symlink_points_to "${old}" && continue
+                sudo rm -f "${old}" 2>/dev/null || true
+            done
+        fi
+        return 0
+    fi
+    sudo rm -f "${out}.new" "${tmp}" 2>/dev/null || true
+    log_warn "The new startup image for kernel ${kv} could not be written to /boot, so the previous one is kept."
+    return 1
+}
+
 generate_kernel_initramfs() {
     local kver="$1"
     validate_privileges
     probe_gpu_hardware
-    if ! check_boot_disk_space 250; then
-        log_warn "Proceeding with caution, but /boot partition is running very low on disk space."
+    # 6A-133 (LTS B7): on LILO/ELILO the stock kernels' initrds stay with geninitrd and the user's loader (hands-off)
+    local ss_handsoff
+    ss_handsoff=$(hands_off_boot_loader)
+    if [ -n "${ss_handsoff}" ] && [ "${kver}" != "ALL" ] && [[ "${kver}" != TARGETED* ]] && is_stock_slackware_kver "${kver}"; then
+        print_boot_loader_reminder
+        return 0
     fi
+    check_boot_disk_space 250 || true
+    # 6A-8g: images are copied from /tmp onto /boot. Existing ones are overwritten in place (only growth is needed, covered
+    # by the margin); kernels without an image yet need a full one each. Too little space would leave an entry unbootable.
+    local cur_initrd_mb missing_initrd
+    cur_initrd_mb=$(largest_boot_initramfs_mb)
+    [ "${cur_initrd_mb}" -gt 0 ] 2>/dev/null || cur_initrd_mb=32
+    missing_initrd=$(count_kernels_without_initramfs)
+    require_boot_space $(( missing_initrd * cur_initrd_mb + $(boot_space_margin_mb "${cur_initrd_mb}") )) "initramfs" || return 1
 
     local engine
     engine=$(detect_initramfs_engine)
@@ -2236,6 +2676,9 @@ generate_kernel_initramfs() {
     if [ "${engine}" = "dracut" ]; then
         local dracut_bin
         dracut_bin=$(command -v dracut 2>/dev/null || echo "/usr/bin/dracut")
+        # 6A-42: private root-owned build dir (was /tmp/dracut-<kver>-$$.img, a predictable path written by root)
+        local dracut_tmpdir
+        dracut_tmpdir=$(sudo mktemp -d /tmp/slacky-dracut.XXXXXX 2>/dev/null) || { log_error "Cannot create a private build folder for the startup image."; return 1; }
         local dracut_args=(--force)
         if [ "$(uname -m)" = "x86_64" ] && [ -d "/usr/lib64" ]; then
             dracut_args+=(--libdirs "/lib64 /usr/lib64 /usr/local/lib64")
@@ -2251,6 +2694,11 @@ generate_kernel_initramfs() {
             dracut_args+=(--add "btrfs" --add-drivers "btrfs zstd crc32c")
         fi
 
+        # Enforce universal multi-threaded zstd -1 compression for high-speed boot and build
+        if command -v zstd >/dev/null 2>&1; then
+            dracut_args+=(--compress "zstd -1 -T0")
+        fi
+
         local is_laptop=0
         if command -v is_laptop_chassis >/dev/null 2>&1 && is_laptop_chassis; then
             is_laptop=1
@@ -2260,12 +2708,20 @@ generate_kernel_initramfs() {
             local pending_kvers=()
             local pending_nv=()
             local pending_args=()
+            # 6A-98: in a keep-set commit the kernels about to be removed get no new image
+            local ss_dying=""
+            if [ "${SS_KEEP_SET_MENU:-0}" = "1" ] && [ "${kver}" != "ALL" ]; then
+                ss_dying=" $(ss_purge_set | tr '\n' ' ') "
+            fi
 
             for kdir in /lib/modules/*; do
                 [ -d "${kdir}" ] || continue
                 local single_kver
                 single_kver=$(basename "${kdir}")
                 [ -f "${kdir}/modules.dep" ] || continue
+                case "${ss_dying}" in *" ${single_kver} "*) continue ;; esac
+                # 6A-133: hands-off for stock kernels on LILO/ELILO
+                if [ -n "${ss_handsoff}" ] && is_stock_slackware_kver "${single_kver}"; then continue; fi
                 if sudo test -f "/boot/vmlinuz-${single_kver}" || sudo test -f "/boot/vmlinuz-generic" || [ -d "/lib/modules/${single_kver}/kernel" ]; then
                     local initrd_out="/boot/initramfs-${single_kver}.img"
                     local has_k_nv=false
@@ -2282,6 +2738,10 @@ generate_kernel_initramfs() {
                             is_up_to_date=false
                         fi
                         if [ "${has_k_nv}" = "true" ] && [ -f "${k_nv_mod}" ] && sudo test "${k_nv_mod}" -nt "${initrd_out}"; then
+                            is_up_to_date=false
+                        fi
+                        # 6A-97: the NVIDIA sync ordered this image (an unpacked module keeps the package's old mtime)
+                        if ss_initrd_ordered "${single_kver}"; then
                             is_up_to_date=false
                         fi
                         if [ "${is_up_to_date}" = "true" ]; then
@@ -2310,11 +2770,13 @@ generate_kernel_initramfs() {
 
             local total_builds="${#pending_kvers[@]}"
             local pipeline_generated=()
+            local pipeline_failed=()
 
             if [ "${total_builds}" -eq 0 ]; then
                 if [ "${kver}" = "TARGETED_PIPELINE" ]; then
                     printf "  \033[1;36m[3/5]\033[0m \033[1mDracut Initramfs Generation\033[0m  : \033[1;32mAll installed images are up to date\033[0m\n"
                 fi
+                sudo rm -rf "${dracut_tmpdir}" 2>/dev/null || true
                 return 0
             fi
 
@@ -2330,40 +2792,18 @@ generate_kernel_initramfs() {
             fi
 
             if can_run_parallel_dracut && [ "${total_builds}" -gt 1 ]; then
-                local pids=()
-                local tmp_files=()
-                local out_files=()
+                # 6A-119: at most ss_dracut_jobs builds at a time; a failed build is retried once on its own.
+                local max_jobs
+                max_jobs=$(ss_dracut_jobs "${total_builds}")
+                local pids=() tmp_files=() out_files=() t_start=() t_used=()
+                local next_job=0 running=0 j
 
                 for ((i=0; i<total_builds; i++)); do
-                    local skver="${pending_kvers[i]}"
-                    local initrd_out="/boot/initramfs-${skver}.img"
-                    local tmp_initrd="/tmp/dracut-${skver}-$$.img"
-                    sudo rm -f "${tmp_initrd}" 2>/dev/null || true
-
-                    local has_k_nv=false
-                    if find "/lib/modules/${skver}" "/usr/lib/modules/${skver}" -name "nvidia.ko*" 2>/dev/null | grep -q "nvidia"; then
-                        has_k_nv=true
-                    fi
-
-                    local k_dracut_args=("${dracut_args[@]}")
-                    if [ "${has_k_nv}" = "true" ]; then
-                        if [ "${is_laptop}" -eq 1 ]; then
-                            if [ "${HAS_INTEL}" = "true" ]; then
-                                k_dracut_args+=(--force-drivers "i915 nvidia nvidia_modeset nvidia_uvm nvidia_drm")
-                            elif [ "${HAS_AMD}" = "true" ]; then
-                                k_dracut_args+=(--force-drivers "amdgpu nvidia nvidia_modeset nvidia_uvm nvidia_drm")
-                            else
-                                k_dracut_args+=(--add-drivers "nvidia nvidia_modeset nvidia_uvm nvidia_drm")
-                            fi
-                        else
-                            k_dracut_args+=(--add-drivers "nvidia nvidia_modeset nvidia_uvm nvidia_drm")
-                        fi
-                    fi
-
-                    sudo env -i PATH="/usr/local/sbin:/usr/local/bin:/sbin:/usr/sbin:/bin:/usr/bin" "${dracut_bin}" "${k_dracut_args[@]}" "${tmp_initrd}" "${skver}" >/dev/null 2>&1 &
-                    pids+=("$!")
-                    tmp_files+=("${tmp_initrd}")
-                    out_files+=("${initrd_out}")
+                    tmp_files+=("${dracut_tmpdir}/initramfs-${pending_kvers[i]}.img")
+                    out_files+=("/boot/initramfs-${pending_kvers[i]}.img")
+                    pids+=("")
+                    t_start+=(0)
+                    t_used+=(0)
                 done
 
                 local spin_idx=0
@@ -2377,14 +2817,22 @@ generate_kernel_initramfs() {
                 fi
 
                 while true; do
-                    local any_running=false
-                    for pid in "${pids[@]}"; do
-                        if kill -0 "${pid}" 2>/dev/null; then
-                            any_running=true
-                            break
+                    running=0
+                    for ((j=0; j<next_job; j++)); do
+                        if [ -n "${pids[j]}" ] && kill -0 "${pids[j]}" 2>/dev/null; then
+                            running=$(( running + 1 ))
+                        elif [ "${t_used[j]}" -eq 0 ]; then
+                            t_used[j]=$(( SECONDS - t_start[j] + 1 ))
                         fi
                     done
-                    [ "${any_running}" = "true" ] || break
+                    while [ "${running}" -lt "${max_jobs}" ] && [ "${next_job}" -lt "${total_builds}" ]; do
+                        ss_dracut_build_one "${pending_kvers[next_job]}" "${tmp_files[next_job]}" &
+                        pids[next_job]="$!"
+                        t_start[next_job]="${SECONDS}"
+                        next_job=$(( next_job + 1 ))
+                        running=$(( running + 1 ))
+                    done
+                    [ "${running}" -gt 0 ] || break
 
                     local spin_char="${spinner_frames[spin_idx % ${#spinner_frames[@]}]}"
                     local dots=""
@@ -2409,21 +2857,23 @@ generate_kernel_initramfs() {
                     local skver="${pending_kvers[i]}"
                     local tmp_initrd="${tmp_files[i]}"
                     local initrd_out="${out_files[i]}"
-                    local pid="${pids[i]}"
-                    wait "${pid}" 2>/dev/null || true
-
-                    local img_sz=0
-                    if [ -f "${tmp_initrd}" ]; then
-                        img_sz=$(stat -c%s "${tmp_initrd}" 2>/dev/null || echo 0)
+                    local rc=0
+                    wait "${pids[i]}" 2>/dev/null || rc=$?
+                    if [ "${rc}" -ne 0 ]; then
+                        # One quiet serial retry: a parallel failure can be memory pressure, not a broken kernel.
+                        ss_note "dracut for ${skver} failed in parallel (exit ${rc}); retrying alone"
+                        sudo rm -f "${tmp_initrd}" 2>/dev/null || true
+                        local t0="${SECONDS}"
+                        rc=0
+                        ss_dracut_build_one "${skver}" "${tmp_initrd}" || rc=$?
+                        t_used[i]=$(( SECONDS - t0 + 1 ))
                     fi
-                    if [ "${img_sz}" -gt 5000000 ]; then
-                        sudo mv -f "${tmp_initrd}" "${initrd_out}"
-                        sudo chmod 600 "${initrd_out}" 2>/dev/null || true
-                        sudo rm -f "/boot/initrd-${skver}.img" "/boot/initrd-${skver}.gz" "/boot/initrd-${skver}" 2>/dev/null || true
+                    ss_note "dracut ${skver}: exit ${rc}, about ${t_used[i]} s (${max_jobs} at a time)"
+
+                    if install_initramfs_image "${tmp_initrd}" "${initrd_out}" "${skver}"; then
                         pipeline_generated+=("${skver}")
                     else
-                        log_warn "Generated Dracut image ${initrd_out} is unexpectedly small (${img_sz} bytes)."
-                        sudo rm -f "${tmp_initrd}" 2>/dev/null || true
+                        pipeline_failed+=("${skver}")
                     fi
                 done
             else
@@ -2431,8 +2881,7 @@ generate_kernel_initramfs() {
                 for ((i=0; i<total_builds; i++)); do
                     local single_kver="${pending_kvers[i]}"
                     local initrd_out="/boot/initramfs-${single_kver}.img"
-                    local tmp_initrd="/tmp/dracut-${single_kver}-$$.img"
-                    sudo rm -f "${tmp_initrd}" 2>/dev/null || true
+                    local tmp_initrd="${dracut_tmpdir}/initramfs-${single_kver}.img"
 
                     local has_k_nv=false
                     if find "/lib/modules/${single_kver}" "/usr/lib/modules/${single_kver}" -name "nvidia.ko*" 2>/dev/null | grep -q "nvidia"; then
@@ -2482,18 +2931,10 @@ generate_kernel_initramfs() {
                     done
                     wait "${dracut_pid}" 2>/dev/null || true
 
-                    local img_sz=0
-                    if [ -f "${tmp_initrd}" ]; then
-                        img_sz=$(stat -c%s "${tmp_initrd}" 2>/dev/null || echo 0)
-                    fi
-                    if [ "${img_sz}" -gt 5000000 ]; then
-                        sudo mv -f "${tmp_initrd}" "${initrd_out}"
-                        sudo chmod 600 "${initrd_out}" 2>/dev/null || true
-                        sudo rm -f "/boot/initrd-${single_kver}.img" "/boot/initrd-${single_kver}.gz" "/boot/initrd-${single_kver}" 2>/dev/null || true
+                    if install_initramfs_image "${tmp_initrd}" "${initrd_out}" "${single_kver}"; then
                         pipeline_generated+=("${single_kver}")
                     else
-                        log_warn "Generated Dracut image ${initrd_out} is unexpectedly small (${img_sz} bytes)."
-                        sudo rm -f "${tmp_initrd}" 2>/dev/null || true
+                        pipeline_failed+=("${single_kver}")
                     fi
                 done
             fi
@@ -2504,12 +2945,19 @@ generate_kernel_initramfs() {
                 local img_kver
                 img_kver=$(basename "${img}" | sed -e 's/^initramfs-//' -e 's/\.img$//')
                 if [ ! -d "/lib/modules/${img_kver}" ] && [ ! -d "/usr/lib/modules/${img_kver}" ]; then
-                    sudo rm -f "${img}" 2>/dev/null || true
+                    # 6A-133: never remove a file a /boot symlink points to
+                    boot_symlink_points_to "${img}" || sudo rm -f "${img}" 2>/dev/null || true
                 fi
             done < <(sudo find /boot -maxdepth 1 -name "initramfs-*.img" 2>/dev/null || true)
 
+            sudo rm -rf "${dracut_tmpdir}" 2>/dev/null || true
             if [ "${kver}" = "TARGETED_PIPELINE" ]; then
-                if [ "${#pipeline_generated[@]}" -gt 0 ]; then
+                # 6A-44: a failed image is shown as failed (was always green)
+                if [ "${#pipeline_failed[@]}" -gt 0 ]; then
+                    local jf
+                    jf=$(IFS=', '; echo "${pipeline_failed[*]}")
+                    printf "\r  \033[1;36m[3/5]\033[0m \033[1mDracut Initramfs Generation\033[0m  : \033[1;31mFailed for %s (previous image kept)\033[0m\033[K\n" "${jf}"
+                elif [ "${#pipeline_generated[@]}" -gt 0 ]; then
                     local joined
                     joined=$(IFS=', '; echo "${pipeline_generated[*]}")
                     printf "\r  \033[1;36m[3/5]\033[0m \033[1mDracut Initramfs Generation\033[0m  : \033[1;32mGenerated %d fresh image(s) (%s)\033[0m\033[K\n" "${#pipeline_generated[@]}" "${joined}"
@@ -2518,7 +2966,9 @@ generate_kernel_initramfs() {
                 fi
             fi
 
-            return 0
+            # Only the full-update pipeline (which shows the red [3/5] line and continues) gets a non-zero result; the
+            # ~20 other callers run under set -e and must still reach the Limine reseal, so they keep the old 0.
+            [ "${#pipeline_failed[@]}" -eq 0 ] || [ "${kver}" != "TARGETED_PIPELINE" ]
         else
             local cur_loc
             cur_loc=$(get_active_locale 2>/dev/null || echo "en")
@@ -2551,8 +3001,7 @@ generate_kernel_initramfs() {
             fi
 
             local initrd_out="/boot/initramfs-${kver}.img"
-            local tmp_initrd="/tmp/dracut-${kver}-$$.img"
-            sudo rm -f "${tmp_initrd}" 2>/dev/null || true
+            local tmp_initrd="${dracut_tmpdir}/initramfs-${kver}.img"
 
             sudo env -i PATH="/usr/local/sbin:/usr/local/bin:/sbin:/usr/sbin:/bin:/usr/bin" "${dracut_bin}" "${k_dracut_args[@]}" "${tmp_initrd}" "${kver}" >/dev/null 2>&1 &
             local dracut_pid=$!
@@ -2576,38 +3025,34 @@ generate_kernel_initramfs() {
             done
             wait "${dracut_pid}" 2>/dev/null || true
 
-            local img_sz=0
-            if [ -f "${tmp_initrd}" ]; then
-                img_sz=$(stat -c%s "${tmp_initrd}" 2>/dev/null || echo 0)
-            fi
-            if [ "${img_sz}" -gt 5000000 ]; then
-                sudo mv -f "${tmp_initrd}" "${initrd_out}"
-                sudo chmod 600 "${initrd_out}" 2>/dev/null || true
-                sudo rm -f "/boot/initrd-${kver}.img" "/boot/initrd-${kver}.gz" "/boot/initrd-${kver}" 2>/dev/null || true
-                printf "\r\033[K"
-                log_success "Dracut initramfs generated: ${initrd_out} (${img_sz} bytes)"
-                return 0
-            else
-                sudo rm -f "${tmp_initrd}" 2>/dev/null || true
-                printf "\r\033[K"
-                log_warn "Generated Dracut image ${initrd_out} is unexpectedly small (${img_sz} bytes). Preserving existing initrd backup."
+            printf "\r\033[K"
+            if install_initramfs_image "${tmp_initrd}" "${initrd_out}" "${kver}"; then
+                sudo rm -rf "${dracut_tmpdir}" 2>/dev/null || true
+                log_success "Dracut initramfs generated: ${initrd_out}"
                 return 0
             fi
+            sudo rm -rf "${dracut_tmpdir}" 2>/dev/null || true
+            # previous image kept and the warning shown; return 0 like before so callers under set -e still reseal
+            return 0
         fi
     else
         # Legacy Slackware mkinitrd fallback
-        if [ "${kver}" = "ALL" ] || [ "${kver}" = "TARGETED" ]; then
+        # 6A-133 (M6): TARGETED_PIPELINE (the full-update [3/5] step) was missing here, so no image was built at all
+        if [ "${kver}" = "ALL" ] || [ "${kver}" = "TARGETED" ] || [ "${kver}" = "TARGETED_PIPELINE" ]; then
+            local mk_failed=0
             local gen_script
             gen_script=$(command -v mkinitrd_command_generator.sh 2>/dev/null || echo "/sbin/mkinitrd_command_generator.sh")
-            if [ "${kver}" = "ALL" ] && [ -x "${gen_script}" ]; then
+            if [ "${kver}" = "ALL" ] && [ -x "${gen_script}" ] && [ -z "${ss_handsoff}" ]; then
                 log_info "Regenerating mkinitrd images using Slackware generator..."
-                sudo bash <("${gen_script}") 2>/dev/null || true
+                sudo bash <("${gen_script}") 2>/dev/null || mk_failed=1
             elif [ -d "/lib/modules" ]; then
                 for kdir in /lib/modules/*; do
                     [ -d "${kdir}" ] || continue
                     local single_kver
                     single_kver=$(basename "${kdir}")
-                    if [ "${kver}" = "TARGETED" ]; then
+                    [ -f "${kdir}/modules.dep" ] || continue
+                    if [ -n "${ss_handsoff}" ] && is_stock_slackware_kver "${single_kver}"; then continue; fi
+                    if [ "${kver}" != "ALL" ]; then
                         local initrd_out="/boot/initrd-${single_kver}.gz"
                         sudo test -f "${initrd_out}" || initrd_out="/boot/initrd-${single_kver}.img"
                         if sudo test -f "${initrd_out}"; then
@@ -2617,13 +3062,20 @@ generate_kernel_initramfs() {
                             fi
                         fi
                     fi
-                    generate_legacy_mkinitrd "${single_kver}"
+                    generate_legacy_mkinitrd "${single_kver}" || mk_failed=1
                 done
             fi
-            log_success "mkinitrd generation completed for all kernels."
-            return 0
+            if [ "${mk_failed}" -eq 0 ]; then
+                log_success "mkinitrd generation completed for all kernels."
+            else
+                log_warn "Some startup images could not be built; the previous ones were kept."
+            fi
+            # same contract as the dracut branch: only the pipeline sees a failure
+            [ "${mk_failed}" -eq 0 ] || [ "${kver}" != "TARGETED_PIPELINE" ]
+            return
         else
-            generate_legacy_mkinitrd "${kver}"
+            # previous image kept and the warning shown; 0 like the dracut branch so callers under set -e still reseal
+            generate_legacy_mkinitrd "${kver}" || true
         fi
     fi
 }
@@ -2649,8 +3101,14 @@ generate_legacy_mkinitrd() {
         ucode_opt="-u /boot/amd-ucode.cpio"
     fi
 
-    local root_dev root_fs root_uuid root_flags
-    IFS='|' read -r root_dev root_fs root_uuid root_flags <<< "$(detect_root_filesystem_details)"
+    local root_res
+    root_res=$(resolve_boot_root_cmd 2>/dev/null || echo "ERROR")
+    if [ "${root_res}" = "ERROR" ] || [ -z "${root_res}" ]; then
+        log_error "FATAL: Root filesystem device or UUID resolution failed! Aborting initrd generation."
+        return 1
+    fi
+    local root_cmd root_flags root_fs root_dev root_uuid
+    IFS='|' read -r root_cmd root_flags root_fs root_dev root_uuid <<< "${root_res}"
     log_info "Detected root device: ${root_dev} (${root_fs})"
 
     local base_modules="${root_fs}:nvme:xhci-pci:ahci:sd_mod"
@@ -2665,33 +3123,45 @@ generate_legacy_mkinitrd() {
     fi
 
     local nvidia_modules=""
-    if [ "${HAS_NVIDIA}" = "true" ] || [ -d "/lib/modules/${kver}/kernel/drivers/video" ]; then
+    # 6A-133 (F9): only when this kernel really has an nvidia.ko (the video dir exists on every kernel)
+    if [ "${HAS_NVIDIA}" = "true" ] && [ -n "$(find -L "/lib/modules/${kver}" -name 'nvidia.ko*' -print -quit 2>/dev/null)" ]; then
         nvidia_modules=":nvidia:nvidia-modeset:nvidia-uvm:nvidia-drm"
         log_info "NVIDIA hardware identified. Bundling video modules into initrd."
     fi
 
     local combined_modules="${base_modules}${nvidia_modules}"
 
-    local root_param="${root_dev}"
+    local root_param=""
     if [ -n "${root_uuid}" ]; then
         root_param="UUID=${root_uuid}"
+    elif [ -n "${root_dev}" ] && [ "${root_dev}" != "/dev/root" ]; then
+        root_param="${root_dev}"
+    else
+        log_error "FATAL: Missing valid root device or UUID for mkinitrd! Aborting."
+        return 1
     fi
 
-    local tmp_tree="/tmp/initrd-tree-${kver}-$$"
-    local tmp_out="/tmp/initrd-${kver}-$$.gz"
-    sudo rm -rf "${tmp_tree}" "${tmp_out}" 2>/dev/null || true
+    # 6A-133 (M9): private root-owned build dir (was a predictable /tmp name written by root); no fallback without
+    # -m/-f/-r (it overwrote a good initrd with one that cannot mount a btrfs root); the result goes through
+    # install_initramfs_image (.new + rename, previous image kept on any failure).
+    local mk_tmpdir
+    mk_tmpdir=$(sudo mktemp -d /tmp/slacky-mkinitrd.XXXXXX 2>/dev/null) || { log_error "Cannot create a private build folder for the startup image."; return 1; }
+    local tmp_tree="${mk_tmpdir}/tree"
+    local tmp_out="${mk_tmpdir}/initrd-${kver}.gz"
 
     if ! sudo "${MKINITRD_CMD}" -c -k "${kver}" -s "${tmp_tree}" -m "${combined_modules}" -f "${root_fs}" -r "${root_param}" ${ucode_opt} -o "${tmp_out}"; then
-        log_warn "Standard mkinitrd completed with warnings. Running fallback..."
-        sudo "${MKINITRD_CMD}" -c -k "${kver}" -s "${tmp_tree}" -o "${tmp_out}" 2>/dev/null || true
+        sudo rm -rf "${mk_tmpdir}" 2>/dev/null || true
+        log_warn "The startup image for kernel ${kver} could not be built, so the previous one is kept."
+        return 1
     fi
-
-    if [ -f "${tmp_out}" ] && [ -s "${tmp_out}" ]; then
-        sudo mv -f "${tmp_out}" "${initrd_out}"
-        sudo chmod 600 "${initrd_out}" 2>/dev/null || true
+    local mk_rc=0
+    if install_initramfs_image "${tmp_out}" "${initrd_out}" "${kver}" 1000000; then
         log_success "Initrd generated: ${initrd_out}"
+    else
+        mk_rc=1
     fi
-    sudo rm -rf "${tmp_tree}" "${tmp_out}" 2>/dev/null || true
+    sudo rm -rf "${mk_tmpdir}" 2>/dev/null || true
+    return "${mk_rc}"
 }
 
 # Backwards compatibility alias

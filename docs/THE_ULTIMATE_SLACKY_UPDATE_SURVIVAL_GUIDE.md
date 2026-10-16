@@ -1,6 +1,6 @@
 # 📘 The Ultimate Slacky-Update Survival Guide
 ### *Enterprise-Grade System Maintenance, Kernel Lifecycle, Driver Orchestrator & Workstation Suite for Slackware Linux*
-#### `v1.0_RC2` — *"Dark Star"* (Stability & Hardware Release Candidate)
+#### `v1.0 LTS` — *"Dark Star"* (Official Long-Term Support Release)
 
 ---
 
@@ -12,7 +12,7 @@
 > [!CAUTION]
 > **COMPREHENSIVE TESTING, LIABILITY & USE-AT-YOUR-OWN-RISK DISCLAIMER**  
 > * **Hardware Testing & Verification:** Slacky-Update has been extensively verified and field-tested on the author's bare-metal workstations, and dry-run/simulated test passes have been executed across diverse build environments. However, **this in no way guarantees that it will operate seamlessly or without anomalies on your specific hardware configuration.**
-> * **100% User Responsibility:** Slacky-Update executes deep, low-level modifications to foundational system components, including Linux kernel deployments, proprietary graphics stacks, initramfs generation, Btrfs subvolumes, and UEFI bootloader topologies. **All installation, upgrades, and system modifications are performed 100% at your own discretion and risk.**
+> * **100% User Responsibility:** Slacky-Update executes deep, low-level modifications to foundational system components, including Linux kernel deployments, proprietary graphics stacks, initramfs generation, Btrfs subvolumes, and UEFI bootloader topologies. **All installation, upgrades, and system modifications are performed strictly at your own discretion and risk.**
 > * **No Liability for Data Loss:** The authors, maintainers, and contributors assume **no liability, warranty, or responsibility** for system malfunctions, unbootable states, hardware quirks, or loss of personal data.
 > * **Mandatory Backups:** Always maintain current, tested backups of your personal data (`/home`, essential configuration files, and boot partitions) and keep a bootable Slackware Live-USB accessible before performing upgrades or modifying bootloaders.
 > * **Bug Reporting & Support Policy:** If you encounter bugs, regressions, or hardware edge-cases, please report them on [GitHub Issues](https://github.com/TuxOfValhalla/slacky-update/issues) so they can be addressed. Beyond the comprehensive documentation provided in `docs/`, no individual customer support, warranties, or service level agreements are offered.
@@ -20,7 +20,7 @@
 ---
 
 ## 📑 Table of Contents
-1. [Core Philosophy: The Sacred Slackware Base](#core-philosophy-the-sacred-slackware-base)
+1. [Core Philosophy: The Sacred Slackware Base & The Five Pillars](#core-philosophy-the-sacred-slackware-base--the-five-pillars)
 2. [System Synchronization & Package Engine](#system-synchronization--package-engine)
 3. [CachyOS Kernels (And all the flavors)](#cachyos-kernels-and-all-the-flavors)
 4. [Graphics Stack & NVIDIA Driver Orchestration](#graphics-stack--nvidia-driver-orchestration)
@@ -32,18 +32,26 @@
 10. [Hyprland Desktop Suite Overview](#hyprland-desktop-suite-overview)
 11. [Multi-Lingual Engine (24 Locales)](#multi-lingual-engine-24-locales)
 
-
 ---
 
-## 1. Core Philosophy: The Sacred Slackware Base {#core-philosophy-the-sacred-slackware-base}
+## 1. Core Philosophy: The Sacred Slackware Base & The Five Pillars {#core-philosophy-the-sacred-slackware-base--the-five-pillars}
 
-Slacky-Update was engineered around one immutable principle: **The Slackware Base System is Sacred.**
+Slacky-Update was engineered around two foundational cornerstones: **The Sacred Slackware Base System** and **The Five Engineering Pillars**.
 
-Unlike other package managers or modernization scripts that overwrite `/usr/lib64`, replace `glibc`, alter `/etc/pam.d/`, or inject alien daemons into system directories, Slacky-Update operates strictly within native Slackware boundaries:
-* **Native Packaging Standard:** All deployed software is packaged into genuine Slackware `.txz` archives with standard `slack-desc` manifests, tracked in `/var/log/packages/`, and fully removable via `removepkg`.
-* **Zero Rootfs Pollution:** Workstation applications and runtime libraries are isolated in `/opt/<app>/` and `/opt/underpants/` with private dynamic linker search paths (`RPATH` / `LD_LIBRARY_PATH`).
+### 🏛️ The Sacred Slackware Base System
+Unlike foreign package managers or reckless modernization scripts that overwrite `/usr/lib64`, replace `glibc`, alter `/etc/pam.d/`, or inject alien daemons into system directories, Slacky-Update operates strictly within native Slackware boundaries:
+* **Native Packaging Standard:** All deployed software is packaged into genuine Slackware `.txz` archives with standard `slack-desc` manifests, tracked in `/var/log/packages/`, and fully removable via standard `removepkg`.
+* **Zero Rootfs Pollution:** Workstation applications and runtime libraries are isolated in `/opt/<app>/` and `/opt/underpants/` with private dynamic linker search paths (`RPATH` / `RUNPATH`).
 * **SysVinit Sovereignty:** Daemons and hardware services generate standard BSD-style init scripts in `/etc/rc.d/` (`rc.coolercontrol`, `rc.asusd`, `rc.lact`, `rc.ananicy-cpp`, `rc.scx`, `rc.gamemode`) adhering to Slackware convention.
 * **Pure Source Transparency:** Slacky-Update contains zero precompiled binary blobs; every module is transparent Bash and Python 3.
+
+### 🌟 The Five Pillars of Excellence
+Every feature, routine, and interface in Slacky-Update is continuously measured against five strict standards:
+1. **⚡ Speed:** Multi-core parallel zstd `-1 -T0` dracut decompression (<20ms boot), NVMe direct I/O hardware bypass (`none` scheduler), 10GB persistent shader disk cache, and instant sub-millisecond TUI responsiveness.
+2. **🛋️ Comfort:** Automated ChangeLog tracking, background tray telemetry, dynamic terminal adaptation, full mouse navigation, and instant Shift + Drag text copying for effortless clipboard sharing with LLMs.
+3. **🛡️ Safety:** In-flight signal traps (`trap '' INT QUIT TSTP`) preventing broken states midway, non-destructive boot coexistence (GRUB/ELILO preserved), active kernel armor (`[ACTIVE - CANNOT REMOVE]`), and Btrfs Snapper snapshots.
+4. **🎨 UI Design:** Clean Dark Star aesthetics, absolute cursor row positioning (`\033[{row};1H\033[2K`) eliminating staircase defects, dynamic multi-column package status, and intuitive visual hierarchy.
+5. **🤝 Ease of Use:** 1-line automated installs, guided Secure Boot setup, universal `(ESC)` navigation across all menus, and clear human-readable confirmation prompts.
 
 > [!NOTE]
 > ### 🧒 ELI5 (Explain Like I'm 5)
@@ -59,14 +67,16 @@ Unlike other package managers or modernization scripts that overwrite `/usr/lib6
 ### How the Engine Works
 The System Synchronization Engine manages Slackware core updates in a single, resilient pipeline:
 1. **Parallel Pre-fetch:** Spawns 10 concurrent download streams (`SLACKY_PREFETCH_JOBS=10`) using Python and `curl` to pre-cache all needed `.txz` packages and `.asc` GPG signatures into `/var/cache/slacky-update/packages/` before package operations begin.
-2. **Slackpkg Integration & Stream Normalization:** Invokes `slackpkg update`, `slackpkg install-new`, and `slackpkg upgrade-all` through a real-time VT100/CSI/DEC stream normalizer. The normalizer converts `\r` and DEC Restore Cursor (`\x1b8`, `\x1b[u`) to `\n`, strips terminal cursor jumps, silences `wget` background redirect logs, and executes from temporary sandbox directories to prevent `wget-log.*` pollution in `$HOME`.
-3. **Multi-Pass Resume:** If core system packages (`slackpkg`, `pkgtools`, `glibc-solibs`, `ca-certificates`) upgrade mid-transaction, the engine pauses, reloads the newly installed toolchain, and automatically completes remaining packages in up to 3 passes.
-4. **Smart `.new` File Reconciliation:** Scans `/etc/` post-upgrade and categorizes `.new` files into 4 groups (New Configurations, Identical Duplicates, Unmodified Defaults, Custom User Configurations) with batch resolution.
-5. **Smart Reboot Evaluator:** Inspects package manifests to determine if the running kernel, glibc, or NVIDIA driver was updated, prompting for a reboot only when strictly necessary.
+2. **Dynamic TUI, Mouse Navigation & Shift-Drag Copying:** Automatically calculates terminal geometry, dynamically budgets vertical screen height, and presents available packages in a 2/3-column responsive grid with full mouse click selection. To copy text directly to your clipboard (for LLMs or debugging), hold **`Shift`** while dragging (`Shift + Drag`) to bypass application mouse tracking in all modern terminal emulators.
+3. **In-Flight Transaction Armor:** Shields running package installations with atomic signal locks (`trap '' INT QUIT TSTP`). Once package upgrades or kernel builds commence, accidental keystrokes cannot abort transactions midway, safeguarding system package logs from partial states.
+4. **Slackpkg Integration & Stream Normalization:** Invokes `slackpkg update`, `slackpkg install-new`, and `slackpkg upgrade-all` through a real-time VT100/CSI/DEC stream normalizer. The normalizer converts `\r` and DEC Restore Cursor (`\x1b8`, `\x1b[u`) to `\n`, strips terminal cursor jumps, silences `wget` background redirect logs, and executes from temporary sandbox directories to prevent `wget-log.*` pollution in `$HOME`.
+5. **Multi-Pass Resume:** If core system packages (`slackpkg`, `pkgtools`, `glibc-solibs`, `ca-certificates`) upgrade mid-transaction, the engine pauses, reloads the newly installed toolchain, and automatically completes remaining packages in up to 3 passes.
+6. **Smart `.new` File Reconciliation:** Scans `/etc/` post-upgrade and categorizes `.new` files into 4 groups (New Configurations, Identical Duplicates, Unmodified Defaults, Custom User Configurations) with batch resolution.
+7. **Smart Reboot Evaluator:** Inspects package manifests to determine if the running kernel, glibc, or NVIDIA driver was updated, prompting for a reboot only when strictly necessary.
 
 > [!NOTE]
 > ### 🧒 ELI5
-> Instead of downloading one package at a time like an old dial-up modem, Slacky-Update sends 10 delivery vans at once to grab all your updates in seconds. It also makes sure the screen doesn't flicker or overwrite old text, and asks what to do with new config files so you never lose your personal settings.
+> Instead of downloading one package at a time like an old dial-up modem, Slacky-Update sends 10 delivery vans at once to grab all your updates in seconds. It also makes sure the screen adapts to your window size, locks the update process so a slip of your finger can't break the system, and asks what to do with new config files so you never lose your personal settings.
 
 ### 🔍 Troubleshooting: Package Engine
 * **Symptom:** `slackpkg update` fails with `CHECKSUMS.md5.asc download FAILS`.
@@ -175,7 +185,8 @@ Slacky-Update orchestrates both kernel-space driver modules and user-space graph
    * Disable Watchdog (`nowatchdog`)
    * Disable USB Autosuspend (`usbcore.autosuspend=-1`)
    * ZSWAP RAM Compression (`zswap.enabled=1 zswap.compressor=zstd zswap.max_pool_percent=25`)
-4. **UEFI Secure Boot & `sbctl` Integration:** Keeps UEFI Secure Boot permanently **ENABLED** in motherboard BIOS. Automates custom PK/KEK/db key enrollment and signs all kernel images, initramfs archives, and EFI binaries.
+   * Universal Split Lock Protection (`split_lock_mitigate=0 split_lock_detect=off`)
+4. **UEFI Secure Boot & MOK Management:** Keeps UEFI Secure Boot enabled in motherboard BIOS. Features a guided, streamlined setup for Machine Owner Key (MOK) generation and certificate enrollment—operating fully automatically on all subsequent kernel and initramfs builds once enrolled.
 5. **Btrfs Snapper Snapshot Boot Integration:** Scans Btrfs root snapshots and automatically generates boot entries for the 5 newest snapshots, enabling 1-click rollback directly from the bootloader menu.
 
 > [!NOTE]
@@ -198,15 +209,20 @@ Slacky-Update orchestrates both kernel-space driver modules and user-space graph
 * **Trigger:** Menu Option `[7]` (*System Performance Tweaks*), CLI: `slacky-update --tweaks`
 
 ### How the Engine Works
-Deploys proven kernel, memory, network, and hardware tweaks in `/etc/sysctl.d/`, `/etc/security/limits.d/`, and `/etc/udev/rules.d/`:
-* **Virtual Memory Tuning:** Sets `vm.max_map_count=2147483642` (required for modern Unreal Engine 5 and Direct3D 12 titles via VKD3D-Proton), `vm.swappiness=10`, `vm.vfs_cache_pressure=50`, and Transparent HugePages (`transparent_hugepage=madvise`).
-* **TCP BBR Congestion Control:** Activates Google BBR congestion control (`net.ipv4.tcp_congestion_control=bbr`) and FQ queue discipline (`net.core.default_qdisc=fq`) for minimum download bufferbloat.
-* **NTSYNC Primitives:** Provisions `/dev/ntsync` compatibility for fast in-kernel Windows NT synchronization primitives in Wine/Proton.
-* **Universal Controller Forcefield:** Deploys udev hardware rules for DualSense, Xbox Wireless, Nintendo Switch Pro, 8BitDo, VR headsets, and flight sticks, disabling USB autosuspend on gaming peripherals (`ATTR{power/control}="on"`).
+Deploys proven kernel, memory, network, and hardware tweaks in `/etc/sysctl.d/`, `/etc/security/limits.d/`, and `/etc/udev/rules.d/` with 100% symmetric granular reversibility:
+1. **File Descriptors & Process Limits:** Sets `1048576` (1M) file descriptor limits and enables realtime scheduling priority for audio/gaming.
+2. **Virtual Memory & THP:** Sets `vm.max_map_count=2147483642` (essential for Unreal Engine 5 and VKD3D-Proton), `vm.swappiness=10`, `vm.dirty_background_bytes=134217728` (128MB), `vm.dirty_bytes=268435456` (256MB), and Transparent HugePages to `madvise` with deferred defragmentation.
+3. **TCP BBR Congestion Control:** Activates Google BBR congestion control (`net.ipv4.tcp_congestion_control=bbr`) and FQ queue discipline (`net.core.default_qdisc=fq`) for minimum download bufferbloat.
+4. **NTSYNC Synchronization:** Provisions `/dev/ntsync` (0666 permissions) for fast in-kernel Windows NT synchronization primitives in Wine/Proton.
+5. **Universal Controller Forcefield:** Deploys udev hardware rules across 27+ vendor categories, disabling USB autosuspend on gaming peripherals (`ATTR{power/control}="on"`).
+6. **Turbo Boot & Fast Shutdown:** Disables legacy 16-bit PCMCIA routines, skips inactive NFS server pauses, enforces NetworkManager interface sovereignty, mounts `/tmp` as RAM-backed `tmpfs`, and reduces SysVinit shutdown sleeps from 5s to 0.5s.
+7. **Storage & NVMe Direct I/O Scheduler:** Configures hardware bypass (`none`) on NVMe PCIe Gen 4/5 SSDs to eliminate kernel I/O queue lock overhead, with `mq-deadline` for SATA SSDs and `bfq` for HDDs.
+8. **NVIDIA & Mesa 10GB Global Shader Disk Cache:** Permanent shader retention (`__GL_SHADER_DISK_CACHE_SIZE=10737418240`, `MESA_SHADER_CACHE_MAX_SIZE=10G`) eliminating micro-stutters from ongoing shader recompilation.
+9. **PipeWire Low-Latency Audio:** Drop-in PipeWire quantum configuration locked to 256 samples (5.33ms) paired with RT95 audio priority limits for zero-xrun audio production and gaming communication.
 
 > [!NOTE]
 > ### 🧒 ELI5
-> These tweaks remove hidden speed limits in your operating system. They give games access to more memory maps, stop your internet from lagging during big downloads, and ensure your game controllers never go to sleep in the middle of a match!
+> These tweaks remove hidden speed limits in your operating system. They give games access to more memory maps, stop background file saving from causing gaming micro-stutters, cut your computer's shutdown time down to seconds, and ensure your game controllers never go to sleep in the middle of a match!
 
 ---
 
@@ -244,9 +260,11 @@ Deploys proven kernel, memory, network, and hardware tweaks in `/etc/sysctl.d/`,
 > The Underpants Gnomes Pacman Sidecar CLI (`gnomes`) is classified as **Experimental**.  
 > Because the upstream Arch Linux and CachyOS repositories contain over **31,800+ packages**, it is impossible to manually audit and test every single package permutation.  
 > **Why Underpants Gnomes is Benign and Safe for your Host System:**
-> * All transmuted packages are installed strictly into `/opt/underpants/pkgs/<package>/` and link against the shared runtime pool in `/opt/underpants/runtime/`.
-> * Gnomes **never** writes to, replaces, or modifies core system directories (`/lib64`, `/usr/lib64`, `glibc`, `pam`, `/sbin`).
-> * **The only risk is that an individual transmuted package may fail to launch due to missing deep dependencies.** If an application fails to run, it can be safely removed with `gnomes -R <package>` without affecting your Slackware system. Please report broken packages on GitHub!
+> * Foreign package manager binaries (`pacman`, `apt`, `dnf`, `libalpm`) are **never** installed or executed on your host system. An in-memory Python engine parses manifests and decompresses upstream archives directly in RAM using `zstandard`.
+> * Transmuted applications are packaged into authentic native Slackware `.txz` archives (`underpants-*.txz`) and installed cleanly via `upgradepkg --install-new`, cataloging strictly under namespaced `/var/log/packages/underpants-*` logs.
+> * All application binaries and dependencies are isolated strictly in `/opt/underpants/pkgs/<package>/` and link against the shared runtime pool in `/opt/underpants/runtime/`.
+> * Gnomes **never** writes to, replaces, or modifies host system libraries (`/lib64`, `/usr/lib64`, `glibc`, PAM). Host system libraries are 100% shielded and sovereign.
+> * **The only risk is that an individual transmuted package may fail to launch due to missing deep dependencies.** If an application fails to run, it can be safely removed with `gnomes -R <package>` (or `removepkg`) without affecting your Slackware system. Please report broken packages on GitHub!
 
 ### Mandatory First-Time Setup: Complete Runtime Pool
 Before installing standalone software via `gnomes -S`, you **must** install the complete runtime pool:

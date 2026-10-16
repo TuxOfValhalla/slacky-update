@@ -1,0 +1,32 @@
+#!/bin/sh
+# slacky-prime-run (6A-82): start ONE program on the extra graphics card of a hybrid laptop.
+#   slacky-prime-run <program> [arguments]          Steam launch option: slacky-prime-run %command%
+# NVIDIA card that does not drive the screen: PRIME render offload (OpenGL, Vulkan, VA-API video).
+# AMD/Intel extra card: DRI_PRIME=1 (Mesa picks the other GPU). One graphics card only: the program starts normally.
+if [ $# -eq 0 ]; then
+    echo "Usage: slacky-prime-run <program> [arguments]   (Steam: slacky-prime-run %command%)" >&2
+    exit 2
+fi
+sys="${SLACKY_SYSFS_ROOT:-}/sys"
+nv_extra=0 other_extra=0 gpus=0
+for c in "${sys}"/bus/pci/devices/*/class; do
+    cls="" ven="" boot=""
+    read -r cls < "${c}" 2>/dev/null || continue
+    case "${cls}" in 0x0300*|0x0302*|0x0380*) ;; *) continue ;; esac
+    d="${c%/class}"
+    read -r ven < "${d}/vendor" 2>/dev/null || ven=""
+    read -r boot < "${d}/boot_vga" 2>/dev/null || boot=0
+    gpus=$((gpus + 1))
+    [ "${boot}" = "1" ] && continue
+    if [ "${ven}" = "0x10de" ]; then nv_extra=1; else other_extra=1; fi
+done
+if [ "${nv_extra}" = "1" ]; then
+    export __NV_PRIME_RENDER_OFFLOAD=1
+    export __GLX_VENDOR_LIBRARY_NAME=nvidia
+    export __VK_LAYER_NV_optimus=NVIDIA_only
+    export LIBVA_DRIVER_NAME=nvidia
+    export NVD_BACKEND=direct
+elif [ "${other_extra}" = "1" ] && [ "${gpus}" -ge 2 ]; then
+    export DRI_PRIME=1
+fi
+exec "$@"

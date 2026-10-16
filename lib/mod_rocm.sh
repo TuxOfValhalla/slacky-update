@@ -1,7 +1,7 @@
 #!/bin/bash
 # =============================================================================
 #  SLACKY-UPDATE: AMD ROCm / HIP Creator Toolkit Module
-#  Manages AMD ROCm OpenCL / HIP Runtimes, Mesa OpenCL purges & Blacklisting
+#  Manages AMD ROCm OpenCL / HIP Runtimes (Mesa OpenCL is never removed, only hidden from ROCm sessions)
 # =============================================================================
 
 set -euo pipefail
@@ -12,69 +12,46 @@ is_amd_gpu_present() {
     [ "${HAS_AMD}" = "true" ]
 }
 
-# --- [ PURGE & BLACKLIST CONFLICTING MESA OPENCL / RUSTICL ] ---
+# --- [ MESA OPENCL / RUSTICL NEXT TO ROCM ] ---
+# 6A-2 (mirror of Rust B7): Mesa OpenCL / Rusticl belongs to Slackware's mesa package. Nothing is removed,
+# deleted or blacklisted; ROCm sessions hide it through the OCL_ICD_VENDORS filter in /etc/profile.d/rocm.sh.
 purge_conflicting_mesa_opencl() {
-    validate_privileges
-    log_info "Scanning for conflicting Mesa OpenCL and Rusticl packages..."
-
-    local conflicting_pkgs=("opencl-mesa" "opencl-mesa-compat32" "rusticl" "mesa-rusticl")
-    local removed_any=0
-
-    for cpkg in "${conflicting_pkgs[@]}"; do
-        for p in /var/log/packages/${cpkg}-*; do
-            [ -f "${p}" ] || continue
-            local base_p
-            base_p=$(basename "${p}")
-            log_info "Removing conflicting package: ${base_p}..."
-            sudo "${PKG_REMOVE_CMD}" "${base_p}" 2>/dev/null || true
-            removed_any=1
-        done
+    local icd found=0
+    for icd in /etc/OpenCL/vendors/mesa.icd /etc/OpenCL/vendors/rusticl.icd; do
+        [ -e "${icd}" ] && found=1
     done
-
-    # Remove conflicting OpenCL vendor ICD descriptors
-    local conflicting_icds=(
-        "/etc/OpenCL/vendors/mesa.icd"
-        "/etc/OpenCL/vendors/rusticl.icd"
-    )
-    for icd in "${conflicting_icds[@]}"; do
-        if [ -f "${icd}" ]; then
-            log_info "Removing conflicting ICD: ${icd}..."
-            sudo rm -f "${icd}"
-            removed_any=1
-        fi
-    done
-
-    # Blacklist in /etc/slackpkg/blacklist to prevent regression during slackpkg upgrade-all
-    local blacklist_file="/etc/slackpkg/blacklist"
-    if [ -f "${blacklist_file}" ]; then
-        if ! grep -q "Slacky-Update AMD ROCm Protection" "${blacklist_file}"; then
-            log_info "Adding Mesa OpenCL & Rusticl blacklist entries to ${blacklist_file}..."
-            echo -e "\n# [Slacky-Update AMD ROCm Protection]\nopencl-mesa*\nrusticl*\nmesa-rusticl*" | sudo tee -a "${blacklist_file}" >/dev/null
-        fi
+    if [ "${found}" -eq 0 ]; then
+        log_info "$(_ ROCM_MESA_NONE)"
+    elif grep -qs 'OCL_ICD_VENDORS' /etc/profile.d/rocm.sh; then
+        log_info "$(_ ROCM_MESA_HIDDEN)"
+    else
+        log_info "$(_ ROCM_MESA_NOT_HIDDEN)"
     fi
-
-    sudo "${LDCONFIG_CMD}" 2>/dev/null || true
-    log_success "$(_ ROCM_PURGE_SUCCESS)"
 }
 
 # --- [ INSTALL CACHYOS / ARCH ROCM SUITE ] ---
 install_cachyos_rocm_suite() {
     validate_privileges
+    # 6A-143 (ROCm, C-M5/F10): ROCm is for AMD GPUs; SLACKY_ROCM_ALLOW_NON_AMD=1 overrides (e.g. eGPU not yet attached)
+    if ! is_amd_gpu_present && [ "${SLACKY_ROCM_ALLOW_NON_AMD:-0}" != "1" ]; then
+        log_warn "No AMD graphics card was found, so ROCm was not installed."
+        return 1
+    fi
     log_info "Preparing AMD ROCm & HIP Creator Suite deployment..."
 
-    # Ensure conflicting Mesa OpenCL is purged and blacklisted first
-    purge_conflicting_mesa_opencl
-
-    local staging_root="/tmp/slacky-rocm-staging"
-    sudo rm -rf "${staging_root}"
-    sudo mkdir -p "${staging_root}/install"
-    sudo mkdir -p "${staging_root}/etc/OpenCL/vendors"
-    sudo mkdir -p "${staging_root}/etc/profile.d"
-    sudo mkdir -p "${staging_root}/etc/ld.so.conf.d"
+    # 6A-2: Mesa OpenCL is never removed (Slackware's mesa owns it); rocm.sh below hides it from ROCm sessions.
+    # Private 0700 work dir (mktemp) built as the user; root is only used for upgradepkg.
+    # 6A-143: staged on disk in a private 0700 dir under the user cache (ROCm is several GB; /tmp may be RAM)
+    local work_base="${XDG_CACHE_HOME:-${HOME}/.cache}/slacky-update"
+    mkdir -p -m 0700 "${work_base}" 2>/dev/null || true
+    local work_dir
+    work_dir=$(mktemp -d "${work_base}/rocm-build.XXXXXXXX") || { log_error "Cannot create a private ROCm work directory."; return 1; }
+    local staging_root="${work_dir}/stage"
+    mkdir -p "${staging_root}/install" "${staging_root}/etc/OpenCL/vendors" "${staging_root}/etc/profile.d" "${staging_root}/etc/ld.so.conf.d"
 
     local mirror_url="https://mirror.cachyos.org/repo/x86_64/cachyos"
-    local arch_mirror_url="https://geo-mirror.pkgbuild.com/extra/os/x86_64"
-    local arch_multilib_url="https://geo-mirror.pkgbuild.com/multilib/os/x86_64"
+    local arch_mirror_url="https://geo.mirror.pkgbuild.com/extra/os/x86_64"
+    local arch_multilib_url="https://geo.mirror.pkgbuild.com/multilib/os/x86_64"
 
     log_info "Scanning upstream repository for ROCm & HIP 64-bit and 32-bit multilib packages..."
 
@@ -90,8 +67,7 @@ install_cachyos_rocm_suite() {
         "lib32-opencl-icd-loader"
     )
 
-    local dl_dir="$(get_user_staging_dir)/rocm-dl"
-    rm -rf "${dl_dir}"
+    local dl_dir="${work_dir}/dl"
     mkdir -p "${dl_dir}"
 
     local rocm_dl_items=()
@@ -121,39 +97,65 @@ install_cachyos_rocm_suite() {
         fi
 
         if [ -n "${pkg_file}" ]; then
-            rocm_dl_items+=("${base_url}/${pkg_file}|${dl_dir}/${pkg_file}")
+            # 6A-143: signature downloaded next to each package (url|dest|sig_url|sig_dest)
+            rocm_dl_items+=("${base_url}/${pkg_file}|${dl_dir}/${pkg_file}|${base_url}/${pkg_file}.sig|${dl_dir}/${pkg_file}.sig")
             resolved_pkgs+=("${dl_dir}/${pkg_file}")
         else
             log_warn "Package ${rpkg} not found in primary mirrors; continuing..."
         fi
     done
 
-    if [ ${#rocm_dl_items[@]} -gt 0 ]; then
-        if ! download_parallel_pacman "AMD ROCm / HIP Creator Suite (64-bit & Multilib)" "${rocm_dl_items[@]}"; then
-            log_warn "Some ROCm components failed to download."
-        fi
-        validate_privileges
+    # 6A-143: never build a partial suite. The core packages must resolve; every resolved package must download,
+    # pass its signature check (when a .sig exists) and extract cleanly, or nothing is installed.
+    local core_pkg core_found
+    for core_pkg in rocm-core rocm-opencl-runtime; do
+        core_found=0
         for r_pkg_file in "${resolved_pkgs[@]}"; do
-            if [ -f "${r_pkg_file}" ] && [ -s "${r_pkg_file}" ]; then
-                sudo tar --zstd -xf "${r_pkg_file}" -C "${staging_root}/" 2>/dev/null || true
-            fi
+            [[ "$(basename "${r_pkg_file}")" =~ ^${core_pkg}-[0-9] ]] && core_found=1
         done
+        if [ "${core_found}" -eq 0 ]; then
+            log_error "The ROCm package ${core_pkg} was not found on the mirrors, so nothing was installed."
+            rm -rf "${work_dir}"
+            return 1
+        fi
+    done
+    if ! download_parallel_pacman "AMD ROCm / HIP Creator Suite (64-bit & Multilib)" "${rocm_dl_items[@]}"; then
+        log_error "Some ROCm parts could not be downloaded, so nothing was installed."
+        rm -rf "${work_dir}"
+        return 1
     fi
+    for r_pkg_file in "${resolved_pkgs[@]}"; do
+        if [ ! -s "${r_pkg_file}" ]; then
+            log_error "The ROCm part $(basename "${r_pkg_file}") is missing, so nothing was installed."
+            rm -rf "${work_dir}"
+            return 1
+        fi
+        if [ -f "${r_pkg_file}.sig" ] && ! verify_cachyos_gpg_signature "${r_pkg_file}" "${r_pkg_file}.sig"; then
+            log_error "The ROCm part $(basename "${r_pkg_file}") failed its signature check, so nothing was installed."
+            rm -rf "${work_dir}"
+            return 1
+        fi
+        if ! tar --zstd -xf "${r_pkg_file}" -C "${staging_root}/" 2>/dev/null; then
+            log_error "The ROCm part $(basename "${r_pkg_file}") could not be unpacked, so nothing was installed."
+            rm -rf "${work_dir}"
+            return 1
+        fi
+    done
 
     # Clean Arch Linux packaging metadata
-    sudo rm -f "${staging_root}/.BUILDINFO" "${staging_root}/.INSTALL" "${staging_root}/.MTREE" "${staging_root}/.PKGINFO"
+    rm -f "${staging_root}/.BUILDINFO" "${staging_root}/.INSTALL" "${staging_root}/.MTREE" "${staging_root}/.PKGINFO"
 
     # Setup OpenCL ICDs (64-bit and 32-bit multilib)
-    echo "libamdocl64.so" | sudo tee "${staging_root}/etc/OpenCL/vendors/amdocl64.icd" >/dev/null
+    echo "libamdocl64.so" > "${staging_root}/etc/OpenCL/vendors/amdocl64.icd"
     if [ -f "${staging_root}/usr/lib32/libamdocl32.so" ] || [ -f "${staging_root}/opt/rocm/lib/libamdocl32.so" ] || [ -f "${staging_root}/usr/lib32/libOpenCL.so" ]; then
-        echo "libamdocl32.so" | sudo tee "${staging_root}/etc/OpenCL/vendors/amdocl32.icd" >/dev/null
+        echo "libamdocl32.so" > "${staging_root}/etc/OpenCL/vendors/amdocl32.icd"
     fi
 
     # Setup ldconfig paths for both 64-bit and 32-bit multilib ROCm libraries
-    echo -e "/opt/rocm/lib\n/opt/rocm/lib64\n/opt/rocm/lib32\n/usr/lib64/rocm\n/usr/lib/rocm" | sudo tee "${staging_root}/etc/ld.so.conf.d/rocm.conf" >/dev/null
+    echo -e "/opt/rocm/lib\n/opt/rocm/lib64\n/opt/rocm/lib32\n/usr/lib64/rocm\n/usr/lib/rocm" > "${staging_root}/etc/ld.so.conf.d/rocm.conf"
 
     # Setup profile scripts
-    cat << 'ROCM_SH_EOF' | sudo tee "${staging_root}/etc/profile.d/rocm.sh" >/dev/null
+    cat << 'ROCM_SH_EOF' > "${staging_root}/etc/profile.d/rocm.sh"
 #!/bin/sh
 # AMD ROCm / HIP Creator Environment Configuration
 export ROCM_PATH="/opt/rocm"
@@ -163,9 +165,24 @@ export ROC_ENABLE_PRE_VEGA=1
 if [ -d "/opt/rocm/bin" ] && ! echo "$PATH" | grep -q "/opt/rocm/bin"; then
     export PATH="$PATH:/opt/rocm/bin"
 fi
+
+# Hide Mesa Rusticl from OpenCL apps (avoids SIGSEGV in e.g. DaVinci Resolve) without
+# touching any Slackware-owned file: build a per-user ICD dir that omits mesa/rusticl.
+if [ -n "${XDG_RUNTIME_DIR:-}" ] && [ -d /etc/OpenCL/vendors ]; then
+    _ocl_dir="$XDG_RUNTIME_DIR/slacky-ocl-vendors"
+    if mkdir -p "$_ocl_dir" 2>/dev/null; then
+        for _icd in /etc/OpenCL/vendors/*.icd; do
+            [ -e "$_icd" ] || continue
+            case "${_icd##*/}" in mesa.icd|rusticl.icd) continue ;; esac
+            ln -sf "$_icd" "$_ocl_dir/${_icd##*/}" 2>/dev/null
+        done
+        export OCL_ICD_VENDORS="$_ocl_dir"
+    fi
+    unset _ocl_dir _icd
+fi
 ROCM_SH_EOF
 
-    cat << 'ROCM_CSH_EOF' | sudo tee "${staging_root}/etc/profile.d/rocm.csh" >/dev/null
+    cat << 'ROCM_CSH_EOF' > "${staging_root}/etc/profile.d/rocm.csh"
 #!/bin/csh
 # AMD ROCm / HIP Creator Environment Configuration
 setenv ROCM_PATH /opt/rocm
@@ -177,10 +194,10 @@ if ( -d /opt/rocm/bin ) then
 endif
 ROCM_CSH_EOF
 
-    sudo chmod 755 "${staging_root}/etc/profile.d/rocm.sh" "${staging_root}/etc/profile.d/rocm.csh"
+    chmod 755 "${staging_root}/etc/profile.d/rocm.sh" "${staging_root}/etc/profile.d/rocm.csh"
 
     # Write Slackware slack-desc
-    cat << 'DESC_EOF' | sudo tee "${staging_root}/install/slack-desc" >/dev/null
+    cat << 'DESC_EOF' > "${staging_root}/install/slack-desc"
 cachyos-rocm-opencl: cachyos-rocm-opencl (AMD ROCm & HIP OpenCL Creator Suite)
 cachyos-rocm-opencl:
 cachyos-rocm-opencl: High performance AMD ROCm OpenCL and HIP compute runtimes,
@@ -195,7 +212,7 @@ cachyos-rocm-opencl:
 DESC_EOF
 
     # Write doinst.sh
-    cat << 'DOINST_EOF' | sudo tee "${staging_root}/install/doinst.sh" >/dev/null
+    cat << 'DOINST_EOF' > "${staging_root}/install/doinst.sh"
 if [ -x /sbin/ldconfig ]; then
   /sbin/ldconfig 2>/dev/null || true
 fi
@@ -210,21 +227,53 @@ DOINST_EOF
         [ -n "${extracted_ver}" ] && rocm_ver="${extracted_ver}"
     fi
 
-    local target_pkg="/tmp/cachyos-rocm-opencl-${rocm_ver}-x86_64-1_slacky.txz"
-    log_info "Assembling Slackware txz package: ${target_pkg}..."
+    chmod -R u=rwX,go=rX "${staging_root}"
+
+    # 6A-2 (B7 mirror): Footprint Guard before packaging (enforce unless SLACKY_FOOTPRINT_MODE=report)
+    if [ -n "${GNOMES_PY:-}" ] && [ -f "${GNOMES_PY}" ]; then
+        if ! python3 "${GNOMES_PY}" footprint-guard "${staging_root}" --label "cachyos-rocm-opencl-${rocm_ver}"; then
+            if [ "${SLACKY_FOOTPRINT_MODE:-enforce}" != "report" ]; then
+                log_error "Footprint check failed for cachyos-rocm-opencl. Package not built."
+                rm -rf "${work_dir}"
+                return 1
+            fi
+        fi
+    elif [ "${SLACKY_FOOTPRINT_MODE:-enforce}" != "report" ]; then
+        log_error "Footprint check unavailable (gnomes_pacman.py not found). Package not built."
+        rm -rf "${work_dir}"
+        return 1
+    fi
+
+    local target_pkg="${work_dir}/cachyos-rocm-opencl-${rocm_ver}-x86_64-1_slacky.txz"
+    log_info "Assembling Slackware txz package: ${target_pkg##*/}..."
     (
         cd "${staging_root}"
-        sudo find ./ | LC_COLLATE=C sort | sed '2,$s,^\./,,' | tar --no-recursion -T - -cf - | xz -T0 -1 > "${target_pkg}" 2>/dev/null || true
+        # 2C: explicit root ownership in the archive
+        find ./ | LC_COLLATE=C sort | sed '2,$s,^\./,,' | tar --owner=0 --group=0 --numeric-owner --no-recursion -T - -cf - | xz -T0 -1 > "${target_pkg}" 2>/dev/null || true
     )
 
+    # 2C: never install an archive with non-root entries
+    if [ -f "${target_pkg}" ] && [ -n "$(tar --numeric-owner -tvJf "${target_pkg}" 2>/dev/null | awk '$2 != "0/0"' | head -n1)" ]; then
+        log_error "cachyos-rocm-opencl package has files not owned by root:root. Not installing."
+        rm -rf "${work_dir}"
+        return 1
+    fi
+
     if [ -f "${target_pkg}" ] && [ -s "${target_pkg}" ]; then
-        log_info "Installing ${target_pkg}..."
-        sudo "${PKG_UPGRADE_CMD}" --reinstall --install-new "${target_pkg}"
-        sudo rm -rf "${staging_root}" "${dl_dir}" "${target_pkg}"
-        log_success "$(_ ROCM_INSTALL_SUCCESS)"
+        chmod 644 "${target_pkg}"
+        log_info "Installing ${target_pkg##*/}..."
+        validate_privileges
+        if sudo "${PKG_UPGRADE_CMD}" --reinstall --install-new "${target_pkg}"; then
+            rm -rf "${work_dir}"
+            log_success "$(_ ROCM_INSTALL_SUCCESS)"
+        else
+            log_error "Installing cachyos-rocm-opencl failed. Nothing else was changed."
+            rm -rf "${work_dir}"
+            return 1
+        fi
     else
         log_warn "Failed to build cachyos-rocm-opencl package. Reverting staging..."
-        sudo rm -rf "${staging_root}" "${dl_dir}"
+        rm -rf "${work_dir}"
         return 1
     fi
 }
@@ -248,11 +297,13 @@ verify_amd_compute_status() {
         echo -e "${YELLOW}Not deployed${RESET}"
     fi
 
-    echo -n "• Mesa OpenCL Conflict Status: "
-    if ls /var/log/packages/opencl-mesa* >/dev/null 2>&1 || [ -f "/etc/OpenCL/vendors/mesa.icd" ]; then
-        echo -e "${RED}Conflict Present (opencl-mesa detected! Run option 2 to purge)${RESET}"
+    echo -n "• Mesa OpenCL (Rusticl): "
+    if [ ! -e /etc/OpenCL/vendors/mesa.icd ] && [ ! -e /etc/OpenCL/vendors/rusticl.icd ]; then
+        echo -e "${GREEN}Not present${RESET}"
+    elif grep -qs 'OCL_ICD_VENDORS' /etc/profile.d/rocm.sh; then
+        echo -e "${GREEN}Hidden from ROCm apps (Slackware files untouched)${RESET}"
     else
-        echo -e "${GREEN}Clean (No Mesa OpenCL conflicts)${RESET}"
+        echo -e "${YELLOW}Visible to ROCm apps (install ROCm with option 1 to hide it)${RESET}"
     fi
 
     if command -v clinfo >/dev/null 2>&1; then
@@ -269,7 +320,7 @@ manage_rocm_interactive() {
         echo ""
         echo -e "${BOLD}${CYAN}$(_ ROCM_MENU_TITLE)${RESET}"
         echo -e "  \033[1;33m1.\033[0m $(_ ROCM_OPTION_INSTALL)"
-        echo -e "  \033[1;33m2.\033[0m $(_ ROCM_OPTION_PURGE_MESA)"
+        echo -e "  \033[1;33m2.\033[0m $(_ ROCM_OPTION_MESA_STATUS)"
         echo -e "  \033[1;33m3.\033[0m $(_ ROCM_OPTION_VERIFY)"
         echo -e "  \033[1;33m4.\033[0m $(_ SBO_BACK_OPTION)"
         echo ""

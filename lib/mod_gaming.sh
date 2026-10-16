@@ -45,11 +45,13 @@ coolercontrol|CoolerControl (All-in-One Liquid & Fan Control)|hardware|coolercon
 asusctl|ASUS ROG Laptop Control Daemon & CLI|hardware|asusctl-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||arch-extra,cachyos
 zenpower3|ZenPower AMD Ryzen Telemetry Driver (DKMS)|hardware|zenpower3-dkms-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|||chaotic-aur,cachyos,arch-extra
 v4l2loopback|V4L2 Loopback Virtual Video Device (DKMS)|hardware|v4l2loopback-dkms-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|||arch-extra,cachyos,chaotic-aur
-rtl8821cu|Realtek RTL8821CU USB Wi-Fi Driver (DKMS)|hardware|rtl8821cu-dkms-git-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|||chaotic-aur,cachyos
-rtl88x2bu|Realtek RTL88x2BU USB Wi-Fi Driver (DKMS)|hardware|rtl88x2bu-dkms-git-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|||chaotic-aur,cachyos
-rtl8812au|Realtek RTL8812AU High-Power Wi-Fi Driver (DKMS)|hardware|rtl8812au-dkms-git-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|||chaotic-aur,cachyos
+rtl8821cu|Realtek RTL8821CU USB Wi-Fi Driver (DKMS)|hardware|rtl8821cu-morrownr-dkms-git-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|||chaotic-aur,cachyos
+rtl88x2bu|Realtek RTL88x2BU USB Wi-Fi Driver (DKMS)|hardware|rtl88x2bu-dkms-git-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|||chaotic-aur,cachyos|hidden
+rtl8812au|Realtek RTL8812AU High-Power Wi-Fi Driver (DKMS)|hardware|rtl8812au-dkms-git-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|||chaotic-aur,cachyos|hidden
 broadcom-wl|Broadcom 802.11 Linux STA Wireless Driver (DKMS)|hardware|broadcom-wl-dkms-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|||arch-extra,cachyos
-r8125|Realtek 2.5GbE Ethernet Network Driver (DKMS)|hardware|r8125-dkms-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|||cachyos-extra-v3,cachyos-extra,cachyos
+r8125|Realtek 2.5GbE Ethernet Network Driver (DKMS)|hardware|r8125-dkms-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|||chaotic-aur,cachyos-extra-v3,cachyos-extra,cachyos
+spacenav|3Dconnexion SpaceMouse Master Suite (spacenavd, libspnav & spnavcfg)|hardware|spacenavd-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst||libspnav-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,spnavcfg-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|arch-extra,cachyos,chaotic-aur
+volt-gui|Volt GUI (AMD Ryzen Undervolt & Curve Optimizer GUI)|hardware|volt-gui(?:-bin)?-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst||zenpower3-dkms-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,ryzenadj-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|chaotic-aur,chaotic-cdn,cachyos,arch-extra,aur,github|hidden
 easyeffects|EasyEffects Studio Audio DSP & JackHack96 Presets|audio|easyeffects-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||lsp-plugins-lv2-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,calf-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,mda\.lv2-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,zam-plugins-lv2-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,zita-convolver-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,rnnoise-[0-9a-zA-Z_\.:-]*\.pkg\.tar\.zst,libbs2b-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,soundtouch-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libebur128-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,webrtc-audio-processing-(?:2|1)-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,lilv-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,serd-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,sord-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,sratom-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,qt6-graphs-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,onetbb-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libmysofa-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,zix-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|arch-extra,cachyos
 pear-desktop|Pear Desktop (YouTube Music with Custom Plugins)|audio|pear-desktop-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||electron42-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libjpeg-turbo-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|chaotic-aur,chaotic-cdn,arch-extra
 audacity|Audacity (Digital Audio Editor & Recording Studio)|audio|audacity-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||suil-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,lilv-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,serd-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,sord-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,sratom-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,zix-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,portsmf-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,portaudio-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,portmidi-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libsbsms-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,vamp-plugin-sdk-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,soundtouch-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,twolame-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libid3tag-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libsoxr-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libmspack-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,wxwidgets-gtk3-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,wxwidgets-common-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libjpeg-turbo-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|arch-extra,cachyos-extra-v3,cachyos
@@ -57,7 +59,18 @@ yabridge|Yabridge (+ yabridgectl VST2/VST3 Plugin Bridge)|audio|yabridge-(?:bin-
 spotify|Spotify Launcher (Official Native Client Bootstrap)|audio|spotify-launcher-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||sequoia-sqv-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libayatana-appindicator-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libayatana-indicator-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,ayatana-ido-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libcurl-gnutls-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|arch-extra,cachyos,arch-core
 inkscape|Inkscape (Professional Vector Graphics Editor)|creative|inkscape-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||lib2geom-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,double-conversion-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,graphicsmagick-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libcdr-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,poppler-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libvisio-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libwpg-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,librevenge-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos-extra-v3,arch-extra,cachyos
 darktable|Darktable (Advanced RAW Photo Workflow & Editor)|creative|darktable-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||libavif-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libheif-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libde265-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libyuv-(?:r)?[0-9a-zA-Z_\.\+-]*\.pkg\.tar\.zst,rav1e-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,svt-av1-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,openh264-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,pugixml-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,colord-gtk-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,osm-gps-map-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,gmic-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,flickcurl-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos-extra-v3,arch-extra,cachyos
+dvcp-aac|DaVinci Resolve AAC Audio Bridge (GloriousEggroll Native AAC Fix)|creative|dvcp-aac-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|||github,gloriouseggroll
+bambu-studio|Bambu Studio (High-Speed 3D Slicer for Bambu Lab)|creative|BambuStudio_ubuntu24\.04-v[0-9][0-9.]*-[0-9]+\.AppImage||webkit2gtk-4\.1-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libsoup3-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libavif-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libyuv-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,rav1e-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,svt-av1-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|github,arch-extra,cachyos
+blender|Blender (3D Creation & Animation Studio)|creative|blender-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||onetbb-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,openimageio-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,opencolorio-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,embree-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,openimagedenoise-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,alembic-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,openvdb-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos-extra-v3,arch-extra,cachyos
+freecad|FreeCAD (Parametric Open-Source 3D CAD Modeler)|creative|freecad-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||opencascade-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,med-file-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,coin-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos-extra-v4,cachyos-extra-v3,arch-extra,cachyos
+plasticity|Plasticity (3D CAD for Concept Artists & Industrial Design)|creative|plasticity-bin-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|||chaotic-aur,chaotic-cdn,aur,cachyos|hidden
+storyboarder|Storyboarder (Fast Visual Storytelling & Pre-Vis Animatics)|creative|storyboarder-bin-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|||chaotic-aur,chaotic-cdn,aur,cachyos|hidden
 syncthing|Syncthing (Continuous P2P File Synchronization)|tools|syncthing-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||arch-extra,cachyos-extra-v3,cachyos
+antigravity|Google Antigravity 2.0 (AI Agent Command Center & IDE)|tools|antigravity(?:-bin|-ide)?-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|||chaotic-aur,chaotic-cdn,cachyos,aur
+claude-desktop|Anthropic Claude Desktop (Official Linux Beta App)|tools|claude-desktop-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|||aur,anthropic
+claude-code|Anthropic Claude Code (Official Terminal AI Agent)|tools|claude-code-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|||npm,anthropic
+gemini-cli|Google Gemini CLI (Official Terminal AI Agent)|tools|gemini-cli-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|||npm,google
+gnome-disk-utility|GNOME Disk Utility (Storage Management & S.M.A.R.T. + libhandy)|tools|gnome-disk-utility-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||libhandy-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,libdvdread-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|cachyos-extra-v4,cachyos-extra-v3,arch-extra,cachyos
 obs-studio|OBS Studio (Isolated App-Bundle & Python 3.14)|streaming|obs-studio-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst||python-3\.[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,mbedtls-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,obs-studio-plugin-browser-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,cef-minimal-obs(?:-bin)?-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,libdatachannel-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,libjuice-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,librist-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,libusrsctp-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|arch-extra,arch-core,cachyos
 obs-vkcapture|OBS VKCapture (+ 32-bit Multilib Vulkan/GL)|streaming|obs-vkcapture-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|lib32-obs-vkcapture-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||cachyos,arch-extra
 obs-move-transition|OBS Move Transition (Source & Scene Motion)|streaming|obs-move-transition(?:-bin|-git)?-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||chaotic-aur,cachyos-extra,cachyos
@@ -74,12 +87,13 @@ google-chrome|Google Chrome (Official Web Browser)|browser|google-chrome-[0-9a-z
 microsoft-edge|Microsoft Edge (Official Web Browser)|browser|microsoft-edge-(?:stable|beta|dev)-bin-[0-9a-zA-Z_\.:-]*\.pkg\.tar\.zst|||chaotic-aur,chaotic-cdn,cachyos
 brave|Brave Browser (Privacy Browser with AdBlock)|browser|brave-bin-(?:1%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos,chaotic-aur,chaotic-cdn
 zen-browser|Zen Browser (High-Performance Gecko Browser)|browser|zen-browser-bin-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos,chaotic-aur,chaotic-cdn
+opera|Opera Web Browser (Fast & Secure with Built-In Free VPN)|browser|opera-[0-9a-zA-Z_\.:-]*\.pkg\.tar\.zst|||chaotic-aur,chaotic-cdn,cachyos|hidden
 sbctl|sbctl (Secure Boot Key Manager & Signer)|bootloader|sbctl-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||arch-extra,cachyos
 limine|Limine Bootloader (>= 12.x EFI & Tools)|bootloader|limine-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos
 limine-entry-tool|Limine Entry Tool (Config & Enrollment Generator)|bootloader|limine-entry-tool-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos
 limine-snapper-sync|Limine Snapper Sync (Btrfs Snapshot Integrator)|bootloader|limine-snapper-sync-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos
-hyprland-noctalia|Hyprland Mac-like Desktop Suite (Noctalia Shell, Portals & Display Tools)|desktop|hyprland-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||noctalia-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,xdg-desktop-portal-hyprland-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprlock-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hypridle-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpaper-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpicker-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprland-guiutils-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,aquamarine-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprlang-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprcursor-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprgraphics-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprutils-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpolkitagent-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprwire-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprtoolkit-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,sdbus-cpp-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,tomlplusplus-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,muparser-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,re2-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,md4c-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,lua-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libical-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,ddcui-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,wlr-randr-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,nwg-displays-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,python-i3ipc-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos-extra-v3,cachyos-v3,cachyos,arch-extra,chaotic-aur
-hyprland-core|Hyprland Minimal Core Compositor (+ Wayland Portals, Lock & Display Tools)|desktop|hyprland-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||xdg-desktop-portal-hyprland-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprlock-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hypridle-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpaper-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpicker-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprland-guiutils-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,aquamarine-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprlang-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprcursor-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprgraphics-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprutils-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpolkitagent-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprwire-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprtoolkit-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,sdbus-cpp-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,tomlplusplus-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,muparser-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,re2-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,lua-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,ddcui-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,wlr-randr-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,nwg-displays-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,python-i3ipc-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos-extra-v3,cachyos-v3,cachyos,arch-extra
+hyprland-noctalia|Hyprland Mac-like Desktop Suite (Noctalia Shell, Portals & Display Tools)|desktop|hyprland-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||noctalia-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,xdg-desktop-portal-hyprland-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprlock-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hypridle-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpaper-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpicker-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprland-guiutils-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,aquamarine-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprlang-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprcursor-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprgraphics-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprutils-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpolkitagent-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprwire-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprtoolkit-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,sdbus-cpp-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,tomlplusplus-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,muparser-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,re2-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,md4c-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,lua-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libical-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,ddcui-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,wlr-randr-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,nwg-displays-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,python-i3ipc-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libjpeg-turbo-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos-extra-v3,cachyos-v3,cachyos,arch-extra,chaotic-aur
+hyprland-core|Hyprland Minimal Core Compositor (+ Wayland Portals, Lock & Display Tools)|desktop|hyprland-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||xdg-desktop-portal-hyprland-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprlock-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hypridle-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpaper-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpicker-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprland-guiutils-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,aquamarine-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprlang-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprcursor-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprgraphics-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprutils-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpolkitagent-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprwire-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprtoolkit-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,sdbus-cpp-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,tomlplusplus-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,muparser-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,re2-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,lua-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,ddcui-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,wlr-randr-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,nwg-displays-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,python-i3ipc-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libjpeg-turbo-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos-extra-v3,cachyos-v3,cachyos,arch-extra
 hyprpicker|Hyprpicker (Wayland Eyedropper & Color Picker)|desktop|hyprpicker-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos-extra-v3,cachyos-v3,cachyos,arch-extra
 hyprmod|HyprMod (GTK4/Libadwaita Hyprland Visual Settings & Rules Editor)|desktop||||aur,github
 mactahoe-icons|Mac Tahoe Icon Theme (27 macOS Tahoe Variants for KDE/GTK)|ricing||||aur,github
@@ -90,6 +104,40 @@ CATALOG_EOF
 }
 
 # --- [ HELPER FUNCTIONS ] ---
+# 6A-176: folder that holds slacky_vendor_fetch.py (next to gnomes_pacman.py); empty when it is missing, and then the vendor
+# builds stop instead of downloading without a check.
+_slacky_vendor_fetch_dir() {
+    local d
+    for d in "${GNOMES_PY:+$(dirname "${GNOMES_PY}")}" "${APP_DIR:-}" "${SCRIPT_DIR:-}/../lib" /usr/share/slacky-update/lib /usr/local/lib/slacky-update; do
+        [ -n "${d}" ] && [ -f "${d}/slacky_vendor_fetch.py" ] && { printf '%s' "${d}"; return 0; }
+    done
+    return 0
+}
+
+# 6A-163..170, 6A-178: catalog ids whose upstream package does not exist in any repo this tool reads (checked 2026-10-14: no
+# rtl88x2bu / rtl8812au in chaotic-aur, CachyOS or Arch; 2026-10-15: no opera in any of its repos; volt-gui, plasticity and storyboarder are AUR only, 6A-190). They carry the "hidden" catalog flag; this gives the plain reason.
+gaming_pkg_unavailable_reason() {
+    case "$1" in
+        rtl88x2bu|rtl8812au)
+            echo "There is no ready-made package for this Wi-Fi driver in the sources this tool uses, so it cannot be installed here."
+            ;;
+        opera)
+            # 6A-178: no repository this tool reads carries an Opera package (checked 2026-10-15)
+            echo "Opera is not offered here, because none of the sources this tool uses carries a package for it."
+            ;;
+        volt-gui|plasticity|storyboarder)
+            # 6A-190: these three exist only in the Arch user repository (AUR) and have no signed download this tool could check
+            # (checked 2026-10-15), so the rows carry the "hidden" catalog flag. A source may be added later: then remove
+            # "hidden" from the catalog row and this case.
+            case "$1" in
+                volt-gui) echo "Volt GUI is not offered here, because its only source has no signed download that this tool can check." ;;
+                plasticity) echo "Plasticity is not offered here, because its only source has no signed download that this tool can check." ;;
+                storyboarder) echo "Storyboarder is not offered here, because its only source has no signed download that this tool can check." ;;
+            esac
+            ;;
+    esac
+}
+
 is_gaming_pkg_whitelisted() {
     local pkg_id="$1"
     # Pre-release filter toggle (strictly filter unverified/dormant packages)
@@ -109,14 +157,15 @@ is_gaming_pkg_whitelisted() {
     case "${pkg_id}" in
         mangohud|gamemode|goverlay|vram-booster|scx|ananicy|gamescope|retroarch|\
         heroic|lutris|faugus|protonplus|steam-devices|steam|\
-        lact|openrgb|solaar|openghub|coolercontrol|asusctl|\
+        lact|openrgb|solaar|openghub|coolercontrol|asusctl|spacenav|volt-gui|\
         zenpower3|v4l2loopback|rtl8821cu|rtl88x2bu|rtl8812au|broadcom-wl|r8125|\
         easyeffects|pear-desktop|audacity|spotify|yabridge|\
-        inkscape|darktable|syncthing|\
+        inkscape|darktable|dvcp-aac|bambu-studio|blender|freecad|plasticity|storyboarder|\
+        syncthing|antigravity|claude-desktop|claude-code|gemini-cli|gnome-disk-utility|\
         obs-studio|obs-vkcapture|obs-move-transition|obs-source-record|\
         obs-pipewire-audio-capture|obs-advanced-scene-switcher|obs-multi-rtmp|\
         obs-composite-blur|obs-teleport|discord|vesktop|sunshine|\
-        google-chrome|microsoft-edge|brave|zen-browser|sbctl|limine|limine-entry-tool|limine-snapper-sync|\
+        google-chrome|microsoft-edge|brave|zen-browser|opera|sbctl|limine|limine-entry-tool|limine-snapper-sync|\
         hyprland-noctalia|hyprland-core|hyprmod|\
         mactahoe-icons|mactahoe-cursors|whitesur-icons|whitesur-cursors)
             return 0
@@ -187,6 +236,13 @@ if os.path.exists(pkg_log_dir):
                 if p_ver.isdigit() or p_ver == "INSTALLED":
                     p_ver = vm.group(2)
             installed_pkgs[p_name.lower()] = p_ver
+            canon_name = p_name.lower()
+            for sfx in ("-bin", "-git", "-manager", "-launcher", "-desktop", "-appimage"):
+                if canon_name.endswith(sfx):
+                    canon_name = canon_name[:-len(sfx)]
+                    break
+            if canon_name not in installed_pkgs or p_ver > installed_pkgs[canon_name]:
+                installed_pkgs[canon_name] = p_ver
 
 # Binary, driver and service probe fallback table
 BINARY_MAP = {
@@ -236,11 +292,25 @@ BINARY_MAP = {
     "yabridge": ["yabridgectl"],
     "inkscape": ["inkscape"],
     "darktable": ["darktable"],
+    "dvcp-aac": ["/opt/resolve/IOPlugins/aac_decoder_probe.dvcp.bundle", "/opt/resolve/IOPlugins/aac_fdk_plugin.dvcp.bundle"],
     "syncthing": ["syncthing"],
+    "antigravity": ["antigravity", "/usr/bin/antigravity", "/usr/bin/agy", "/opt/antigravity/antigravity", "/opt/Antigravity/antigravity"],
+    "claude-desktop": ["claude-desktop", "/usr/bin/claude-desktop", "/usr/lib/claude-desktop/claude-desktop", "/opt/claude-desktop/claude-desktop"],
+    "claude-code": ["claude-code", "/usr/bin/claude-code", "/opt/claude-code/claude-code", "/opt/claude-code/claude"],
+    "gemini-cli": ["gemini-cli", "/usr/bin/gemini-cli", "/usr/bin/gemini", "/opt/gemini-cli/bundle/gemini.js"],
     "google-chrome": ["google-chrome", "google-chrome-stable"],
     "microsoft-edge": ["microsoft-edge", "microsoft-edge-stable"],
     "brave": ["brave", "brave-browser"],
     "zen-browser": ["zen-browser", "zen"],
+    "opera": ["opera", "/usr/bin/opera", "/usr/lib64/opera/opera", "/usr/lib/opera/opera"],
+    "gnome-disk-utility": ["gnome-disks", "/usr/bin/gnome-disks"],
+    "spacenav": ["spacenavd", "spnavcfg", "/usr/bin/spacenavd"],
+    "volt-gui": ["volt-gui", "/usr/bin/volt-gui", "/opt/volt-gui/volt-gui", "/opt/volt-gui/volt-gui.py"],
+    "bambu-studio": ["bambu-studio", "/usr/bin/bambu-studio", "/opt/bambu-studio/bin/bambu-studio", "/usr/bin/BambuStudio"],
+    "blender": ["blender", "/usr/bin/blender", "/opt/blender/blender"],
+    "freecad": ["freecad", "FreeCAD", "/usr/bin/freecad", "/usr/bin/FreeCAD", "/usr/lib64/freecad/bin/FreeCAD"],
+    "plasticity": ["plasticity", "/usr/bin/plasticity", "/opt/plasticity/plasticity", "/opt/Plasticity/plasticity"],
+    "storyboarder": ["storyboarder", "/usr/bin/storyboarder", "/opt/storyboarder/storyboarder", "/opt/Storyboarder/storyboarder"],
     "sbctl": ["sbctl"],
     "hyprland-noctalia": ["hyprland", "noctalia", "/usr/bin/Hyprland", "noctalia-shell"],
     "hyprland-core": ["hyprland", "/usr/bin/Hyprland"],
@@ -357,11 +427,25 @@ PKG_DESCRIPTIONS = {
     "yabridge": "Modern VST2/VST3/CLAP Windows audio plugin bridge for Linux DAWs.",
     "inkscape": "Professional vector graphics editor for illustration and design.",
     "darktable": "Professional RAW photography workflow application and virtual lighttable.",
+    "dvcp-aac": "DaVinci Resolve Studio AAC audio bridge (GloriousEggroll) for native AAC playback and export.",
     "syncthing": "Continuous decentralized peer-to-peer file synchronization service.",
+    "antigravity": "Google Antigravity 2.0 multi-agent coding and AI command center platform.",
+    "claude-desktop": "Anthropic Claude Desktop Linux Beta app (AI Chat, Cowork & Claude Code).",
+    "claude-code": "Anthropic Claude Code terminal AI agent (Autonomous coding and workflow tool).",
+    "gemini-cli": "Google Gemini CLI terminal AI agent (Code generation, terminal agent & debugging).",
     "google-chrome": "Official Google Chrome web browser.",
     "microsoft-edge": "Official Microsoft Edge web browser.",
     "brave": "Privacy-focused web browser with built-in ad and tracker blocking.",
     "zen-browser": "High-performance Firefox Gecko-based web browser with split-views.",
+    "opera": "Fast and secure web browser with built-in free VPN and messaging sidebars.",
+    "gnome-disk-utility": "GNOME Disk Utility for storage management, partition editing & S.M.A.R.T. health.",
+    "spacenav": "Complete 3Dconnexion SpaceMouse driver suite with daemon, library, and configuration GUI.",
+    "volt-gui": "Graphical voltage and power management interface for AMD Ryzen curve optimization.",
+    "bambu-studio": "High-speed 3D slicer for Bambu Lab printers with automated NVIDIA/WebKit acceleration.",
+    "blender": "Professional 3D creation suite (modeling, animation, Cycles & EEVEE-Next rendering).",
+    "freecad": "Parametric open-source 3D CAD modeler for engineering, mechanics & product design.",
+    "plasticity": "Fast NURBS & CAD modeling software for concept artists and industrial designers.",
+    "storyboarder": "Rapid visual storytelling and animatics creation tool for directors and artists.",
     "sbctl": "UEFI Secure Boot key manager, enrollment, and file signing utility."
 }
 
@@ -478,7 +562,12 @@ if os.path.exists(pkg_dir):
                 p_name = vm.group(1)
                 if p_ver.isdigit() or p_ver == "INSTALLED":
                     p_ver = vm.group(2)
-            if p_name == target_id:
+            canon_name = p_name
+            for sfx in ("-bin", "-git", "-manager", "-launcher", "-desktop", "-appimage"):
+                if canon_name.endswith(sfx):
+                    canon_name = canon_name[:-len(sfx)]
+                    break
+            if p_name == target_id or canon_name == target_id:
                 found.append(p_ver)
 
 if found:
@@ -533,11 +622,25 @@ BINARY_MAP = {
     "yabridge": ["yabridgectl"],
     "inkscape": ["inkscape"],
     "darktable": ["darktable"],
+    "dvcp-aac": ["/opt/resolve/IOPlugins/aac_decoder_probe.dvcp.bundle", "/opt/resolve/IOPlugins/aac_fdk_plugin.dvcp.bundle"],
     "syncthing": ["syncthing"],
+    "antigravity": ["antigravity", "/usr/bin/antigravity", "/usr/bin/agy", "/opt/antigravity/antigravity", "/opt/Antigravity/antigravity"],
+    "claude-desktop": ["claude-desktop", "/usr/bin/claude-desktop", "/usr/bin/claude", "/usr/lib/claude-desktop/claude-desktop", "/opt/claude-desktop/claude-desktop"],
+    "claude-code": ["claude-code", "/usr/bin/claude-code", "/opt/claude-code/claude-code", "/opt/claude-code/claude"],
+    "gemini-cli": ["gemini-cli", "/usr/bin/gemini-cli", "/usr/bin/gemini", "/opt/gemini-cli/bundle/gemini.js"],
     "google-chrome": ["google-chrome", "google-chrome-stable"],
     "microsoft-edge": ["microsoft-edge", "microsoft-edge-stable"],
     "brave": ["brave", "brave-browser"],
     "zen-browser": ["zen-browser", "zen"],
+    "opera": ["opera", "/usr/bin/opera", "/usr/lib64/opera/opera", "/usr/lib/opera/opera"],
+    "gnome-disk-utility": ["gnome-disks", "/usr/bin/gnome-disks"],
+    "spacenav": ["spacenavd", "spnavcfg", "/usr/bin/spacenavd"],
+    "volt-gui": ["volt-gui", "/usr/bin/volt-gui", "/opt/volt-gui/volt-gui", "/opt/volt-gui/volt-gui.py"],
+    "bambu-studio": ["bambu-studio", "/usr/bin/bambu-studio", "/opt/bambu-studio/bin/bambu-studio", "/usr/bin/BambuStudio"],
+    "blender": ["blender", "/usr/bin/blender", "/opt/blender/blender"],
+    "freecad": ["freecad", "FreeCAD", "/usr/bin/freecad", "/usr/bin/FreeCAD", "/usr/lib64/freecad/bin/FreeCAD"],
+    "plasticity": ["plasticity", "/usr/bin/plasticity", "/opt/plasticity/plasticity", "/opt/Plasticity/plasticity"],
+    "storyboarder": ["storyboarder", "/usr/bin/storyboarder", "/opt/storyboarder/storyboarder", "/opt/Storyboarder/storyboarder"],
     "sbctl": ["sbctl"],
     "hyprland-noctalia": ["hyprland", "noctalia", "/usr/bin/Hyprland", "noctalia-shell"],
     "hyprland-core": ["hyprland", "/usr/bin/Hyprland"],
@@ -571,13 +674,13 @@ PYPKGVERCHECK
 check_all_installed_gaming_updates_fast() {
     local catalog_raw
     catalog_raw=$(get_gaming_catalog 2>/dev/null || echo "")
-    python3 - "${catalog_raw}" << 'PYFASTCHECK'
+    SLACKY_LIB_DIR="$(slacky_mirrors_lib_dir)" python3 - "${catalog_raw}" << 'PYFASTCHECK'
 import sys, os, re, time, datetime, json, urllib.request, urllib.parse, hashlib, concurrent.futures
 
 raw_catalog_lines = sys.argv[1].strip().splitlines()
 
 def get_cache_dir():
-    for d in ['/var/cache/slacky-update', os.path.expanduser('~/.cache/slacky-update'), '/tmp/slacky-update-cache']:
+    for d in ['/var/cache/slacky-update', os.path.expanduser('~/.cache/slacky-update')]:
         try:
             os.makedirs(d, exist_ok=True)
             test_f = os.path.join(d, '.write_test')
@@ -586,103 +689,99 @@ def get_cache_dir():
             return d
         except Exception:
             continue
-    return '/tmp'
+    # 6A-17: no fixed /tmp fallback (predictable path, lost on reboot); a private temp dir instead
+    return __import__('tempfile').mkdtemp(prefix='slacky-update-cache.')
 
 cache_dir = get_cache_dir()
 
-def get_chaotic_fastest_mirror(cdir):
-    m_file = os.path.join(cdir, 'chaotic_fastest_mirror.json')
-    now = time.time()
-    today_dt = datetime.datetime.now()
-    is_thursday = (today_dt.weekday() == 3)
-    today_str = today_dt.strftime('%Y-%m-%d')
-
-    if os.path.exists(m_file):
-        try:
-            with open(m_file, 'r', encoding='utf-8') as f:
-                d = json.load(f)
-            cached_m = d.get('mirror')
-            last_ts = d.get('timestamp', 0)
-            last_day = d.get('date', '')
-            if cached_m and not cached_m.startswith('https://cdn-mirror'):
-                if last_day == today_str:
-                    return cached_m
-                elif not is_thursday and (now - last_ts) < (7 * 86400):
-                    return cached_m
-        except Exception:
-            pass
-
-    mirrors = [
-        'https://de-1-mirror.chaotic.cx/chaotic-aur/x86_64/',
-        'https://de-2-mirror.chaotic.cx/chaotic-aur/x86_64/',
-        'https://nl-1-mirror.chaotic.cx/chaotic-aur/x86_64/',
-        'https://fr-1-mirror.chaotic.cx/chaotic-aur/x86_64/',
-        'https://de-4-mirror.chaotic.cx/chaotic-aur/x86_64/',
-        'https://geo-mirror.chaotic.cx/chaotic-aur/x86_64/',
-        'https://es-mirror.chaotic.cx/chaotic-aur/x86_64/',
-        'https://bg-mirror.chaotic.cx/chaotic-aur/x86_64/',
-        'https://ca-mirror.chaotic.cx/chaotic-aur/x86_64/',
-        'https://us-mi-mirror.chaotic.cx/chaotic-aur/x86_64/',
-        'https://us-ut-mirror.chaotic.cx/chaotic-aur/x86_64/'
-    ]
-
-    def ping_m(u):
-        t0 = time.time()
-        try:
-            req = urllib.request.Request(u + 'chaotic-mirrorlist.pkg.tar.zst', headers={'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64)', 'Range': 'bytes=0-256'})
-            with urllib.request.urlopen(req, timeout=0.75) as resp:
-                resp.read(256)
-                return ((time.time() - t0) * 1000, u)
-        except Exception:
-            return (999999, u)
-
-    best_url = 'https://geo-mirror.chaotic.cx/chaotic-aur/x86_64/'
-    best_lat = 999999
-    completed_valid = []
-    try:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=len(mirrors)) as ex:
-            futures = {ex.submit(ping_m, m): m for m in mirrors}
-            for fut in concurrent.futures.as_completed(futures, timeout=0.85):
-                try:
-                    lat, u = fut.result()
-                    if lat < 90000:
-                        completed_valid.append((lat, u))
-                        if lat < 55:
-                            best_lat, best_url = lat, u
-                            break
-                        if len(completed_valid) >= 3:
-                            completed_valid.sort(key=lambda x: x[0])
-                            best_lat, best_url = completed_valid[0]
-                            break
-                except Exception:
-                    pass
-    except Exception:
-        pass
-
-    if best_lat >= 90000 and completed_valid:
-        completed_valid.sort(key=lambda x: x[0])
-        best_lat, best_url = completed_valid[0]
-
-    try:
-        with open(m_file, 'w', encoding='utf-8') as f:
-            json.dump({'mirror': best_url, 'timestamp': now, 'date': today_str, 'latency_ms': best_lat}, f)
-    except Exception:
-        pass
-    return best_url
+# 6A-182: one shared helper (lib/slacky_mirrors.py) instead of three copies; the daily rule and the cache file
+# (chaotic_fastest_mirror.json) are defined there. Without the module the geo mirror is used.
+if os.environ.get('SLACKY_LIB_DIR'):
+    sys.path.insert(0, os.environ['SLACKY_LIB_DIR'])
+try:
+    import slacky_mirrors as _slacky_mirrors
+    def get_chaotic_fastest_mirror(cdir):
+        return _slacky_mirrors.chaotic_fastest(cdir)
+except Exception:
+    def get_chaotic_fastest_mirror(cdir):
+        return 'https://geo-mirror.chaotic.cx/chaotic-aur/x86_64/'
 
 chaotic_fastest = get_chaotic_fastest_mirror(cache_dir)
 
+def detect_cpu_tier() -> str:
+    cpuinfo = "/proc/cpuinfo"
+    if not os.path.exists(cpuinfo):
+        return "generic"
+    try:
+        with open(cpuinfo, "r", encoding="utf-8", errors="ignore") as f:
+            content = f.read()
+        if all(flag in content for flag in ["avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl"]):
+            if "AuthenticAMD" in content:
+                return "znver4"
+            return "v4"
+        elif all(flag in content for flag in ["avx2", "fma", "bmi1", "bmi2"]):
+            return "v3"
+    except Exception:
+        pass
+    return "generic"
+
+cpu_tier = detect_cpu_tier()
+
+def expand_repos_for_tier(r_list, tier):
+    res = []
+    for r in r_list:
+        if r in ("cachyos-extra-v3", "cachyos-extra"):
+            if tier == "znver4":
+                for cand in ["cachyos-extra-znver4", "cachyos-extra-v4", "cachyos-extra-v3", "cachyos-extra"]:
+                    if cand not in res: res.append(cand)
+            elif tier == "v4":
+                for cand in ["cachyos-extra-v4", "cachyos-extra-v3", "cachyos-extra"]:
+                    if cand not in res: res.append(cand)
+            elif tier == "v3":
+                for cand in ["cachyos-extra-v3", "cachyos-extra"]:
+                    if cand not in res: res.append(cand)
+            else:
+                if "cachyos-extra" not in res: res.append("cachyos-extra")
+        elif r in ("cachyos-v3", "cachyos"):
+            if tier == "znver4":
+                for cand in ["cachyos-znver4", "cachyos-v4", "cachyos-v3", "cachyos"]:
+                    if cand not in res: res.append(cand)
+            elif tier == "v4":
+                for cand in ["cachyos-v4", "cachyos-v3", "cachyos"]:
+                    if cand not in res: res.append(cand)
+            elif tier == "v3":
+                for cand in ["cachyos-v3", "cachyos"]:
+                    if cand not in res: res.append(cand)
+            else:
+                if "cachyos" not in res: res.append("cachyos")
+        else:
+            if r not in res: res.append(r)
+    return res
+
+c_base = "https://mirror.cachyos.org/repo"
 repos = {
-    "cachyos": "https://mirror.cachyos.org/repo/x86_64/cachyos/",
-    "cachyos-v3": "https://mirror.cachyos.org/repo/x86_64_v3/cachyos-v3/",
-    "cachyos-extra": "https://mirror.cachyos.org/repo/x86_64/cachyos-extra/",
-    "cachyos-extra-v3": "https://mirror.cachyos.org/repo/x86_64_v3/cachyos-extra-v3/",
+    "cachyos": f"{c_base}/x86_64/cachyos/",
+    "cachyos-extra": f"{c_base}/x86_64/cachyos-extra/",
+    "cachyos-v3": f"{c_base}/x86_64_v3/cachyos-v3/",
+    "cachyos-extra-v3": f"{c_base}/x86_64_v3/cachyos-extra-v3/",
+    "cachyos-v4": f"{c_base}/x86_64_v4/cachyos-v4/",
+    "cachyos-extra-v4": f"{c_base}/x86_64_v4/cachyos-extra-v4/",
+    "cachyos-znver4": f"{c_base}/x86_64_v4/cachyos-znver4/",
+    "cachyos-extra-znver4": f"{c_base}/x86_64_v4/cachyos-extra-znver4/",
     "chaotic-aur": chaotic_fastest,
     "chaotic-cdn": chaotic_fastest,
     "arch-core": "https://geo.mirror.pkgbuild.com/core/os/x86_64/",
     "arch-extra": "https://geo.mirror.pkgbuild.com/extra/os/x86_64/",
     "arch-multilib": "https://geo.mirror.pkgbuild.com/multilib/os/x86_64/"
 }
+
+if cpu_tier == "generic":
+    repos["cachyos-v3"] = repos["cachyos"]
+    repos["cachyos-extra-v3"] = repos["cachyos-extra"]
+    repos["cachyos-v4"] = repos["cachyos"]
+    repos["cachyos-extra-v4"] = repos["cachyos-extra"]
+    repos["cachyos-znver4"] = repos["cachyos"]
+    repos["cachyos-extra-znver4"] = repos["cachyos-extra"]
 
 catalog = {}
 for line in raw_catalog_lines:
@@ -715,8 +814,17 @@ def fetch_url_cached(url, cdir, ttl=1800):
         except Exception:
             pass
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64)"})
-        with urllib.request.urlopen(req, timeout=10) as resp:
+        headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64)"}
+        if os.path.exists(cache_file):
+            try:
+                import email.utils
+                mtime = os.path.getmtime(cache_file)
+                if mtime > 0:
+                    headers["If-Modified-Since"] = email.utils.formatdate(mtime, usegmt=True)
+            except Exception:
+                pass
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=5) as resp:
             content = resp.read().decode("utf-8", errors="ignore")
             try:
                 with open(cache_file, 'w', encoding='utf-8', errors='ignore') as f:
@@ -724,7 +832,22 @@ def fetch_url_cached(url, cdir, ttl=1800):
             except Exception:
                 pass
             return content
+    except urllib.error.HTTPError as he:
+        if he.code == 304 and os.path.exists(cache_file):
+            try:
+                os.utime(cache_file, (now, now))
+                with open(cache_file, 'r', encoding='utf-8', errors='ignore') as f:
+                    return f.read()
+            except Exception:
+                pass
+        return ""
     except Exception:
+        if os.path.exists(cache_file):
+            try:
+                with open(cache_file, 'r', encoding='utf-8', errors='ignore') as f:
+                    return f.read()
+            except Exception:
+                pass
         return ""
 
 def clean_pkg_version(pid, raw_v):
@@ -771,32 +894,57 @@ def parse_installed_pkg(pkg):
 
 detected_installed = {}
 for pkg in installed_pkgs:
+    # 6A-153: only packages the curated suite built itself (_slacky) are curated; a _gnomes app belongs to gnomes,
+    # an SBo or stock package to its own updater (was: discord/lutris/... reported twice and rebuilt over gnomes)
+    if not re.sub(r'\.(t[xg]z|tlz)$', '', pkg).endswith('_slacky'):
+        continue
     name, ver = parse_installed_pkg(pkg)
     if ver == 'NONE':
         continue
+    clean_name = re.sub(r'^(underpants|cachyos-gnome|cachyos-gnome-gnome)-', '', name)
+    for sfx in ('-bin', '-git', '-manager', '-launcher', '-desktop', '-appimage'):
+        if clean_name.endswith(sfx):
+            clean_name = clean_name[:-len(sfx)]
+            break
     for pid in catalog:
-        if name in (f"underpants-{pid}", f"cachyos-gnome-{pid}", f"cachyos-gnome-gnome-{pid}", pid, f"{pid}-bin", f"{pid}-git", f"{pid}-manager", f"{pid}-launcher"):
-            detected_installed[pid] = ver
+        if clean_name == pid or name == pid:
+            if pid not in detected_installed or is_strictly_greater(ver, detected_installed[pid]):
+                detected_installed[pid] = ver
 
 needed_repos = set()
 for pid in detected_installed:
     if pid in catalog:
         _, pat, l32_pat, r_list = catalog[pid]
         if pat:
-            for rk in r_list:
+            for rk in expand_repos_for_tier(r_list, cpu_tier):
                 if rk in ("arch-extra", "arch-core", "arch-multilib"):
                     continue
                 u = repos.get(rk)
                 if u:
                     needed_repos.add(u)
         if l32_pat:
-            for rk in ("cachyos", "cachyos-v3", "arch-multilib", "cachyos-extra", "cachyos-extra-v3"):
+            for rk in expand_repos_for_tier(["cachyos-extra-v3", "cachyos-v3", "arch-multilib"], cpu_tier):
                 u = repos.get(rk)
                 if u:
                     needed_repos.add(u)
 
-with concurrent.futures.ThreadPoolExecutor(max_workers=min(max(len(needed_repos), 1), 8)) as ex:
-    repo_contents = dict(zip(needed_repos, ex.map(lambda u: fetch_url_cached(u, cache_dir), needed_repos)))
+needed_repos_list = list(needed_repos)[:10]
+with concurrent.futures.ThreadPoolExecutor(max_workers=min(max(len(needed_repos_list), 1), 8)) as ex:
+    repo_contents = dict(zip(needed_repos_list, ex.map(lambda u: fetch_url_cached(u, cache_dir), needed_repos_list)))
+
+# WP-2: a version the user rolled back from (gnomes --rollback) is not offered again; a newer release is
+try:
+    with open('/var/cache/slacky-update/gnomes/rollback-holds.json') as _fh:
+        rollback_holds = {k: v for k, v in json.load(_fh).items() if isinstance(v, dict)}
+except Exception:
+    rollback_holds = {}
+
+def rolled_back(pid, best_ver):
+    for b in (f"underpants-{pid}", f"cachyos-gnome-{pid}", pid):
+        h = rollback_holds.get(b)
+        if h and not is_strictly_greater(best_ver, h.get("skip_version", "")):
+            return True
+    return False
 
 def check_single_package(pid, cur_ver):
     if pid not in catalog:
@@ -806,8 +954,30 @@ def check_single_package(pid, cur_ver):
         return None
     main_candidates = []
 
-    # Fast AUR RPC API check for AUR / GitHub packages (e.g. hyprmod, themes)
-    if any(r in ("aur", "aur-rpc", "github") for r in r_list) or pid in ("hyprmod", "mactahoe-icons", "mactahoe-cursors", "whitesur-icons", "whitesur-cursors"):
+    # 6A-65: hyprmod is built from a locked, checksummed source set (HYPRMOD_LOCK in the build recipe); only a new lock in a
+    # new slacky-update build offers an update, never a moving AUR/GitHub version
+    if pid == "hyprmod":
+        main_candidates.append("0.4.0")
+    # 6A-192: the official Bambu Lab release (newest non-prerelease with the Ubuntu 24.04 AppImage); the AUR source package is not it
+    elif pid == "bambu-studio":
+        try:
+            raw_json = fetch_url_cached("https://api.github.com/repos/bambulab/BambuStudio/releases", cache_dir, ttl=1800)
+            for rel in (json.loads(raw_json) if raw_json else []):
+                if rel.get("prerelease") or rel.get("draft"):
+                    continue
+                if any(re.search(r"^BambuStudio_(?:ubuntu24\.04|ubu24)-v[0-9][0-9.]*-[0-9]+\.AppImage$", a.get("name", "")) for a in rel.get("assets", [])):
+                    cv = clean_pkg_version(pid, rel.get("tag_name", "").lstrip("v"))
+                    if cv:
+                        main_candidates.append(cv)
+                    break
+        except Exception:
+            pass
+    # 6A-193: the four themes are built from pinned commit archives (same pins as the Rust engine); no moving AUR version
+    elif pid in ("mactahoe-icons", "mactahoe-cursors", "whitesur-icons", "whitesur-cursors"):
+        main_candidates.append({"mactahoe-icons": "2026.09.10.r0.839848b9", "mactahoe-cursors": "2026.09.10.r0.839848b9",
+                                "whitesur-icons": "2026.09.10", "whitesur-cursors": "2025.04.05.r0.e190baf6"}[pid])
+    # Fast AUR RPC API check for AUR / GitHub packages
+    elif any(r in ("aur", "aur-rpc", "github") for r in r_list):
         try:
             aur_map = {
                 "openghub": "openghub-bin",
@@ -849,7 +1019,7 @@ def check_single_package(pid, cur_ver):
                 pass
 
     if pat:
-        for rk in r_list:
+        for rk in expand_repos_for_tier(r_list, cpu_tier):
             base_u = repos.get(rk, "")
             html = repo_contents.get(base_u, "")
             if not html:
@@ -886,7 +1056,7 @@ def check_single_package(pid, cur_ver):
             except Exception:
                 pass
 
-        multilib_rkeys = ["cachyos", "cachyos-v3", "arch-multilib", "cachyos-extra", "cachyos-extra-v3"]
+        multilib_rkeys = expand_repos_for_tier(["cachyos-extra-v3", "cachyos-v3", "arch-multilib"], cpu_tier)
         for rk in multilib_rkeys:
             base_u = repos.get(rk, "")
             html = repo_contents.get(base_u, "")
@@ -909,13 +1079,13 @@ def check_single_package(pid, cur_ver):
             return None
         intersected.sort(key=parse_version_key)
         best_ver = intersected[-1]
-        if is_strictly_greater(best_ver, cur_ver):
+        if is_strictly_greater(best_ver, cur_ver) and not rolled_back(pid, best_ver):
             return f"{pid}|{name}|{cur_ver}|{best_ver}"
         return None
 
     main_candidates.sort(key=parse_version_key)
     best_ver = main_candidates[-1]
-    if is_strictly_greater(best_ver, cur_ver):
+    if is_strictly_greater(best_ver, cur_ver) and not rolled_back(pid, best_ver):
         return f"{pid}|{name}|{cur_ver}|{best_ver}"
     return None
 
@@ -935,7 +1105,7 @@ PYFASTCHECK
 resolve_cachyos_gaming_upstream_metadata() {
     local pkg_id="$1"
     
-    python3 - "${pkg_id}" << 'PYRESOLVE'
+    SLACKY_LIB_DIR="$(slacky_mirrors_lib_dir)" python3 - "${pkg_id}" << 'PYRESOLVE'
 import sys, os, re, time, datetime, json, urllib.request, urllib.parse, hashlib, concurrent.futures
 
 pkg_id = sys.argv[1]
@@ -945,38 +1115,13 @@ if pkg_id == "steam-devices":
     sys.exit(0)
 
 if pkg_id == "hyprmod":
-    try:
-        aur_url = "https://aur.archlinux.org/rpc/v5/info?arg[]=hyprmod"
-        req = urllib.request.Request(aur_url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64)"})
-        with urllib.request.urlopen(req, timeout=6) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-            results = data.get("results", [])
-            if results:
-                v = results[0].get("Version", "0.4.0").split("-")[0]
-                print(f"{v} GITHUB_WHEELS NONE NONE")
-                sys.exit(0)
-    except Exception:
-        pass
+    # 6A-65: locked version (must match HYPRMOD_LOCK in the build recipe)
     print("0.4.0 GITHUB_WHEELS NONE NONE")
     sys.exit(0)
-
-if pkg_id in ("mactahoe-icons", "mactahoe-cursors", "whitesur-icons", "whitesur-cursors"):
-    aur_name_map = {
-        "mactahoe-icons": "mactahoe-icon-theme-git",
-        "mactahoe-cursors": "mactahoe-cursor-theme-git",
-        "whitesur-icons": "whitesur-icon-theme",
-        "whitesur-cursors": "whitesur-cursor-theme-git"
-    }
-    aur_pkg = aur_name_map.get(pkg_id, pkg_id)
-    default_vers = {
-        "mactahoe-icons": "2025.10.16",
-        "mactahoe-cursors": "2025.10.16",
-        "whitesur-icons": "2026.09.10",
-        "whitesur-cursors": "2026.01.01"
-    }
-    ver = default_vers.get(pkg_id, "1.0.0")
+if pkg_id == "antigravity":
+    ver = "2.19.1"
     try:
-        aur_url = f"https://aur.archlinux.org/rpc/v5/info?arg[]={aur_pkg}"
+        aur_url = "https://aur.archlinux.org/rpc/v5/info?arg[]=antigravity"
         req = urllib.request.Request(aur_url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64)"})
         with urllib.request.urlopen(req, timeout=6) as resp:
             data = json.loads(resp.read().decode("utf-8"))
@@ -985,11 +1130,73 @@ if pkg_id in ("mactahoe-icons", "mactahoe-cursors", "whitesur-icons", "whitesur-
                 ver = results[0].get("Version", ver).split("-")[0]
     except Exception:
         pass
+    print(f"{ver} AUR_ANTIGRAVITY NONE NONE")
+    sys.exit(0)
+
+if pkg_id == "claude-desktop":
+    ver = "2.9939.4"
+    try:
+        aur_url = "https://aur.archlinux.org/rpc/v5/info?arg[]=claude-desktop"
+        req = urllib.request.Request(aur_url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64)"})
+        with urllib.request.urlopen(req, timeout=6) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            results = data.get("results", [])
+            if results:
+                ver = results[0].get("Version", ver).split("-")[0]
+    except Exception:
+        pass
+    print(f"{ver} DEB_CLAUDE_DESKTOP NONE NONE")
+    sys.exit(0)
+
+if pkg_id == "claude-code":
+    ver = "2.1.287"
+    try:
+        npm_url = "https://registry.npmjs.org/@anthropic-ai/claude-code-linux-x64/latest"
+        req = urllib.request.Request(npm_url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64)"})
+        with urllib.request.urlopen(req, timeout=6) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            ver = data.get("version", ver)
+    except Exception:
+        pass
+    print(f"{ver} NPM_CLAUDE_CODE NONE NONE")
+    sys.exit(0)
+
+if pkg_id == "gemini-cli":
+    ver = "0.62.0"
+    try:
+        npm_url = "https://registry.npmjs.org/@google/gemini-cli/latest"
+        req = urllib.request.Request(npm_url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64)"})
+        with urllib.request.urlopen(req, timeout=6) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            ver = data.get("version", ver)
+    except Exception:
+        pass
+    print(f"{ver} NPM_GEMINI_CLI NONE NONE")
+    sys.exit(0)
+
+if pkg_id == "dvcp-aac":
+    ver = "1.0.0"
+    try:
+        gh_url = "https://api.github.com/repos/GloriousEggroll/dvcp-aac/releases/latest"
+        req = urllib.request.Request(gh_url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64)"})
+        with urllib.request.urlopen(req, timeout=6) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            ver = data.get("tag_name", ver).lstrip("v")
+    except Exception:
+        pass
+    print(f"{ver} GITHUB_DVCP_AAC NONE NONE")
+    sys.exit(0)
+
+if pkg_id in ("mactahoe-icons", "mactahoe-cursors", "whitesur-icons", "whitesur-cursors"):
+    # 6A-193: pinned commit archives (THEME_PINS in the build recipe, same pins as the Rust engine); only a new pin in a new
+    # slacky-update build offers an update, never a moving AUR version
+    ver = {"mactahoe-icons": "2026.09.10.r0.839848b9", "mactahoe-cursors": "2026.09.10.r0.839848b9",
+           "whitesur-icons": "2026.09.10", "whitesur-cursors": "2025.04.05.r0.e190baf6"}[pkg_id]
     print(f"{ver} GITHUB_THEME NONE NONE")
     sys.exit(0)
 
 def get_cache_dir():
-    for d in ['/var/cache/slacky-update', os.path.expanduser('~/.cache/slacky-update'), '/tmp/slacky-update-cache']:
+    for d in ['/var/cache/slacky-update', os.path.expanduser('~/.cache/slacky-update')]:
         try:
             os.makedirs(d, exist_ok=True)
             test_f = os.path.join(d, '.write_test')
@@ -998,110 +1205,99 @@ def get_cache_dir():
             return d
         except Exception:
             continue
-    return '/tmp'
+    # 6A-17: no fixed /tmp fallback (predictable path, lost on reboot); a private temp dir instead
+    return __import__('tempfile').mkdtemp(prefix='slacky-update-cache.')
 
 cache_dir = get_cache_dir()
 
-def get_chaotic_fastest_mirror(cdir):
-    m_file = os.path.join(cdir, 'chaotic_fastest_mirror.json')
-    now = time.time()
-    today_dt = datetime.datetime.now()
-    is_thursday = (today_dt.weekday() == 3)
-    today_str = today_dt.strftime('%Y-%m-%d')
-
-    if os.path.exists(m_file):
-        try:
-            with open(m_file, 'r', encoding='utf-8') as f:
-                d = json.load(f)
-            cached_m = d.get('mirror')
-            last_ts = d.get('timestamp', 0)
-            last_day = d.get('date', '')
-            if last_day == today_str and cached_m:
-                return cached_m
-            elif not is_thursday and (now - last_ts) < (7 * 86400) and cached_m:
-                return cached_m
-        except Exception:
-            pass
-
-    mirrors = [
-        'https://de-1-mirror.chaotic.cx/chaotic-aur/x86_64/',
-        'https://de-2-mirror.chaotic.cx/chaotic-aur/x86_64/',
-        'https://nl-1-mirror.chaotic.cx/chaotic-aur/x86_64/',
-        'https://fr-1-mirror.chaotic.cx/chaotic-aur/x86_64/',
-        'https://de-4-mirror.chaotic.cx/chaotic-aur/x86_64/',
-        'https://cdn-mirror.chaotic.cx/chaotic-aur/x86_64/',
-        'https://geo-mirror.chaotic.cx/chaotic-aur/x86_64/',
-        'https://es-mirror.chaotic.cx/chaotic-aur/x86_64/',
-        'https://bg-mirror.chaotic.cx/chaotic-aur/x86_64/',
-        'https://ca-mirror.chaotic.cx/chaotic-aur/x86_64/',
-        'https://us-mi-mirror.chaotic.cx/chaotic-aur/x86_64/',
-        'https://us-ut-mirror.chaotic.cx/chaotic-aur/x86_64/'
-    ]
-
-    def ping_m(u):
-        t0 = time.time()
-        try:
-            req = urllib.request.Request(u + 'chaotic-mirrorlist.pkg.tar.zst', headers={'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64)', 'Range': 'bytes=0-256'})
-            with urllib.request.urlopen(req, timeout=0.75) as resp:
-                resp.read(256)
-                return ((time.time() - t0) * 1000, u)
-        except Exception:
-            return (999999, u)
-
-    best_url = 'https://cdn-mirror.chaotic.cx/chaotic-aur/x86_64/'
-    best_lat = 999999
-    completed_valid = []
-    try:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=len(mirrors)) as ex:
-            futures = {ex.submit(ping_m, m): m for m in mirrors}
-            for fut in concurrent.futures.as_completed(futures, timeout=0.85):
-                try:
-                    lat, u = fut.result()
-                    if lat < 90000:
-                        completed_valid.append((lat, u))
-                        if lat < 55:
-                            best_lat, best_url = lat, u
-                            break
-                        if len(completed_valid) >= 3:
-                            completed_valid.sort(key=lambda x: x[0])
-                            best_lat, best_url = completed_valid[0]
-                            break
-                except Exception:
-                    pass
-    except Exception:
-        pass
-
-    if best_lat >= 90000 and completed_valid:
-        completed_valid.sort(key=lambda x: x[0])
-        best_lat, best_url = completed_valid[0]
-
-    try:
-        with open(m_file, 'w', encoding='utf-8') as f:
-            json.dump({
-                'mirror': best_url,
-                'latency_ms': round(best_lat, 2) if best_lat < 90000 else None,
-                'timestamp': now,
-                'date': today_str,
-                'day_of_week': today_dt.strftime('%A')
-            }, f, indent=2)
-    except Exception:
-        pass
-
-    return best_url
+# 6A-182: one shared helper (lib/slacky_mirrors.py) instead of three copies; the daily rule and the cache file
+# (chaotic_fastest_mirror.json) are defined there. Without the module the geo mirror is used.
+if os.environ.get('SLACKY_LIB_DIR'):
+    sys.path.insert(0, os.environ['SLACKY_LIB_DIR'])
+try:
+    import slacky_mirrors as _slacky_mirrors
+    def get_chaotic_fastest_mirror(cdir):
+        return _slacky_mirrors.chaotic_fastest(cdir)
+except Exception:
+    def get_chaotic_fastest_mirror(cdir):
+        return 'https://geo-mirror.chaotic.cx/chaotic-aur/x86_64/'
 
 chaotic_fastest = get_chaotic_fastest_mirror(cache_dir)
 
+def detect_cpu_tier() -> str:
+    cpuinfo = "/proc/cpuinfo"
+    if not os.path.exists(cpuinfo):
+        return "generic"
+    try:
+        with open(cpuinfo, "r", encoding="utf-8", errors="ignore") as f:
+            content = f.read()
+        if all(flag in content for flag in ["avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl"]):
+            if "AuthenticAMD" in content:
+                return "znver4"
+            return "v4"
+        elif all(flag in content for flag in ["avx2", "fma", "bmi1", "bmi2"]):
+            return "v3"
+    except Exception:
+        pass
+    return "generic"
+
+cpu_tier = detect_cpu_tier()
+
+def expand_repos_for_tier(r_list, tier):
+    res = []
+    for r in r_list:
+        if r in ("cachyos-extra-v3", "cachyos-extra"):
+            if tier == "znver4":
+                for cand in ["cachyos-extra-znver4", "cachyos-extra-v4", "cachyos-extra-v3", "cachyos-extra"]:
+                    if cand not in res: res.append(cand)
+            elif tier == "v4":
+                for cand in ["cachyos-extra-v4", "cachyos-extra-v3", "cachyos-extra"]:
+                    if cand not in res: res.append(cand)
+            elif tier == "v3":
+                for cand in ["cachyos-extra-v3", "cachyos-extra"]:
+                    if cand not in res: res.append(cand)
+            else:
+                if "cachyos-extra" not in res: res.append("cachyos-extra")
+        elif r in ("cachyos-v3", "cachyos"):
+            if tier == "znver4":
+                for cand in ["cachyos-znver4", "cachyos-v4", "cachyos-v3", "cachyos"]:
+                    if cand not in res: res.append(cand)
+            elif tier == "v4":
+                for cand in ["cachyos-v4", "cachyos-v3", "cachyos"]:
+                    if cand not in res: res.append(cand)
+            elif tier == "v3":
+                for cand in ["cachyos-v3", "cachyos"]:
+                    if cand not in res: res.append(cand)
+            else:
+                if "cachyos" not in res: res.append("cachyos")
+        else:
+            if r not in res: res.append(r)
+    return res
+
+c_base = "https://mirror.cachyos.org/repo"
 repos = {
-    "cachyos": "https://mirror.cachyos.org/repo/x86_64/cachyos/",
-    "cachyos-v3": "https://mirror.cachyos.org/repo/x86_64_v3/cachyos-v3/",
-    "cachyos-extra": "https://mirror.cachyos.org/repo/x86_64/cachyos-extra/",
-    "cachyos-extra-v3": "https://mirror.cachyos.org/repo/x86_64_v3/cachyos-extra-v3/",
+    "cachyos": f"{c_base}/x86_64/cachyos/",
+    "cachyos-extra": f"{c_base}/x86_64/cachyos-extra/",
+    "cachyos-v3": f"{c_base}/x86_64_v3/cachyos-v3/",
+    "cachyos-extra-v3": f"{c_base}/x86_64_v3/cachyos-extra-v3/",
+    "cachyos-v4": f"{c_base}/x86_64_v4/cachyos-v4/",
+    "cachyos-extra-v4": f"{c_base}/x86_64_v4/cachyos-extra-v4/",
+    "cachyos-znver4": f"{c_base}/x86_64_v4/cachyos-znver4/",
+    "cachyos-extra-znver4": f"{c_base}/x86_64_v4/cachyos-extra-znver4/",
     "chaotic-aur": chaotic_fastest,
     "chaotic-cdn": chaotic_fastest,
     "arch-core": "https://geo.mirror.pkgbuild.com/core/os/x86_64/",
     "arch-extra": "https://geo.mirror.pkgbuild.com/extra/os/x86_64/",
     "arch-multilib": "https://geo.mirror.pkgbuild.com/multilib/os/x86_64/"
 }
+
+if cpu_tier == "generic":
+    repos["cachyos-v3"] = repos["cachyos"]
+    repos["cachyos-extra-v3"] = repos["cachyos-extra"]
+    repos["cachyos-v4"] = repos["cachyos"]
+    repos["cachyos-extra-v4"] = repos["cachyos-extra"]
+    repos["cachyos-znver4"] = repos["cachyos"]
+    repos["cachyos-extra-znver4"] = repos["cachyos-extra"]
 
 catalog = {
     "mangohud": (r'href=[\'\"]?(mangohud-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(lib32-mangohud-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(glfw-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["cachyos-extra-v3", "arch-extra", "cachyos"], ["arch-multilib", "cachyos"]),
@@ -1135,7 +1331,8 @@ catalog = {
         r'href=[\'\"]?(electron42-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(libjpeg-turbo-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["chaotic-aur", "chaotic-cdn", "arch-extra"], []),
-    "yabridge": (r'href=[\'\"]?(yabridge-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(lib32-yabridge-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(yabridgectl-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["arch-extra", "cachyos", "chaotic-aur"], ["arch-multilib", "cachyos"]),
+    # 6A-189: no repository carries lib32-yabridge, so the 32-bit part is not required (same as the Rust app): the lib32 pattern is None
+    "yabridge": (r'href=[\'\"]?(yabridge-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(yabridgectl-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["arch-extra", "cachyos", "chaotic-aur"], ["arch-multilib", "cachyos"]),
     "audacity": (r'href=[\'\"]?(audacity-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
         r'href=[\'\"]?(suil-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(lilv-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
@@ -1189,6 +1386,7 @@ catalog = {
         r'href=[\'\"]?(flickcurl-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["cachyos-extra-v3", "arch-extra", "cachyos"], []),
     "syncthing": (r'href=[\'\"]?(syncthing-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos-extra-v3", "cachyos"], []),
+    "antigravity": (r'href=[\'\"]?(antigravity(?:-bin|-ide)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "chaotic-cdn", "cachyos", "arch-extra"], []),
     "ananicy": (r'href=[\'\"]?(ananicy-cpp(?:-git)?-([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
         r'href=[\'\"]?(cachyos-ananicy-rules(?:-git)?-([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(libbpf-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
@@ -1224,6 +1422,15 @@ catalog = {
         r'href=[\'\"]?(libsoup3-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(libmanette-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["arch-extra", "cachyos", "chaotic-aur"], []),
+    # 6A-192: the program is the official GitHub release AppImage (github_and_direct_pkgs below); these are its library parts
+    "bambu-studio": (r'href=[\'\"]?(BambuStudio_ubuntu24\.04-v([0-9][0-9.]*)-[0-9]+\.AppImage)[\'\"]?', None, [
+        r'href=[\'\"]?(webkit2gtk-4\.1-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libsoup3-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libavif-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libyuv-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(rav1e-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(svt-av1-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    ], ["arch-extra", "cachyos"], []),
     "coolercontrol": (r'href=[\'\"]?(coolercontrol-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(coolercontrold-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["cachyos", "arch-extra"], []),
     "asusctl": (r'href=[\'\"]?(asusctl-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
     "brave": (r'href=[\'\"]?(brave-bin-(?:1%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "chaotic-aur", "chaotic-cdn"], []),
@@ -1254,11 +1461,11 @@ catalog = {
     "obs-teleport": (r'href=[\'\"]?(obs-teleport(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos-extra", "cachyos"], []),
     "zenpower3": (r'href=[\'\"]?(zenpower3-dkms-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos", "arch-extra"], []),
     "v4l2loopback": (r'href=[\'\"]?(v4l2loopback-dkms-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos", "chaotic-aur"], []),
-    "rtl8821cu": (r'href=[\'\"]?(rtl8821cu-dkms-git-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos"], []),
+    "rtl8821cu": (r'href=[\'\"]?(rtl8821cu-morrownr-dkms-git-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos"], []),
     "rtl88x2bu": (r'href=[\'\"]?(rtl88x2bu-dkms-git-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos"], []),
     "rtl8812au": (r'href=[\'\"]?(rtl8812au-dkms-git-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos"], []),
     "broadcom-wl": (r'href=[\'\"]?(broadcom-wl-dkms-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
-    "r8125": (r'href=[\'\"]?(r8125-dkms-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos-extra-v3", "cachyos-extra", "cachyos"], []),
+    "r8125": (r'href=[\'\"]?(r8125-dkms-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos-extra-v3", "cachyos-extra", "cachyos"], []),
     "sunshine": (r'href=[\'\"]?(sunshine-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
         r'href=[\'\"]?(libayatana-appindicator-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(miniupnpc-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
@@ -1270,6 +1477,7 @@ catalog = {
     "limine-snapper-sync": (r'href=[\'\"]?(limine-snapper-sync-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos"], []),
     "sbctl": (r'href=[\'\"]?(sbctl-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
     "hyprland-noctalia": (r'href=[\'\"]?(hyprland-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(libjpeg-turbo-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',  # 6A-13: libjpeg.so.8 for libhyprgraphics
         r'href=[\'\"]?(noctalia(?:-shell)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(xdg-desktop-portal-hyprland-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(hyprlock-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
@@ -1298,6 +1506,7 @@ catalog = {
         r'href=[\'\"]?(python-i3ipc-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["cachyos-extra-v3", "cachyos-v3", "cachyos", "arch-extra", "chaotic-aur"], []),
     "hyprland-core": (r'href=[\'\"]?(hyprland-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(libjpeg-turbo-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',  # 6A-13: libjpeg.so.8 for libhyprgraphics
         r'href=[\'\"]?(xdg-desktop-portal-hyprland-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(hyprlock-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(hypridle-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
@@ -1345,7 +1554,7 @@ def fetch_url_cached(url, cdir, ttl=1800):
             pass
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64)"})
-        with urllib.request.urlopen(req, timeout=6) as resp:
+        with urllib.request.urlopen(req, timeout=5) as resp:
             content = resp.read().decode("utf-8", errors="ignore")
             try:
                 with open(cache_file, 'w', encoding='utf-8', errors='ignore') as f:
@@ -1385,7 +1594,7 @@ def fetch_match(pat, r_list, pid=''):
     if not pat:
         return None, None
     candidates = []
-    for r_key in r_list:
+    for r_key in expand_repos_for_tier(r_list, cpu_tier):
         base_url = repos.get(r_key, "")
         if not base_url:
             continue
@@ -1416,7 +1625,7 @@ def fetch_all_matches(pat, r_list, pid=''):
     if not pat:
         return {}
     res = {}
-    for r_key in r_list:
+    for r_key in expand_repos_for_tier(r_list, cpu_tier):
         base_url = repos.get(r_key, "")
         if not base_url:
             continue
@@ -1442,12 +1651,17 @@ def fetch_all_matches(pat, r_list, pid=''):
 
 aur_pkg_names = {
     "google-chrome": ("google-chrome", "google-chrome-{ver}-x86_64.pkg.tar.zst"),
+    "antigravity": ("antigravity", "antigravity-{ver}-x86_64.pkg.tar.zst"),
     "microsoft-edge": ("microsoft-edge-stable-bin", "microsoft-edge-stable-bin-{ver}-x86_64.pkg.tar.zst"),
     "brave": ("brave-bin", "brave-bin-{ver}-x86_64.pkg.tar.zst"),
     "zen-browser": ("zen-browser-bin", "zen-browser-bin-{ver}-x86_64.pkg.tar.zst"),
+    "opera": ("opera", "opera-{ver}-x86_64.pkg.tar.zst"),
+    "plasticity": ("plasticity-bin", "plasticity-bin-{ver}-x86_64.pkg.tar.zst"),
+    "storyboarder": ("storyboarder-bin", "storyboarder-bin-{ver}-x86_64.pkg.tar.zst"),
+    "volt-gui": ("volt-gui-bin", "volt-gui-bin-{ver}-x86_64.pkg.tar.zst"),
     "zenpower3": ("zenpower3-dkms", "zenpower3-dkms-{ver}-x86_64.pkg.tar.zst"),
     "v4l2loopback": ("v4l2loopback-dkms-git", "v4l2loopback-dkms-git-{ver}-x86_64.pkg.tar.zst"),
-    "rtl8821cu": ("rtl8821cu-dkms-git", "rtl8821cu-dkms-git-{ver}-x86_64.pkg.tar.zst"),
+    "rtl8821cu": ("rtl8821cu-morrownr-dkms-git", "rtl8821cu-morrownr-dkms-git-{ver}-x86_64.pkg.tar.zst"),
     "rtl88x2bu": ("rtl88x2bu-dkms-git", "rtl88x2bu-dkms-git-{ver}-x86_64.pkg.tar.zst"),
     "rtl8812au": ("rtl8812au-dkms-git", "rtl8812au-dkms-git-{ver}-x86_64.pkg.tar.zst"),
     "obs-pipewire-audio-capture": ("obs-pipewire-audio-capture", "obs-pipewire-audio-capture-{ver}-x86_64.pkg.tar.zst")
@@ -1490,6 +1704,14 @@ github_and_direct_pkgs = {
         "asset_pattern": r"OpenGHub_([0-9\.]+)_amd64\.deb",
         "fallback_version": "0.1.4",
         "fallback_url": "https://github.com/Slyvan25/OpenGHub/releases/download/v0.1.4/OpenGHub_0.1.4_amd64.deb"
+    },
+    # 6A-192: official Bambu Lab release AppImage (the AUR / Chaotic name bambu-studio-bin is dead); the newest release that
+    # is not a prerelease. The build checks the download against the SHA-256 of the release API (slacky_vendor_fetch.py).
+    "bambu-studio": {
+        "type": "github_release",
+        "repo": "bambulab/BambuStudio",
+        "asset_pattern": r"^BambuStudio_(?:ubuntu24\.04|ubu24)-v([0-9][0-9.]*)-[0-9]+\.AppImage$",
+        "skip_prerelease": True
     }
 }
 
@@ -1551,6 +1773,8 @@ else:
                 if raw:
                     releases = json.loads(raw)
                     for rel in releases:
+                        if meta.get("skip_prerelease") and (rel.get("prerelease") or rel.get("draft")):
+                            continue
                         tag = rel.get("tag_name", "").lstrip("v")
                         for asset in rel.get("assets", []):
                             aname = asset.get("name", "")
@@ -1641,13 +1865,13 @@ resolve_multiple_gaming_upstreams_batch() {
     local target_pids=("$@")
     [ ${#target_pids[@]} -gt 0 ] || return 0
 
-    python3 - "${target_pids[@]}" << 'PYBATCHRESOLVE'
+    SLACKY_LIB_DIR="$(slacky_mirrors_lib_dir)" python3 - "${target_pids[@]}" << 'PYBATCHRESOLVE'
 import sys, os, re, time, datetime, json, urllib.request, urllib.parse, hashlib, concurrent.futures
 
 pkg_ids = sys.argv[1:]
 
 def get_cache_dir():
-    for d in ['/var/cache/slacky-update', os.path.expanduser('~/.cache/slacky-update'), '/tmp/slacky-update-cache']:
+    for d in ['/var/cache/slacky-update', os.path.expanduser('~/.cache/slacky-update')]:
         try:
             os.makedirs(d, exist_ok=True)
             test_f = os.path.join(d, '.write_test')
@@ -1656,88 +1880,99 @@ def get_cache_dir():
             return d
         except Exception:
             continue
-    return '/tmp'
+    # 6A-17: no fixed /tmp fallback (predictable path, lost on reboot); a private temp dir instead
+    return __import__('tempfile').mkdtemp(prefix='slacky-update-cache.')
 
 cache_dir = get_cache_dir()
 
-def get_chaotic_fastest_mirror(cdir):
-    m_file = os.path.join(cdir, 'chaotic_fastest_mirror.json')
-    now = time.time()
-    today_dt = datetime.datetime.now()
-    is_thursday = (today_dt.weekday() == 3)
-    today_str = today_dt.strftime('%Y-%m-%d')
-
-    if os.path.exists(m_file):
-        try:
-            with open(m_file, 'r', encoding='utf-8') as f:
-                d = json.load(f)
-            cached_m = d.get('mirror')
-            last_ts = d.get('timestamp', 0)
-            last_day = d.get('date', '')
-            if last_day == today_str and cached_m:
-                return cached_m
-            elif not is_thursday and (now - last_ts) < (7 * 86400) and cached_m:
-                return cached_m
-        except Exception:
-            pass
-
-    mirrors = [
-        'https://cdn-mirror.chaotic.cx/chaotic-aur/x86_64/',
-        'https://geo-mirror.chaotic.cx/chaotic-aur/x86_64/',
-        'https://de-1-mirror.chaotic.cx/chaotic-aur/x86_64/',
-        'https://de-2-mirror.chaotic.cx/chaotic-aur/x86_64/',
-        'https://de-4-mirror.chaotic.cx/chaotic-aur/x86_64/',
-        'https://es-mirror.chaotic.cx/chaotic-aur/x86_64/',
-        'https://bg-mirror.chaotic.cx/chaotic-aur/x86_64/',
-        'https://nl-1-mirror.chaotic.cx/chaotic-aur/x86_64/',
-        'https://fr-1-mirror.chaotic.cx/chaotic-aur/x86_64/',
-        'https://ca-mirror.chaotic.cx/chaotic-aur/x86_64/',
-        'https://us-mi-mirror.chaotic.cx/chaotic-aur/x86_64/',
-        'https://us-ut-mirror.chaotic.cx/chaotic-aur/x86_64/'
-    ]
-
-    def ping_m(u):
-        t0 = time.time()
-        try:
-            req = urllib.request.Request(u + 'chaotic-mirrorlist.pkg.tar.zst', headers={'User-Agent': 'Mozilla/5.0', 'Range': 'bytes=0-256'})
-            with urllib.request.urlopen(req, timeout=1.8) as resp:
-                resp.read(256)
-                return ((time.time() - t0) * 1000, u)
-        except Exception:
-            return (999999, u)
-
-    best_url = 'https://cdn-mirror.chaotic.cx/chaotic-aur/x86_64/'
-    best_lat = 999999
-    try:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=len(mirrors)) as ex:
-            results = list(ex.map(ping_m, mirrors))
-        valid = [r for r in results if r[0] < 90000]
-        if valid:
-            valid.sort(key=lambda x: x[0])
-            best_lat, best_url = valid[0]
-    except Exception:
-        pass
-
-    try:
-        with open(m_file, 'w', encoding='utf-8') as f:
-            json.dump({'mirror': best_url, 'timestamp': now, 'date': today_str, 'latency_ms': best_lat}, f)
-    except Exception:
-        pass
-    return best_url
+# 6A-182: one shared helper (lib/slacky_mirrors.py) instead of three copies; the daily rule and the cache file
+# (chaotic_fastest_mirror.json) are defined there. Without the module the geo mirror is used.
+if os.environ.get('SLACKY_LIB_DIR'):
+    sys.path.insert(0, os.environ['SLACKY_LIB_DIR'])
+try:
+    import slacky_mirrors as _slacky_mirrors
+    def get_chaotic_fastest_mirror(cdir):
+        return _slacky_mirrors.chaotic_fastest(cdir)
+except Exception:
+    def get_chaotic_fastest_mirror(cdir):
+        return 'https://geo-mirror.chaotic.cx/chaotic-aur/x86_64/'
 
 chaotic_fastest = get_chaotic_fastest_mirror(cache_dir)
 
+def detect_cpu_tier() -> str:
+    cpuinfo = "/proc/cpuinfo"
+    if not os.path.exists(cpuinfo):
+        return "generic"
+    try:
+        with open(cpuinfo, "r", encoding="utf-8", errors="ignore") as f:
+            content = f.read()
+        if all(flag in content for flag in ["avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl"]):
+            if "AuthenticAMD" in content:
+                return "znver4"
+            return "v4"
+        elif all(flag in content for flag in ["avx2", "fma", "bmi1", "bmi2"]):
+            return "v3"
+    except Exception:
+        pass
+    return "generic"
+
+cpu_tier = detect_cpu_tier()
+
+def expand_repos_for_tier(r_list, tier):
+    res = []
+    for r in r_list:
+        if r in ("cachyos-extra-v3", "cachyos-extra"):
+            if tier == "znver4":
+                for cand in ["cachyos-extra-znver4", "cachyos-extra-v4", "cachyos-extra-v3", "cachyos-extra"]:
+                    if cand not in res: res.append(cand)
+            elif tier == "v4":
+                for cand in ["cachyos-extra-v4", "cachyos-extra-v3", "cachyos-extra"]:
+                    if cand not in res: res.append(cand)
+            elif tier == "v3":
+                for cand in ["cachyos-extra-v3", "cachyos-extra"]:
+                    if cand not in res: res.append(cand)
+            else:
+                if "cachyos-extra" not in res: res.append("cachyos-extra")
+        elif r in ("cachyos-v3", "cachyos"):
+            if tier == "znver4":
+                for cand in ["cachyos-znver4", "cachyos-v4", "cachyos-v3", "cachyos"]:
+                    if cand not in res: res.append(cand)
+            elif tier == "v4":
+                for cand in ["cachyos-v4", "cachyos-v3", "cachyos"]:
+                    if cand not in res: res.append(cand)
+            elif tier == "v3":
+                for cand in ["cachyos-v3", "cachyos"]:
+                    if cand not in res: res.append(cand)
+            else:
+                if "cachyos" not in res: res.append("cachyos")
+        else:
+            if r not in res: res.append(r)
+    return res
+
+c_base = "https://mirror.cachyos.org/repo"
 repos = {
-    "cachyos": "https://mirror.cachyos.org/repo/x86_64/cachyos/",
-    "cachyos-v3": "https://mirror.cachyos.org/repo/x86_64_v3/cachyos-v3/",
-    "cachyos-extra": "https://mirror.cachyos.org/repo/x86_64/cachyos-extra/",
-    "cachyos-extra-v3": "https://mirror.cachyos.org/repo/x86_64_v3/cachyos-extra-v3/",
+    "cachyos": f"{c_base}/x86_64/cachyos/",
+    "cachyos-extra": f"{c_base}/x86_64/cachyos-extra/",
+    "cachyos-v3": f"{c_base}/x86_64_v3/cachyos-v3/",
+    "cachyos-extra-v3": f"{c_base}/x86_64_v3/cachyos-extra-v3/",
+    "cachyos-v4": f"{c_base}/x86_64_v4/cachyos-v4/",
+    "cachyos-extra-v4": f"{c_base}/x86_64_v4/cachyos-extra-v4/",
+    "cachyos-znver4": f"{c_base}/x86_64_v4/cachyos-znver4/",
+    "cachyos-extra-znver4": f"{c_base}/x86_64_v4/cachyos-extra-znver4/",
     "chaotic-aur": chaotic_fastest,
     "chaotic-cdn": chaotic_fastest,
     "arch-core": "https://geo.mirror.pkgbuild.com/core/os/x86_64/",
     "arch-extra": "https://geo.mirror.pkgbuild.com/extra/os/x86_64/",
     "arch-multilib": "https://geo.mirror.pkgbuild.com/multilib/os/x86_64/"
 }
+
+if cpu_tier == "generic":
+    repos["cachyos-v3"] = repos["cachyos"]
+    repos["cachyos-extra-v3"] = repos["cachyos-extra"]
+    repos["cachyos-v4"] = repos["cachyos"]
+    repos["cachyos-extra-v4"] = repos["cachyos-extra"]
+    repos["cachyos-znver4"] = repos["cachyos"]
+    repos["cachyos-extra-znver4"] = repos["cachyos-extra"]
 
 catalog = {
     "mangohud": (r'href=[\'\"]?(mangohud-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(lib32-mangohud-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(glfw-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["cachyos-extra-v3", "arch-extra", "cachyos"], ["arch-multilib", "cachyos"]),
@@ -1771,7 +2006,8 @@ catalog = {
         r'href=[\'\"]?(electron42-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(libjpeg-turbo-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["chaotic-aur", "chaotic-cdn", "arch-extra"], []),
-    "yabridge": (r'href=[\'\"]?(yabridge-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(lib32-yabridge-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(yabridgectl-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["arch-extra", "cachyos", "chaotic-aur"], ["arch-multilib", "cachyos"]),
+    # 6A-189: no repository carries lib32-yabridge, so the 32-bit part is not required (same as the Rust app): the lib32 pattern is None
+    "yabridge": (r'href=[\'\"]?(yabridge-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(yabridgectl-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["arch-extra", "cachyos", "chaotic-aur"], ["arch-multilib", "cachyos"]),
     "audacity": (r'href=[\'\"]?(audacity-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
         r'href=[\'\"]?(suil-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(lilv-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
@@ -1825,6 +2061,7 @@ catalog = {
         r'href=[\'\"]?(flickcurl-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["cachyos-extra-v3", "arch-extra", "cachyos"], []),
     "syncthing": (r'href=[\'\"]?(syncthing-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos-extra-v3", "cachyos"], []),
+    "antigravity": (r'href=[\'\"]?(antigravity(?:-bin|-ide)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "chaotic-cdn", "cachyos", "arch-extra"], []),
     "ananicy": (r'href=[\'\"]?(ananicy-cpp(?:-git)?-([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
         r'href=[\'\"]?(cachyos-ananicy-rules(?:-git)?-([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(libbpf-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
@@ -1860,6 +2097,15 @@ catalog = {
         r'href=[\'\"]?(libsoup3-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(libmanette-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["arch-extra", "cachyos", "chaotic-aur"], []),
+    # 6A-192: the program is the official GitHub release AppImage (github_and_direct_pkgs below); these are its library parts
+    "bambu-studio": (r'href=[\'\"]?(BambuStudio_ubuntu24\.04-v([0-9][0-9.]*)-[0-9]+\.AppImage)[\'\"]?', None, [
+        r'href=[\'\"]?(webkit2gtk-4\.1-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libsoup3-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libavif-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libyuv-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(rav1e-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(svt-av1-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    ], ["arch-extra", "cachyos"], []),
     "coolercontrol": (r'href=[\'\"]?(coolercontrol-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(coolercontrold-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["cachyos", "arch-extra"], []),
     "asusctl": (r'href=[\'\"]?(asusctl-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
     "brave": (r'href=[\'\"]?(brave-bin-(?:1%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "chaotic-aur", "chaotic-cdn"], []),
@@ -1890,11 +2136,11 @@ catalog = {
     "obs-teleport": (r'href=[\'\"]?(obs-teleport(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos-extra", "cachyos"], []),
     "zenpower3": (r'href=[\'\"]?(zenpower3-dkms-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos", "arch-extra"], []),
     "v4l2loopback": (r'href=[\'\"]?(v4l2loopback-dkms-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos", "chaotic-aur"], []),
-    "rtl8821cu": (r'href=[\'\"]?(rtl8821cu-dkms-git-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos"], []),
+    "rtl8821cu": (r'href=[\'\"]?(rtl8821cu-morrownr-dkms-git-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos"], []),
     "rtl88x2bu": (r'href=[\'\"]?(rtl88x2bu-dkms-git-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos"], []),
     "rtl8812au": (r'href=[\'\"]?(rtl8812au-dkms-git-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos"], []),
     "broadcom-wl": (r'href=[\'\"]?(broadcom-wl-dkms-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
-    "r8125": (r'href=[\'\"]?(r8125-dkms-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos-extra-v3", "cachyos-extra", "cachyos"], []),
+    "r8125": (r'href=[\'\"]?(r8125-dkms-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos-extra-v3", "cachyos-extra", "cachyos"], []),
     "sunshine": (r'href=[\'\"]?(sunshine-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
         r'href=[\'\"]?(libayatana-appindicator-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(miniupnpc-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
@@ -1906,6 +2152,7 @@ catalog = {
     "limine-snapper-sync": (r'href=[\'\"]?(limine-snapper-sync-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos"], []),
     "sbctl": (r'href=[\'\"]?(sbctl-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
     "hyprland-noctalia": (r'href=[\'\"]?(hyprland-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(libjpeg-turbo-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',  # 6A-13: libjpeg.so.8 for libhyprgraphics
         r'href=[\'\"]?(noctalia(?:-shell)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(xdg-desktop-portal-hyprland-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(hyprlock-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
@@ -1934,6 +2181,7 @@ catalog = {
         r'href=[\'\"]?(python-i3ipc-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["cachyos-extra-v3", "cachyos-v3", "cachyos", "arch-extra", "chaotic-aur"], []),
     "hyprland-core": (r'href=[\'\"]?(hyprland-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(libjpeg-turbo-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',  # 6A-13: libjpeg.so.8 for libhyprgraphics
         r'href=[\'\"]?(xdg-desktop-portal-hyprland-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(hyprlock-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(hypridle-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
@@ -1962,7 +2210,16 @@ catalog = {
     "mactahoe-icons": (None, None, None, [], []),
     "mactahoe-cursors": (None, None, None, [], []),
     "whitesur-icons": (None, None, None, [], []),
-    "whitesur-cursors": (None, None, None, [], [])
+    "whitesur-cursors": (None, None, None, [], []),
+    "opera": (r'href=[\'\"]?(opera-([0-9a-zA-Z_\.:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "chaotic-cdn", "cachyos"], []),
+    "gnome-disk-utility": (r'href=[\'\"]?(gnome-disk-utility-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(libhandy-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(libdvdread-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    ], ["cachyos-extra-v4", "cachyos-extra-v3", "arch-extra", "cachyos"], []),
+    "spacenav": (r'href=[\'\"]?(spacenavd-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(libspnav-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(spnavcfg-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    ], ["arch-extra", "cachyos", "chaotic-aur"], [])
 }
 
 def fetch_url_cached(url, cdir, ttl=1800):
@@ -1979,7 +2236,7 @@ def fetch_url_cached(url, cdir, ttl=1800):
             pass
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64)"})
-        with urllib.request.urlopen(req, timeout=6) as resp:
+        with urllib.request.urlopen(req, timeout=5) as resp:
             content = resp.read().decode("utf-8", errors="ignore")
             try:
                 with open(cache_file, 'w', encoding='utf-8', errors='ignore') as f:
@@ -2019,7 +2276,7 @@ def fetch_match(pat, r_list, pid=''):
     if not pat:
         return None, None
     candidates = []
-    for r_key in r_list:
+    for r_key in expand_repos_for_tier(r_list, cpu_tier):
         base_url = repos.get(r_key, "")
         if not base_url:
             continue
@@ -2050,7 +2307,7 @@ def fetch_all_matches(pat, r_list, pid=''):
     if not pat:
         return {}
     res = {}
-    for r_key in r_list:
+    for r_key in expand_repos_for_tier(r_list, cpu_tier):
         base_url = repos.get(r_key, "")
         if not base_url:
             continue
@@ -2076,12 +2333,17 @@ def fetch_all_matches(pat, r_list, pid=''):
 
 aur_pkg_names = {
     "google-chrome": ("google-chrome", "google-chrome-{ver}-x86_64.pkg.tar.zst"),
+    "antigravity": ("antigravity", "antigravity-{ver}-x86_64.pkg.tar.zst"),
     "microsoft-edge": ("microsoft-edge-stable-bin", "microsoft-edge-stable-bin-{ver}-x86_64.pkg.tar.zst"),
     "brave": ("brave-bin", "brave-bin-{ver}-x86_64.pkg.tar.zst"),
     "zen-browser": ("zen-browser-bin", "zen-browser-bin-{ver}-x86_64.pkg.tar.zst"),
+    "opera": ("opera", "opera-{ver}-x86_64.pkg.tar.zst"),
+    "plasticity": ("plasticity-bin", "plasticity-bin-{ver}-x86_64.pkg.tar.zst"),
+    "storyboarder": ("storyboarder-bin", "storyboarder-bin-{ver}-x86_64.pkg.tar.zst"),
+    "volt-gui": ("volt-gui-bin", "volt-gui-bin-{ver}-x86_64.pkg.tar.zst"),
     "zenpower3": ("zenpower3-dkms", "zenpower3-dkms-{ver}-x86_64.pkg.tar.zst"),
     "v4l2loopback": ("v4l2loopback-dkms-git", "v4l2loopback-dkms-git-{ver}-x86_64.pkg.tar.zst"),
-    "rtl8821cu": ("rtl8821cu-dkms-git", "rtl8821cu-dkms-git-{ver}-x86_64.pkg.tar.zst"),
+    "rtl8821cu": ("rtl8821cu-morrownr-dkms-git", "rtl8821cu-morrownr-dkms-git-{ver}-x86_64.pkg.tar.zst"),
     "rtl88x2bu": ("rtl88x2bu-dkms-git", "rtl88x2bu-dkms-git-{ver}-x86_64.pkg.tar.zst"),
     "rtl8812au": ("rtl8812au-dkms-git", "rtl8812au-dkms-git-{ver}-x86_64.pkg.tar.zst"),
     "obs-pipewire-audio-capture": ("obs-pipewire-audio-capture", "obs-pipewire-audio-capture-{ver}-x86_64.pkg.tar.zst")
@@ -2124,29 +2386,24 @@ github_and_direct_pkgs = {
         "asset_pattern": r"OpenGHub_([0-9\.]+)_amd64\.deb",
         "fallback_version": "0.1.4",
         "fallback_url": "https://github.com/Slyvan25/OpenGHub/releases/download/v0.1.4/OpenGHub_0.1.4_amd64.deb"
+    },
+    # 6A-192: official Bambu Lab release AppImage (the AUR / Chaotic name bambu-studio-bin is dead); the newest release that
+    # is not a prerelease. The build checks the download against the SHA-256 of the release API (slacky_vendor_fetch.py).
+    "bambu-studio": {
+        "type": "github_release",
+        "repo": "bambulab/BambuStudio",
+        "asset_pattern": r"^BambuStudio_(?:ubuntu24\.04|ubu24)-v([0-9][0-9.]*)-[0-9]+\.AppImage$",
+        "skip_prerelease": True
     }
 }
 
 def resolve_single(pid):
     if pid == "steam-devices":
         return pid, "1.0.0.61", "BUNDLED", "NONE", "NONE"
-    if pid in ("mactahoe-icons", "mactahoe-cursors", "whitesur-icons", "whitesur-cursors"):
-        aur_name_map = {
-            "mactahoe-icons": "mactahoe-icon-theme-git",
-            "mactahoe-cursors": "mactahoe-cursor-theme-git",
-            "whitesur-icons": "whitesur-icon-theme",
-            "whitesur-cursors": "whitesur-cursor-theme-git"
-        }
-        aur_pkg = aur_name_map.get(pid, pid)
-        default_vers = {
-            "mactahoe-icons": "2025.10.16",
-            "mactahoe-cursors": "2025.10.16",
-            "whitesur-icons": "2026.09.10",
-            "whitesur-cursors": "2026.01.01"
-        }
-        ver = default_vers.get(pid, "1.0.0")
+    if pid == "antigravity":
+        ver = "2.19.1"
         try:
-            aur_url = f"https://aur.archlinux.org/rpc/v5/info?arg[]={aur_pkg}"
+            aur_url = "https://aur.archlinux.org/rpc/v5/info?arg[]=antigravity"
             raw = fetch_url_cached(aur_url, cache_dir, ttl=1800)
             if raw:
                 data = json.loads(raw)
@@ -2155,6 +2412,100 @@ def resolve_single(pid):
                     ver = results[0].get("Version", ver).split("-")[0]
         except Exception:
             pass
+        return pid, ver, "AUR_ANTIGRAVITY", "NONE", "NONE"
+    if pid == "claude-desktop":
+        ver = "2.9939.4"
+        try:
+            aur_url = "https://aur.archlinux.org/rpc/v5/info?arg[]=claude-desktop"
+            raw = fetch_url_cached(aur_url, cache_dir, ttl=1800)
+            if raw:
+                data = json.loads(raw)
+                results = data.get("results", [])
+                if results:
+                    ver = results[0].get("Version", ver).split("-")[0]
+        except Exception:
+            pass
+        return pid, ver, "DEB_CLAUDE_DESKTOP", "NONE", "NONE"
+    if pid == "claude-code":
+        ver = "2.1.287"
+        try:
+            npm_url = "https://registry.npmjs.org/@anthropic-ai/claude-code-linux-x64/latest"
+            raw = fetch_url_cached(npm_url, cache_dir, ttl=1800)
+            if raw:
+                data = json.loads(raw)
+                ver = data.get("version", ver)
+        except Exception:
+            pass
+        return pid, ver, "NPM_CLAUDE_CODE", "NONE", "NONE"
+    if pid == "gemini-cli":
+        ver = "0.62.0"
+        try:
+            npm_url = "https://registry.npmjs.org/@google/gemini-cli/latest"
+            raw = fetch_url_cached(npm_url, cache_dir, ttl=1800)
+            if raw:
+                data = json.loads(raw)
+                ver = data.get("version", ver)
+        except Exception:
+            pass
+        return pid, ver, "NPM_GEMINI_CLI", "NONE", "NONE"
+    if pid == "dvcp-aac":
+        ver = "1.0.0"
+        try:
+            gh_url = "https://api.github.com/repos/GloriousEggroll/dvcp-aac/releases/latest"
+            raw = fetch_url_cached(gh_url, cache_dir, ttl=1800)
+            if raw:
+                data = json.loads(raw)
+                ver = data.get("tag_name", ver).lstrip("v")
+        except Exception:
+            pass
+        return pid, ver, "GITHUB_DVCP_AAC", "NONE", "NONE"
+    if pid == "spacenav":
+        pat = r'href=[\'\"]?(spacenavd-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+        ver, url = fetch_match(pat, ["arch-extra", "cachyos", "chaotic-aur"], pid)
+        ver = ver or "1.3"
+        extra1 = ""
+        e_ver1, e_url1 = fetch_match(r'href=[\'\"]?(libspnav-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["arch-extra", "cachyos", "chaotic-aur"], "libspnav")
+        if e_url1:
+            extra1 = e_url1
+        extra2 = ""
+        e_ver2, e_url2 = fetch_match(r'href=[\'\"]?(spnavcfg-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["arch-extra", "cachyos", "chaotic-aur"], "spnavcfg")
+        if e_url2:
+            extra2 = e_url2
+        return pid, ver, url or "NONE", extra1 or "NONE", extra2 or "NONE"
+    if pid == "gnome-disk-utility":
+        pat = r'href=[\'\"]?(gnome-disk-utility-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+        ver, url = fetch_match(pat, ["cachyos-extra-v4", "cachyos-extra-v3", "arch-extra", "cachyos"], pid)
+        ver = ver or "46.1"
+        extra1 = ""
+        e_ver1, e_url1 = fetch_match(r'href=[\'\"]?(libhandy-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["cachyos-extra-v4", "cachyos-extra-v3", "arch-extra", "cachyos"], "libhandy")
+        if e_url1:
+            extra1 = e_url1
+        extra2 = ""
+        e_ver2, e_url2 = fetch_match(r'href=[\'\"]?(libdvdread-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["cachyos-extra-v4", "cachyos-extra-v3", "arch-extra", "cachyos"], "libdvdread")
+        if e_url2:
+            extra2 = e_url2
+        return pid, ver, url or "NONE", extra1 or "NONE", extra2 or "NONE"
+    if pid == "volt-gui":
+        pat = r'href=[\'\"]?(volt-gui(?:-bin)?-([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+        ver, url = fetch_match(pat, ["chaotic-aur", "chaotic-cdn", "cachyos"], pid)
+        if not ver or not url:
+            try:
+                aur_url = "https://aur.archlinux.org/rpc/v5/info?arg[]=volt-gui-bin"
+                raw = fetch_url_cached(aur_url, cache_dir, ttl=1800)
+                if raw:
+                    data = json.loads(raw)
+                    results = data.get("results", [])
+                    if results:
+                        ver = results[0].get("Version", "1.0.0")
+                        url = f"{chaotic_fastest.rstrip('/')}/volt-gui-bin-{ver}-x86_64.pkg.tar.zst"
+            except Exception:
+                pass
+        ver = ver or "1.0.0"
+        return pid, ver, url or "NONE", "NONE", "NONE"
+    if pid in ("mactahoe-icons", "mactahoe-cursors", "whitesur-icons", "whitesur-cursors"):
+        # 6A-193: pinned versions (see THEME_PINS in the build recipe)
+        ver = {"mactahoe-icons": "2026.09.10.r0.839848b9", "mactahoe-cursors": "2026.09.10.r0.839848b9",
+               "whitesur-icons": "2026.09.10", "whitesur-cursors": "2025.04.05.r0.e190baf6"}[pid]
         return pid, ver, "GITHUB_THEME", "NONE", "NONE"
     if pid not in catalog:
         return pid, "NONE", "NONE", "NONE", "NONE"
@@ -2218,6 +2569,8 @@ def resolve_single(pid):
                     if raw:
                         releases = json.loads(raw)
                         for rel in releases:
+                            if meta.get("skip_prerelease") and (rel.get("prerelease") or rel.get("draft")):
+                                continue
                             tag = rel.get("tag_name", "").lstrip("v")
                             for asset in rel.get("assets", []):
                                 aname = asset.get("name", "")
@@ -2309,6 +2662,73 @@ for pid, ver, m_u, l_u, e_u in results:
 PYBATCHRESOLVE
 }
 
+# 6A-196: the Hyprland suites (hyprland-noctalia, hyprland-core) and hyprpicker ship some of the same files, and the suites
+# ship hyprpicker itself. Policy (coordinator recommendation, owner confirmation pending; change HERE only): the two suites
+# and hyprpicker are mutually exclusive. Installing a suite replaces the other suite and a separate hyprpicker; hyprpicker
+# alone is skipped when a suite that already contains it is installed.
+GAMING_HYPR_SUITES="hyprland-noctalia hyprland-core"
+GAMING_HYPR_PICKER_PKGS="hyprland-noctalia hyprland-core hyprpicker"   # base names (without the underpants- prefix) that own hyprpicker's files
+# Extra cleanup_foreign_gaming_pkgs patterns of a Hyprland id: the other suite's and hyprpicker's real (underpants-/cachyos-gnome-) names.
+gaming_hypr_exclusive_patterns() {
+    local pkg_id="$1" s
+    case "${pkg_id}" in
+        hyprland-noctalia|hyprland-core)
+            for s in ${GAMING_HYPR_SUITES} hyprpicker; do
+                [ "${s}" = "${pkg_id}" ] && continue
+                printf '%s\n' "underpants-${s}-[0-9]*" "cachyos-gnome-${s}-[0-9]*"
+            done ;;
+    esac
+}
+# Returns 0 and prints one plain sentence when pkg_id must be skipped because an installed suite already ships it.
+gaming_hypr_exclusive_skip() {
+    local pkg_id="$1" db="${GAMING_PKGLOG_DIR:-/var/log/packages}" s f
+    [ "${pkg_id}" = "hyprpicker" ] || return 1
+    for s in ${GAMING_HYPR_SUITES}; do
+        for f in "${db}/underpants-${s}-"[0-9]* "${db}/cachyos-gnome-${s}-"[0-9]*; do
+            [ -e "${f}" ] || continue
+            echo "Hyprpicker is already part of the installed ${s} desktop, so it is not installed on its own."
+            return 0
+        done
+    done
+    return 1
+}
+
+# 6A-195: no link (or file) with a name the package rules refuse. Links: the Rust packer's plain-name rule (letters, digits and
+# . _ + @ % , = : - / only, in the link's path and in its target). Files: names with shell-special characters or control
+# characters (a stray "}" from an upstream typo). Dropped with one log line; the package is built without them.
+gaming_drop_odd_names() {
+    local staging_root="$1"
+    [ -d "${staging_root}" ] || return 0
+    local n
+    n=$(python3 -I - "${staging_root}" << 'DROP_ODD_NAMES_EOF'
+import os, re, sys
+root = sys.argv[1]
+plain = re.compile(r'^[A-Za-z0-9._+@%,=:/-]+$')
+bad_file = re.compile(r'[\x00-\x1f\x7f{}$`\\;|&<>"]')
+dropped = 0
+for d, dirs, files in os.walk(root):
+    rel_d = os.path.relpath(d, root)
+    if rel_d == "install" or rel_d.startswith("install" + os.sep):
+        continue
+    for name in files + [x for x in dirs if os.path.islink(os.path.join(d, x))]:
+        full = os.path.join(d, name)
+        if os.path.islink(full):
+            rel = os.path.relpath(full, root)
+            if not plain.match(rel) or not plain.match(os.readlink(full)):
+                os.unlink(full)
+                dropped += 1
+        elif bad_file.search(name):
+            os.unlink(full)
+            dropped += 1
+print(dropped)
+DROP_ODD_NAMES_EOF
+) || return 1
+    if [ "${n:-0}" -gt 0 ] 2>/dev/null; then
+        log_info "Left out ${n} link(s) or file(s) with unusual names."
+    fi
+    return 0
+}
+
 # --- [ PACKAGE CLEANUP & RESOLUTION ] ---
 cleanup_foreign_gaming_pkgs() {
     local pkg_id="$1"
@@ -2343,7 +2763,13 @@ cleanup_foreign_gaming_pkgs() {
             ;;
         lutris)
             patterns=("lutris-[0-9]*")
-            sudo rm -f /usr/share/applications/net.lutris.Lutris1.desktop /usr/share/pixmaps/*lutris* /usr/share/pixmaps/*Lutris* 2>/dev/null || rm -f /usr/share/applications/net.lutris.Lutris1.desktop /usr/share/pixmaps/*lutris* /usr/share/pixmaps/*Lutris* 2>/dev/null || true
+            # 6A-4: only stray files no installed package lists (old builds); tracked files belong to pkgtools
+            local stray
+            for stray in /usr/share/applications/net.lutris.Lutris1.desktop /usr/share/pixmaps/*lutris* /usr/share/pixmaps/*Lutris*; do
+                [ -e "${stray}" ] || continue
+                grep -qsxF "${stray#/}" /var/log/packages/* && continue
+                sudo rm -f "${stray}" 2>/dev/null || true
+            done
             ;;
         faugus)
             patterns=("faugus-[0-9]*" "faugus-launcher-[0-9]*")
@@ -2355,7 +2781,9 @@ cleanup_foreign_gaming_pkgs() {
             patterns=("steam-[0-9]*" "steam-launcher-[0-9]*" "underpants-steam-[0-9]*" "cachyos-gnome-steam-[0-9]*")
             ;;
         steam-devices)
-            patterns=("game-devices-udev-[0-9]*" "steam-devices-[0-9]*")
+            # 6A-187: only the older game-devices-udev build is replaced. The SlackBuilds.org steam-devices package is never
+            # removed: it owns the Valve rules file 60-steam-input.rules (the footprint guard leaves that file out of our package)
+            patterns=("game-devices-udev-[0-9]*")
             ;;
         lact)
             patterns=("lact-[0-9]*" "lact-r[0-9]*" "cachyos-gnome-lact-r[0-9]*")
@@ -2386,6 +2814,10 @@ cleanup_foreign_gaming_pkgs() {
             ;;
         opera)
             patterns=("opera-[0-9]*" "opera-ffmpeg-codecs-[0-9]*")
+            ;;
+        bambu-studio)
+            # 6A-192: the older build of this program was called bambu-studio (built from the dead AUR name)
+            patterns=("bambu-studio-[0-9]*")
             ;;
         obs-studio)
             patterns=("obs-studio-[0-9]*" "obs-[0-9]*")
@@ -2432,6 +2864,9 @@ cleanup_foreign_gaming_pkgs() {
         syncthing)
             patterns=("syncthing-[0-9]*")
             ;;
+        antigravity)
+            patterns=("antigravity-[0-9]*" "antigravity-bin-[0-9]*" "antigravity-ide-[0-9]*")
+            ;;
         limine)
             patterns=("limine-[0-9]*")
             ;;
@@ -2469,7 +2904,7 @@ cleanup_foreign_gaming_pkgs() {
             patterns=("v4l2loopback-[0-9]*" "v4l2loopback-dkms-[0-9]*")
             ;;
         rtl8821cu)
-            patterns=("rtl8821cu-[0-9]*" "rtl8821cu-dkms-[0-9]*" "rtl8821cu-dkms-git-[0-9]*")
+            patterns=("rtl8821cu-[0-9]*" "rtl8821cu-dkms-[0-9]*" "rtl8821cu-dkms-git-[0-9]*" "rtl8821cu-morrownr-dkms-git-[0-9]*")
             ;;
         rtl88x2bu)
             patterns=("rtl88x2bu-[0-9]*" "rtl88x2bu-dkms-[0-9]*" "rtl88x2bu-dkms-git-[0-9]*")
@@ -2488,30 +2923,609 @@ cleanup_foreign_gaming_pkgs() {
             ;;
         hyprland-noctalia|hyprland-core)
             patterns=("hyprland-[0-9]*" "hyprland-noctalia-[0-9]*" "hyprland-core-[0-9]*" "noctalia-[0-9]*" "noctalia-shell-[0-9]*" "cachyos-gnome-hyprland-[0-9]*" "underpants-hyprland-[0-9]*")
+            # 6A-196: the patterns above never matched the installed underpants- names of the other suite; add them (and hyprpicker)
+            while IFS= read -r _hx; do [ -n "${_hx}" ] && patterns+=("${_hx}"); done < <(gaming_hypr_exclusive_patterns "${pkg_id}")
             ;;
     esac
 
-    for pat in "${patterns[@]}" "underpants-${pkg_id}-[0-9]*" "cachyos-gnome-${pkg_id}-[0-9]*"; do
-        for p in /var/log/packages/${pat}; do
-            [ -f "${p}" ] || continue
-            local bname
-            bname=$(basename "${p}")
+    # Antigravity is upgraded atomically via upgradepkg old%new to protect running instances
+    if [ "${pkg_id}" = "antigravity" ]; then
+        return 0
+    fi
+
+    # 6A-4: match the installed package's exact base name (name-version-arch-build stripped), never a loose
+    # filename glob. Runs AFTER the new underpants-<id> is installed, so removepkg keeps every file the new
+    # package owns and the app is never missing if the install fails. The package being installed is left to
+    # upgradepkg; official Slackware packages (build field without a tag) are never removed.
+    local new_base="underpants-${pkg_id}"
+    local p bname base build pat name
+    for p in /var/log/packages/*; do
+        [ -f "${p}" ] || continue
+        bname="${p##*/}"
+        base="${bname%-*-*-*}"
+        build="${bname##*-}"
+        [ "${base}" != "${bname}" ] || continue
+        [ "${base}" = "${new_base}" ] && continue
+        for pat in "${patterns[@]}" "underpants-${pkg_id}-[0-9]*" "cachyos-gnome-${pkg_id}-[0-9]*"; do
+            name="${pat%-\[0-9\]\*}"
+            name="${name%-r\[0-9\]\*}"
+            # shellcheck disable=SC2053
+            [[ "${base}" == ${name} ]] || continue
+            if [[ "${build}" =~ ^[0-9]+$ ]]; then
+                log_warn "Leaving ${bname} installed: it is an official Slackware package."
+                break
+            fi
             log_info "Removing older or superseded package: ${bname}..."
             validate_privileges
-            sudo "${PKG_REMOVE_CMD}" "${bname}" 2>/dev/null || true
+            sudo "${PKG_REMOVE_CMD}" "${bname}" >/dev/null 2>&1 || log_warn "Could not remove ${bname}. Remove it by hand with: removepkg ${bname}"
+            break
         done
     done
 }
 
+# 6A-6c: rc.local / rc.local_shutdown block helpers (spec: docs/rclocal_spec.md). Printed into each curated package's
+# doinst.sh and douninst.sh, so the package works without slacky-update installed. Blocks are marker-delimited and
+# self-contained; every change is syntax-checked (sh -n) before and after, written via a temp file in the same directory
+# and swapped in with a .slacky-bak backup; unbalanced markers or a broken file make it refuse and leave the file as is.
+slacky_rc_helpers() {
+    cat << 'SU_RC_HELPERS_EOF'
+su_rc_log() { echo "slacky-update: rc.local: $*" >&2; }
+su_rc_syntax_ok() { [ -z "$(sh -n "$1" 2>&1)" ]; }
+su_rc_markers_ok() {
+  awk '
+    { l=$0; sub(/\r$/,"",l) }
+    l ~ /^# >>> slacky-update:[A-Za-z0-9._+-]+ >>>$/ {
+      n=l; sub(/^# >>> slacky-update:/,"",n); sub(/ >>>$/,"",n)
+      if (open != "") bad=1; open=n; next }
+    l ~ /^# <<< slacky-update:[A-Za-z0-9._+-]+ <<<$/ {
+      n=l; sub(/^# <<< slacky-update:/,"",n); sub(/ <<<$/,"",n)
+      if (open == "" || open != n) bad=1; open=""; next }
+    END { exit (bad || open != "") }' "$1"
+}
+su_rc_has_block() { awk -v b="# >>> slacky-update:$2 >>>" '{ l=$0; sub(/\r$/,"",l) } l==b { f=1 } END { exit !f }' "$1"; }
+su_rc_commit() { cp -p "$1" "$1.slacky-bak" && mv -f "$2" "$1"; }
+su_rc_add() { # FILE NAME < body
+  su_f=$(readlink -f "$1") || return 1; su_n=$2; su_body=$(cat)
+  [ -f "$su_f" ] || return 1
+  su_rc_markers_ok "$su_f" || { su_rc_log "unbalanced markers in $su_f, left unchanged"; return 1; }
+  su_rc_syntax_ok "$su_f" || { su_rc_log "$su_f has a syntax error, left unchanged"; return 1; }
+  su_rc_has_block "$su_f" "$su_n" && return 0
+  if tr -d '\n' <"$su_f" | grep -q "$(printf '\r')"; then su_rc_log "$su_f has CRLF line endings, left unchanged"; return 1; fi
+  if grep -v '^[[:space:]]*#' "$su_f" | grep -q "rc\.$su_n"; then return 0; fi
+  if tr -d '\r' <"$su_f" | grep -v '^[[:space:]]*\(#.*\)\{0,1\}$' | tail -n 1 | grep -q '^[[:space:]]*exit\([[:space:]]\|$\)'; then
+    su_rc_log "$su_f ends with exit, left unchanged"; return 1; fi
+  su_t=$(mktemp "$su_f.slacky.XXXXXX") || return 1
+  cp -p "$su_f" "$su_t" || { rm -f "$su_t"; return 1; }
+  { cat "$su_f"; [ -n "$(tail -c 1 "$su_f")" ] && printf '\n'
+    printf '\n# >>> slacky-update:%s >>>\n%s\n# <<< slacky-update:%s <<<\n' "$su_n" "$su_body" "$su_n"; } >"$su_t"
+  if su_rc_markers_ok "$su_t" && su_rc_syntax_ok "$su_t"; then su_rc_commit "$su_f" "$su_t"
+  else rm -f "$su_t"; su_rc_log "result would be invalid, $su_f unchanged"; return 1; fi
+}
+su_rc_remove() { # FILE NAME
+  su_f=$(readlink -f "$1") || return 1; su_n=$2
+  [ -f "$su_f" ] || return 0
+  su_rc_has_block "$su_f" "$su_n" || return 0
+  su_rc_markers_ok "$su_f" || { su_rc_log "unbalanced markers in $su_f, left unchanged"; return 1; }
+  su_rc_syntax_ok "$su_f" || { su_rc_log "$su_f has a syntax error, left unchanged"; return 1; }
+  su_t=$(mktemp "$su_f.slacky.XXXXXX") || return 1
+  cp -p "$su_f" "$su_t" || { rm -f "$su_t"; return 1; }
+  awk -v b="# >>> slacky-update:$su_n >>>" -v e="# <<< slacky-update:$su_n <<<" '
+    { l=$0; sub(/\r$/,"",l) }
+    skip { if (l == e) skip=0; next }
+    l == b { hold=0; skip=1; next }
+    { if (hold) print held; hold=0
+      if (l == "") { held=$0; hold=1; next }
+      print }
+    END { if (hold) print held }' "$su_f" >"$su_t"
+  if su_rc_markers_ok "$su_t" && su_rc_syntax_ok "$su_t" && ! su_rc_has_block "$su_t" "$su_n"; then su_rc_commit "$su_f" "$su_t"
+  else rm -f "$su_t"; su_rc_log "result would be invalid, $su_f unchanged"; return 1; fi
+}
+su_rc_migrate() { # FILE NAME VERB "Comment text"  - exact old 4-line unmarked block -> marked block
+  su_f=$(readlink -f "$1") || return 1; su_n=$2; su_v=$3; su_c="# $4:"
+  [ -f "$su_f" ] || return 0
+  { su_rc_markers_ok "$su_f" && su_rc_syntax_ok "$su_f"; } || return 1
+  su_rc_has_block "$su_f" "$su_n" && return 0
+  su_t=$(mktemp "$su_f.slacky.XXXXXX") || return 1
+  cp -p "$su_f" "$su_t"
+  awk -v c="$su_c" -v n="$su_n" -v v="$su_v" '
+    { L[NR]=$0; sub(/\r$/,"",L[NR]); R[NR]=$0 }
+    END { i=1
+      while (i<=NR) {
+        if (L[i]==c && L[i+1]=="if [ -x /etc/rc.d/rc." n " ]; then" && L[i+2]=="  /etc/rc.d/rc." n " " v && L[i+3]=="fi") {
+          found=1; i+=4
+          print "# >>> slacky-update:" n " >>>"; print "if [ -x /etc/rc.d/rc." n " ]; then"
+          print "  /etc/rc.d/rc." n " " v; print "fi"; print "# <<< slacky-update:" n " <<<"; continue }
+        print R[i]; i++ }
+      exit found?0:3 }' "$su_f" >"$su_t"
+  if [ $? -ne 0 ]; then rm -f "$su_t"; return 0; fi
+  if su_rc_markers_ok "$su_t" && su_rc_syntax_ok "$su_t"; then su_rc_commit "$su_f" "$su_t"
+  else rm -f "$su_t"; return 1; fi
+}
+# Daemons whose packages may ship /etc/rc.d/rc.NAME: "NAME|Description" (description = the old block comment)
+SU_RC_DAEMONS="ananicy-cpp|Ananicy C++ auto-nice daemon
+lact|LACT GPU control daemon
+scx|Sched-EXT gaming scheduler
+coolercontrol|CoolerControl daemon
+asusd|ASUS control daemon
+syncthing|Syncthing service
+dmemcg-booster|dmemcg-booster VRAM daemon"
+# 6A-83: kernel modules to load at boot, "MODULE|file that shows the package is installed". Slackware never reads
+# modules-load.d; its place for this is /etc/rc.d/rc.modules.local (a sysadmin file pkgtools never overwrites).
+SU_RC_MODULES="zenpower|/etc/modprobe.d/zenpower.conf
+v4l2loopback|/etc/modprobe.d/v4l2loopback.conf
+i2c-dev|/usr/bin/ddcui"
+su_mod_listed() { grep -v '^[[:space:]]*#' "$1" 2>/dev/null | grep -qE "modprobe([[:space:]]+-[a-z]+)*[[:space:]]+$2([[:space:]]|\$)"; }
+SU_RC_HELPERS_EOF
+}
+
+# 6A-166 / 6A-168: the DKMS source folders a package ships, one line each: "folder|module|version". Names come from the
+# folder's own dkms.conf (same fallbacks as the doinst block); an entry with odd characters is left out.
+slacky_dkms_own_entries() {
+    local staging_root="$1" dconf ddir dname mod_name mod_ver
+    for dconf in "${staging_root}"/usr/src/*/dkms.conf; do
+        [ -f "${dconf}" ] || continue
+        ddir=$(dirname "${dconf}")
+        dname=$(basename "${ddir}")
+        mod_name=$(grep -E '^\s*PACKAGE_NAME=' "${dconf}" 2>/dev/null | head -n1 | cut -d= -f2 | tr -d '"'\'' ' || true)
+        mod_ver=$(grep -E '^\s*PACKAGE_VERSION=' "${dconf}" 2>/dev/null | head -n1 | cut -d= -f2 | tr -d '"'\'' ' || true)
+        [ -z "${mod_name}" ] && mod_name=$(echo "${dname}" | sed -E 's/-[0-9].*//')
+        [ -z "${mod_ver}" ] && mod_ver=$(echo "${dname}" | sed -E 's/^[a-zA-Z0-9_\-]+-//')
+        [[ "${dname}|${mod_name}|${mod_ver}" =~ ^[A-Za-z0-9._+-]+\|[A-Za-z0-9._+-]+\|[A-Za-z0-9._+-]+$ ]] || continue
+        printf '%s|%s|%s\n' "${dname}" "${mod_name}" "${mod_ver}"
+    done
+}
+
 # --- [ TRANSMUTATION & BUILD ENGINE ] ---
+# 6A-64: write the generated Hyprland hardware environment into a marked block of the user's own
+# ~/.config/hypr/hyprland.env. Lines outside the block (the user's own) are never touched; the file is written as the
+# user (never root-owned in the home directory); a missing user (pure root context) means nothing is written.
+write_user_hypr_env_block() {
+    local content="$1" user="${SUDO_USER:-${USER:-}}" home
+    [ -n "${user}" ] && [ "${user}" != "root" ] || return 0
+    home=$(getent passwd "${user}" 2>/dev/null | cut -d: -f6)
+    [ -n "${home}" ] && [ -d "${home}" ] || return 0
+    local f="${home}/.config/hypr/hyprland.env"
+    local py='
+import os, sys
+f, content = sys.argv[1], sys.argv[2].rstrip("\n")
+b = "# >>> slacky-update: hardware environment (generated; put your own lines outside this block) >>>"
+e = "# <<< slacky-update: hardware environment <<<"
+old = open(f, encoding="utf-8").read() if os.path.exists(f) else ""
+keep, inside = [], False
+for line in old.splitlines():
+    if line.strip() == b:
+        inside = True
+        continue
+    if line.strip().startswith(e):
+        inside = False
+        rest = line.strip()[len(e):].strip()
+        if rest:
+            keep.append(rest)
+        continue
+    if not inside:
+        keep.append(line)
+while keep and not keep[-1].strip():
+    keep.pop()
+out = "\n".join(keep + ([""] if keep else []) + [b, content, e]) + "\n"
+os.makedirs(os.path.dirname(f), exist_ok=True)
+tmp = f + ".slacky-tmp"
+with open(tmp, "w", encoding="utf-8") as fh:
+    fh.write(out)
+os.replace(tmp, f)
+'
+    if [ "$(id -u)" -eq 0 ]; then
+        sudo -u "${user}" python3 -I -c "${py}" "${f}" "${content}" 2>/dev/null || true
+    else
+        python3 -I -c "${py}" "${f}" "${content}" 2>/dev/null || true
+    fi
+}
+
+# 6A-75/6A-78: display-GPU facts for the Hyprland configurator, read from world-readable sysfs only (no lspci, no
+# root). SLACKY_SYSFS_ROOT lets tests point it at a fake tree. Sets:
+#   HYPR_DRM_ORDER     PCI slots for AQ_DRM_DEVICES (primary first, then every other GPU with a connected output);
+#                      empty on a single GPU, or when only one GPU drives outputs on a desktop (no variable needed)
+#   HYPR_NV_SW_CURSOR  true only for NVIDIA older than Turing (device id below 0x1e00, i.e. older than the GTX 16xx
+#                      series) or an NVIDIA card whose id cannot be read; newer cards use Hyprland's own default
+hypr_gpu_facts() {
+    local sys="${SLACKY_SYSFS_ROOT:-}/sys"
+    HYPR_DRM_ORDER=""
+    HYPR_NV_SW_CURSOR=false
+    HYPR_NV_DISPLAY=false   # 6A-82: an NVIDIA card drives the screens (not a render-only laptop dGPU)
+    # 6A-128: HYPR_NV_BOUND = an NVIDIA card is bound to the nvidia driver (false on nouveau);
+    # HYPR_DISPLAY_VENDOR = vendor id of the GPU that drives the screens (a GPU with connected outputs wins over boot_vga)
+    HYPR_NV_BOUND=false
+    HYPR_DISPLAY_VENDOR=""
+    local nv_boot=false nv_conn=false other_conn=false drv
+    local boot_ven="" boot_conn=false first_out_ven="" panel_ven=""
+    local card dev cls ven did slot boot st name conn panel n=0
+    local primary="" primary_panel=false boot_slot="" first_out="" others=""
+    for card in "${sys}"/class/drm/card[0-9]*; do
+        case "${card##*/}" in *-*) continue ;; esac
+        dev="${card}/device"
+        [ -e "${dev}" ] || continue
+        cls=$(cat "${dev}/class" 2>/dev/null || true)
+        case "${cls}" in 0x03*) ;; *) continue ;; esac
+        slot=$(basename "$(readlink -f "${dev}")")
+        ven=$(cat "${dev}/vendor" 2>/dev/null || true)
+        did=$(cat "${dev}/device" 2>/dev/null || true)
+        boot=$(cat "${dev}/boot_vga" 2>/dev/null || echo 0)
+        n=$((n + 1))
+        if [ "${ven}" = "0x10de" ]; then
+            case "${did}" in
+                0x[0-9a-fA-F]*) [ $((did)) -lt $((0x1e00)) ] && HYPR_NV_SW_CURSOR=true ;;
+                *) HYPR_NV_SW_CURSOR=true ;;
+            esac
+        fi
+        conn=false
+        panel=false
+        for st in "${card}"-*/status; do
+            [ -f "${st}" ] || continue
+            [ "$(cat "${st}" 2>/dev/null)" = "connected" ] || continue
+            conn=true
+            name="${st%/status}"
+            name="${name##*/}"
+            case "${name#*-}" in eDP*|LVDS*|DSI*) panel=true ;; esac
+        done
+        if [ "${ven}" = "0x10de" ]; then
+            [ "${boot}" = "1" ] && nv_boot=true
+            [ "${conn}" = "true" ] && nv_conn=true
+            drv=$(readlink "${dev}/driver" 2>/dev/null || true)
+            [ "${drv##*/}" = "nvidia" ] && HYPR_NV_BOUND=true
+        elif [ "${conn}" = "true" ]; then
+            other_conn=true
+        fi
+        if [ "${panel}" = "true" ] && [ -z "${primary}" ]; then
+            primary="${slot}"
+            primary_panel=true
+            panel_ven="${ven}"
+        fi
+        if [ "${boot}" = "1" ]; then
+            boot_slot="${slot}"
+            boot_ven="${ven}"
+            boot_conn="${conn}"
+        fi
+        if [ "${conn}" = "true" ]; then
+            [ -z "${first_out}" ] && first_out="${slot}" && first_out_ven="${ven}"
+            others="${others} ${slot}"
+        fi
+    done
+    if [ "${nv_boot}" = "true" ] && [ "${other_conn}" != "true" ] || { [ "${nv_conn}" = "true" ] && [ "${other_conn}" != "true" ]; }; then
+        HYPR_NV_DISPLAY=true
+    fi
+    if [ -n "${panel_ven}" ]; then
+        HYPR_DISPLAY_VENDOR="${panel_ven}"
+    elif [ "${boot_conn}" = "true" ] || { [ -z "${first_out_ven}" ] && [ -n "${boot_ven}" ]; }; then
+        HYPR_DISPLAY_VENDOR="${boot_ven}"
+    else
+        HYPR_DISPLAY_VENDOR="${first_out_ven}"
+    fi
+    [ "${n}" -ge 2 ] || return 0
+    [ -n "${primary}" ] || primary="${boot_slot:-${first_out}}"
+    [ -n "${primary}" ] || return 0
+    local order="${primary}" s
+    for s in ${others}; do
+        [ "${s}" = "${primary}" ] || order="${order} ${s}"
+    done
+    # A desktop whose monitors all hang off one GPU needs no variable (Hyprland picks that GPU itself)
+    if [ "${order}" = "${primary}" ] && [ "${primary_panel}" != "true" ]; then
+        return 0
+    fi
+    HYPR_DRM_ORDER="${order}"
+}
+
+# 6A-128: true when an AMD GPU drives the screens (after hypr_gpu_facts). Unknown display vendor keeps the old rule
+# (AMD present and no Intel GPU), so a machine sysfs cannot describe is not changed.
+hypr_display_is_amd() {
+    case "${HYPR_DISPLAY_VENDOR:-}" in
+        0x1002) return 0 ;;
+        "") [ "${HAS_INTEL:-false}" != "true" ]; return ;;
+    esac
+    return 1
+}
+
+# 6A-76: true (exit 0) when __GLX_VENDOR_LIBRARY_NAME=nvidia is still needed on a single-NVIDIA machine. It is only
+# dropped after a live check proves that X11 programs already get NVIDIA's OpenGL without it; when the check cannot run
+# (no display, no glxinfo, run without the user's session) the variable is kept, so nothing can get worse.
+hypr_glx_vendor_var_needed() {
+    [ -n "${DISPLAY:-}" ] || return 0
+    command -v glxinfo >/dev/null 2>&1 || return 0
+    local out
+    out=$(env -u LD_LIBRARY_PATH -u __GLX_VENDOR_LIBRARY_NAME timeout 5 glxinfo -B 2>/dev/null || true)
+    case "${out}" in
+        *"OpenGL vendor string: NVIDIA"*) return 1 ;;
+    esac
+    return 0
+}
+
+# 6A-80: writes modules/hdr.lua.suggestions from the EDID of every connected monitor that supports HDR (PQ). The file
+# is a template refreshed by the tool, never loaded by Hyprland (Lua only loads *.lua) and never a user file. Reads
+# world-readable EDID; serial numbers are never written. $1 = target modules dir.
+write_hypr_hdr_suggestions() {
+    local mods="$1"
+    [ -d "${mods}" ] || return 0
+    local py='
+import glob, os, sys
+sysroot, out = sys.argv[1], sys.argv[2]
+def name_and_range(e):
+    name, rng = "", None
+    for off in (54, 72, 90, 108):
+        d = e[off:off + 18]
+        if len(d) < 18 or d[0] or d[1]:
+            continue
+        if d[3] == 0xFC:
+            name = d[5:18].split(b"\n")[0].decode("ascii", "replace").strip()
+        elif d[3] == 0xFD:
+            lo, hi = d[5], d[6]
+            if d[4] & 0x01: lo += 255
+            if d[4] & 0x02: hi += 255
+            rng = (lo, hi)
+    return name, rng
+def hdr_info(e):
+    eotf = []
+    for i in range(1, len(e) // 128):
+        b = e[i * 128:(i + 1) * 128]
+        if len(b) < 4 or b[0] != 0x02:
+            continue
+        p, end = 4, min(b[2], 127)
+        while p < end:
+            tag, ln = b[p] >> 5, b[p] & 0x1F
+            blk = b[p + 1:p + 1 + ln]
+            if tag == 7 and ln >= 2 and blk[0] == 6:
+                bits = blk[1]
+                if bits & 0x04: eotf.append("PQ")
+                if bits & 0x08: eotf.append("HLG")
+            p += 1 + ln
+    return eotf
+lines = []
+for st in sorted(glob.glob(os.path.join(sysroot, "sys/class/drm/card*-*/status"))):
+    try:
+        if open(st).read().strip() != "connected":
+            continue
+        e = open(os.path.join(os.path.dirname(st), "edid"), "rb").read()
+    except OSError:
+        continue
+    if len(e) < 128 or e[:8] != bytes([0, 255, 255, 255, 255, 255, 255, 0]):
+        continue
+    eotf = hdr_info(e)
+    if "PQ" not in eotf:
+        continue
+    conn = os.path.basename(os.path.dirname(st)).split("-", 1)[1]
+    name, rng = name_and_range(e)
+    desc = name or "monitor"
+    vrr = ""
+    if rng and rng[1] > rng[0]:
+        vrr = ", variable refresh %d-%d Hz" % rng
+    lines.append("-- %s: %s, HDR (%s)%s" % (conn, desc, "+".join(eotf), vrr))
+    lines.append("--   add to the existing hl.monitor line for this output:  bitdepth = 10, cm = \"hdr\"" + (", vrr = 3" if vrr else ""))
+    lines.append("--   example: hl.monitor({ output = \"%s\", mode = \"preferred\", position = \"auto\", scale = 1.0, bitdepth = 10, cm = \"hdr\"%s })" % (conn, ", vrr = 3" if vrr else ""))
+    lines.append("")
+if not lines:
+    sys.exit(0)
+head = [
+    "-- HDR suggestions made by slacky-update from your monitors (EDID). This file is NOT loaded by Hyprland.",
+    "-- To use a line: copy the keys into modules/monitors.lua (same output name) and save; Hyprland applies it at once.",
+    "-- vrr = 3 turns variable refresh on for fullscreen games and videos only. Remove the keys again to undo.",
+    "-- This file is rewritten by slacky-update; keep your own changes in monitors.lua.",
+    "",
+]
+tmp = out + ".slacky-tmp"
+with open(tmp, "w", encoding="utf-8") as fh:
+    fh.write("\n".join(head + lines))
+os.replace(tmp, out)
+'
+    python3 -I -c "${py}" "${SLACKY_SYSFS_ROOT:-/}" "${mods}/hdr.lua.suggestions" 2>/dev/null || true
+}
+
+# SS-4 / 6A-105 (owner decision 2026-10-13): one menu writer. The limine-snapper-sync snapper plugin stays (snapshots
+# must reach the Limine menu), but in our build:
+#  - the plugin only places an order (/var/cache/slacky-update/boot-menu-pending) while a slacky-update run holds the
+#    run lock /run/lock/slacky-update.lock; the run's boot commit or the hourly job rebuilds the menu once;
+#  - /usr/bin/limine-snapper-sync does the same check, and fails closed when the boot lock
+#    /run/lock/boot-partition.lock cannot be taken: upstream ignored the timeout (mutex_lock's return value was not
+#    checked) and wrote limine.conf, enrolled and signed the boot loader unlocked; it also deleted and recreated the
+#    lock file when it could not open it (a new file means no exclusion at all).
+# Applied to the staging tree at build time. Returns 1 when an anchor is missing (upstream changed): the caller then
+# refuses to build the package rather than ship an unpatched menu writer.
+patch_limine_snapper_sync_staging() {
+    local root="${1:-}"
+    local wrapper="${root}/usr/bin/limine-snapper-sync"
+    local plugins=() p
+    for p in "${root}/usr/lib64/snapper/plugins/10-limine-snapper-sync" "${root}/usr/lib/snapper/plugins/10-limine-snapper-sync"; do
+        [ -f "${p}" ] && plugins+=("${p}")
+    done
+    [ -n "${root}" ] && [ -f "${wrapper}" ] && [ "${#plugins[@]}" -gt 0 ] || return 1
+
+    local guard_plugin guard_wrapper
+    guard_plugin=$(cat << 'LSS_PLUGIN_EOF'
+# slacky-update SS-4 (6A-105): one menu writer. While a slacky-update run holds its run lock, only leave an order:
+# the run's boot commit (or the hourly slacky-snapper-limine-sync job) rebuilds, enrolls and signs the menu once.
+case "${1:-}" in
+create-snapshot-post | delete-snapshot-post | modify-snapshot-post)
+	if [[ "${2:-}" == "/" ]] && [[ -e /run/lock/slacky-update.lock ]] \
+		&& ! flock -n /run/lock/slacky-update.lock true 2>/dev/null; then
+		mkdir -p /var/cache/slacky-update 2>/dev/null || true
+		: >/var/cache/slacky-update/boot-menu-pending 2>/dev/null || true
+		exit 0
+	fi
+	;;
+esac
+LSS_PLUGIN_EOF
+)
+    guard_wrapper=$(cat << 'LSS_WRAPPER_EOF'
+# slacky-update SS-4 (6A-105): one menu writer.
+slacky_menu_order() {
+	mkdir -p /var/cache/slacky-update 2>/dev/null || true
+	: >/var/cache/slacky-update/boot-menu-pending 2>/dev/null || true
+}
+# Fail closed: without the boot lock nothing is written; the order is served by the next lock holder or the hourly job.
+slacky_menu_order_fail_closed() {
+	slacky_menu_order
+	ENABLE_MUTEX=false
+	warning_msg $"The startup menu is busy. It will be updated automatically later."
+	exit 75
+}
+# A slacky-update run holds its run lock: its own boot commit rebuilds the menu once, so only leave the order.
+if ! $RESTORE_MODE && [[ -e /run/lock/slacky-update.lock ]] && ! flock -n /run/lock/slacky-update.lock true 2>/dev/null; then
+	slacky_menu_order
+	ENABLE_MUTEX=false
+	exit 0
+fi
+LSS_WRAPPER_EOF
+)
+
+    local f tmp
+    for f in "${plugins[@]}"; do
+        grep -q 'slacky-update SS-4' "${f}" && continue
+        tmp="${f}.ss4.$$"
+        # after the first "set -euo pipefail" (before any snapshot work or async start)
+        SS4_GUARD="${guard_plugin}" awk 'BEGIN{d=0; g=ENVIRON["SS4_GUARD"]} {print} !d && $0=="set -euo pipefail" {print ""; print g; d=1}' "${f}" > "${tmp}" || { rm -f "${tmp}"; return 1; }
+        grep -q 'slacky-update SS-4' "${tmp}" || { rm -f "${tmp}"; return 1; }
+        cat "${tmp}" > "${f}" && rm -f "${tmp}"
+    done
+
+    if ! grep -q 'slacky-update SS-4' "${wrapper}"; then
+        tmp="${wrapper}.ss4.$$"
+        # 1. no delete-and-recreate of the lock file; 2. a failed lock = fail closed; 3. run-lock check before the lock
+        SS4_GUARD="${guard_wrapper}" awk '
+            BEGIN { r = 0; m = 0; i = 0; g = ENVIRON["SS4_GUARD"] }
+            /^[ \t]*rm -f "\$\{BOOT_PARTITION_LOCK\}"[ \t]*$/ && !r { print "\t\treturn 1"; skip = 1; r = 1; next }
+            skip == 1 && /^[ \t]*exec 200>"\$\{BOOT_PARTITION_LOCK\}"[ \t]*$/ { skip = 0; next }
+            $0 == "if $ENABLE_MUTEX; then" && !i { print g; print ""; i = 1 }
+            $0 == "\tmutex_lock \"${SCRIPT_NAME}\"" && !m { print "\tmutex_lock \"${SCRIPT_NAME}\" || slacky_menu_order_fail_closed"; m = 1; next }
+            { print }
+            END { if (!(r && m && i)) exit 3 }
+        ' "${wrapper}" > "${tmp}" || { rm -f "${tmp}"; return 1; }
+        if grep -q 'rm -f "${BOOT_PARTITION_LOCK}"' "${tmp}" \
+            || ! grep -q 'mutex_lock "${SCRIPT_NAME}" || slacky_menu_order_fail_closed' "${tmp}" \
+            || ! grep -q 'slacky-update SS-4' "${tmp}"; then
+            rm -f "${tmp}"
+            return 1
+        fi
+        cat "${tmp}" > "${wrapper}" && rm -f "${tmp}"
+    fi
+    bash -n "${wrapper}" 2>/dev/null || return 1
+    for f in "${plugins[@]}"; do
+        bash -n "${f}" 2>/dev/null || return 1
+    done
+    return 0
+}
+
+# 6A-125: one plain error and the build's staging is removed. Uses the caller's local staging_base (bash dynamic scope);
+# the caller returns 1 itself.
+gaming_build_failed() {
+    log_error "${1}"
+    if [ -n "${staging_base:-}" ] && [ -d "${staging_base}" ]; then
+        rm -rf "${staging_base}" 2>/dev/null || true
+    fi
+    return 0
+}
+
+# 6A-129 (M7): admin-editable config files a curated package ships as .new (Slackware config() pattern)
+GAMING_CONFIG_NEW_FILES="etc/scx_loader.toml etc/ananicy.d/ananicy.conf"  # not modprobe.d: 6A-83 uses those files as package markers
+
+# 6A-129: the first upgrade from a package that listed the plain file deletes it (upgradepkg removes files the new
+# package no longer lists). Put back the copy saved before the upgrade and drop an identical .new.
+# $1 = root ("" on the real system), $2 = dir with saved copies, rest = relative config paths.
+gaming_restore_kept_configs() {
+    local root="$1" saved_dir="$2" cfg_rel saved
+    shift 2
+    for cfg_rel in "$@"; do
+        saved="${saved_dir}/${cfg_rel//\//_}"
+        [ -f "${saved}" ] || continue
+        [ -e "${root}/${cfg_rel}" ] && continue
+        sudo install -m 644 -o root -g root "${saved}" "${root}/${cfg_rel}" 2>/dev/null \
+            || { log_warn "Your settings in /${cfg_rel} could not be put back; a copy is in /${cfg_rel}.new."; continue; }
+        if [ -f "${root}/${cfg_rel}.new" ] && cmp -s "${saved}" "${root}/${cfg_rel}.new"; then
+            sudo rm -f "${root}/${cfg_rel}.new" 2>/dev/null || true
+        fi
+    done
+    return 0
+}
+
+# 6A-125: true when the build left the program it is meant to install (a stub package is never built).
+gaming_payload_present() {
+    local pkg_id="$1" main_url="$2" staging_root="$3" tmp_extract="$4" p
+    case "${pkg_id}" in
+        hyprmod)
+            for p in "${staging_root}"/usr/lib*/python3*/site-packages/hyprmod; do [ -d "${p}" ] && return 0; done
+            return 1 ;;
+        mactahoe-icons|mactahoe-cursors|whitesur-icons|whitesur-cursors)
+            [ -n "$(find "${staging_root}/usr/share/icons" -mindepth 2 -type f -print -quit 2>/dev/null)" ]; return ;;
+        antigravity)
+            [ -n "$(find "${staging_root}/opt/antigravity" -type f -print -quit 2>/dev/null)" ]; return ;;
+        claude-desktop)
+            for p in usr/lib/claude-desktop opt/claude-desktop usr/share/claude-desktop usr/lib64/claude-desktop; do
+                [ -n "$(find "${staging_root}/${p}" -type f -print -quit 2>/dev/null)" ] && return 0
+            done
+            return 1 ;;
+        claude-code)
+            [ -s "${staging_root}/opt/claude-code/claude-code" ]; return ;;
+        gemini-cli)
+            [ -s "${staging_root}/opt/gemini-cli/bundle/gemini.js" ]; return ;;
+        dvcp-aac)
+            # 6A-188: the plugin files are *.dvcp (the old check looked for *.so and refused every rebuild as empty): any file below the plugin folder counts
+            [ -n "$(find "${staging_root}/opt/resolve/IOPlugins" -type f -print -quit 2>/dev/null)" ]; return ;;
+    esac
+    if [ "${main_url}" = "BUNDLED" ]; then
+        [ -n "$(find "${staging_root}" -type f -name '*.rules' -print -quit 2>/dev/null)" ]; return
+    fi
+    # Archive recipes: something besides pacman metadata was extracted (main, lib32 or extra parts)
+    [ -n "$(find "${tmp_extract}" -mindepth 2 \( -type f -o -type l \) ! -name '.PKGINFO' ! -name '.MTREE' \
+        ! -name '.BUILDINFO' ! -name '.INSTALL' ! -name '.CHANGELOG' -print -quit 2>/dev/null)" ]
+}
+
+# 6A-125: the build sets its own INT/TERM trap; the caller's trap (e.g. the batch's) is restored afterwards.
+# Called with errexit active, a failure still ends the script exactly as before.
+# 6A-125 (verifier BLOCKER-1): inside a full update the run owns INT/TERM (SS-3 stop model: finish the step, then the
+# boot chain); a curated build must never exit the run or reset its traps. Standalone deploys keep their own traps.
+_gaming_trap_set() {
+    [ "${SLACKY_UPDATE_RUNNING:-0}" = "1" ] && return 0
+    trap "$1; exit 130" INT
+    trap "$1; exit 143" TERM
+}
+_gaming_trap_reset() {
+    [ "${SLACKY_UPDATE_RUNNING:-0}" = "1" ] && return 0
+    trap - INT TERM
+}
+
 transmute_and_deploy_gaming_pkg() {
+    local _tdg_prev_int _tdg_prev_term _tdg_rc
+    _tdg_prev_int=$(trap -p INT)
+    _tdg_prev_term=$(trap -p TERM)
+    _transmute_and_deploy_gaming_pkg_impl "$@"
+    _tdg_rc=$?
+    _gaming_trap_reset
+    if [ -n "${_tdg_prev_int}" ]; then eval "${_tdg_prev_int}"; fi
+    if [ -n "${_tdg_prev_term}" ]; then eval "${_tdg_prev_term}"; fi
+    return "${_tdg_rc}"
+}
+
+_transmute_and_deploy_gaming_pkg_impl() {
     local pkg_id="$1"
     local pre_cache_dir="${2:-}"
     local pre_ver="${3:-}"
     local pre_main_url="${4:-}"
     local pre_lib32_url="${5:-}"
     local pre_extra_url="${6:-}"
+    local _unavail_why
+    _unavail_why=$(gaming_pkg_unavailable_reason "${pkg_id}")
+    if [ -n "${_unavail_why}" ]; then
+        log_warn "${pkg_id}: ${_unavail_why}"
+        return 1
+    fi
+    # rec 3: an installed gnomes build of the same program is never replaced by the curated build
+    if gaming_pkg_owned_by_gnomes "${pkg_id}"; then
+        log_warn "$(gaming_pkg_other_engine_sentence "${pkg_id}")"
+        return 1
+    fi
     
+    # 6A-196: hyprpicker alone is skipped when an installed Hyprland suite already ships it
+    local _hx_why
+    if _hx_why=$(gaming_hypr_exclusive_skip "${pkg_id}"); then
+        log_info "${_hx_why}"
+        return 0
+    fi
+
     # Pre-flight readiness checks
     audit_multilib_readiness "${pkg_id}"
     if [ "${pkg_id}" = "solaar" ] || [ "${pkg_id}" = "openghub" ] || [ "${pkg_id}" = "steam-devices" ] || [ "${pkg_id}" = "openrgb" ] || [ "${pkg_id}" = "coolercontrol" ] || [ "${pkg_id}" = "sunshine" ] || [ "${pkg_id}" = "steam" ]; then
@@ -2566,7 +3580,10 @@ transmute_and_deploy_gaming_pkg() {
     local cache_dir="${staging_base}/downloads"
     local staging_root="${staging_base}/pkg"
     local tmp_extract="${staging_base}/extract"
-    trap 'rm -rf "${staging_base:-}" 2>/dev/null || true' INT TERM
+    # 6A-125: Ctrl-C/TERM removes this build's staging (and a batch's, if any) and stops; it never packs leftovers
+    local _tdg_clean
+    _tdg_clean="rm -rf -- $(printf '%q' "${staging_base}")${_GAMING_BATCH_STAGING:+ $(printf '%q' "${_GAMING_BATCH_STAGING}")} 2>/dev/null"
+    _gaming_trap_set "${_tdg_clean}"
 
     mkdir -p "${cache_dir}" "${staging_root}" "${tmp_extract}/main" "${tmp_extract}/lib32" "${tmp_extract}/extra"
 
@@ -2593,32 +3610,66 @@ transmute_and_deploy_gaming_pkg() {
         fi
     elif [ "${main_url}" = "GITHUB_WHEELS" ] || [ "${pkg_id}" = "hyprmod" ]; then
         log_info "Transmuting and building ${pkg_id} (${ver}) from GitHub / PyPI wheel ecosystem..."
-        python3 - "${staging_root}" "${ver}" << 'PYBUILD_HYPRMOD'
-import sys, os, urllib.request, tarfile, tempfile, subprocess, glob, shutil
+        python3 - "${staging_root}" "${ver}" << 'PYBUILD_HYPRMOD' || { gaming_build_failed "hyprmod was not built. Nothing was changed."; return 1; }
+import sys, os, urllib.request, tarfile, tempfile, subprocess, glob, shutil, hashlib
 
 staging_root = sys.argv[1]
 ver = sys.argv[2]
 headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36'}
 
+# 6A-65: locked source set. hyprmod from its release tag (sha256 identical to the AUR PKGBUILD); its five libraries as the
+# exact PyPI wheels (immutable files). A download whose checksum differs is refused and nothing is built.
+# To move to a new hyprmod release: update every entry here and the "0.4.0" in the two version checks, in one build.
+HYPRMOD_LOCK = {
+    "version": "0.4.0",
+    "source": ("https://github.com/BlueManCZ/hyprmod/archive/refs/tags/v0.4.0.tar.gz",
+               "fd3672ad5257bb65038fd7442553fd1a8cfb5c41a0320186797368a7f2abbc9f", "hyprmod-0.4.0"),
+    "wheels": [
+        ("https://files.pythonhosted.org/packages/f0/fe/59edb40c675b4d2e48d9474626ec8b549bcfb6f0113b845b3d01408a8b1b/hyprland_config-0.9.17-py3-none-any.whl",
+         "4bbf49efe070a27531dccfed96477189d6c9f108107857864dbff6a5ab74894b"),
+        ("https://files.pythonhosted.org/packages/ea/e5/5515c5d0ef146622250cc9cbdfdf1b603b77087553becb1191501de88d71/hyprland_monitors-0.9.0-py3-none-any.whl",
+         "0f6eeb3dae2a9db0a5eaaeca09aa63f4ff0d31d6ff7dbe763245b501208f1989"),
+        ("https://files.pythonhosted.org/packages/0f/24/66d5aad64573e38a5ec31820f3a920ff6a79364a329dba7f3e708bced536/hyprland_schema-0.7.1-py3-none-any.whl",
+         "97637f24ac593232e388f99b079c4166cc8e321775e9097470f3b467cda551dc"),
+        ("https://files.pythonhosted.org/packages/e4/74/e156c61e041b357591749aa480257b129e4c9a186faed98fd72551c68049/hyprland_socket-0.12.2-py3-none-any.whl",
+         "4f1d007b7f9165447c39c66c578012bd2628331aeadb3a81c2fe2229711dc4d7"),
+        ("https://files.pythonhosted.org/packages/c9/43/4452549ec8208ef093c1cdd880ab2f6e0f3b0a3916dc00b7d3b8f94f83df/hyprland_state-0.4.7-py3-none-any.whl",
+         "ef4e4db2f0769d49c1c3291ebb8ddcaa9fc1d59c1022e0a75407b49b794ab269"),
+    ],
+}
+if ver != HYPRMOD_LOCK["version"]:
+    print(f"   hyprmod {ver} was asked for, building the locked version {HYPRMOD_LOCK['version']}.")
+
+def fetch_verified(url, sha, dest):
+    req = urllib.request.Request(url, headers=headers)
+    h = hashlib.sha256()
+    with urllib.request.urlopen(req, timeout=30) as resp, open(dest, 'wb') as f:
+        while True:
+            chunk = resp.read(1 << 16)
+            if not chunk:
+                break
+            h.update(chunk)
+            f.write(chunk)
+    if h.hexdigest() != sha:
+        print(f"   {os.path.basename(dest)} does not match its known checksum. Not building hyprmod.")
+        sys.exit(1)
+
 with tempfile.TemporaryDirectory() as tmpdir:
     dist_dir = os.path.join(tmpdir, 'dist')
     os.makedirs(dist_dir, exist_ok=True)
-    repos = ['hyprland-config', 'hyprland-monitors', 'hyprland-schema', 'hyprland-socket', 'hyprland-state', 'hyprmod']
-    for repo in repos:
-        tar_url = f'https://github.com/BlueManCZ/{repo}/archive/refs/heads/main.tar.gz'
-        tar_path = os.path.join(tmpdir, f'{repo}.tar.gz')
-        req = urllib.request.Request(tar_url, headers=headers)
-        with urllib.request.urlopen(req, timeout=25) as resp, open(tar_path, 'wb') as f:
-            f.write(resp.read())
-        with tarfile.open(tar_path, 'r:gz') as tf:
-            tf.extractall(tmpdir)
-        extracted_dir = os.path.join(tmpdir, f'{repo}-main')
-        subprocess.run(['python3', '-m', 'build', '--wheel', '--no-isolation', '--outdir', dist_dir], cwd=extracted_dir, check=True)
+    for url, sha in HYPRMOD_LOCK["wheels"]:
+        fetch_verified(url, sha, os.path.join(dist_dir, url.rsplit('/', 1)[1]))
+    src_url, src_sha, src_top = HYPRMOD_LOCK["source"]
+    tar_path = os.path.join(tmpdir, 'hyprmod.tar.gz')
+    fetch_verified(src_url, src_sha, tar_path)
+    with tarfile.open(tar_path, 'r:gz') as tf:
+        tf.extractall(tmpdir, filter='data')
+    hyprmod_src = os.path.join(tmpdir, src_top)
+    subprocess.run(['python3', '-m', 'build', '--wheel', '--no-isolation', '--outdir', dist_dir], cwd=hyprmod_src, check=True)
 
-    for w in glob.glob(os.path.join(dist_dir, '*.whl')):
+    for w in sorted(glob.glob(os.path.join(dist_dir, '*.whl'))):
         subprocess.run(['python3', '-m', 'installer', '--destdir', staging_root, w], check=True)
 
-    hyprmod_src = os.path.join(tmpdir, 'hyprmod-main')
     os.makedirs(os.path.join(staging_root, 'usr/share/applications'), exist_ok=True)
     os.makedirs(os.path.join(staging_root, 'usr/share/icons/hicolor/scalable/apps'), exist_ok=True)
     os.makedirs(os.path.join(staging_root, 'usr/share/metainfo'), exist_ok=True)
@@ -2631,45 +3682,469 @@ with tempfile.TemporaryDirectory() as tmpdir:
         shutil.copy(os.path.join(hyprmod_src, 'data/metainfo/io.github.bluemancz.hyprmod.metainfo.xml'), os.path.join(staging_root, 'usr/share/metainfo/'))
 PYBUILD_HYPRMOD
     elif [ "${main_url}" = "GITHUB_THEME" ] || [ "${pkg_id}" = "mactahoe-icons" ] || [ "${pkg_id}" = "mactahoe-cursors" ] || [ "${pkg_id}" = "whitesur-icons" ] || [ "${pkg_id}" = "whitesur-cursors" ]; then
-        log_info "Transmuting and building ${pkg_id} (${ver}) from GitHub / AUR theme source..."
-        python3 - "${staging_root}" "${pkg_id}" "${ver}" << 'PYBUILD_THEME'
-import sys, os, tempfile, subprocess, shutil
+        log_info "Transmuting and building ${pkg_id} (${ver}) from a pinned GitHub source archive..."
+        # 6A-193: one pinned commit archive per project, SHA-256 checked (same pins as the Rust curated engine). Never a git clone of
+        # a moving branch. The project's own install.sh runs only on the verified archive.
+        python3 - "${staging_root}" "${pkg_id}" "${ver}" << 'PYBUILD_THEME' || { gaming_build_failed "${pkg_id} could not be built. Nothing was changed."; return 1; }  # 6A-125
+import sys, os, re, tempfile, subprocess, shutil, tarfile, hashlib, urllib.request
 
 staging_root = sys.argv[1]
 pkg_id = sys.argv[2]
 ver = sys.argv[3]
 
+# 6A-193 pins (raising one is a slacky-update release, like HYPRMOD_LOCK): MacTahoe 839848b9 (tag 2026-09-10), WhiteSur icons
+# 73d8040d (tag 2026-09-10), WhiteSur cursors e190baf6 (2025-04-05, no tags). Values equal the Rust recipes_desktop.rs.
+THEME_PINS = {
+    "mactahoe": ("https://github.com/vinceliuice/MacTahoe-icon-theme/archive/839848b9a8a38a92a6936e30c4abe35cc6f2546d.tar.gz",
+                 "00cb36a3883e40687ade9f57a0c1dd3e14fda84b73efc69aa86e2be67f32ab0a", 64 << 20, "2026.09.10.r0.839848b9"),
+    "whitesur-icons": ("https://github.com/vinceliuice/WhiteSur-icon-theme/archive/73d8040da51a9ed74e47c7366e7e9ff437601a5c.tar.gz",
+                       "96661649071d8a9664b40d42abea75286175234473106156e9a4b25f54e6cb0c", 64 << 20, "2026.09.10"),
+    "whitesur-cursors": ("https://github.com/vinceliuice/WhiteSur-cursors/archive/e190baf618ed95ee217d2fd45589bd309b37672b.tar.gz",
+                         "35c817c2c26bc4d2c06801cfe6c924a068ad771d3846c5203b04d1c893dd5664", 16 << 20, "2025.04.05.r0.e190baf6"),
+}
+pin_key = {"mactahoe-icons": "mactahoe", "mactahoe-cursors": "mactahoe",
+           "whitesur-icons": "whitesur-icons", "whitesur-cursors": "whitesur-cursors"}[pkg_id]
+url, want_sha, max_bytes, pinned_ver = THEME_PINS[pin_key]
+if ver != pinned_ver:
+    print(f"   {pkg_id} {ver} was asked for, building the pinned version {pinned_ver}.")
+
+def fetch_verified(dest):
+    h = hashlib.sha256()
+    total = 0
+    if not url.startswith("https://github.com/"):
+        raise SystemExit(1)
+    src = urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64)"}), timeout=30)
+    with src, open(dest, "wb") as f:
+        while True:
+            chunk = src.read(1 << 16)
+            if not chunk:
+                break
+            total += len(chunk)
+            if total > max_bytes:
+                print(f"   {pkg_id}: the download is larger than expected. Not building.")
+                sys.exit(1)
+            h.update(chunk)
+            f.write(chunk)
+    if h.hexdigest() != want_sha:
+        print(f"   {pkg_id}: the download does not match its known checksum. Not building.")
+        sys.exit(1)
+
 with tempfile.TemporaryDirectory() as tmpdir:
     icons_dest = os.path.join(staging_root, "usr/share/icons")
     os.makedirs(icons_dest, exist_ok=True)
-    env = os.environ.copy()
-    env["GIT_TERMINAL_PROMPT"] = "0"
+    tar_path = os.path.join(tmpdir, "theme.tar.gz")
+    fetch_verified(tar_path)
+    src_dir = os.path.join(tmpdir, "src")
+    os.makedirs(src_dir)
+    with tarfile.open(tar_path, "r:gz") as tf:
+        tf.extractall(src_dir, filter="data")
+    tops = [d for d in os.listdir(src_dir) if os.path.isdir(os.path.join(src_dir, d))]
+    if len(tops) != 1:
+        print(f"   {pkg_id}: the archive has an unexpected layout. Not building.")
+        sys.exit(1)
+    repo_dir = os.path.join(src_dir, tops[0])
 
-    if pkg_id == "mactahoe-icons":
-        repo_dir = os.path.join(tmpdir, "mactahoe")
-        subprocess.run(["git", "clone", "--depth", "1", "https://github.com/vinceliuice/MacTahoe-icon-theme.git", repo_dir], env=env, check=True)
+    def run_install_script():
+        script = os.path.join(repo_dir, "install.sh")
+        with open(script, "r", errors="replace") as fh:
+            body = fh.read()
+        # the pinned script is known to only copy files and link them; anything that reaches for the network or root is refused
+        if re.search(r"\b(git\s+clone|curl|wget|sudo|pkexec)\b", body):
+            print(f"   {pkg_id}: the install script of the pinned archive does something unexpected. Not building.")
+            sys.exit(1)
         subprocess.run(["sed", "-i", "/gtk-update-icon-cache/d", "install.sh"], cwd=repo_dir, check=True)
-        subprocess.run(["./install.sh", "-d", icons_dest, "-t", "all"], cwd=repo_dir, check=True)
+        subprocess.run(["bash", "./install.sh", "-d", icons_dest, "-t", "all"], cwd=repo_dir, check=True, stdout=subprocess.DEVNULL)  # silent on success
+
+    if pkg_id in ("mactahoe-icons", "whitesur-icons"):
+        run_install_script()
     elif pkg_id == "mactahoe-cursors":
-        repo_dir = os.path.join(tmpdir, "mactahoe")
-        subprocess.run(["git", "clone", "--depth", "1", "https://github.com/vinceliuice/MacTahoe-icon-theme.git", repo_dir], env=env, check=True)
         if os.path.exists(os.path.join(repo_dir, "cursors/dist")):
             shutil.copytree(os.path.join(repo_dir, "cursors/dist"), os.path.join(icons_dest, "MacTahoe-cursors"), dirs_exist_ok=True)
         if os.path.exists(os.path.join(repo_dir, "cursors/dist-dark")):
             shutil.copytree(os.path.join(repo_dir, "cursors/dist-dark"), os.path.join(icons_dest, "MacTahoe-dark-cursors"), dirs_exist_ok=True)
-    elif pkg_id == "whitesur-icons":
-        repo_dir = os.path.join(tmpdir, "whitesur")
-        subprocess.run(["git", "clone", "--depth", "1", "https://github.com/vinceliuice/WhiteSur-icon-theme.git", repo_dir], env=env, check=True)
-        subprocess.run(["sed", "-i", "/gtk-update-icon-cache/d", "install.sh"], cwd=repo_dir, check=True)
-        subprocess.run(["./install.sh", "-d", icons_dest, "-t", "all"], cwd=repo_dir, check=True)
-    elif pkg_id == "whitesur-cursors":
-        repo_dir = os.path.join(tmpdir, "whitesur-cur")
-        subprocess.run(["git", "clone", "--depth", "1", "https://github.com/vinceliuice/WhiteSur-cursors.git", repo_dir], env=env, check=True)
+    elif pkg_id == "whitesur-cursors":  # 6A-126: was shell syntax (SyntaxError, theme builds never worked)
         if os.path.exists(os.path.join(repo_dir, "dist")):
             shutil.copytree(os.path.join(repo_dir, "dist"), os.path.join(icons_dest, "WhiteSur-cursors"), dirs_exist_ok=True)
         if os.path.exists(os.path.join(repo_dir, "dist-dark")):
             shutil.copytree(os.path.join(repo_dir, "dist-dark"), os.path.join(icons_dest, "WhiteSur-dark-cursors"), dirs_exist_ok=True)
 PYBUILD_THEME
+    elif [ "${main_url}" = "AUR_ANTIGRAVITY" ] || [ "${pkg_id}" = "antigravity" ]; then
+        log_info "Transmuting and building ${pkg_id} (${ver}) from upstream Google Antigravity & AUR ecosystem..."
+        python3 - "${staging_root}" "${cache_dir}" "${ver}" << 'PYBUILD_ANTIGRAVITY' || { gaming_build_failed "${pkg_id} could not be built. Nothing was changed."; return 1; }  # 6A-125
+import sys, os, tempfile, subprocess, shutil, re, urllib.request, tarfile, hashlib
+
+staging_root = sys.argv[1]
+cache_dir = sys.argv[2]
+ver = sys.argv[3]
+
+env = os.environ.copy()
+env["GIT_TERMINAL_PROMPT"] = "0"
+
+with tempfile.TemporaryDirectory() as tmpdir:
+    aur_dir = os.path.join(tmpdir, "aur")
+    try:
+        subprocess.run(["git", "clone", "--depth", "1", "https://aur.archlinux.org/antigravity.git", aur_dir], env=env, check=True, capture_output=True)
+    except Exception as e:
+        print(f"Warning: AUR git clone failed ({e}), using default tarball resolution.")
+        os.makedirs(aur_dir, exist_ok=True)
+
+    pkgbuild_path = os.path.join(aur_dir, "PKGBUILD")
+    build_id = "6046815158665216"
+    expected_b2 = ""
+    if os.path.exists(pkgbuild_path):
+        try:
+            with open(pkgbuild_path, "r", encoding="utf-8") as f:
+                c = f.read()
+            bm = re.search(r'_build=([0-9]+)', c)
+            if bm:
+                build_id = bm.group(1)
+            vm = re.search(r'pkgver=([0-9\.]+)', c)
+            if vm:
+                ver = vm.group(1)
+            # 6A-6b: Google publishes no checksum; the AUR PKGBUILD carries a BLAKE2b-512 (b2sum) of this tarball
+            hm = re.search(r"b2sums_x86_64=\(\s*['\"]([0-9a-f]{128})['\"]", c)
+            if hm:
+                expected_b2 = hm.group(1)
+        except Exception:
+            pass
+
+    tar_url = f"https://storage.googleapis.com/antigravity-public/antigravity-hub/{ver}-{build_id}/linux-x64/Antigravity.tar.gz"
+    local_tar = os.path.join(cache_dir, f"Antigravity-{ver}-x86_64.tar.gz")
+
+    def b2sum_of(path):
+        h = hashlib.blake2b()
+        with open(path, "rb") as fh:
+            for chunk in iter(lambda: fh.read(1 << 20), b""):
+                h.update(chunk)
+        return h.hexdigest()
+
+    if not expected_b2:
+        raise RuntimeError("Antigravity was not installed: its checksum could not be read from the AUR package recipe, "
+                           "so the download cannot be verified. Try again later.")
+
+    # 6A-6b: a cached archive must match too (before, any file over 1 MB was reused forever)
+    if os.path.exists(local_tar) and b2sum_of(local_tar) != expected_b2:
+        print("Cached Antigravity archive does not match its checksum; downloading it again.")
+        os.remove(local_tar)
+
+    if not os.path.exists(local_tar) or os.path.getsize(local_tar) < 1000000:
+        print(f"Downloading upstream Antigravity {ver} from {tar_url}...")
+        download_ok = False
+        try:
+            subprocess.run(["curl", "-#", "-fSL", "-A", "Mozilla/5.0 (X11; Linux x86_64)", "-o", local_tar, tar_url], check=True)
+            if os.path.exists(local_tar) and os.path.getsize(local_tar) > 1000000:
+                download_ok = True
+        except Exception:
+            pass
+
+        if not download_ok:
+            req = urllib.request.Request(tar_url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"})
+            with urllib.request.urlopen(req, timeout=120) as resp, open(local_tar, "wb") as f:
+                shutil.copyfileobj(resp, f)
+
+    if not os.path.exists(local_tar) or os.path.getsize(local_tar) < 1000000:
+        raise RuntimeError(f"Failed to download valid Antigravity archive from {tar_url}")
+    if b2sum_of(local_tar) != expected_b2:
+        os.remove(local_tar)
+        raise RuntimeError("Antigravity was not installed: the download does not match its published checksum "
+                           "(damaged or tampered file). It was deleted; try again later.")
+
+    print(f"Extracting {local_tar} into /opt/antigravity...")
+    opt_dest = os.path.join(staging_root, "opt/antigravity")
+    os.makedirs(opt_dest, exist_ok=True)
+
+    with tarfile.open(local_tar, "r:gz") as tf:
+        tf.extractall(opt_dest)
+
+    # Flatten if unpacked into a single top-level directory
+    subdirs = [d for d in os.listdir(opt_dest) if os.path.isdir(os.path.join(opt_dest, d)) and d.lower().startswith("antigravity")]
+    if len(subdirs) == 1 and not os.path.exists(os.path.join(opt_dest, "antigravity")):
+        nested = os.path.join(opt_dest, subdirs[0])
+        for item in os.listdir(nested):
+            shutil.move(os.path.join(nested, item), opt_dest)
+        os.rmdir(nested)
+
+    # Ensure binary executable permissions
+    main_bin = os.path.join(opt_dest, "antigravity")
+    if os.path.exists(main_bin):
+        os.chmod(main_bin, 0o755)
+    sandbox_bin = os.path.join(opt_dest, "chrome-sandbox")
+    if os.path.exists(sandbox_bin):
+        try:
+            os.chmod(sandbox_bin, 0o4755)
+        except Exception:
+            pass
+
+    # Install applications desktop file and icons
+    apps_dest = os.path.join(staging_root, "usr/share/applications")
+    pix_dest = os.path.join(staging_root, "usr/share/pixmaps")
+    hicolor_dest = os.path.join(staging_root, "usr/share/icons/hicolor/512x512/apps")
+    os.makedirs(apps_dest, exist_ok=True)
+    os.makedirs(pix_dest, exist_ok=True)
+    os.makedirs(hicolor_dest, exist_ok=True)
+
+    desktop_file = os.path.join(apps_dest, "antigravity.desktop")
+    if os.path.exists(os.path.join(aur_dir, "antigravity.desktop")):
+        shutil.copy(os.path.join(aur_dir, "antigravity.desktop"), desktop_file)
+    else:
+        with open(desktop_file, "w", encoding="utf-8") as df:
+            df.write("""[Desktop Entry]
+Name=Antigravity 2.0
+Comment=AI Agent Command Center & IDE
+GenericName=Agent Orchestrator
+Exec=/usr/bin/antigravity %F
+Icon=antigravity
+Type=Application
+StartupNotify=false
+StartupWMClass=Antigravity
+Categories=Development;IDE;TextEditor;Utility;
+MimeType=application/x-antigravity-workspace;
+""")
+
+    if os.path.exists(os.path.join(aur_dir, "antigravity.png")):
+        shutil.copy(os.path.join(aur_dir, "antigravity.png"), os.path.join(pix_dest, "antigravity.png"))
+        shutil.copy(os.path.join(aur_dir, "antigravity.png"), os.path.join(hicolor_dest, "antigravity.png"))
+    elif os.path.exists("/usr/share/pixmaps/antigravity.png"):
+        shutil.copy("/usr/share/pixmaps/antigravity.png", os.path.join(pix_dest, "antigravity.png"))
+        shutil.copy("/usr/share/pixmaps/antigravity.png", os.path.join(hicolor_dest, "antigravity.png"))
+PYBUILD_ANTIGRAVITY
+    elif [ "${main_url}" = "DEB_CLAUDE_DESKTOP" ] || [ "${pkg_id}" = "claude-desktop" ]; then
+        log_info "Transmuting and building ${pkg_id} (${ver}) from official Anthropic Debian release..."
+        python3 - "${staging_root}" "${cache_dir}" "${ver}" "$(_slacky_vendor_fetch_dir)" << 'PYBUILD_CLAUDE_DESKTOP' || { gaming_build_failed "${pkg_id} could not be built. Nothing was changed."; return 1; }  # 6A-125
+import sys, os, tempfile, subprocess, shutil, urllib.request, tarfile
+
+staging_root = sys.argv[1]
+cache_dir = sys.argv[2]
+ver = sys.argv[3]
+lib_dir = sys.argv[4] if len(sys.argv) > 4 else ""
+# 6A-176: the vendor's own published checksum is read and checked before anything is unpacked (fail closed)
+if not lib_dir or not os.path.isfile(os.path.join(lib_dir, "slacky_vendor_fetch.py")):
+    raise RuntimeError("slacky_vendor_fetch.py was not found, so the download cannot be verified")
+sys.path.insert(0, lib_dir)
+import slacky_vendor_fetch as vf
+
+local_deb = os.path.join(cache_dir, f"claude-desktop_{ver}_amd64.deb")
+try:
+    deb_url, deb_sha256, deb_size = vf.apt_record("claude-desktop", ver)
+    print(f"Downloading official Claude Desktop {ver} from {deb_url}...")
+    vf.download_verified(deb_url, local_deb, "sha256", deb_sha256, deb_size if deb_size > 0 else 512 << 20)
+except vf.VendorError as exc:
+    raise RuntimeError(f"The Claude Desktop download could not be verified ({exc})")
+
+print(f"Extracting {local_deb} payload into staging root...")
+with tempfile.TemporaryDirectory() as tmpdir:
+    subprocess.run(["ar", "x", local_deb], cwd=tmpdir, check=True)
+    data_tar = None
+    for cand in ["data.tar.xz", "data.tar.zst", "data.tar.gz"]:
+        p = os.path.join(tmpdir, cand)
+        if os.path.exists(p):
+            data_tar = p
+            break
+    if not data_tar:
+        raise RuntimeError("No data.tar payload found inside debian archive")
+    
+    if data_tar.endswith(".zst"):
+        plain_tar = os.path.join(tmpdir, "data.tar")
+        with open(plain_tar, "wb") as zout:
+            subprocess.run(["zstd", "-dc", data_tar], stdout=zout, check=True)
+        data_tar = plain_tar
+    # 6A-176: member check instead of a bare extractall (a Debian package may link to absolute paths, which stay links)
+    with tarfile.open(data_tar) as tf:
+        vf.extract_safe(tf, staging_root, allow_absolute_links=True)
+
+lintian_dir = os.path.join(staging_root, "usr/share/lintian")
+if os.path.exists(lintian_dir):
+    shutil.rmtree(lintian_dir, ignore_errors=True)
+
+for sb in [
+    os.path.join(staging_root, "usr/lib/claude-desktop/chrome-sandbox"),
+    os.path.join(staging_root, "opt/claude-desktop/chrome-sandbox")
+]:
+    if os.path.exists(sb):
+        try:
+            os.chmod(sb, 0o4755)
+        except Exception:
+            pass
+PYBUILD_CLAUDE_DESKTOP
+    elif [ "${main_url}" = "NPM_CLAUDE_CODE" ] || [ "${pkg_id}" = "claude-code" ]; then
+        log_info "Transmuting and building ${pkg_id} (${ver}) from official Anthropic Claude Code release..."
+        python3 - "${staging_root}" "${cache_dir}" "${ver}" "$(_slacky_vendor_fetch_dir)" << 'PYBUILD_CLAUDE_CODE' || { gaming_build_failed "${pkg_id} could not be built. Nothing was changed."; return 1; }  # 6A-125
+import sys, os, tempfile, subprocess, shutil, urllib.request, tarfile
+
+staging_root = sys.argv[1]
+cache_dir = sys.argv[2]
+ver = sys.argv[3]
+lib_dir = sys.argv[4] if len(sys.argv) > 4 else ""
+# 6A-176: the vendor's own published checksum is read and checked before anything is unpacked (fail closed)
+if not lib_dir or not os.path.isfile(os.path.join(lib_dir, "slacky_vendor_fetch.py")):
+    raise RuntimeError("slacky_vendor_fetch.py was not found, so the download cannot be verified")
+sys.path.insert(0, lib_dir)
+import slacky_vendor_fetch as vf
+
+try:
+    tar_url, tar_sha512 = vf.npm_record("@anthropic-ai/claude-code-linux-x64", ver)
+    local_tar = os.path.join(cache_dir, f"claude-code-linux-x64-{ver}.tgz")
+    print(f"Downloading official Claude Code {ver} from {tar_url}...")
+    vf.download_verified(tar_url, local_tar, "sha512", tar_sha512, 256 << 20)
+except vf.VendorError as exc:
+    raise RuntimeError(f"The Claude Code download could not be verified ({exc})")
+
+print(f"Extracting {local_tar} into /opt/claude-code...")
+opt_dir = os.path.join(staging_root, "opt/claude-code")
+os.makedirs(opt_dir, exist_ok=True)
+
+with tempfile.TemporaryDirectory() as tmpdir:
+    with tarfile.open(local_tar, "r:*") as tf:
+        vf.extract_safe(tf, tmpdir)  # 6A-176: filter='data' (or the equivalent member check), never a bare extractall
+    pkg_dir = os.path.join(tmpdir, "package")
+    if not os.path.exists(pkg_dir):
+        pkg_dir = tmpdir
+    
+    claude_bin = os.path.join(pkg_dir, "claude")
+    if not os.path.exists(claude_bin):
+        for root, _, files in os.walk(tmpdir):
+            if "claude" in files:
+                claude_bin = os.path.join(root, "claude")
+                break
+    
+    if os.path.exists(claude_bin):
+        target_bin = os.path.join(opt_dir, "claude-code")
+        shutil.copy2(claude_bin, target_bin)
+        os.chmod(target_bin, 0o755)
+    else:
+        raise RuntimeError("No claude binary found inside extracted package")
+
+usr_bin = os.path.join(staging_root, "usr/bin")
+os.makedirs(usr_bin, exist_ok=True)
+wrapper_path = os.path.join(usr_bin, "claude-code")
+with open(wrapper_path, "w", encoding="utf-8") as wf:
+    wf.write("""#!/bin/sh
+# Anthropic Claude Code CLI Launcher for Slackware
+exec /opt/claude-code/claude-code "$@"
+""")
+os.chmod(wrapper_path, 0o755)
+
+cli_symlink = os.path.join(usr_bin, "claude-cli")
+if not os.path.exists(cli_symlink):
+    os.symlink("claude-code", cli_symlink)
+PYBUILD_CLAUDE_CODE
+    elif [ "${main_url}" = "NPM_GEMINI_CLI" ] || [ "${pkg_id}" = "gemini-cli" ]; then
+        log_info "Transmuting and building ${pkg_id} (${ver}) from official Google Gemini CLI release..."
+        python3 - "${staging_root}" "${cache_dir}" "${ver}" "$(_slacky_vendor_fetch_dir)" << 'PYBUILD_GEMINI_CLI' || { gaming_build_failed "${pkg_id} could not be built. Nothing was changed."; return 1; }  # 6A-125
+import sys, os, tempfile, subprocess, shutil, urllib.request, tarfile
+
+staging_root = sys.argv[1]
+cache_dir = sys.argv[2]
+ver = sys.argv[3]
+lib_dir = sys.argv[4] if len(sys.argv) > 4 else ""
+# 6A-176: the vendor's own published checksum is read and checked before anything is unpacked (fail closed)
+if not lib_dir or not os.path.isfile(os.path.join(lib_dir, "slacky_vendor_fetch.py")):
+    raise RuntimeError("slacky_vendor_fetch.py was not found, so the download cannot be verified")
+sys.path.insert(0, lib_dir)
+import slacky_vendor_fetch as vf
+
+try:
+    tar_url, tar_sha512 = vf.npm_record("@google/gemini-cli", ver)
+    local_tar = os.path.join(cache_dir, f"gemini-cli-{ver}.tgz")
+    print(f"Downloading official Gemini CLI {ver} from {tar_url}...")
+    vf.download_verified(tar_url, local_tar, "sha512", tar_sha512, 96 << 20)
+except vf.VendorError as exc:
+    raise RuntimeError(f"The Gemini CLI download could not be verified ({exc})")
+
+print(f"Extracting {local_tar} into /opt/gemini-cli...")
+opt_dir = os.path.join(staging_root, "opt/gemini-cli")
+os.makedirs(opt_dir, exist_ok=True)
+
+with tempfile.TemporaryDirectory() as tmpdir:
+    with tarfile.open(local_tar, "r:*") as tf:
+        vf.extract_safe(tf, tmpdir)  # 6A-176: filter='data' (or the equivalent member check), never a bare extractall
+    pkg_dir = os.path.join(tmpdir, "package")
+    if not os.path.exists(pkg_dir):
+        pkg_dir = tmpdir
+    
+    for item in os.listdir(pkg_dir):
+        s = os.path.join(pkg_dir, item)
+        d = os.path.join(opt_dir, item)
+        if os.path.isdir(s):
+            shutil.copytree(s, d, dirs_exist_ok=True)
+        else:
+            shutil.copy2(s, d)
+
+usr_bin = os.path.join(staging_root, "usr/bin")
+os.makedirs(usr_bin, exist_ok=True)
+wrapper_path = os.path.join(usr_bin, "gemini-cli")
+with open(wrapper_path, "w", encoding="utf-8") as wf:
+    wf.write("""#!/bin/sh
+# Google Gemini CLI Launcher for Slackware
+NODE_BIN="$(which node 2>/dev/null || echo /usr/bin/node)"
+if [ ! -x "${NODE_BIN}" ]; then
+    echo "Error: Node.js (>=20) is required to run gemini-cli." >&2
+    exit 1
+fi
+exec "${NODE_BIN}" /opt/gemini-cli/bundle/gemini.js "$@"
+""")
+os.chmod(wrapper_path, 0o755)
+
+gemini_symlink = os.path.join(usr_bin, "gemini")
+if not os.path.exists(gemini_symlink):
+    os.symlink("gemini-cli", gemini_symlink)
+PYBUILD_GEMINI_CLI
+    elif [ "${main_url}" = "GITHUB_DVCP_AAC" ] || [ "${pkg_id}" = "dvcp-aac" ]; then
+        log_info "Transmuting and building ${pkg_id} (${ver}) from GloriousEggroll dvcp-aac release..."
+        python3 - "${staging_root}" "${cache_dir}" "${ver}" << 'PYBUILD_DVCP_AAC' || { gaming_build_failed "${pkg_id} could not be built. Nothing was changed."; return 1; }  # 6A-125
+import sys, os, tempfile, subprocess, shutil, urllib.request, tarfile
+
+staging_root = sys.argv[1]
+cache_dir = sys.argv[2]
+ver = sys.argv[3]
+
+tar_url = f"https://github.com/GloriousEggroll/dvcp-aac/releases/download/{ver}/aac-plugin-release.tar.gz"
+local_tar = os.path.join(cache_dir, f"dvcp-aac-{ver}.tar.gz")
+
+if not os.path.exists(local_tar) or os.path.getsize(local_tar) < 100000:
+    print(f"Downloading GloriousEggroll dvcp-aac {ver} from {tar_url}...")
+    download_ok = False
+    try:
+        subprocess.run(["curl", "-#", "-fSL", "-A", "Mozilla/5.0 (X11; Linux x86_64)", "-o", local_tar, tar_url], check=True)
+        if os.path.exists(local_tar) and os.path.getsize(local_tar) > 100000:
+            download_ok = True
+    except Exception:
+        pass
+
+    if not download_ok:
+        req = urllib.request.Request(tar_url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"})
+        with urllib.request.urlopen(req, timeout=120) as resp, open(local_tar, "wb") as f:
+            shutil.copyfileobj(resp, f)
+
+if not os.path.exists(local_tar) or os.path.getsize(local_tar) < 100000:
+    raise RuntimeError(f"Failed to download valid dvcp-aac archive from {tar_url}")
+
+print(f"Extracting {local_tar} into DaVinci Resolve IOPlugins directory...")
+plugins_dest = os.path.join(staging_root, "opt/resolve/IOPlugins")
+os.makedirs(plugins_dest, exist_ok=True)
+
+with tempfile.TemporaryDirectory() as tmpdir:
+    with tarfile.open(local_tar, "r:gz") as tf:
+        tf.extractall(tmpdir)
+    
+    # Locate .bundle directories
+    for root, dirs, files in os.walk(tmpdir):
+        for d in dirs:
+            if d.endswith(".bundle"):
+                src_bundle = os.path.join(root, d)
+                dst_bundle = os.path.join(plugins_dest, d)
+                if os.path.exists(dst_bundle):
+                    shutil.rmtree(dst_bundle)
+                shutil.copytree(src_bundle, dst_bundle)
+                print(f"Installed DaVinci Resolve IOPlugin bundle: {d}")
+
+# Set clean permissions
+for root, dirs, files in os.walk(plugins_dest):
+    for d in dirs:
+        os.chmod(os.path.join(root, d), 0o755)
+    for f in files:
+        os.chmod(os.path.join(root, f), 0o755 if f.endswith(".so") else 0o644)
+PYBUILD_DVCP_AAC
     else
         local main_file="${cache_dir}/$(basename "${main_url}")"
         local dl_items=()
@@ -2715,6 +4190,22 @@ PYBUILD_THEME
             fi
         fi
 
+        if [ "${pkg_id}" = "bambu-studio" ]; then
+            # 6A-192: the download must be the asset of exactly this version with the size and SHA-256 the GitHub release API names
+            python3 - "${main_file}" "${ver}" "$(_slacky_vendor_fetch_dir)" << 'PYVERIFY_BAMBU' || { gaming_build_failed "The download for ${pkg_id} could not be verified. Nothing was changed."; rm -f "${main_file}" 2>/dev/null; return 1; }
+import sys, os
+main_file, ver, lib_dir = sys.argv[1], sys.argv[2], sys.argv[3]
+if not lib_dir or not os.path.isfile(os.path.join(lib_dir, "slacky_vendor_fetch.py")):
+    raise SystemExit("slacky_vendor_fetch.py was not found, so the download cannot be verified")
+sys.path.insert(0, lib_dir)
+import slacky_vendor_fetch as vf
+try:
+    vf.verify_github_asset(main_file, vf.BAMBU_REPO, vf.BAMBU_ASSET_RE, ver)
+except vf.VendorError as exc:
+    raise SystemExit("The Bambu Studio download could not be verified (%s)" % exc)
+PYVERIFY_BAMBU
+        fi
+
         if [ -f "${main_file}.sig" ]; then
             if ! verify_cachyos_gpg_signature "${main_file}" "${main_file}.sig"; then
                 log_error "GPG signature verification failed for ${pkg_id}! Aborting transmutation to protect system integrity."
@@ -2727,27 +4218,54 @@ PYBUILD_THEME
             return 1
         fi
 
+        # 6A-125: an archive that does not unpack stops the build (errexit is off when called from the batch)
+        local extract_ok=1
         if [[ "${main_file}" =~ \.deb$ ]]; then
             (
-                cd "${tmp_extract}/main"
-                ar x "${main_file}" 2>/dev/null || true
+                cd "${tmp_extract}/main" || exit 1
+                ar x "${main_file}" 2>/dev/null || exit 1
                 if [ -f data.tar.zst ]; then
-                    tar --zstd -xf data.tar.zst 2>/dev/null || true
+                    tar --zstd -xf data.tar.zst 2>/dev/null || exit 1
                 elif [ -f data.tar.xz ]; then
-                    tar -xf data.tar.xz 2>/dev/null || true
+                    tar -xf data.tar.xz 2>/dev/null || exit 1
                 elif [ -f data.tar.gz ]; then
-                    tar -xf data.tar.gz 2>/dev/null || true
+                    tar -xf data.tar.gz 2>/dev/null || exit 1
+                else
+                    exit 1
                 fi
                 rm -f control.tar.* data.tar.* debian-binary 2>/dev/null || true
-            )
+            ) || extract_ok=0
+        elif [[ "${main_file}" =~ \.AppImage$ ]]; then
+            # 6A-192: unsquashfs at the image offset (the file is never executed); the NEEDED entries of older builds are fixed
+            mkdir -p "${tmp_extract}/main/opt"
+            python3 - "${main_file}" "${tmp_extract}/main/opt/bambu-studio-${ver}" "$(_slacky_vendor_fetch_dir)" << 'PYUNPACK_APPIMAGE' || extract_ok=0
+import sys, os
+src, dest, lib_dir = sys.argv[1], sys.argv[2], sys.argv[3]
+if not lib_dir or not os.path.isfile(os.path.join(lib_dir, "slacky_vendor_fetch.py")):
+    raise SystemExit("slacky_vendor_fetch.py was not found")
+sys.path.insert(0, lib_dir)
+import slacky_vendor_fetch as vf
+try:
+    vf.unpack_appimage(src, dest)
+    vf.fix_needed(dest)
+except vf.VendorError as exc:
+    raise SystemExit("The AppImage could not be unpacked (%s)" % exc)
+PYUNPACK_APPIMAGE
         elif [[ "${main_file}" =~ \.zip$ ]] || [[ "${main_url}" =~ download\?file= ]]; then
-            unzip -q -o "${main_file}" -d "${tmp_extract}/main" 2>/dev/null || true
-            find "${tmp_extract}/main" -type f \( -name "*.tar.gz" -o -name "*.tar.xz" -o -name "*.tgz" \) | while read -r inner_tar; do
-                tar -xf "${inner_tar}" -C "${tmp_extract}/main" 2>/dev/null || true
-                rm -f "${inner_tar}" 2>/dev/null || true
-            done
+            if unzip -q -o "${main_file}" -d "${tmp_extract}/main" 2>/dev/null; then
+                find "${tmp_extract}/main" -type f \( -name "*.tar.gz" -o -name "*.tar.xz" -o -name "*.tgz" \) | while read -r inner_tar; do
+                    tar -xf "${inner_tar}" -C "${tmp_extract}/main" 2>/dev/null || exit 1
+                    rm -f "${inner_tar}" 2>/dev/null || true
+                done || extract_ok=0
+            else
+                extract_ok=0
+            fi
         else
-            tar --zstd -xf "${main_file}" -C "${tmp_extract}/main" 2>/dev/null || tar -xf "${main_file}" -C "${tmp_extract}/main" 2>/dev/null || true
+            tar --zstd -xf "${main_file}" -C "${tmp_extract}/main" 2>/dev/null || tar -xf "${main_file}" -C "${tmp_extract}/main" 2>/dev/null || extract_ok=0
+        fi
+        if [ "${extract_ok}" -ne 1 ]; then
+            gaming_build_failed "The download for ${pkg_id} could not be unpacked. Nothing was changed."
+            return 1
         fi
     fi
 
@@ -2760,7 +4278,10 @@ PYBUILD_THEME
                 rm -rf "${staging_base}"
                 return 1
             fi
-            tar --zstd -xf "${lib32_file}" -C "${tmp_extract}/lib32" 2>/dev/null || true
+            if ! tar --zstd -xf "${lib32_file}" -C "${tmp_extract}/lib32" 2>/dev/null; then
+                gaming_build_failed "The 32-bit part of ${pkg_id} could not be unpacked. Nothing was changed."  # 6A-125
+                return 1
+            fi
         fi
     fi
 
@@ -2773,16 +4294,30 @@ PYBUILD_THEME
             extra_idx=$((extra_idx + 1))
             local extra_file="${cache_dir}/$(basename "${single_extra_url}")"
             if [ -f "${extra_file}" ]; then
+                # 6A-125: a part that fails its signature check (or lacks one from a signed repo) stops the build;
+                # skipping it used to install an incomplete app and report success
                 if [ -f "${extra_file}.sig" ]; then
                     if ! verify_cachyos_gpg_signature "${extra_file}" "${extra_file}.sig"; then
-                        log_warn "GPG signature verification failed for auxiliary $(basename "${single_extra_url}"). Skipping."
-                        continue
+                        gaming_build_failed "A part of ${pkg_id} failed its signature check. Nothing was changed."
+                        return 1
                     fi
+                elif [[ "${single_extra_url}" =~ (cachyos\.org|pkgbuild\.com|archlinux\.org|chaotic\.cx) ]] && [[ "${single_extra_url}" =~ \.pkg\.tar\.zst$ ]]; then
+                    gaming_build_failed "A part of ${pkg_id} has no signature to check. Nothing was changed."
+                    return 1
                 fi
                 mkdir -p "${tmp_extract}/extra_${extra_idx}"
-                tar --zstd -xf "${extra_file}" -C "${tmp_extract}/extra_${extra_idx}" 2>/dev/null || tar -xf "${extra_file}" -C "${tmp_extract}/extra_${extra_idx}" 2>/dev/null || true
+                if ! { tar --zstd -xf "${extra_file}" -C "${tmp_extract}/extra_${extra_idx}" 2>/dev/null || tar -xf "${extra_file}" -C "${tmp_extract}/extra_${extra_idx}" 2>/dev/null; }; then
+                    gaming_build_failed "A part of ${pkg_id} could not be unpacked. Nothing was changed."
+                    return 1
+                fi
             fi
         done
+    fi
+
+    # 6A-125: never package a build that did not produce its program
+    if ! gaming_payload_present "${pkg_id}" "${main_url}" "${staging_root}" "${tmp_extract}"; then
+        gaming_build_failed "${pkg_id} was not built because its download was empty or incomplete. Nothing was changed."
+        return 1
     fi
 
     # Map file hierarchy into Slackware standard structure:
@@ -3332,7 +4867,8 @@ OPENGHUB_WRAPPER_EOF
                     continue
                 fi
                 # Do NOT copy files that belong inside subdirectories (like advanced-scene-switcher-plugins/)
-                if echo "${so_file}" | grep -qE "/[a-zA-Z0-9_\-]+-plugins/"; then
+                # (6A-171: the OBS folder "obs-plugins" itself is NOT such a subfolder; its loose libraries are bridged)
+                if dirname "${so_file#"${tmp_extract}/main/"}" | tr '/' '\n' | grep -vx "obs-plugins" | grep -qxE "[a-zA-Z0-9_-]+-plugins"; then
                     continue
                 fi
                 bso=$(basename "${so_file}")
@@ -3439,6 +4975,16 @@ OPENGHUB_WRAPPER_EOF
         rm -f "${staging_root}/usr/lib64/liblua.so" "${staging_root}/usr/lib64/libical.so" "${staging_root}/usr/lib64/libicalss.so" "${staging_root}/usr/lib64/libicalvcal.so" 2>/dev/null || true
         # 3. Clean up headers from auxiliary packages that Slackware already manages
         rm -rf "${staging_root}/usr/include/lua"* "${staging_root}/usr/include/libical"* 2>/dev/null || true
+        # 6A-66: 4. the uwsm login entry only when uwsm exists (otherwise a dead entry in the login screen)
+        command -v uwsm >/dev/null 2>&1 || rm -f "${staging_root}/usr/share/wayland-sessions/hyprland-uwsm.desktop"
+        # 5. build-only files: no headers ship, so cmake/pkg-config files and code generators have no use on the host
+        rm -rf "${staging_root}/usr/lib64/cmake" "${staging_root}/usr/lib64/pkgconfig" "${staging_root}/usr/share/pkgconfig" 2>/dev/null || true
+        rm -f "${staging_root}/usr/bin/hyprwire-scanner" "${staging_root}/usr/bin/sdbus-c++-xml2cpp" "${staging_root}/usr/bin/md2html" \
+              "${staging_root}/usr/share/man/man1/md2html.1.gz" 2>/dev/null || true
+        # 6. modules-load.d is not read on Slackware (ddcui's i2c-dev must come from rc.modules.local)
+        rm -rf "${staging_root}/usr/lib64/modules-load.d" "${staging_root}/usr/lib/modules-load.d" 2>/dev/null || true
+        # 7. empty directories left by the steps above
+        find "${staging_root}/lib/udev" "${staging_root}/usr/lib64" -depth -type d -empty -delete 2>/dev/null || true
     fi
 
     # Browser conveniences in /usr/bin:
@@ -3457,7 +5003,10 @@ OPENGHUB_WRAPPER_EOF
     if [ "${pkg_id}" = "microsoft-edge" ]; then
         [ -f "${staging_root}/usr/bin/microsoft-edge-stable" ] && [ ! -e "${staging_root}/usr/bin/microsoft-edge" ] && ln -sf microsoft-edge-stable "${staging_root}/usr/bin/microsoft-edge"
         [ -f "${staging_root}/usr/bin/microsoft-edge" ] && [ ! -e "${staging_root}/usr/bin/edge" ] && ln -sf microsoft-edge "${staging_root}/usr/bin/edge"
-        [ -f "${staging_root}/opt/microsoft/msedge/microsoft-edge" ] && [ ! -e "${staging_root}/usr/bin/microsoft-edge" ] && ln -sf /opt/microsoft/msedge/microsoft-edge "${staging_root}/usr/bin/microsoft-edge"
+        [ -f "${staging_root}/opt/microsoft/msedge/microsoft-edge" ] && [ ! -e "${staging_root}/usr/bin/microsoft-edge" ] && ln -sf /opt/microsoft/msedge/microsoft-edge "${staging_root}/usr/bin/microsoft-edge"        # 6A-175: the Arch package links Microsoft's apt repository helper as a ROOT cron job (/etc/cron.daily/microsoft-edge); it is
+        # written for apt-based systems and has no place here. Dropped here as well as by the footprint guard (which also covers
+        # report mode). The program itself keeps opt/microsoft/msedge/cron/microsoft-edge.
+        rm -f -- "${staging_root}/etc/cron.daily/microsoft-edge"
     fi
     if [ "${pkg_id}" = "vesktop" ]; then
         [ -f "${staging_root}/opt/vesktop/vesktop" ] && [ ! -e "${staging_root}/usr/bin/vesktop" ] && ln -sf /opt/vesktop/vesktop "${staging_root}/usr/bin/vesktop"
@@ -3530,7 +5079,18 @@ OPENGHUB_WRAPPER_EOF
     fi
 
     if [ "${pkg_id}" = "goverlay" ]; then
+        # 6A-74: goverlay 1.9.4 ships the program as the FILE usr/lib/goverlay (merged into usr/lib64); move it aside
+        # before the directory of the same name is created (mkdir failed with "File exists" and the deploy stopped)
+        local gv
+        for gv in "${staging_root}/usr/lib64/goverlay" "${staging_root}/usr/lib/goverlay"; do
+            if [ -f "${gv}" ] && is_elf_binary "${gv}"; then
+                mv -f "${gv}" "${staging_root}/usr/bin/goverlay.slacky-elf" 2>/dev/null || { mkdir -p "${staging_root}/usr/bin" && mv -f "${gv}" "${staging_root}/usr/bin/goverlay.slacky-elf"; }
+            fi
+        done
         mkdir -p "${staging_root}/usr/lib64/goverlay" "${staging_root}/usr/lib/goverlay" "${staging_root}/usr/bin"
+        if [ -f "${staging_root}/usr/bin/goverlay.slacky-elf" ]; then
+            mv -f "${staging_root}/usr/bin/goverlay.slacky-elf" "${staging_root}/usr/lib64/goverlay/goverlay-bin"
+        fi
         # If /usr/lib64/goverlay or /usr/lib/goverlay or /usr/bin/goverlay is an ELF binary, move it to /usr/lib64/goverlay/goverlay-bin
         if [ -f "${staging_root}/usr/bin/goverlay" ] && is_elf_binary "${staging_root}/usr/bin/goverlay"; then
             mv -f "${staging_root}/usr/bin/goverlay" "${staging_root}/usr/lib64/goverlay/goverlay-bin"
@@ -3725,31 +5285,40 @@ VK32_EOF
     fi
 
     if [ "${pkg_id}" = "zenpower3" ]; then
-        mkdir -p "${staging_root}/etc/modprobe.d" "${staging_root}/etc/modules-load.d"
+        # 6A-83: boot loading via rc.modules.local (doinst), not modules-load.d (never read on Slackware)
+        mkdir -p "${staging_root}/etc/modprobe.d"
         cat << 'ZEN_EOF' > "${staging_root}/etc/modprobe.d/zenpower.conf"
 # Generated by slacky-update Underpants Gnomes
 # Blacklist default k10temp to allow zenpower full access to Zen SVI2 telemetry
 blacklist k10temp
 ZEN_EOF
-        echo "zenpower" > "${staging_root}/etc/modules-load.d/zenpower.conf"
     fi
 
     if [ "${pkg_id}" = "v4l2loopback" ]; then
-        mkdir -p "${staging_root}/etc/modprobe.d" "${staging_root}/etc/modules-load.d"
+        mkdir -p "${staging_root}/etc/modprobe.d"
         cat << 'V4L2_EOF' > "${staging_root}/etc/modprobe.d/v4l2loopback.conf"
 # Generated by slacky-update Underpants Gnomes
 options v4l2loopback devices=1 video_nr=10 card_label="OBS Virtual Camera" exclusive_caps=1
 V4L2_EOF
-        echo "v4l2loopback" > "${staging_root}/etc/modules-load.d/v4l2loopback.conf"
+    fi
+
+    if [ "${pkg_id}" = "limine-snapper-sync" ]; then
+        # SS-4 / 6A-105: one menu writer (see patch_limine_snapper_sync_staging). Refuse to build an unpatched copy.
+        if ! patch_limine_snapper_sync_staging "${staging_root}"; then
+            log_error "limine-snapper-sync changed upstream and could not be made safe for the startup menu. It was not updated."
+            rm -rf "${staging_base}"
+            return 1
+        fi
     fi
 
     if [ "${pkg_id}" = "darktable" ]; then
         # Darktable binary RUNPATH points to $ORIGIN/../lib/darktable
         # Ensure /usr/lib/darktable symlinks to /usr/lib64/darktable on Slackware 64-bit
-        mkdir -p "${staging_root}/usr/lib" "${staging_root}/usr/lib64/darktable" "${staging_root}/etc/ld.so.conf.d"
+        mkdir -p "${staging_root}/usr/lib" "${staging_root}/usr/lib64/darktable"
         rm -rf "${staging_root}/usr/lib/darktable" 2>/dev/null || true
         ln -sf /usr/lib64/darktable "${staging_root}/usr/lib/darktable"
-        echo "/usr/lib64/darktable" > "${staging_root}/etc/ld.so.conf.d/darktable.conf"
+        # 6A-163: no etc/ld.so.conf.d file (it would change the linker path of the whole system); the RUNPATH above is enough
+        rm -f "${staging_root}/etc/ld.so.conf.d/darktable.conf" 2>/dev/null || true
 
         # Lua 5.4 binary compatibility symlinks on Slackware
         if [ -f "/usr/lib64/liblua.so.5.4" ] || [ -f "${staging_root}/usr/lib64/liblua.so.5.4" ]; then
@@ -3761,10 +5330,11 @@ V4L2_EOF
     if [ "${pkg_id}" = "inkscape" ]; then
         # Inkscape internal library RUNPATH points to $ORIGIN/../lib/inkscape
         # Ensure /usr/lib/inkscape symlinks to /usr/lib64/inkscape on Slackware 64-bit
-        mkdir -p "${staging_root}/usr/lib" "${staging_root}/usr/lib64/inkscape" "${staging_root}/etc/ld.so.conf.d"
+        mkdir -p "${staging_root}/usr/lib" "${staging_root}/usr/lib64/inkscape"
         rm -rf "${staging_root}/usr/lib/inkscape" 2>/dev/null || true
         ln -sf /usr/lib64/inkscape "${staging_root}/usr/lib/inkscape"
-        echo "/usr/lib64/inkscape" > "${staging_root}/etc/ld.so.conf.d/inkscape.conf"
+        # 6A-163: no etc/ld.so.conf.d file (system-wide linker path); the RUNPATH above is enough
+        rm -f "${staging_root}/etc/ld.so.conf.d/inkscape.conf" 2>/dev/null || true
     fi
 
     if [ "${pkg_id}" = "lact" ]; then
@@ -3911,19 +5481,52 @@ ANANICY_RC_EOF
         if [ -f "${staging_root}/usr/share/dbus-1/system.d/org.scx.Loader.conf" ]; then
             cp -a "${staging_root}/usr/share/dbus-1/system.d/org.scx.Loader.conf" "${staging_root}/etc/dbus-1/system.d/" 2>/dev/null || true
         fi
+
+        cat << 'SCX_CONF_EOF' > "${staging_root}/etc/scx_loader.toml"
+# /etc/scx_loader.toml - Sched-EXT Loader Configuration for Slackware
+default_scheduler = "scx_lavd"
+
+[schedulers.scx_lavd]
+description = "Latency-critical and gaming-oriented BPF scheduler"
+path = "/usr/bin/scx_lavd"
+args = ["--autopilot"]
+
+[schedulers.scx_bpfland]
+description = "BPFland gaming scheduler"
+path = "/usr/bin/scx_bpfland"
+
+[schedulers.scx_rustland]
+description = "Rustland user-space gaming scheduler"
+path = "/usr/bin/scx_rustland"
+SCX_CONF_EOF
+
         cat << 'SCX_RC_EOF' > "${staging_root}/etc/rc.d/rc.scx"
 #!/bin/sh
 # /etc/rc.d/rc.scx - Sched-EXT Gaming Scheduler & Loader Daemon for Slackware
 
 DEFAULT_SCHED="${SCX_SCHED:-scx_lavd}"
 
+scx_check_support() {
+    if [ ! -d /sys/kernel/sched_ext ]; then
+        echo "Sched-EXT is not supported by current kernel (/sys/kernel/sched_ext missing). Skipping."
+        return 1
+    fi
+    if ! mountpoint -q /sys/kernel/debug 2>/dev/null; then
+        mount -t debugfs none /sys/kernel/debug 2>/dev/null || true
+    fi
+    return 0
+}
+
 scx_start() {
-    if command -v scx_loader >/dev/null 2>&1; then
+    if ! scx_check_support; then
+        return 0
+    fi
+    if command -v "${DEFAULT_SCHED}" >/dev/null 2>&1; then
+        echo "Starting Sched-EXT gaming scheduler (${DEFAULT_SCHED} --autopilot)..."
+        nohup "${DEFAULT_SCHED}" --autopilot >/var/log/scx.log 2>&1 &
+    elif command -v scx_loader >/dev/null 2>&1; then
         echo "Starting Sched-EXT loader daemon (scx_loader)..."
         nohup scx_loader >/var/log/scx_loader.log 2>&1 &
-    elif command -v "${DEFAULT_SCHED}" >/dev/null 2>&1; then
-        echo "Starting Sched-EXT gaming scheduler: ${DEFAULT_SCHED}"
-        nohup "${DEFAULT_SCHED}" >/var/log/scx.log 2>&1 &
     else
         echo "Sched-EXT scheduler or scx_loader not found."
     fi
@@ -3936,6 +5539,10 @@ scx_stop() {
 }
 
 scx_status() {
+    if [ ! -d /sys/kernel/sched_ext ]; then
+        echo "Sched-EXT is not supported by running kernel."
+        return 0
+    fi
     if pgrep -x scx_loader >/dev/null 2>&1; then
         echo "Sched-EXT loader daemon is active (PID: $(pgrep -x scx_loader))"
     fi
@@ -3954,7 +5561,7 @@ case "$1" in
     *) echo "Usage: $0 {start|stop|restart|status}" ;;
 esac
 SCX_RC_EOF
-        chmod 755 "${staging_root}/etc/rc.d/rc.scx"
+        chmod 644 "${staging_root}/etc/rc.d/rc.scx"
     fi
 
     if [ "${pkg_id}" = "easyeffects" ]; then
@@ -3965,7 +5572,7 @@ SCX_RC_EOF
                  "${staging_root}/etc/skel/.config/easyeffects/irs"
         
         local presets_tar="${staging_base}/easyeffects-presets.tar.gz"
-        curl -fsSL "https://github.com/JackHack96/EasyEffects-Presets/archive/refs/heads/master.tar.gz" -o "${presets_tar}" 2>/dev/null || true
+        curl -fsSL --connect-timeout 15 -m 120 "https://github.com/JackHack96/EasyEffects-Presets/archive/refs/heads/master.tar.gz" -o "${presets_tar}" 2>/dev/null || true  # 6A-129: no endless hang on a dead network
         if [ -f "${presets_tar}" ]; then
             local extract_tmp="${staging_base}/presets_tmp"
             mkdir -p "${extract_tmp}"
@@ -4281,6 +5888,479 @@ SYNCTHING_RC_EOF
         chmod 755 "${staging_root}/etc/rc.d/rc.syncthing"
     fi
 
+    if [ "${pkg_id}" = "antigravity" ]; then
+        mkdir -p "${staging_root}/usr/bin" \
+                 "${staging_root}/usr/share/applications" \
+                 "${staging_root}/usr/share/pixmaps" \
+                 "${staging_root}/opt/antigravity"
+
+        if [ -d "${staging_root}/opt/Antigravity" ] && [ ! -d "${staging_root}/opt/antigravity" ]; then
+            mv "${staging_root}/opt/Antigravity" "${staging_root}/opt/antigravity"
+        fi
+
+        rm -f "${staging_root}/usr/bin/antigravity"
+        cat << 'ANTIGRAVITY_WRAPPER_EOF' > "${staging_root}/usr/bin/antigravity"
+#!/bin/sh
+# Google Antigravity 2.0 AI Agent Command Center Launcher for Slackware
+export ANTIGRAVITY_PATH="/opt/antigravity"
+export JETSKI_LS_PORT="${JETSKI_LS_PORT:-39714}"
+export ELECTRON_OZONE_PLATFORM_HINT="${ELECTRON_OZONE_PLATFORM_HINT:-auto}"
+
+FLAGS=""
+if [ -n "${WAYLAND_DISPLAY:-}" ]; then
+    FLAGS="--ozone-platform-hint=auto --enable-features=WaylandWindowDecorations"
+fi
+
+if [ -x /opt/antigravity/antigravity ]; then
+    exec /opt/antigravity/antigravity ${FLAGS} "$@"
+elif [ -x /opt/Antigravity/antigravity ]; then
+    exec /opt/Antigravity/antigravity ${FLAGS} "$@"
+else
+    echo "Error: Antigravity binary not found in /opt/antigravity/antigravity" >&2
+    exit 1
+fi
+ANTIGRAVITY_WRAPPER_EOF
+        chmod 755 "${staging_root}/usr/bin/antigravity"
+
+        rm -f "${staging_root}/usr/bin/agy"
+        cat << 'AGY_WRAPPER_EOF' > "${staging_root}/usr/bin/agy"
+#!/bin/sh
+# Antigravity CLI Launcher
+if [ -x /opt/antigravity/resources/app/bin/agy ]; then
+    exec /opt/antigravity/resources/app/bin/agy "$@"
+else
+    exec /usr/bin/antigravity "$@"
+fi
+AGY_WRAPPER_EOF
+        chmod 755 "${staging_root}/usr/bin/agy"
+
+        cat << 'ANTIGRAVITY_DESKTOP_EOF' > "${staging_root}/usr/share/applications/antigravity.desktop"
+[Desktop Entry]
+Name=Google Antigravity 2.0
+GenericName=AI Agent Command Center & IDE
+Comment=Advanced Agentic Coding and Multi-Agent Orchestration Platform
+Exec=/usr/bin/antigravity %U
+Icon=antigravity
+Terminal=false
+Type=Application
+StartupNotify=false
+StartupWMClass=Antigravity
+Categories=Development;Utility;IDE;
+MimeType=x-scheme-handler/antigravity;
+ANTIGRAVITY_DESKTOP_EOF
+
+        for sz in 16x16 24x24 32x32 48x48 64x64 128x128 256x256 512x512 scalable; do
+            if [ -f "${staging_root}/usr/share/icons/hicolor/${sz}/apps/antigravity.png" ]; then
+                mkdir -p "${staging_root}/usr/share/pixmaps"
+                cp -a "${staging_root}/usr/share/icons/hicolor/${sz}/apps/antigravity.png" "${staging_root}/usr/share/pixmaps/antigravity.png" 2>/dev/null || true
+            fi
+        done
+        if [ ! -f "${staging_root}/usr/share/pixmaps/antigravity.png" ] && [ -f "${staging_root}/opt/antigravity/resources/app/resources/linux/code.png" ]; then
+            cp -a "${staging_root}/opt/antigravity/resources/app/resources/linux/code.png" "${staging_root}/usr/share/pixmaps/antigravity.png" 2>/dev/null || true
+        fi
+    fi
+
+    if [ "${pkg_id}" = "claude-desktop" ]; then
+        mkdir -p "${staging_root}/usr/bin" \
+                 "${staging_root}/usr/share/applications" \
+                 "${staging_root}/usr/share/pixmaps"
+
+        rm -f "${staging_root}/usr/bin/claude-desktop" "${staging_root}/usr/bin/claude"
+        cat << 'CLAUDE_WRAPPER_EOF' > "${staging_root}/usr/bin/claude-desktop"
+#!/bin/sh
+# Anthropic Claude Desktop Linux Launcher for Slackware
+export ELECTRON_OZONE_PLATFORM_HINT="${ELECTRON_OZONE_PLATFORM_HINT:-auto}"
+
+FLAGS=""
+if [ -n "${WAYLAND_DISPLAY:-}" ]; then
+    FLAGS="--ozone-platform-hint=auto --enable-features=WaylandWindowDecorations"
+fi
+
+if [ -f "${HOME}/.config/claude-desktop-flags.conf" ]; then
+    USER_FLAGS=$(grep -v '^[[:space:]]*#' "${HOME}/.config/claude-desktop-flags.conf" 2>/dev/null | tr '\n' ' ')
+    FLAGS="${FLAGS} ${USER_FLAGS}"
+fi
+
+for bin_path in /usr/lib/claude-desktop/claude-desktop /opt/claude-desktop/claude-desktop /usr/share/claude-desktop/claude-desktop /usr/lib64/claude-desktop/claude-desktop; do
+    if [ -x "${bin_path}" ]; then
+        exec "${bin_path}" ${FLAGS} "$@"
+    fi
+done
+
+echo "Error: claude-desktop binary not found in /usr/lib/claude-desktop/" >&2
+exit 1
+CLAUDE_WRAPPER_EOF
+        chmod 755 "${staging_root}/usr/bin/claude-desktop"
+        ln -sf claude-desktop "${staging_root}/usr/bin/claude"
+
+        for df in "${staging_root}/usr/share/applications"/claude*.desktop "${staging_root}/usr/share/applications"/Claude*.desktop; do
+            if [ -f "${df}" ]; then
+                sed -i 's|^Exec=.*|Exec=/usr/bin/claude-desktop %U|g; s|^TryExec=.*|TryExec=/usr/bin/claude-desktop|g' "${df}"
+            fi
+        done
+
+        for sz in 16x16 24x24 32x32 48x48 64x64 128x128 256x256 512x512 scalable; do
+            if [ -f "${staging_root}/usr/share/icons/hicolor/${sz}/apps/claude-desktop.png" ]; then
+                cp -a "${staging_root}/usr/share/icons/hicolor/${sz}/apps/claude-desktop.png" "${staging_root}/usr/share/pixmaps/claude-desktop.png" 2>/dev/null || true
+            elif [ -f "${staging_root}/usr/share/icons/hicolor/${sz}/apps/claude.png" ]; then
+                cp -a "${staging_root}/usr/share/icons/hicolor/${sz}/apps/claude.png" "${staging_root}/usr/share/pixmaps/claude-desktop.png" 2>/dev/null || true
+            fi
+        done
+    fi
+
+    if [ "${pkg_id}" = "claude-code" ]; then
+        mkdir -p "${staging_root}/usr/bin"
+        cat << 'CLAUDE_CODE_WRAPPER_EOF' > "${staging_root}/usr/bin/claude-code"
+#!/bin/sh
+# Anthropic Claude Code CLI Launcher for Slackware
+if [ -x /opt/claude-code/claude-code ]; then
+    exec /opt/claude-code/claude-code "$@"
+elif [ -x /opt/claude-code/claude ]; then
+    exec /opt/claude-code/claude "$@"
+else
+    echo "Error: claude-code binary not found in /opt/claude-code/" >&2
+    exit 1
+fi
+CLAUDE_CODE_WRAPPER_EOF
+        chmod 755 "${staging_root}/usr/bin/claude-code"
+        ln -sf claude-code "${staging_root}/usr/bin/claude-cli" 2>/dev/null || true
+    fi
+
+    if [ "${pkg_id}" = "gemini-cli" ]; then
+        mkdir -p "${staging_root}/usr/bin"
+        cat << 'GEMINI_CLI_WRAPPER_EOF' > "${staging_root}/usr/bin/gemini-cli"
+#!/bin/sh
+# Google Gemini CLI Launcher for Slackware
+NODE_BIN="$(which node 2>/dev/null || echo /usr/bin/node)"
+if [ ! -x "${NODE_BIN}" ]; then
+    echo "Error: Node.js (>=20) is required to run gemini-cli." >&2
+    exit 1
+fi
+if [ -f /opt/gemini-cli/bundle/gemini.js ]; then
+    exec "${NODE_BIN}" /opt/gemini-cli/bundle/gemini.js "$@"
+else
+    echo "Error: gemini-cli bundle not found in /opt/gemini-cli/bundle/gemini.js" >&2
+    exit 1
+fi
+GEMINI_CLI_WRAPPER_EOF
+        chmod 755 "${staging_root}/usr/bin/gemini-cli"
+        ln -sf gemini-cli "${staging_root}/usr/bin/gemini" 2>/dev/null || true
+    fi
+
+    if [ "${pkg_id}" = "opera" ]; then
+        mkdir -p "${staging_root}/usr/bin"
+        cat << 'OPERA_WRAPPER_EOF' > "${staging_root}/usr/bin/opera"
+#!/bin/sh
+# Opera Web Browser Launcher for Slackware
+FLAGS=""
+if [ -n "${WAYLAND_DISPLAY:-}" ]; then
+    FLAGS="--ozone-platform-hint=auto --enable-features=WaylandWindowDecorations"
+fi
+for opera_bin in /usr/lib64/opera/opera /usr/lib/opera/opera /opt/opera/opera; do
+    if [ -x "${opera_bin}" ]; then
+        exec "${opera_bin}" ${FLAGS} "$@"
+    fi
+done
+exec /usr/lib/opera/opera ${FLAGS} "$@"
+OPERA_WRAPPER_EOF
+        chmod 755 "${staging_root}/usr/bin/opera"
+    fi
+
+    if [ "${pkg_id}" = "gnome-disk-utility" ]; then
+        mkdir -p "${staging_root}/usr/share/glib-2.0/schemas"
+        # Ensure libhandy is accessible in /usr/lib64 if provided
+        if [ -d "${staging_root}/usr/lib" ] && [ ! -d "${staging_root}/usr/lib64" ]; then
+            mkdir -p "${staging_root}/usr/lib64"
+            cp -a "${staging_root}"/usr/lib/libhandy*.so* "${staging_root}/usr/lib64/" 2>/dev/null || true
+        fi
+    fi
+
+    if [ "${pkg_id}" = "spacenav" ] || [ "${pkg_id}" = "spacenavd" ]; then
+        mkdir -p "${staging_root}/etc/rc.d" "${staging_root}/lib/udev/rules.d" "${staging_root}/usr/bin"
+        cat << 'SPACENAV_UDEV_EOF' > "${staging_root}/lib/udev/rules.d/99-spacenav.rules"
+# 3Dconnexion SpaceNavigator / SpaceMouse udev rules for Slackware
+SUBSYSTEM=="usb", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="c62[0-9|a-f]", MODE="0666", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTRS{idVendor}=="256f", MODE="0666", TAG+="uaccess"
+KERNEL=="event[0-9]*", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="c62[0-9|a-f]", MODE="0666", TAG+="uaccess"
+KERNEL=="event[0-9]*", ATTRS{idVendor}=="256f", MODE="0666", TAG+="uaccess"
+SPACENAV_UDEV_EOF
+
+        cat << 'SPACENAV_RC_EOF' > "${staging_root}/etc/rc.d/rc.spacenavd"
+#!/bin/sh
+# /etc/rc.d/rc.spacenavd - 3Dconnexion SpaceMouse daemon service for Slackware
+BIN="/usr/bin/spacenavd"
+
+spacenav_start() {
+  if [ -x "$BIN" ]; then
+    echo "Starting 3Dconnexion SpaceMouse daemon (spacenavd)..."
+    $BIN -d >/var/log/spacenavd.log 2>&1 &
+  fi
+}
+spacenav_stop() {
+  echo "Stopping 3Dconnexion SpaceMouse daemon..."
+  pkill -x spacenavd 2>/dev/null || true
+}
+spacenav_status() {
+  if pgrep -x spacenavd >/dev/null 2>&1; then
+    echo "spacenavd is running (PID: $(pgrep -x spacenavd))."
+  else
+    echo "spacenavd is NOT running."
+  fi
+}
+case "$1" in
+  start) spacenav_start ;;
+  stop) spacenav_stop ;;
+  restart) spacenav_stop; sleep 1; spacenav_start ;;
+  status) spacenav_status ;;
+  *) echo "Usage: $0 {start|stop|restart|status}" ;;
+esac
+SPACENAV_RC_EOF
+        chmod 755 "${staging_root}/etc/rc.d/rc.spacenavd"
+    fi
+
+    if [ "${pkg_id}" = "volt-gui" ]; then
+        mkdir -p "${staging_root}/usr/bin"
+        cat << 'VOLT_GUI_WRAPPER_EOF' > "${staging_root}/usr/bin/volt-gui"
+#!/bin/bash
+# Volt GUI Slackware Launch Wrapper
+export VOLT_GUI_DIR="/opt/volt-gui"
+PY_VER=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")' 2>/dev/null || echo "3.11")
+export PYTHONPATH="${VOLT_GUI_DIR}:${VOLT_GUI_DIR}/lib/python${PY_VER}/site-packages:${VOLT_GUI_DIR}/lib:${PYTHONPATH:-}"
+
+if [ -f "${VOLT_GUI_DIR}/volt-gui.py" ]; then
+    exec python3 "${VOLT_GUI_DIR}/volt-gui.py" "$@"
+elif [ -f "${VOLT_GUI_DIR}/src/volt-gui/volt-gui.py" ]; then
+    exec python3 "${VOLT_GUI_DIR}/src/volt-gui/volt-gui.py" "$@"
+elif [ -f "/usr/share/volt-gui/volt-gui.py" ]; then
+    exec python3 "/usr/share/volt-gui/volt-gui.py" "$@"
+elif command -v volt-gui.py >/dev/null 2>&1; then
+    exec python3 "$(command -v volt-gui.py)" "$@"
+else
+    echo "Error: volt-gui script not found in ${VOLT_GUI_DIR}." >&2
+    exit 1
+fi
+VOLT_GUI_WRAPPER_EOF
+        chmod 755 "${staging_root}/usr/bin/volt-gui"
+    fi
+
+    if [ "${pkg_id}" = "bambu-studio" ]; then
+        # 6A-198: the old Arch package shipped 99-bambulab-devices.rules (mode 0666 for every CH340 USB-serial device, so every
+        # user could open them). Never shipped here; repair for installed copies: docs/repair/6A-198_remove_bambu_udev_rule.sh.
+        rm -f -- "${staging_root}"/etc/udev/rules.d/99-bambulab-devices.rules \
+                 "${staging_root}"/lib/udev/rules.d/99-bambulab-devices.rules \
+                 "${staging_root}"/usr/lib/udev/rules.d/99-bambulab-devices.rules \
+                 "${staging_root}"/usr/lib64/udev/rules.d/99-bambulab-devices.rules 2>/dev/null || true
+        mkdir -p "${staging_root}/usr/bin"
+        cat << 'BAMBU_WRAPPER_EOF' > "${staging_root}/usr/bin/bambu-studio"
+#!/bin/sh
+# Bambu Studio Launcher with GPU auto-detection for Slackware
+export BAMBU_STUDIO_DIR="/opt/bambu-studio"
+export LD_LIBRARY_PATH="${BAMBU_STUDIO_DIR}/lib:${BAMBU_STUDIO_DIR}/bin:${LD_LIBRARY_PATH:-}"
+export WEBKIT_EXEC_PATH="${BAMBU_STUDIO_DIR}/lib/webkit2gtk-4.1:/usr/lib64/webkit2gtk-4.1:/usr/lib/webkit2gtk-4.1"
+export WEBKIT_INJECTED_BUNDLE_PATH="${BAMBU_STUDIO_DIR}/lib/webkit2gtk-4.1/injected-bundle:/usr/lib64/webkit2gtk-4.1/injected-bundle:/usr/lib/webkit2gtk-4.1/injected-bundle"
+
+# WebKitGTK sandbox and NVIDIA/Wayland DMA-BUF controls
+export WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1
+export WEBKIT_DISABLE_DMABUF_RENDERER=1
+
+# 6A-128: only when a GPU is bound to the proprietary/open nvidia driver (never for nouveau: its OpenGL is Mesa)
+BAMBU_NV_BOUND=0
+for BAMBU_NV_DEV in /sys/bus/pci/drivers/nvidia/[0-9a-f]*:*; do
+    if [ -e "${BAMBU_NV_DEV}" ]; then BAMBU_NV_BOUND=1; break; fi
+done
+if [ "${BAMBU_NV_BOUND}" = "1" ]; then
+    export __GLX_VENDOR_LIBRARY_NAME=nvidia
+    export __NV_PRIME_RENDER_OFFLOAD=1
+    export __VK_LAYER_NV_optimus=NVIDIA_only
+fi
+
+if [ -z "${GSETTINGS_SCHEMA_DIR:-}" ]; then
+    export GSETTINGS_SCHEMA_DIR="/usr/share/glib-2.0/schemas"
+fi
+
+for bin_path in "${BAMBU_STUDIO_DIR}/bin/bambu-studio" "${BAMBU_STUDIO_DIR}/AppRun" "/usr/bin/bambu-studio-bin" "${BAMBU_STUDIO_DIR}/bambu-studio"; do
+    if [ -x "${bin_path}" ]; then
+        exec "${bin_path}" "$@"
+    fi
+done
+
+echo "Error: Bambu Studio executable not found in ${BAMBU_STUDIO_DIR}" >&2
+exit 1
+BAMBU_WRAPPER_EOF
+        chmod 755 "${staging_root}/usr/bin/bambu-studio"
+        ln -sf bambu-studio "${staging_root}/usr/bin/BambuStudio" 2>/dev/null || true
+        # 6A-192: the AppImage sits in opt/bambu-studio-<version>; the launcher uses /opt/bambu-studio
+        if [ -d "${staging_root}/opt/bambu-studio-${ver}" ]; then
+            local bs_app="${staging_root}/opt/bambu-studio-${ver}" bs_icon bs_size
+            ln -sfn "bambu-studio-${ver}" "${staging_root}/opt/bambu-studio"
+            if [ -f "${bs_app}/BambuStudio.desktop" ]; then
+                mkdir -p "${staging_root}/usr/share/applications"
+                sed -e 's|^Exec=.*|Exec=bambu-studio %U|' -e 's|^Icon=.*|Icon=bambu-studio|' -e 's|^Name=.*|Name=Bambu Studio|' -e '/^X-AppImage-Version=/d' \
+                    "${bs_app}/BambuStudio.desktop" > "${staging_root}/usr/share/applications/bambu-studio.desktop"
+                chmod 644 "${staging_root}/usr/share/applications/bambu-studio.desktop"
+            fi
+            for bs_icon in "${bs_app}"/usr/share/icons/hicolor/*/apps/BambuStudio.png; do
+                [ -f "${bs_icon}" ] || continue
+                bs_size=$(basename "$(dirname "$(dirname "${bs_icon}")")")
+                mkdir -p "${staging_root}/usr/share/icons/hicolor/${bs_size}/apps"
+                cp -f "${bs_icon}" "${staging_root}/usr/share/icons/hicolor/${bs_size}/apps/bambu-studio.png"
+            done
+            if [ -f "${bs_app}/BambuStudio.png" ]; then
+                mkdir -p "${staging_root}/usr/share/pixmaps"
+                cp -f "${bs_app}/BambuStudio.png" "${staging_root}/usr/share/pixmaps/bambu-studio.png"
+            fi
+            # the library parts are libraries only: no command line tools, no development files
+            rm -f "${staging_root}/usr/bin/avifenc" "${staging_root}/usr/bin/avifdec" "${staging_root}/usr/bin/avifgainmaputil" \
+                  "${staging_root}/usr/bin/SvtAv1EncApp" "${staging_root}/usr/bin/rav1e" 2>/dev/null || true
+            rm -rf "${staging_root}/usr/lib64/cmake" "${staging_root}/usr/lib64/pkgconfig" "${staging_root}/usr/share/vala" "${staging_root}/usr/share/man" 2>/dev/null || true
+        fi
+    fi
+
+    if [ "${pkg_id}" = "blender" ]; then
+        mkdir -p "${staging_root}/usr/bin"
+        # 6A-185: the launcher below must not overwrite the program. Keep the package's own program as usr/bin/blender-bin
+        # (the launcher starts that one first); without this the launcher ended up calling itself and the program was lost.
+        if [ -L "${staging_root}/usr/bin/blender" ]; then
+            rm -f "${staging_root}/usr/bin/blender"
+        elif [ -f "${staging_root}/usr/bin/blender" ] && [ ! -e "${staging_root}/usr/bin/blender-bin" ] && [ ! -L "${staging_root}/usr/bin/blender-bin" ]; then
+            mv "${staging_root}/usr/bin/blender" "${staging_root}/usr/bin/blender-bin"
+        fi
+        cat << 'BLENDER_WRAPPER_EOF' > "${staging_root}/usr/bin/blender"
+#!/bin/sh
+# Blender Launch Wrapper for Slackware
+ulimit -n 1048576 2>/dev/null || true
+
+# GPU Acceleration
+if lspci 2>/dev/null | grep -i "vga\|3d" | grep -qi "nvidia"; then
+    [ -d "/usr/local/cuda" ] && export CUDA_PATH="/usr/local/cuda"
+    export LD_LIBRARY_PATH="/usr/lib64:${LD_LIBRARY_PATH:-}"
+    export CYCLES_CUDA_EXTRA_CFLAGS="-O3"
+    export __GL_SHADER_DISK_CACHE=1
+elif lspci 2>/dev/null | grep -i "vga\|3d" | grep -qi "amd\|radeon"; then
+    [ -d "/opt/rocm" ] && export ROCM_PATH="/opt/rocm"
+    [ -d "/opt/rocm/hip" ] && export HIP_PATH="/opt/rocm/hip"
+fi
+
+# Auto-start spacenavd if SpaceMouse device is connected
+if [ -c "/dev/hidraw0" ] && lsusb 2>/dev/null | grep -qi "256f:\|046d:c6"; then
+    if [ ! -S "/run/spnav.sock" ] && [ ! -S "/var/run/spnav.sock" ]; then
+        if [ -x /etc/rc.d/rc.spacenavd ] && ! pgrep -x spacenavd >/dev/null 2>&1; then
+            sudo /etc/rc.d/rc.spacenavd start 2>/dev/null || true
+        fi
+    fi
+fi
+
+for bin_path in /usr/bin/blender-bin /usr/bin/blender /opt/blender/blender; do
+    if [ -x "${bin_path}" ] && [ "${bin_path}" != "/usr/bin/blender" ]; then
+        exec "${bin_path}" "$@"
+    fi
+done
+exec /usr/bin/blender "$@"
+BLENDER_WRAPPER_EOF
+        chmod 755 "${staging_root}/usr/bin/blender"
+    fi
+
+    if [ "${pkg_id}" = "freecad" ]; then
+        mkdir -p "${staging_root}/usr/bin"
+        # 6A-191: opencascade ships a login-environment script for every user; it has no place in this package
+        rm -f "${staging_root}/etc/profile.d/opencascade.sh" "${staging_root}/etc/profile.d/opencascade.csh"
+        # never write the launcher through a link of the package
+        [ -L "${staging_root}/usr/bin/freecad" ] && rm -f "${staging_root}/usr/bin/freecad"
+        cat << 'FREECAD_WRAPPER_EOF' > "${staging_root}/usr/bin/freecad"
+#!/bin/sh
+# FreeCAD Launch Wrapper for Slackware
+ulimit -n 1048576 2>/dev/null || true
+
+if lspci 2>/dev/null | grep -i "vga\|3d" | grep -qi "nvidia"; then
+    [ -d "/usr/local/cuda" ] && export CUDA_PATH="/usr/local/cuda"
+    export LD_LIBRARY_PATH="/usr/lib64:${LD_LIBRARY_PATH:-}"
+    export __GL_SHADER_DISK_CACHE=1
+elif lspci 2>/dev/null | grep -i "vga\|3d" | grep -qi "amd\|radeon"; then
+    [ -d "/opt/rocm" ] && export ROCM_PATH="/opt/rocm"
+fi
+
+if [ -c "/dev/hidraw0" ] && lsusb 2>/dev/null | grep -qi "256f:\|046d:c6"; then
+    if [ ! -S "/run/spnav.sock" ] && [ ! -S "/var/run/spnav.sock" ]; then
+        if [ -x /etc/rc.d/rc.spacenavd ] && ! pgrep -x spacenavd >/dev/null 2>&1; then
+            sudo /etc/rc.d/rc.spacenavd start 2>/dev/null || true
+        fi
+    fi
+fi
+
+for bin_path in /usr/bin/FreeCAD /usr/lib64/freecad/bin/FreeCAD /usr/lib/freecad/bin/FreeCAD /opt/freecad/AppRun /opt/freecad/bin/freecad; do
+    if [ -x "${bin_path}" ]; then
+        exec "${bin_path}" "$@"
+    fi
+done
+exec FreeCAD "$@"
+FREECAD_WRAPPER_EOF
+        chmod 755 "${staging_root}/usr/bin/freecad"
+        # 6A-186: the package's own FreeCAD link stays; the launcher tries /usr/bin/FreeCAD first, so a link to the launcher
+        # would make it call itself. Only when the package has none, link to the program (never to the launcher).
+        if [ ! -e "${staging_root}/usr/bin/FreeCAD" ] && [ ! -L "${staging_root}/usr/bin/FreeCAD" ] && [ -f "${staging_root}/usr/lib64/freecad/bin/FreeCAD" ]; then
+            ln -s ../lib64/freecad/bin/FreeCAD "${staging_root}/usr/bin/FreeCAD" 2>/dev/null || true
+        fi
+    fi
+
+    if [ "${pkg_id}" = "plasticity" ]; then
+        mkdir -p "${staging_root}/usr/bin"
+        cat << 'PLASTICITY_WRAPPER_EOF' > "${staging_root}/usr/bin/plasticity"
+#!/bin/sh
+# Plasticity 3D CAD Launcher for Slackware
+FLAGS=""
+if [ -n "${WAYLAND_DISPLAY:-}" ]; then
+    FLAGS="--ozone-platform-hint=auto --enable-features=WaylandWindowDecorations"
+fi
+for bin_path in /opt/plasticity/plasticity /opt/Plasticity/plasticity /usr/lib/plasticity/plasticity; do
+    if [ -x "${bin_path}" ]; then
+        exec "${bin_path}" ${FLAGS} "$@"
+    fi
+done
+exec /opt/plasticity/plasticity ${FLAGS} "$@"
+PLASTICITY_WRAPPER_EOF
+        chmod 755 "${staging_root}/usr/bin/plasticity"
+        ln -sf plasticity "${staging_root}/usr/bin/Plasticity" 2>/dev/null || true
+    fi
+
+    if [ "${pkg_id}" = "storyboarder" ]; then
+        mkdir -p "${staging_root}/usr/bin"
+        cat << 'STORYBOARDER_WRAPPER_EOF' > "${staging_root}/usr/bin/storyboarder"
+#!/bin/sh
+# Storyboarder Pre-Vis Launcher for Slackware
+FLAGS=""
+if [ -n "${WAYLAND_DISPLAY:-}" ]; then
+    FLAGS="--ozone-platform-hint=auto --enable-features=WaylandWindowDecorations"
+fi
+for bin_path in /opt/storyboarder/storyboarder /opt/Storyboarder/storyboarder /usr/lib/storyboarder/storyboarder; do
+    if [ -x "${bin_path}" ]; then
+        exec "${bin_path}" ${FLAGS} "$@"
+    fi
+done
+exec /opt/storyboarder/storyboarder ${FLAGS} "$@"
+STORYBOARDER_WRAPPER_EOF
+        chmod 755 "${staging_root}/usr/bin/storyboarder"
+        ln -sf storyboarder "${staging_root}/usr/bin/Storyboarder" 2>/dev/null || true
+    fi
+
+    if [ "${pkg_id}" = "dvcp-aac" ]; then
+        mkdir -p "${staging_root}/opt/resolve/IOPlugins" \
+                 "${staging_root}/usr/bin"
+
+        cat << 'RESOLVE_AAC_CHECK_EOF' > "${staging_root}/usr/bin/resolve-aac-status"
+#!/bin/sh
+# DaVinci Resolve AAC Audio Bridge Status Checker
+echo "=== 🎬 DaVinci Resolve AAC Audio Bridge Status ==="
+if [ -d "/opt/resolve/IOPlugins/aac_decoder_probe.dvcp.bundle" ] && [ -d "/opt/resolve/IOPlugins/aac_fdk_plugin.dvcp.bundle" ]; then
+    echo "  [✓] AAC Decoder Plugin (Import & Playback) : Active in /opt/resolve/IOPlugins"
+    echo "  [✓] AAC Encoder Plugin (Export & Render)   : Active in /opt/resolve/IOPlugins"
+    echo "  [✓] Status: DaVinci Resolve Studio is armed with full native AAC support!"
+else
+    echo "  [!] Warning: One or more AAC plugin bundles are missing from /opt/resolve/IOPlugins."
+fi
+RESOLVE_AAC_CHECK_EOF
+        chmod 755 "${staging_root}/usr/bin/resolve-aac-status"
+    fi
+
     if [ "${pkg_id}" = "yabridge" ]; then
         mkdir -p "${staging_root}/usr/bin" "${staging_root}/usr/lib64" "${staging_root}/usr/lib"
         [ -f "${staging_root}/usr/bin/yabridgectl" ] && chmod 755 "${staging_root}/usr/bin/yabridgectl"
@@ -4318,7 +6398,7 @@ SYNCTHING_RC_EOF
     if [ "${pkg_id}" = "audacity" ]; then
         # Audacity installs internal private libraries to /usr/lib/audacity or /usr/lib64/audacity.
         # Ensure symmetric directories and symlinks for both /usr/lib64 and /usr/lib
-        mkdir -p "${staging_root}/usr/lib64" "${staging_root}/usr/lib" "${staging_root}/etc/ld.so.conf.d"
+        mkdir -p "${staging_root}/usr/lib64" "${staging_root}/usr/lib"
         for subdir in audacity suil-0 wx; do
             if [ -d "${staging_root}/usr/lib64/${subdir}" ] && [ ! -d "${staging_root}/usr/lib/${subdir}" ]; then
                 ln -sf "../lib64/${subdir}" "${staging_root}/usr/lib/${subdir}"
@@ -4329,17 +6409,14 @@ SYNCTHING_RC_EOF
             fi
         done
 
-        # Register library paths in dynamic linker config
-        cat << 'AUDACITY_LD_EOF' > "${staging_root}/etc/ld.so.conf.d/audacity.conf"
-/usr/lib64/audacity
-/usr/lib/audacity
-/usr/lib64
-/usr/lib
-AUDACITY_LD_EOF
+        # 6A-163: the old etc/ld.so.conf.d/audacity.conf put /usr/lib64 and /usr/lib on the linker path of the whole system.
+        # Never shipped any more; the wrapper below sets LD_LIBRARY_PATH for Audacity alone.
+        rm -f "${staging_root}/etc/ld.so.conf.d/audacity.conf" 2>/dev/null || true
 
-        # Wrap /usr/bin/audacity to ensure LD_LIBRARY_PATH always finds private libraries
-        if [ -f "${staging_root}/usr/bin/audacity" ]; then
-            mv -f "${staging_root}/usr/bin/audacity" "${staging_root}/usr/lib64/audacity/audacity.bin" 2>/dev/null || true
+        # Wrap /usr/bin/audacity to ensure LD_LIBRARY_PATH always finds private libraries.
+        # 6A-165: only when the program really moved behind the wrapper; without usr/lib64/audacity the program stays as it is
+        if [ -f "${staging_root}/usr/bin/audacity" ] && [ -d "${staging_root}/usr/lib64/audacity" ] \
+            && mv -f "${staging_root}/usr/bin/audacity" "${staging_root}/usr/lib64/audacity/audacity.bin"; then
             cat << 'AUDACITY_WRAPPER_EOF' > "${staging_root}/usr/bin/audacity"
 #!/bin/sh
 # Audacity wrapper for Slackware ensuring private shared libraries resolve
@@ -4890,14 +6967,19 @@ fi
 UDEV_DOINST_EOF
     fi
 
+    slacky_rc_helpers >> "${staging_root}/install/doinst.sh"
     cat << 'DOINST_TAIL_EOF' >> "${staging_root}/install/doinst.sh"
-if [ -f /lib64/libelogind.so.0 ] && [ ! -e /usr/lib64/libsystemd.so.0 ]; then
-  mkdir -p /usr/lib64
-  ln -sf /lib64/libelogind.so.0 /usr/lib64/libsystemd.so.0 2>/dev/null || true
+# 6A-6: libelogind compatibility links in the pkgtools "( cd DIR ; rm -rf LINK )" form, so removepkg records them and removes
+# them with the last curated package (it only ever deletes symlinks, never a real libsystemd). Never replaces an existing one.
+if [ -f lib64/libelogind.so.0 ] && [ ! -e usr/lib64/libsystemd.so.0 ]; then
+  mkdir -p usr/lib64
+  ( cd usr/lib64 ; rm -rf libsystemd.so.0 )
+  ( cd usr/lib64 ; ln -sf /lib64/libelogind.so.0 libsystemd.so.0 )
 fi
-if [ -f /lib/libelogind.so.0 ] && [ ! -e /usr/lib/libsystemd.so.0 ]; then
-  mkdir -p /usr/lib
-  ln -sf /lib/libelogind.so.0 /usr/lib/libsystemd.so.0 2>/dev/null || true
+if [ -f lib/libelogind.so.0 ] && [ ! -e usr/lib/libsystemd.so.0 ]; then
+  mkdir -p usr/lib
+  ( cd usr/lib ; rm -rf libsystemd.so.0 )
+  ( cd usr/lib ; ln -sf /lib/libelogind.so.0 libsystemd.so.0 )
 fi
 if [ -f /usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json ] && [ ! -e /usr/share/vulkan/implicit_layer.d/MangoHud.json ]; then
   ln -sf MangoHud.x86_64.json /usr/share/vulkan/implicit_layer.d/MangoHud.json 2>/dev/null || true
@@ -4910,6 +6992,17 @@ if [ -f /usr/share/vulkan/implicit_layer.d/obs_vkcapture_64.json ] && [ ! -e /us
 fi
 if [ -d /opt/obs-studio ]; then
   mkdir -p /opt/obs-studio/lib/obs-plugins /opt/obs-studio/share/obs/obs-plugins 2>/dev/null || true
+  # 6A-170: remove a link inside a plugin folder that has the folder's own name and points at the folder or at the host copy
+  # (made by an older run of the loop below: <plugin>/<plugin> -> /usr/share/obs/obs-plugins/<plugin>)
+  for obsd in /usr/share/obs/obs-plugins/*/ /opt/obs-studio/share/obs/obs-plugins/*/ /usr/lib64/obs-plugins/*/ /opt/obs-studio/lib/obs-plugins/*/; do
+    [ -d "${obsd}" ] || continue
+    obsn=$(basename "${obsd}")
+    [ -L "${obsd}${obsn}" ] || continue
+    obst=$(readlink "${obsd}${obsn}")
+    if [ "${obsd}${obsn}" -ef "${obsd%/}" ] || [ "${obst}" = "/usr/share/obs/obs-plugins/${obsn}" ] || [ "${obst}" = "/usr/lib64/obs-plugins/${obsn}" ]; then
+      rm -f "${obsd}${obsn}" 2>/dev/null || true
+    fi
+  done
   if [ -d /usr/lib64/obs-plugins ]; then
     # Clean up stray modular sub-plugins erroneously placed in root plugin directories by earlier builds
     for stray_so in /usr/lib64/obs-plugins/advanced-scene-switcher-*.so /opt/obs-studio/lib/obs-plugins/advanced-scene-switcher-*.so; do
@@ -4919,14 +7012,19 @@ if [ -d /opt/obs-studio ]; then
     for obsitem in /usr/lib64/obs-plugins/*; do
       [ -e "${obsitem}" ] || continue
       obsbname=$(basename "${obsitem}")
-      ( cd /opt/obs-studio/lib/obs-plugins && rm -rf "${obsbname}" && ln -sf "${obsitem}" "${obsbname}" 2>/dev/null || true )
+      # 6A-170: bundle folder and host folder are the same place, or the link is already right: nothing to do
+      [ /opt/obs-studio/lib/obs-plugins -ef /usr/lib64/obs-plugins ] && break
+      [ -L "/opt/obs-studio/lib/obs-plugins/${obsbname}" ] && [ "/opt/obs-studio/lib/obs-plugins/${obsbname}" -ef "${obsitem}" ] && continue
+      ( cd /opt/obs-studio/lib/obs-plugins && rm -rf "${obsbname}" && ln -sfn "${obsitem}" "${obsbname}" 2>/dev/null || true )
     done
   fi
   if [ -d /usr/share/obs/obs-plugins ]; then
     for obsdir in /usr/share/obs/obs-plugins/*; do
       [ -d "${obsdir}" ] || continue
       obsbname=$(basename "${obsdir}")
-      ( cd /opt/obs-studio/share/obs/obs-plugins && rm -rf "${obsbname}" && ln -sf "${obsdir}" "${obsbname}" 2>/dev/null || true )
+      [ /opt/obs-studio/share/obs/obs-plugins -ef /usr/share/obs/obs-plugins ] && break
+      [ -L "/opt/obs-studio/share/obs/obs-plugins/${obsbname}" ] && [ "/opt/obs-studio/share/obs/obs-plugins/${obsbname}" -ef "${obsdir}" ] && continue
+      ( cd /opt/obs-studio/share/obs/obs-plugins && rm -rf "${obsbname}" && ln -sfn "${obsdir}" "${obsbname}" 2>/dev/null || true )
     done
   fi
 fi
@@ -4977,167 +7075,45 @@ if [ -d /usr/lib/steam ] && [ -f /usr/lib/steam/bin_steam.sh ] && [ ! -e /usr/li
   ( cd /usr/lib/steam && ln -sf bin_steam.sh steam 2>/dev/null || true )
 fi
 
-# Slackware rc.local integration for daemons:
-if [ -f /etc/rc.d/rc.ananicy-cpp ]; then
-  chmod 755 /etc/rc.d/rc.ananicy-cpp 2>/dev/null || true
-  if [ -f /etc/rc.d/rc.local ] && ! grep -q "rc.ananicy-cpp" /etc/rc.d/rc.local 2>/dev/null; then
-    cat << 'RC_EOF' >> /etc/rc.d/rc.local
+# 6A-6c: daemon start/stop hooks as marker blocks (helpers printed above by slacky_rc_helpers). Exact old unmarked
+# blocks are migrated in place; hand-edited ones are left alone.
+echo "${SU_RC_DAEMONS}" | while IFS='|' read -r su_dn su_dd; do
+  [ -n "${su_dn}" ] && [ -f "/etc/rc.d/rc.${su_dn}" ] || continue
+  chmod 755 "/etc/rc.d/rc.${su_dn}" 2>/dev/null || true
+  su_rc_migrate /etc/rc.d/rc.local "${su_dn}" start "Start ${su_dd}"
+  su_rc_migrate /etc/rc.d/rc.local_shutdown "${su_dn}" stop "Stop ${su_dd}"
+  printf 'if [ -x /etc/rc.d/rc.%s ]; then\n  /etc/rc.d/rc.%s start\nfi\n' "${su_dn}" "${su_dn}" | su_rc_add /etc/rc.d/rc.local "${su_dn}"
+  printf 'if [ -x /etc/rc.d/rc.%s ]; then\n  /etc/rc.d/rc.%s stop\nfi\n' "${su_dn}" "${su_dn}" | su_rc_add /etc/rc.d/rc.local_shutdown "${su_dn}"
+done
 
-# Start Ananicy C++ auto-nice daemon:
-if [ -x /etc/rc.d/rc.ananicy-cpp ]; then
-  /etc/rc.d/rc.ananicy-cpp start
-fi
-RC_EOF
+# 6A-83: boot-time module loading in rc.modules.local (marked block per module; skipped when the sysadmin already loads it)
+echo "${SU_RC_MODULES}" | while IFS='|' read -r su_mn su_ms; do
+  [ -n "${su_mn}" ] && [ -e "${su_ms}" ] || continue
+  su_mf=/etc/rc.d/rc.modules.local
+  if [ ! -e "${su_mf}" ]; then
+    printf '#!/bin/sh\n# /etc/rc.d/rc.modules.local - local kernel modules loaded at boot\n' > "${su_mf}" && chmod 755 "${su_mf}"
   fi
-  if [ -f /etc/rc.d/rc.local_shutdown ] && ! grep -q "rc.ananicy-cpp" /etc/rc.d/rc.local_shutdown 2>/dev/null; then
-    cat << 'RC_EOF' >> /etc/rc.d/rc.local_shutdown
-
-# Stop Ananicy C++ auto-nice daemon:
-if [ -x /etc/rc.d/rc.ananicy-cpp ]; then
-  /etc/rc.d/rc.ananicy-cpp stop
-fi
-RC_EOF
+  if ! su_mod_listed "${su_mf}" "${su_mn}"; then
+    printf '/sbin/modprobe -q %s\n' "${su_mn}" | su_rc_add "${su_mf}" "module-${su_mn}"
   fi
-fi
-
-if [ -f /etc/rc.d/rc.lact ]; then
-  chmod 755 /etc/rc.d/rc.lact 2>/dev/null || true
-  if [ -f /etc/rc.d/rc.local ] && ! grep -q "rc.lact" /etc/rc.d/rc.local 2>/dev/null; then
-    cat << 'RC_EOF' >> /etc/rc.d/rc.local
-
-# Start LACT GPU control daemon:
-if [ -x /etc/rc.d/rc.lact ]; then
-  /etc/rc.d/rc.lact start
-fi
-RC_EOF
-  fi
-  if [ -f /etc/rc.d/rc.local_shutdown ] && ! grep -q "rc.lact" /etc/rc.d/rc.local_shutdown 2>/dev/null; then
-    cat << 'RC_EOF' >> /etc/rc.d/rc.local_shutdown
-
-# Stop LACT GPU control daemon:
-if [ -x /etc/rc.d/rc.lact ]; then
-  /etc/rc.d/rc.lact stop
-fi
-RC_EOF
-  fi
-fi
-
-if [ -f /etc/rc.d/rc.scx ]; then
-  chmod 755 /etc/rc.d/rc.scx 2>/dev/null || true
-  if [ -f /etc/rc.d/rc.local ] && ! grep -q "rc.scx" /etc/rc.d/rc.local 2>/dev/null; then
-    cat << 'RC_EOF' >> /etc/rc.d/rc.local
-
-# Start Sched-EXT gaming scheduler:
-if [ -x /etc/rc.d/rc.scx ]; then
-  /etc/rc.d/rc.scx start
-fi
-RC_EOF
-  fi
-  if [ -f /etc/rc.d/rc.local_shutdown ] && ! grep -q "rc.scx" /etc/rc.d/rc.local_shutdown 2>/dev/null; then
-    cat << 'RC_EOF' >> /etc/rc.d/rc.local_shutdown
-
-# Stop Sched-EXT gaming scheduler:
-if [ -x /etc/rc.d/rc.scx ]; then
-  /etc/rc.d/rc.scx stop
-fi
-RC_EOF
-  fi
-fi
-
-if [ -f /etc/rc.d/rc.coolercontrol ]; then
-  chmod 755 /etc/rc.d/rc.coolercontrol 2>/dev/null || true
-  if [ -f /etc/rc.d/rc.local ] && ! grep -q "rc.coolercontrol" /etc/rc.d/rc.local 2>/dev/null; then
-    cat << 'RC_EOF' >> /etc/rc.d/rc.local
-
-# Start CoolerControl daemon:
-if [ -x /etc/rc.d/rc.coolercontrol ]; then
-  /etc/rc.d/rc.coolercontrol start
-fi
-RC_EOF
-  fi
-  if [ -f /etc/rc.d/rc.local_shutdown ] && ! grep -q "rc.coolercontrol" /etc/rc.d/rc.local_shutdown 2>/dev/null; then
-    cat << 'RC_EOF' >> /etc/rc.d/rc.local_shutdown
-
-# Stop CoolerControl daemon:
-if [ -x /etc/rc.d/rc.coolercontrol ]; then
-  /etc/rc.d/rc.coolercontrol stop
-fi
-RC_EOF
-  fi
-fi
-
-if [ -f /etc/rc.d/rc.asusd ]; then
-  chmod 755 /etc/rc.d/rc.asusd 2>/dev/null || true
-  if [ -f /etc/rc.d/rc.local ] && ! grep -q "rc.asusd" /etc/rc.d/rc.local 2>/dev/null; then
-    cat << 'RC_EOF' >> /etc/rc.d/rc.local
-
-# Start ASUS control daemon:
-if [ -x /etc/rc.d/rc.asusd ]; then
-  /etc/rc.d/rc.asusd start
-fi
-RC_EOF
-  fi
-  if [ -f /etc/rc.d/rc.local_shutdown ] && ! grep -q "rc.asusd" /etc/rc.d/rc.local_shutdown 2>/dev/null; then
-    cat << 'RC_EOF' >> /etc/rc.d/rc.local_shutdown
-
-# Stop ASUS control daemon:
-if [ -x /etc/rc.d/rc.asusd ]; then
-  /etc/rc.d/rc.asusd stop
-fi
-RC_EOF
-  fi
-fi
-
-if [ -f /etc/rc.d/rc.syncthing ]; then
-  chmod 755 /etc/rc.d/rc.syncthing 2>/dev/null || true
-  if [ -f /etc/rc.d/rc.local ] && ! grep -q "rc.syncthing" /etc/rc.d/rc.local 2>/dev/null; then
-    cat << 'RC_EOF' >> /etc/rc.d/rc.local
-
-# Start Syncthing service:
-if [ -x /etc/rc.d/rc.syncthing ]; then
-  /etc/rc.d/rc.syncthing start
-fi
-RC_EOF
-  fi
-  if [ -f /etc/rc.d/rc.local_shutdown ] && ! grep -q "rc.syncthing" /etc/rc.d/rc.local_shutdown 2>/dev/null; then
-    cat << 'RC_EOF' >> /etc/rc.d/rc.local_shutdown
-
-# Stop Syncthing service:
-if [ -x /etc/rc.d/rc.syncthing ]; then
-  /etc/rc.d/rc.syncthing stop
-fi
-RC_EOF
-  fi
-fi
-
-if [ -f /etc/rc.d/rc.dmemcg-booster ]; then
-  chmod 755 /etc/rc.d/rc.dmemcg-booster 2>/dev/null || true
-  if [ -f /etc/rc.d/rc.local ] && ! grep -q "rc.dmemcg-booster" /etc/rc.d/rc.local 2>/dev/null; then
-    cat << 'RC_EOF' >> /etc/rc.d/rc.local
-
-# Start dmemcg-booster VRAM daemon:
-if [ -x /etc/rc.d/rc.dmemcg-booster ]; then
-  /etc/rc.d/rc.dmemcg-booster start
-fi
-RC_EOF
-  fi
-  if [ -f /etc/rc.d/rc.local_shutdown ] && ! grep -q "rc.dmemcg-booster" /etc/rc.d/rc.local_shutdown 2>/dev/null; then
-    cat << 'RC_EOF' >> /etc/rc.d/rc.local_shutdown
-
-# Stop dmemcg-booster VRAM daemon:
-if [ -x /etc/rc.d/rc.dmemcg-booster ]; then
-  /etc/rc.d/rc.dmemcg-booster stop
-fi
-RC_EOF
-  fi
-fi
+  [ -x "${su_mf}" ] || echo "slacky-update: ${su_mf} is not executable, so ${su_mn} will not load at boot. Fix: chmod +x ${su_mf}" >&2
+  # zenpower is loaded by its own step below (k10temp has to let go of the sensor first)
+  [ "${su_mn}" = "zenpower" ] || /sbin/modprobe -q "${su_mn}" 2>/dev/null || true
+done
 
 if [ -d /etc/easyeffects/output ]; then
-  for u_home in /home/*; do
-    [ -d "${u_home}" ] || continue
-    u_uid=$(stat -c '%u' "${u_home}" 2>/dev/null || echo 0)
-    [ "${u_uid}" -ge 1000 ] || continue
-    u_name=$(basename "${u_home}")
+  mkdir -p /etc/skel/.config/easyeffects/output /etc/skel/.config/easyeffects/irs 2>/dev/null || true
+  cp -n /etc/easyeffects/output/*.json /etc/skel/.config/easyeffects/output/ 2>/dev/null || true
+  if [ -d /etc/easyeffects/irs ]; then
+    cp -n /etc/easyeffects/irs/* /etc/skel/.config/easyeffects/irs/ 2>/dev/null || true
+  fi
+  for jf in /etc/skel/.config/easyeffects/output/*.json; do
+    [ -f "${jf}" ] || continue
+    sed -i "s|<PRESETS_DIRECTORY>|\$HOME/.config/easyeffects|g" "${jf}" 2>/dev/null || true
+  done
+  target_user="${SUDO_USER:-${USER:-}}"
+  if [ -n "${target_user}" ] && [ "${target_user}" != "root" ] && [ -d "/home/${target_user}" ]; then
+    u_home="/home/${target_user}"
     mkdir -p "${u_home}/.config/easyeffects/output" "${u_home}/.config/easyeffects/irs" 2>/dev/null || true
     cp -n /etc/easyeffects/output/*.json "${u_home}/.config/easyeffects/output/" 2>/dev/null || true
     if [ -d /etc/easyeffects/irs ]; then
@@ -5147,8 +7123,8 @@ if [ -d /etc/easyeffects/output ]; then
       [ -f "${jf}" ] || continue
       sed -i "s|<PRESETS_DIRECTORY>|${u_home}/.config/easyeffects|g" "${jf}" 2>/dev/null || true
     done
-    chown -R "${u_name}:users" "${u_home}/.config/easyeffects" 2>/dev/null || true
-  done
+    chown -R "${target_user}:users" "${u_home}/.config/easyeffects" 2>/dev/null || true
+  fi
 fi
 DOINST_TAIL_EOF
 
@@ -5164,12 +7140,23 @@ DOINST_TAIL_EOF
     esac
 
     if [ "${has_dkms_driver}" -eq 1 ]; then
+        printf 'SU_DKMS_OWN="%s"\n' "$(slacky_dkms_own_entries "${staging_root}" | cut -d'|' -f1 | tr '\n' ' ')" >> "${staging_root}/install/doinst.sh"
         cat << 'DKMS_DOINST_EOF' >> "${staging_root}/install/doinst.sh"
 
 # DKMS Kernel Driver Auto-registration & Compilation (Drivers Only)
+# 6A-166: only the source folders THIS package ships are registered (never another driver's /usr/src/*/dkms.conf)
+# 6A-100: while slacky-update runs (its run lock is held) only register the module; the update builds it once per kept
+# kernel in its boot-chain step (this file asks for that), instead of building here for every kernel incl. dying ones
+SS_DKMS_BUILD=1
+if command -v flock >/dev/null 2>&1 && [ -e /run/lock/slacky-update.lock ] && ! flock -n /run/lock/slacky-update.lock true 2>/dev/null; then
+  SS_DKMS_BUILD=0
+  mkdir -p /var/cache/slacky-update 2>/dev/null || true
+  touch /var/cache/slacky-update/dkms-build-pending 2>/dev/null || true
+fi
 if [ -x /usr/sbin/dkms ] || [ -x /usr/bin/dkms ]; then
   DKMS_BIN=$(command -v dkms 2>/dev/null || echo "/usr/sbin/dkms")
-  for dconf in /usr/src/*/dkms.conf; do
+  for su_own in ${SU_DKMS_OWN}; do
+    dconf="/usr/src/${su_own}/dkms.conf"
     [ -f "${dconf}" ] || continue
     ddir=$(dirname "${dconf}")
     dname=$(basename "${ddir}")
@@ -5182,6 +7169,7 @@ if [ -x /usr/sbin/dkms ] || [ -x /usr/bin/dkms ]; then
         ln -sf "${dname}" "/usr/src/${mod_name}-${mod_ver}" 2>/dev/null || true
       fi
       "${DKMS_BIN}" add -m "${mod_name}" -v "${mod_ver}" >/dev/null 2>&1 || true
+      [ "${SS_DKMS_BUILD}" = "1" ] || continue
       for kdir in /lib/modules/*; do
         [ -d "${kdir}/build" ] || continue
         kver=$(basename "${kdir}")
@@ -5196,42 +7184,269 @@ fi
 DKMS_DOINST_EOF
     fi
 
-    if [ "${pkg_id}" = "zenpower3" ] || [ -f "${staging_root}/etc/modules-load.d/zenpower.conf" ]; then
+    if [ "${pkg_id}" = "zenpower3" ] || [ -f "${staging_root}/etc/modprobe.d/zenpower.conf" ]; then
         cat << 'ZEN_DOINST_EOF' >> "${staging_root}/install/doinst.sh"
-if [ -f /etc/modules-load.d/zenpower.conf ]; then
-  /sbin/modprobe -r k10temp >/dev/null 2>&1 || true
-  /sbin/modprobe zenpower >/dev/null 2>&1 || true
+# 6A-167: the sensor driver is swapped only when the zenpower module really exists for the RUNNING kernel (the build can be
+# deferred to the update's boot step or fail); if zenpower will not load, k10temp is loaded again
+if [ -f /etc/modprobe.d/zenpower.conf ]; then
+  su_zk=$(uname -r)
+  if [ -n "$(find "/lib/modules/${su_zk}" -name 'zenpower.ko*' 2>/dev/null | head -n1)" ]; then
+    /sbin/modprobe -r k10temp >/dev/null 2>&1 || true
+    /sbin/modprobe zenpower >/dev/null 2>&1 || /sbin/modprobe k10temp >/dev/null 2>&1 || true
+  fi
 fi
 ZEN_DOINST_EOF
     fi
 
-    if [ "${pkg_id}" = "v4l2loopback" ] || [ -f "${staging_root}/etc/modules-load.d/v4l2loopback.conf" ]; then
+    if [ "${pkg_id}" = "v4l2loopback" ] || [ -f "${staging_root}/etc/modprobe.d/v4l2loopback.conf" ]; then
         cat << 'V4L2_DOINST_EOF' >> "${staging_root}/install/doinst.sh"
-if [ -f /etc/modules-load.d/v4l2loopback.conf ]; then
+if [ -f /etc/modprobe.d/v4l2loopback.conf ]; then
   /sbin/modprobe v4l2loopback >/dev/null 2>&1 || true
 fi
 V4L2_DOINST_EOF
     fi
+
+    # 6A-25: the Hyprland suites ship their own session launcher. Arch's /usr/bin/start-hyprland (Hyprland >= 0.53,
+    # crash watchdog) starts no D-Bus session bus, so with SDDM nothing in the session had a bus (tray, portals).
+    # Packaged here instead of written with sudo after install (the old post-install branch is unreachable).
+    if [ "${pkg_id}" = "hyprland-noctalia" ] || [ "${pkg_id}" = "hyprland-core" ]; then
+        mkdir -p "${staging_root}/usr/bin" "${staging_root}/usr/share/wayland-sessions"
+        cat << 'HYPR_SESSION_EOF' > "${staging_root}/usr/bin/start-hyprland-session"
+#!/bin/sh
+# Slacky-Update Hyprland session launcher: Wayland environment + a D-Bus session bus when the display manager gave none.
+export XDG_CURRENT_DESKTOP=Hyprland
+export XDG_SESSION_TYPE=wayland
+export XDG_SESSION_DESKTOP=Hyprland
+export MOZ_ENABLE_WAYLAND=1
+export QT_QPA_PLATFORM="wayland;xcb"
+export GDK_BACKEND="wayland,x11,*"
+export CLUTTER_BACKEND=wayland
+export SDL_VIDEODRIVER=wayland
+
+if [ -f /etc/hypr/hyprland.env ]; then
+    . /etc/hypr/hyprland.env
+fi
+# 6A-64: the user's own file is read last, so its settings always win
+if [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/hyprland.env" ]; then
+    . "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/hyprland.env"
+fi
+
+# 6A-78: multi-GPU machines list their GPUs by PCI slot; turn them into /dev/dri/cardN now (card numbers can change
+# between boots) and skip a GPU that is gone. A user-set AQ_DRM_DEVICES always wins.
+if [ -n "${SLACKY_DRM_ORDER:-}" ] && [ -z "${AQ_DRM_DEVICES:-}" ]; then
+    _aq=""
+    for _s in ${SLACKY_DRM_ORDER}; do
+        _l="/dev/dri/by-path/pci-${_s}-card"
+        [ -e "${_l}" ] || continue
+        _n=$(readlink -f "${_l}") || continue
+        _aq="${_aq:+${_aq}:}${_n}"
+    done
+    [ -n "${_aq}" ] && export AQ_DRM_DEVICES="${_aq}"
+    unset _aq _s _l _n
+fi
+
+if [ -x /usr/bin/start-hyprland ]; then
+    set -- /usr/bin/start-hyprland "$@"
+else
+    set -- Hyprland "$@"
+fi
+
+if [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ] && command -v dbus-run-session >/dev/null 2>&1; then
+    exec dbus-run-session "$@"
+fi
+exec "$@"
+HYPR_SESSION_EOF
+        chmod 755 "${staging_root}/usr/bin/start-hyprland-session"
+        cat << 'HYPR_DESKTOP_EOF' > "${staging_root}/usr/share/wayland-sessions/hyprland.desktop"
+[Desktop Entry]
+Name=Hyprland
+Comment=An intelligent dynamic tiling Wayland compositor
+Exec=/usr/bin/start-hyprland-session
+Type=Application
+DesktopNames=Hyprland
+Keywords=tiling;wayland;compositor;
+HYPR_DESKTOP_EOF
+        chmod 644 "${staging_root}/usr/share/wayland-sessions/hyprland.desktop"
+    fi
+    # 6A-129 (M7): admin-editable config ships as .new; config() installs it only when there is no file yet
+    local cfg_new_list=() cfg_rel
+    for cfg_rel in ${GAMING_CONFIG_NEW_FILES}; do
+        [ -f "${staging_root}/${cfg_rel}" ] || continue
+        mv -f "${staging_root}/${cfg_rel}" "${staging_root}/${cfg_rel}.new"
+        cfg_new_list+=("${cfg_rel}")
+    done
+    if [ ${#cfg_new_list[@]} -gt 0 ]; then
+        {
+            cat << 'CONFIG_NEW_EOF'
+config() {
+  NEW="$1"
+  OLD="$(dirname "$NEW")/$(basename "$NEW" .new)"
+  if [ ! -r "$OLD" ]; then
+    mv "$NEW" "$OLD"
+  elif [ "$(md5sum < "$OLD")" = "$(md5sum < "$NEW")" ]; then
+    rm "$NEW"
+  fi
+}
+CONFIG_NEW_EOF
+            for cfg_rel in "${cfg_new_list[@]}"; do
+                echo "config ${cfg_rel}.new"
+            done
+        } >> "${staging_root}/install/doinst.sh"
+    fi
     chmod 755 "${staging_root}/install/doinst.sh"
+
+    # 6A-6c: remove a daemon's rc.local blocks when its rc script is gone. removepkg runs this after deleting the package's
+    # files; during an upgrade (or while another package still ships the script) /etc/rc.d/rc.NAME exists and nothing
+    # is touched. The daemon itself is stopped by the updater before removepkg.
+    {
+        echo '#!/bin/sh'
+        slacky_rc_helpers
+        cat << 'DOUNINST_EOF'
+echo "${SU_RC_DAEMONS}" | while IFS='|' read -r su_dn su_dd; do
+  [ -n "${su_dn}" ] || continue
+  [ -e "/etc/rc.d/rc.${su_dn}" ] && continue
+  su_rc_remove /etc/rc.d/rc.local "${su_dn}"
+  su_rc_remove /etc/rc.d/rc.local_shutdown "${su_dn}"
+done
+# 6A-83: a module block goes only when the package that needs it is gone (not during an upgrade)
+echo "${SU_RC_MODULES}" | while IFS='|' read -r su_mn su_ms; do
+  [ -n "${su_mn}" ] || continue
+  [ -e "${su_ms}" ] && continue
+  su_rc_remove /etc/rc.d/rc.modules.local "module-${su_mn}"
+done
+DOUNINST_EOF
+        # 6A-168: a DKMS driver package unregisters its module with DKMS when removepkg has deleted its source folder
+        # (removepkg runs this script after the files are gone; an upgrade that keeps the folder changes nothing)
+        local dkms_own
+        dkms_own=$(slacky_dkms_own_entries "${staging_root}")
+        if [ -n "${dkms_own}" ]; then
+            printf 'SU_DKMS_OWN="%s"\n' "${dkms_own}"
+            cat << 'DKMS_DOUNINST_EOF'
+if [ -x /usr/sbin/dkms ] || [ -x /usr/bin/dkms ]; then
+  DKMS_BIN=$(command -v dkms 2>/dev/null || echo "/usr/sbin/dkms")
+  echo "${SU_DKMS_OWN}" | while IFS='|' read -r su_dn su_mn su_mv; do
+    [ -n "${su_dn}" ] || continue
+    [ -f "/usr/src/${su_dn}/dkms.conf" ] && continue
+    [ -f "/usr/src/${su_mn}-${su_mv}/dkms.conf" ] && continue
+    "${DKMS_BIN}" remove -m "${su_mn}" -v "${su_mv}" --all >/dev/null 2>&1 || true
+    if [ -L "/usr/src/${su_mn}-${su_mv}" ] && [ ! -e "/usr/src/${su_mn}-${su_mv}" ]; then
+      rm -f "/usr/src/${su_mn}-${su_mv}" 2>/dev/null || true
+    fi
+  done
+fi
+DKMS_DOUNINST_EOF
+        fi
+    } > "${staging_root}/install/douninst.sh"
+    chmod 755 "${staging_root}/install/douninst.sh"
 
     # Permissions
     chmod -R u=rwX,go=rX "${staging_root}"
     [ -d "${staging_root}/etc/rc.d" ] && chmod 755 "${staging_root}/etc/rc.d/"* 2>/dev/null || true
+    # 6A-129: chmod -R clears setuid; Electron's chrome-sandbox needs 4755 (the archive is packed as root:root)
+    local sandbox_bin
+    while IFS= read -r -d '' sandbox_bin; do
+        chmod 4755 "${sandbox_bin}" 2>/dev/null || true
+    done < <(find "${staging_root}" -type f -name chrome-sandbox -print0 2>/dev/null)
+
+    # 6A-194: nothing is ever packed group- or world-writable (the installed underpants-hyprmod had 0666/0777 files; root runs
+    # them). chmod above already clears it; this gate makes sure and stops the build if anything is still writable.
+    if [ -n "$(find "${staging_root}" ! -type l -perm /022 -print -quit 2>/dev/null)" ]; then
+        gaming_build_failed "${pkg_name} has files anyone could change. Package not built."
+        return 1
+    fi
+
+    # 6A-195: no link or file with a name the package rules refuse
+    gaming_drop_odd_names "${staging_root}" || { gaming_build_failed "Name check failed for ${pkg_name}. Package not built."; return 1; }
+
+    # 6A-66: D-Bus activation files from Arch point at /usr/lib/...; on Slackware the program sits in /usr/lib64, so
+    # activation silently failed (Hyprland portal, hyprpolkitagent). Rewritten only when the target is really in lib64.
+    local dbus_svc dbus_exec
+    for dbus_svc in "${staging_root}"/usr/share/dbus-1/services/*.service "${staging_root}"/usr/share/dbus-1/system-services/*.service; do
+        [ -f "${dbus_svc}" ] || continue
+        dbus_exec=$(sed -n 's/^Exec=\([^ ]*\).*/\1/p' "${dbus_svc}" | head -n1)
+        case "${dbus_exec}" in
+            /usr/lib/*)
+                if [ ! -e "${staging_root}${dbus_exec}" ] && [ -e "${staging_root}/usr/lib64/${dbus_exec#/usr/lib/}" ]; then
+                    sed -i "s|^Exec=/usr/lib/|Exec=/usr/lib64/|" "${dbus_svc}"
+                fi
+                ;;
+        esac
+    done
+
+    # 2A/2B: Footprint Guard on the final staging tree (enforce mode unless SLACKY_FOOTPRINT_MODE=report)
+    if [ -n "${GNOMES_PY:-}" ] && [ -f "${GNOMES_PY}" ]; then
+        if ! python3 "${GNOMES_PY}" footprint-guard "${staging_root}" --label "${pkg_name}-${ver}"; then
+            if [ "${SLACKY_FOOTPRINT_MODE:-enforce}" != "report" ]; then
+                gaming_build_failed "Footprint check failed for ${pkg_name}. Package not built."  # 6A-125
+                return 1
+            fi
+        fi
+    elif [ "${SLACKY_FOOTPRINT_MODE:-enforce}" != "report" ]; then
+        gaming_build_failed "Footprint check unavailable (gnomes_pacman.py not found). Package not built."
+        return 1
+    fi
 
     echo -e "  ${CYAN}•${RESET} Assembling Slackware package: ${pkg_name}-${ver}-x86_64-1_slacky.txz..."
     local txz_out="${staging_base}/${pkg_name}-${ver}-x86_64-1_slacky.txz"
     rm -f "${txz_out}"
-    (
-        cd "${staging_root}"
-        find ./ | LC_COLLATE=C sort | sed '2,$s,^\./,,' | tar --no-recursion -T - -cf - | xz -T0 -1 > "${txz_out}" 2>/dev/null || true
-    )
+    # 6A-125: a failed or truncated archive is never installed
+    if ! (
+        cd "${staging_root}" || exit 1
+        find ./ | LC_COLLATE=C sort | sed '2,$s,^\./,,' | tar --owner=0 --group=0 --numeric-owner --no-recursion -T - -cf - | xz -T0 -1 > "${txz_out}" 2>/dev/null
+    ) || ! xz -t "${txz_out}" 2>/dev/null; then
+        gaming_build_failed "The ${pkg_name} package could not be created. Nothing was changed."
+        return 1
+    fi
+
+    # 2C: never install an archive with non-root entries
+    if [ -f "${txz_out}" ] && [ -n "$(tar --numeric-owner -tvJf "${txz_out}" 2>/dev/null | awk '$2 != "0/0"' | head -n1)" ]; then
+        gaming_build_failed "${pkg_name} package has files not owned by root:root. Not installing."
+        return 1
+    fi
+
+    # WP-1: a curated package never overwrites a file of an installed gnomes app with another name (the same name is
+    # replaced as before: curated wins over its own gnomes build)
+    if [ -f "${txz_out}" ] && { [ -n "${GNOMES_PY:-}" ] && [ -f "${GNOMES_PY}" ] || [ "${SLACKY_FOOTPRINT_MODE:-enforce}" != "report" ]; } \
+        && ! python3 "${GNOMES_PY:-/nonexistent}" footprint-guard --verify-host-paths "${txz_out}" --mode curated; then
+        gaming_build_failed "${pkg_name} was not installed. Nothing was changed."
+        return 1
+    fi
 
     if [ -f "${txz_out}" ]; then
         chmod 644 "${txz_out}"
-        cleanup_foreign_gaming_pkgs "${pkg_id}"
         validate_privileges
         echo -e "  ${CYAN}•${RESET} Installing ${pkg_name} to system..."
-        sudo "${PKG_UPGRADE_CMD}" --install-new --reinstall "${txz_out}"
+        local old_foreign_pkg="" upg_rc=0
+        # 6A-129: keep a copy of the admin's config files in case the upgrade removes the old plain file
+        local cfg_keep_dir="${staging_base}/cfg-keep"
+        mkdir -p "${cfg_keep_dir}"
+        for cfg_rel in "${cfg_new_list[@]}"; do
+            if [ -f "/${cfg_rel}" ]; then
+                cat "/${cfg_rel}" > "${cfg_keep_dir}/${cfg_rel//\//_}" 2>/dev/null \
+                    || sudo cat "/${cfg_rel}" > "${cfg_keep_dir}/${cfg_rel//\//_}" 2>/dev/null || true
+            fi
+        done
+        if [ "${pkg_id}" = "antigravity" ]; then
+            old_foreign_pkg=$(ls -1d /var/log/packages/antigravity-[0-9]* 2>/dev/null | grep -v 'underpants-' | head -n1 || true)
+        fi
+
+        if [ -n "${old_foreign_pkg}" ]; then
+            local old_bname
+            old_bname=$(basename "${old_foreign_pkg}")
+            echo -e "  ${CYAN}•${RESET} Upgrading legacy ${old_bname} directly to ${pkg_name}..."
+            sudo "${PKG_UPGRADE_CMD}" --install-new --reinstall "${old_bname}%${txz_out}" || upg_rc=$?
+        else
+            sudo "${PKG_UPGRADE_CMD}" --install-new --reinstall "${txz_out}" || upg_rc=$?
+        fi
+        # 6A-4: superseded packages go only after the new one is installed (pkgtools order, no gap)
+        # 6A-125: a failed install is a failure (it used to continue and report success)
+        if [ "${upg_rc}" -eq 0 ] && [ -e "/var/log/packages/$(basename "${txz_out%.txz}")" ]; then
+            cleanup_foreign_gaming_pkgs "${pkg_id}"
+            gaming_restore_kept_configs "" "${cfg_keep_dir}" "${cfg_new_list[@]}"
+        else
+            gaming_build_failed "${pkg_name} was not installed. Older versions were left in place."
+            return 1
+        fi
 
         echo -e "  ${CYAN}•${RESET} [1/4] Updating dynamic linker cache (ldconfig)..."
         sudo /sbin/ldconfig 2>/dev/null || true
@@ -5266,27 +7481,21 @@ V4L2_DOINST_EOF
             fi
         fi
 
-        # GameMode libelogind D-Bus compatibility symlink
-        if [ "${pkg_id}" = "gamemode" ]; then
-            if [ -f /lib64/libelogind.so.0 ] && [ ! -e /usr/lib64/libsystemd.so.0 ]; then
-                sudo mkdir -p /usr/lib64
-                sudo ln -sf /lib64/libelogind.so.0 /usr/lib64/libsystemd.so.0 2>/dev/null || true
-            fi
-            if [ -f /lib/libelogind.so.0 ] && [ ! -e /usr/lib/libsystemd.so.0 ]; then
-                sudo mkdir -p /usr/lib
-                sudo ln -sf /lib/libelogind.so.0 /usr/lib/libsystemd.so.0 2>/dev/null || true
-            fi
-        fi
+        # 6A-6: the GameMode libelogind compatibility link (usr/lib{,64}/libsystemd.so.0) is created by the package's doinst
+        # now, so pkgtools records it and removepkg removes it (was a loose `sudo ln` nobody owned).
 
         # Start daemons if applicable
         if [ "${pkg_id}" = "lact" ] && [ -x /etc/rc.d/rc.lact ]; then
-            sudo /etc/rc.d/rc.lact start 2>/dev/null || true
+            # 6A-169: a daemon that already runs (upgrade) is restarted so the new program takes over; never a second copy
+            if pgrep -f "/usr/bin/lact daemon" >/dev/null 2>&1; then
+                sudo /etc/rc.d/rc.lact restart 2>/dev/null || true
+            else
+                sudo /etc/rc.d/rc.lact start 2>/dev/null || true
+            fi
         elif [ "${pkg_id}" = "ananicy" ] && [ -x /etc/rc.d/rc.ananicy-cpp ]; then
             sudo /etc/rc.d/rc.ananicy-cpp restart 2>/dev/null || true
         elif [ "${pkg_id}" = "scx" ]; then
-            if [ -f /usr/share/dbus-1/system.d/org.scx.Loader.conf ] && [ ! -f /etc/dbus-1/system.d/org.scx.Loader.conf ]; then
-                sudo cp -a /usr/share/dbus-1/system.d/org.scx.Loader.conf /etc/dbus-1/system.d/ 2>/dev/null || true
-            fi
+            # 6A-6: no unowned copy into /etc/dbus-1/system.d; the system bus already reads /usr/share/dbus-1/system.d
             sudo killall -HUP dbus-daemon 2>/dev/null || true
             if [ -x /etc/rc.d/rc.scx ]; then
                 sudo /etc/rc.d/rc.scx restart 2>/dev/null || true
@@ -5299,18 +7508,35 @@ autostartOnLogin=true
 showTrayIcon=true
 noWindowAfterStarting=true
 EERC_EOF
-            for u_home in "${HOME:-}" /home/*; do
-                [ -d "${u_home}" ] || continue
-                local u_name
-                u_name=$(basename "${u_home}")
-                local ee_db="${u_home}/.config/easyeffects/db/easyeffectsrc"
+            if [ -d /etc/easyeffects/output ]; then
+                mkdir -p /etc/skel/.config/easyeffects/output /etc/skel/.config/easyeffects/irs 2>/dev/null || true
+                cp -n /etc/easyeffects/output/*.json /etc/skel/.config/easyeffects/output/ 2>/dev/null || true
+                if [ -d /etc/easyeffects/irs ]; then
+                    cp -n /etc/easyeffects/irs/* /etc/skel/.config/easyeffects/irs/ 2>/dev/null || true
+                fi
+                for jf in /etc/skel/.config/easyeffects/output/*.json; do
+                    [ -f "${jf}" ] || continue
+                    sed -i "s|<PRESETS_DIRECTORY>|\$HOME/.config/easyeffects|g" "${jf}" 2>/dev/null || true
+                done
+            fi
+
+            local target_user="${SUDO_USER:-${USER:-}}"
+            local target_home=""
+            if [ -n "${target_user}" ] && [ "${target_user}" != "root" ]; then
+                target_home=$(getent passwd "${target_user}" 2>/dev/null | cut -d: -f6 || echo "/home/${target_user}")
+            elif [ -n "${HOME:-}" ] && [ "${HOME}" != "/root" ]; then
+                target_home="${HOME}"
+            fi
+
+            if [ -n "${target_home}" ] && [ -d "${target_home}" ] && { [ -w "${target_home}" ] || [ "$(id -u)" -eq 0 ]; }; then
+                local ee_db="${target_home}/.config/easyeffects/db/easyeffectsrc"
                 mkdir -p "$(dirname "${ee_db}")" 2>/dev/null || true
                 if [ -f "${ee_db}" ]; then
                     if ! grep -q "showTrayIcon" "${ee_db}"; then
                         sed -i '/\[Window\]/a showTrayIcon=true\nnoWindowAfterStarting=true' "${ee_db}" 2>/dev/null || true
                     fi
                 else
-                    cat << 'EERC_EOF' > "${ee_db}"
+                    cat << 'EERC_EOF' > "${ee_db}" 2>/dev/null || true
 [Window]
 autostartOnLogin=true
 showTrayIcon=true
@@ -5318,18 +7544,20 @@ noWindowAfterStarting=true
 EERC_EOF
                 fi
                 if [ -d /etc/easyeffects/output ]; then
-                    mkdir -p "${u_home}/.config/easyeffects/output" "${u_home}/.config/easyeffects/irs" 2>/dev/null || true
-                    cp -n /etc/easyeffects/output/*.json "${u_home}/.config/easyeffects/output/" 2>/dev/null || true
+                    mkdir -p "${target_home}/.config/easyeffects/output" "${target_home}/.config/easyeffects/irs" 2>/dev/null || true
+                    cp -n /etc/easyeffects/output/*.json "${target_home}/.config/easyeffects/output/" 2>/dev/null || true
                     if [ -d /etc/easyeffects/irs ]; then
-                        cp -n /etc/easyeffects/irs/* "${u_home}/.config/easyeffects/irs/" 2>/dev/null || true
+                        cp -n /etc/easyeffects/irs/* "${target_home}/.config/easyeffects/irs/" 2>/dev/null || true
                     fi
-                    for jf in "${u_home}/.config/easyeffects/output"/*.json; do
+                    for jf in "${target_home}/.config/easyeffects/output"/*.json; do
                         [ -f "${jf}" ] || continue
-                        sed -i "s|<PRESETS_DIRECTORY>|${u_home}/.config/easyeffects|g" "${jf}" 2>/dev/null || true
+                        sed -i "s|<PRESETS_DIRECTORY>|${target_home}/.config/easyeffects|g" "${jf}" 2>/dev/null || true
                     done
                 fi
-                chown -R "${u_name}:users" "${u_home}/.config/easyeffects" 2>/dev/null || true
-            done
+                if [ "$(id -u)" -eq 0 ] && [ -n "${target_user}" ] && [ "${target_user}" != "root" ]; then
+                    chown -R "${target_user}:users" "${target_home}/.config/easyeffects" 2>/dev/null || true
+                fi
+            fi
         elif [ "${pkg_id}" = "google-chrome" ] || [ "${pkg_id}" = "microsoft-edge" ] || [ "${pkg_id}" = "brave" ]; then
             probe_gpu_hardware
             local flag_files=()
@@ -5364,20 +7592,14 @@ EERC_EOF
             fi
 
             mkdir -p /etc/skel/.config 2>/dev/null || true
+            # 6A-129 (M7): flags files are created once and never overwritten (the user or admin may have edited them)
+            # 6A-179: ONLY /etc/skel/.config. This runs as root, and root never writes into a person's home folder: a link
+            # placed there could point the write at a system file. Existing users keep the files they have; new users get
+            # the files from /etc/skel. A link in place of a file is skipped, never followed.
             for ff in "${flag_files[@]}"; do
-                echo -e "${flags_content}" > "/etc/skel/.config/${ff}" 2>/dev/null || true
-            done
-
-            for u_home in /home/* "${HOME:-}"; do
-                [ -d "${u_home}" ] || continue
-                local u_name
-                u_name=$(basename "${u_home}")
-                [ "${u_name}" != "ftp" ] && [ "${u_name}" != "http" ] && [ "${u_name}" != "nobody" ] || continue
-                mkdir -p "${u_home}/.config" 2>/dev/null || true
-                for ff in "${flag_files[@]}"; do
-                    echo -e "${flags_content}" > "${u_home}/.config/${ff}" 2>/dev/null || true
-                    chown "${u_name}:users" "${u_home}/.config/${ff}" 2>/dev/null || true
-                done
+                [ -e "/etc/skel/.config/${ff}" ] && continue
+                [ -L "/etc/skel/.config/${ff}" ] && continue
+                printf '%b\n' "${flags_content}" > "/etc/skel/.config/${ff}" 2>/dev/null || true
             done
         elif [ "${pkg_id}" = "coolercontrol" ] && [ -x /etc/rc.d/rc.coolercontrol ]; then
             sudo /etc/rc.d/rc.coolercontrol restart 2>/dev/null || true
@@ -5389,16 +7611,23 @@ EERC_EOF
             sudo /etc/rc.d/rc.dmemcg-booster restart 2>/dev/null || true
         elif [ "${pkg_id}" = "openrgb" ]; then
             # Clean up / migrate legacy AppImage desktop entries in user autostart and local applications
-            for u_home in /home/* "${HOME:-}"; do
-                [ -d "${u_home}" ] || continue
-                for d_dir in "${u_home}/.config/autostart" "${u_home}/.local/share/applications"; do
+            local target_user="${SUDO_USER:-${USER:-}}"
+            local target_home=""
+            if [ -n "${target_user}" ] && [ "${target_user}" != "root" ]; then
+                target_home=$(getent passwd "${target_user}" 2>/dev/null | cut -d: -f6 || echo "/home/${target_user}")
+            elif [ -n "${HOME:-}" ] && [ "${HOME}" != "/root" ]; then
+                target_home="${HOME}"
+            fi
+
+            if [ -n "${target_home}" ] && [ -d "${target_home}" ] && { [ -w "${target_home}" ] || [ "$(id -u)" -eq 0 ]; }; then
+                for d_dir in "${target_home}/.config/autostart" "${target_home}/.local/share/applications"; do
                     [ -d "${d_dir}" ] || continue
                     for f in "${d_dir}"/*[oO]pen[rR][gG][bB]*.desktop; do
                         [ -f "${f}" ] || continue
                         sed -i -E 's|Exec=.*[oO]pen[rR][gG][bB].*AppImage|Exec=/usr/bin/openrgb|g; s|Exec=.*OpenRGB-[^ ]*|Exec=/usr/bin/openrgb|g' "${f}" 2>/dev/null || true
                     done
                 done
-            done
+            fi
         elif [ "${pkg_id}" = "goverlay" ] || [ "${pkg_id}" = "mangohud" ] || [ "${pkg_id}" = "hyprland-noctalia" ] || [ "${pkg_id}" = "hyprland-core" ]; then
             log_info "[*] Synchronizing universal multi-path font mesh for MangoHud, GOverlay & Wayland..."
             python3 -c '
@@ -5425,15 +7654,27 @@ if os.path.isdir("/usr/local/share/fonts"):
 
 font_roots = ["/usr/share/fonts", "/usr/local/share/fonts"]
 subdirs = ["TTF", "OTF", "truetype", "opentype"]
-user_homes = [h for h in glob.glob("/home/*") if os.path.isdir(h)]
-if os.path.isdir("/etc/skel"):
-    user_homes.append("/etc/skel")
-if os.environ.get("HOME") and os.environ.get("HOME") not in user_homes:
-    user_homes.append(os.environ.get("HOME"))
 
-for uhome in user_homes:
-    bname = os.path.basename(uhome)
-    if bname in ["ftp", "http", "nobody"]:
+target_homes = []
+if os.path.isdir("/etc/skel"):
+    target_homes.append("/etc/skel")
+
+sudo_user = os.environ.get("SUDO_USER")
+if sudo_user and sudo_user != "root":
+    import pwd
+    try:
+        u_home = pwd.getpwnam(sudo_user).pw_dir
+        if os.path.isdir(u_home) and u_home not in target_homes:
+            target_homes.append(u_home)
+    except Exception:
+        pass
+
+env_home = os.environ.get("HOME")
+if env_home and os.path.isdir(env_home) and env_home != "/root" and env_home not in target_homes:
+    target_homes.append(env_home)
+
+for uhome in target_homes:
+    if not os.access(uhome, os.W_OK) and os.geteuid() != 0:
         continue
     target_base = os.path.join(uhome, ".local/share/fonts")
     for s in [""] + subdirs:
@@ -5549,98 +7790,76 @@ for uhome in user_homes:
 ' 2>/dev/null || true
         elif [ "${pkg_id}" = "limine" ]; then
             if command -v is_limine_installed >/dev/null 2>&1 && [ "$(is_limine_installed)" = "true" ]; then
-                log_info "[*] Limine bootloader package updated: syncing EFI payload, configuration & BLAKE2B enrollment..."
-                backup_limine_self_heal 2>/dev/null || true
-                generate_limine_configuration 2>/dev/null || true
-                enroll_and_sign_limine 2>/dev/null || true
+                if [ "${DEFER_BOOT_SYNC:-0}" = "1" ]; then
+                    # 6A-99: inside a full update the boot-chain step enrolls the new Limine once, after kernels and images
+                    ss_order_menu
+                else
+                    log_info "[*] Limine bootloader package updated: syncing EFI payload, configuration & BLAKE2B enrollment..."
+                    backup_limine_self_heal 2>/dev/null || true
+                    generate_limine_configuration 2>/dev/null || true
+                    enroll_and_sign_limine 2>/dev/null || true
+                fi
             fi
         elif [ "${pkg_id}" = "sbctl" ]; then
             if command -v is_limine_installed >/dev/null 2>&1 && [ "$(is_limine_installed)" = "true" ]; then
-                log_info "[*] sbctl updated: re-signing Limine EFI payload..."
-                sign_limine_efi_sbctl 2>/dev/null || true
+                if [ "${DEFER_BOOT_SYNC:-0}" = "1" ]; then
+                    # 6A-99: the boot-chain step signs a staged Limine EFI with the new sbctl and verifies it
+                    ss_order_menu
+                else
+                    # 6A-101: sign a staged copy and swap it in (was an in-place re-sign of the live boot loader)
+                    log_info "[*] sbctl updated: re-signing Limine EFI payload..."
+                    enroll_and_sign_limine 2>/dev/null || true
+                fi
             fi
         elif [ "${pkg_id}" = "hyprland-noctalia" ] || [ "${pkg_id}" = "hyprland-core" ]; then
             log_info "[*] Configuring Wayland environment and hardware-adaptive Hyprland session..."
             probe_gpu_hardware
-
-            # Strip file capabilities on pipewire & wireplumber if present (avoids AT_SECURE dropping session DBus)
-            if command -v setcap >/dev/null 2>&1; then
-                [ -f /usr/bin/wireplumber ] && sudo setcap -r /usr/bin/wireplumber 2>/dev/null || true
-                [ -f /usr/bin/pipewire ] && sudo setcap -r /usr/bin/pipewire 2>/dev/null || true
+            hypr_gpu_facts
+            # 6A-76: on a single NVIDIA GPU the GLX vendor variable is only written while a live check says it is needed
+            local hypr_glx_line=true
+            if [ "${IS_HYBRID_GPU}" != "true" ] && [ "${HAS_NVIDIA}" = "true" ] && ! hypr_glx_vendor_var_needed; then
+                hypr_glx_line=false
             fi
 
-            # 1. Hardware-adaptive GPU environment (/etc/hypr/hyprland.env)
-            sudo mkdir -p /etc/hypr /usr/share/wayland-sessions /usr/bin
+            # 6A-6: no `setcap -r` on Slackware's pipewire/wireplumber any more (alters Slackware-owned files; 6A-26 showed
+            # both reach the session bus with their file caps once the session has a bus).
+
+            # 1. Hardware-adaptive GPU environment
+            # 6A-64: never (over)written in /etc any more; the generated lines live in a marked block of the user's
+            # ~/.config/hypr/hyprland.env (read last by start-hyprland-session), everything outside the block is kept.
             local env_content="# Auto-generated by slacky-update probe_gpu_hardware\n"
-            if [ "${IS_HYBRID_GPU}" = "true" ]; then
-                # Hybrid / Optimus / PRIME Laptop or Multi-GPU desktop
-                # Compositor renders on iGPU KMS; apps/games offload via PRIME
-                env_content+="# Hybrid / PRIME Multi-GPU configuration\n"
-                env_content+="export __GLX_VENDOR_LIBRARY_NAME=nvidia\n"
+            # 6A-82: the GPU that drives the screens decides (was: "two GPU vendors = hybrid", which also hit desktops with
+            # the iGPU switched on). A render-only NVIDIA laptop GPU gets NO session-wide NVIDIA variables: they made X11
+            # programs on the iGPU screen load NVIDIA's OpenGL and kept the dGPU awake. Programs move to it per program.
+            if [ "${HAS_NVIDIA}" = "true" ] && [ "${HYPR_NV_DISPLAY}" != "true" ]; then
+                env_content+="# Hybrid laptop: the built-in GPU drives the screen, the NVIDIA card sleeps until a program asks for it.\n"
+                env_content+="# Run a game or program on the NVIDIA card with: slacky-prime-run <program>   (Steam: slacky-prime-run %command%)\n"
                 env_content+="export ELECTRON_OZONE_PLATFORM_HINT=auto\n"
-                env_content+="export NVD_BACKEND=direct\n"
-                if [ "${HAS_INTEL}" = "true" ]; then
-                    env_content+="export LIBVA_DRIVER_NAME=iHD\n"
-                elif [ "${HAS_AMD}" = "true" ]; then
-                    env_content+="export LIBVA_DRIVER_NAME=radeonsi\n"
-                else
-                    env_content+="export LIBVA_DRIVER_NAME=nvidia\n"
-                fi
-            elif [ "${HAS_NVIDIA}" = "true" ]; then
-                # Dedicated NVIDIA desktop / single-GPU
+            elif [ "${HAS_NVIDIA}" = "true" ] && [ "${HYPR_NV_BOUND}" = "true" ]; then
+                # Dedicated NVIDIA desktop / single-GPU (6A-128: only with the nvidia driver bound, never nouveau)
                 env_content+="export LIBVA_DRIVER_NAME=nvidia\n"
-                env_content+="export __GLX_VENDOR_LIBRARY_NAME=nvidia\n"
+                [ "${hypr_glx_line}" = "true" ] && env_content+="export __GLX_VENDOR_LIBRARY_NAME=nvidia\n"
                 env_content+="export NVD_BACKEND=direct\n"
                 env_content+="export ELECTRON_OZONE_PLATFORM_HINT=auto\n"
-            elif [ "${HAS_AMD}" = "true" ]; then
+            elif [ "${HAS_NVIDIA}" = "true" ]; then
+                env_content+="# The NVIDIA card runs on the open-source nouveau driver, so no NVIDIA variables are set.\n"
+                env_content+="export ELECTRON_OZONE_PLATFORM_HINT=auto\n"
+            elif [ "${HAS_AMD}" = "true" ] && hypr_display_is_amd; then
+                # 6A-128: only when an AMD GPU drives the screens (not an Intel screen with an AMD card beside it)
                 env_content+="export LIBVA_DRIVER_NAME=radeonsi\n"
                 env_content+="export VDPAU_DRIVER=radeonsi\n"
-            elif [ "${HAS_INTEL}" = "true" ]; then
-                env_content+="export LIBVA_DRIVER_NAME=iHD\n"
             fi
-            echo -e "${env_content}" | sudo tee /etc/hypr/hyprland.env >/dev/null
+            # (Intel: libva picks iHD or, on older chips, i965 by itself; forcing iHD broke video decoding on old Intel)
+            # 6A-78: multi-GPU only. PCI slots, not /dev/dri/cardN (card numbers change between boots and by-path names
+            # contain colons); start-hyprland-session turns them into AQ_DRM_DEVICES at login and skips missing GPUs.
+            if [ -n "${HYPR_DRM_ORDER}" ]; then
+                env_content+="SLACKY_DRM_ORDER=\"${HYPR_DRM_ORDER}\"\n"
+            fi
+            write_user_hypr_env_block "$(printf '%b' "${env_content}")"
 
-            # 2. Session launcher wrapper (/usr/bin/start-hyprland)
-            cat << 'STARTHYPR_EOF' | sudo tee /usr/bin/start-hyprland >/dev/null
-#!/usr/bin/env bash
-# --- [ Slacky-Update Hyprland Wayland Session Wrapper ] ---
-set -e
-
-export XDG_CURRENT_DESKTOP=Hyprland
-export XDG_SESSION_TYPE=wayland
-export XDG_SESSION_DESKTOP=Hyprland
-export MOZ_ENABLE_WAYLAND=1
-export QT_QPA_PLATFORM="wayland;xcb"
-export QT_QPA_PLATFORMTHEME="kde"
-export QT_STYLE_OVERRIDE="Breeze"
-export GTK_THEME="Breeze-Dark"
-export QT_WAYLAND_DISABLE_WINDOWDECORATION="0"
-export GDK_BACKEND="wayland,x11,*"
-export CLUTTER_BACKEND=wayland
-
-if [ -f /etc/hypr/hyprland.env ]; then
-    # shellcheck source=/dev/null
-    source /etc/hypr/hyprland.env
-fi
-
-if [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]; then
-    exec dbus-run-session Hyprland "$@"
-else
-    exec Hyprland "$@"
-fi
-STARTHYPR_EOF
-            sudo chmod 755 /usr/bin/start-hyprland
-
-            # 3. SDDM / Display Manager session desktop entry
-            cat << 'WAYLAND_SESSION_EOF' | sudo tee /usr/share/wayland-sessions/hyprland.desktop >/dev/null
-[Desktop Entry]
-Name=Hyprland (Slacky Curated)
-Comment=An intelligent dynamic tiling Wayland compositor on Slackware
-Exec=/usr/bin/start-hyprland
-Type=Application
-DesktopNames=Hyprland
-WAYLAND_SESSION_EOF
-            sudo chmod 644 /usr/share/wayland-sessions/hyprland.desktop
+            # 6A-6: steps 2 and 3 (sudo-written /usr/bin/start-hyprland and /usr/share/wayland-sessions/hyprland.desktop)
+            # removed. The suite package ships start-hyprland-session + hyprland.desktop (6A-25); writing them here would
+            # overwrite package-owned files (Arch's start-hyprland binary) behind pkgtools' back.
 
             # 4. Seed user & skel dotfiles if not present
             local terminal_cand="konsole"
@@ -5659,20 +7878,17 @@ WAYLAND_SESSION_EOF
             fi
 
             local target_dirs=("/etc/skel")
-            if [ -n "${HOME:-}" ] && [ -d "${HOME}" ]; then
-                target_dirs+=("${HOME}")
+            local target_user="${SUDO_USER:-${USER:-}}"
+            local target_home=""
+            if [ -n "${target_user}" ] && [ "${target_user}" != "root" ]; then
+                target_home=$(getent passwd "${target_user}" 2>/dev/null | cut -d: -f6 || echo "/home/${target_user}")
+            elif [ -n "${HOME:-}" ] && [ "${HOME}" != "/root" ]; then
+                target_home="${HOME}"
             fi
-            for hdir in /home/*; do
-                [ -d "${hdir}" ] || continue
-                local b_user
-                b_user=$(basename "${hdir}")
-                if [ "${b_user}" = "ftp" ] || [ "${b_user}" = "http" ] || [ "${b_user}" = "nobody" ]; then
-                    continue
-                fi
-                if [ "${hdir}" != "${HOME:-}" ] && { [ -w "${hdir}" ] || [ "$(id -u)" -eq 0 ]; }; then
-                    target_dirs+=("${hdir}")
-                fi
-            done
+
+            if [ -n "${target_home}" ] && [ -d "${target_home}" ] && { [ -w "${target_home}" ] || [ "$(id -u)" -eq 0 ]; }; then
+                target_dirs+=("${target_home}")
+            fi
 
             # Auto-detect host keyboard layout (Slackware rc.keymap, vconsole.conf, or LANG)
             local detected_kblayout=""
@@ -5845,7 +8061,8 @@ WAYLAND_SESSION_EOF
                     hypr_body+="windowrule = fullscreen on, match:class ^(steam_app_.*)$\n"
                     hypr_body+="windowrule = fullscreen on, match:class ^(gamescope.*)$\n"
                     hypr_body+="windowrule = immediate on, match:class ^(steam_app_.*)$\n\n"
-                    if [ "${HAS_NVIDIA}" = "true" ]; then
+                    # 6A-75: software cursor only for NVIDIA older than the GTX 16xx series; newer cards use Hyprland's default
+                    if [ "${HYPR_NV_SW_CURSOR}" = "true" ]; then
                         hypr_body+="# NVIDIA Hardware Cursor Settings\ncursor {\n    no_hardware_cursors = true\n    enable_hyprcursor = false\n}\n"
                     fi
                     echo -e "${hypr_body}" > "${hypr_conf}" 2>/dev/null || echo -e "${hypr_body}" | sudo tee "${hypr_conf}" >/dev/null || true
@@ -5879,29 +8096,31 @@ WAYLAND_SESSION_EOF
                     [ ! -f "${hypr_mods}/monitors.lua" ] && echo -e "${mod_mon}" > "${hypr_mods}/monitors.lua" 2>/dev/null || true
 
                     local mod_env="-- Environment Variables\nhl.env(\"QT_QPA_PLATFORM\", \"wayland;xcb\")\nhl.env(\"GDK_BACKEND\", \"wayland,x11,*\")\nhl.env(\"QT_QPA_PLATFORMTHEME\", \"kde\")\nhl.env(\"QT_STYLE_OVERRIDE\", \"Breeze\")\nhl.env(\"GTK_THEME\", \"Breeze-Dark\")\nhl.env(\"QT_WAYLAND_DISABLE_WINDOWDECORATION\", \"0\")\nhl.env(\"XDG_CURRENT_DESKTOP\", \"Hyprland\")\n"
-                    if [ "${IS_HYBRID_GPU}" = "true" ]; then
-                        mod_env+="-- Hybrid Multi-GPU / PRIME Offload\nhl.env(\"__GLX_VENDOR_LIBRARY_NAME\", \"nvidia\")\nhl.env(\"NVD_BACKEND\", \"direct\")\nhl.env(\"ELECTRON_OZONE_PLATFORM_HINT\", \"auto\")\n"
-                        if [ "${HAS_INTEL}" = "true" ]; then
-                            mod_env+="hl.env(\"LIBVA_DRIVER_NAME\", \"iHD\")\n"
-                        elif [ "${HAS_AMD}" = "true" ]; then
-                            mod_env+="hl.env(\"LIBVA_DRIVER_NAME\", \"radeonsi\")\n"
-                        fi
+                    if [ "${HAS_NVIDIA}" = "true" ] && [ "${HYPR_NV_DISPLAY}" != "true" ]; then
+                        # 6A-82: hybrid laptop, nothing NVIDIA session-wide (slacky-prime-run per program)
+                        mod_env+="-- Hybrid laptop: run games on the NVIDIA card with slacky-prime-run (Steam: slacky-prime-run %command%)\nhl.env(\"ELECTRON_OZONE_PLATFORM_HINT\", \"auto\")\n"
+                    elif [ "${HAS_NVIDIA}" = "true" ] && [ "${HYPR_NV_BOUND}" = "true" ]; then
+                        mod_env+="-- NVIDIA Hardware Acceleration\nhl.env(\"LIBVA_DRIVER_NAME\", \"nvidia\")\n"
+                        [ "${hypr_glx_line}" = "true" ] && mod_env+="hl.env(\"__GLX_VENDOR_LIBRARY_NAME\", \"nvidia\")\n"
+                        mod_env+="hl.env(\"NVD_BACKEND\", \"direct\")\nhl.env(\"ELECTRON_OZONE_PLATFORM_HINT\", \"auto\")\n"
                     elif [ "${HAS_NVIDIA}" = "true" ]; then
-                        mod_env+="-- NVIDIA Hardware Acceleration\nhl.env(\"LIBVA_DRIVER_NAME\", \"nvidia\")\nhl.env(\"__GLX_VENDOR_LIBRARY_NAME\", \"nvidia\")\nhl.env(\"NVD_BACKEND\", \"direct\")\nhl.env(\"ELECTRON_OZONE_PLATFORM_HINT\", \"auto\")\n"
-                    elif [ "${HAS_AMD}" = "true" ]; then
+                        # 6A-128: nouveau, no NVIDIA variables
+                        mod_env+="-- The NVIDIA card runs on nouveau, so no NVIDIA variables are set\nhl.env(\"ELECTRON_OZONE_PLATFORM_HINT\", \"auto\")\n"
+                    elif [ "${HAS_AMD}" = "true" ] && hypr_display_is_amd; then
                         mod_env+="-- AMD Mesa Acceleration\nhl.env(\"LIBVA_DRIVER_NAME\", \"radeonsi\")\nhl.env(\"VDPAU_DRIVER\", \"radeonsi\")\n"
                     elif [ "${HAS_INTEL}" = "true" ]; then
-                        mod_env+="-- Intel Mesa Acceleration\nhl.env(\"LIBVA_DRIVER_NAME\", \"iHD\")\n"
+                        mod_env+="-- Intel: libva picks iHD or i965 by itself\n"
                     fi
                     [ ! -f "${hypr_mods}/env.lua" ] && echo -e "${mod_env}" > "${hypr_mods}/env.lua" 2>/dev/null || true
 
                     local mod_auto="-- Autostart Daemons\nhl.on(\"hyprland.start\", function()\n"
                     mod_auto+="    hl.exec_cmd(\"dbus-update-activation-environment --all\")\n"
-                    mod_auto+="    hl.exec_cmd(\"/usr/lib64/xdg-desktop-portal-hyprland || /usr/libexec/xdg-desktop-portal-hyprland\")\n"
+                    # 6A-66: the Hyprland portal is started by D-Bus when needed (its activation file is fixed at build)
                     mod_auto+="    hl.exec_cmd(\"/usr/lib64/hyprpolkitagent/hyprpolkitagent || /usr/libexec/hyprpolkitagent || polkit-gnome-authentication-agent-1\")\n"
-                    mod_auto+="    hl.exec_cmd(\"pipewire\")\n"
-                    mod_auto+="    hl.exec_cmd(\"pipewire-pulse\")\n"
-                    mod_auto+="    hl.exec_cmd(\"wireplumber\")\n"
+                    # 6A-66: only when not already running for this user (a second instance fights the first)
+                    mod_auto+="    hl.exec_cmd(\"pgrep -u \\\"\$(id -u)\\\" -x pipewire >/dev/null || pipewire\")\n"
+                    mod_auto+="    hl.exec_cmd(\"pgrep -u \\\"\$(id -u)\\\" -x pipewire-pulse >/dev/null || pipewire-pulse\")\n"
+                    mod_auto+="    hl.exec_cmd(\"pgrep -u \\\"\$(id -u)\\\" -x wireplumber >/dev/null || wireplumber\")\n"
                     mod_auto+="    hl.exec_cmd(\"hypridle\")\n"
                     if [ "${pkg_id}" = "hyprland-noctalia" ]; then
                         mod_auto+="    hl.exec_cmd(\"noctalia\")\n"
@@ -5917,7 +8136,11 @@ WAYLAND_SESSION_EOF
                     mod_gen+="    decoration = {\n        rounding = 12,\n        active_opacity = 1.0,\n        inactive_opacity = 1.0,\n        blur = { enabled = true, size = 6, passes = 2, new_optimizations = true, xray = false },\n    },\n"
                     mod_gen+="    misc = {\n        disable_hyprland_logo = true,\n        disable_splash_rendering = true,\n        force_default_wallpaper = 0,\n        background_color = 0x11111b,\n        vrr = 0,\n        disable_watchdog_warning = true,\n        disable_hyprland_guiutils_check = true,\n        disable_xdg_env_checks = true,\n    },\n"
                     mod_gen+="    ecosystem = { no_update_news = true, no_donation_nag = true },\n"
-                    mod_gen+="    cursor = { no_hardware_cursors = true, enable_hyprcursor = false },\n"
+                    if [ "${HYPR_NV_SW_CURSOR}" = "true" ]; then
+                        mod_gen+="    cursor = { no_hardware_cursors = true, enable_hyprcursor = false },\n"
+                    else
+                        mod_gen+="    cursor = { enable_hyprcursor = false },\n"
+                    fi
                     mod_gen+="    xwayland = { force_zero_scaling = true },\n"
                     mod_gen+="    dwindle = { preserve_split = true },\n"
                     mod_gen+="})\n"
@@ -5997,10 +8220,34 @@ WAYLAND_SESSION_EOF
                     [ ! -f "${hypr_mods}/keybinds.lua" ] && echo -e "${mod_keys}" > "${hypr_mods}/keybinds.lua" 2>/dev/null || true
                 fi
 
+                # 6A-79: the screen locks by default (hyprlock after 10 minutes and before sleep); the OLED screen-off after
+                # 3 minutes stays. The lock is only set up when hyprlock and a lock-screen config exist, so a missing
+                # lock screen can never shut the user out. Existing user files are never touched.
+                local hyprlock_conf="${hypr_dir}/hyprlock.conf"
+                if [ ! -f "${hyprlock_conf}" ] && [ -f /usr/share/hypr/hyprlock.conf ]; then
+                    cp /usr/share/hypr/hyprlock.conf "${hyprlock_conf}" 2>/dev/null || sudo cp /usr/share/hypr/hyprlock.conf "${hyprlock_conf}" 2>/dev/null || true
+                fi
+                local hypr_can_lock=false
+                if command -v hyprlock >/dev/null 2>&1 && [ -f "${hyprlock_conf}" ]; then
+                    hypr_can_lock=true
+                fi
                 local hypridle_conf="${hypr_dir}/hypridle.conf"
                 if [ ! -f "${hypridle_conf}" ]; then
-                    local idle_body="# --- [ Slacky-Update OLED Protection Hypridle Config ] ---\ngeneral {\n    after_sleep_cmd = hyprctl dispatch 'hl.dsp.dpms({ action = \"on\" })' || hyprctl dispatch dpms on\n    ignore_dbus_inhibit = false\n    ignore_systemd_inhibit = false\n}\n\n# Turn off OLED & secondary screens completely (DPMS Standby / 0 nits, no password lock) after 3 minutes (180 sec)\nlistener {\n    timeout = 180\n    on-timeout = hyprctl dispatch 'hl.dsp.dpms({ action = \"off\" })' || hyprctl dispatch dpms off\n    on-resume = hyprctl dispatch 'hl.dsp.dpms({ action = \"on\" })' || hyprctl dispatch dpms on\n}\n"
+                    local idle_body="# --- [ Slacky-Update OLED Protection Hypridle Config ] ---\ngeneral {\n"
+                    if [ "${hypr_can_lock}" = "true" ]; then
+                        idle_body+="    lock_cmd = pidof hyprlock || hyprlock\n    before_sleep_cmd = loginctl lock-session\n"
+                    fi
+                    idle_body+="    after_sleep_cmd = hyprctl dispatch 'hl.dsp.dpms({ action = \"on\" })' || hyprctl dispatch dpms on\n    ignore_dbus_inhibit = false\n    ignore_systemd_inhibit = false\n}\n\n"
+                    idle_body+="# Turn off OLED & secondary screens completely (DPMS Standby / 0 nits) after 3 minutes (180 sec)\nlistener {\n    timeout = 180\n    on-timeout = hyprctl dispatch 'hl.dsp.dpms({ action = \"off\" })' || hyprctl dispatch dpms off\n    on-resume = hyprctl dispatch 'hl.dsp.dpms({ action = \"on\" })' || hyprctl dispatch dpms on\n}\n"
+                    if [ "${hypr_can_lock}" = "true" ]; then
+                        idle_body+="\n# Lock the screen after 10 minutes (600 sec). To turn the lock off, delete this block.\nlistener {\n    timeout = 600\n    on-timeout = pidof hyprlock || hyprlock\n}\n"
+                    fi
                     echo -e "${idle_body}" > "${hypridle_conf}" 2>/dev/null || echo -e "${idle_body}" | sudo tee "${hypridle_conf}" >/dev/null || true
+                fi
+
+                # 6A-80: HDR suggestions from this machine's monitors (user homes only; /etc/skel gets no hardware data)
+                if [ "${target_dir}" != "/etc/skel" ]; then
+                    write_hypr_hdr_suggestions "${hypr_mods}"
                 fi
 
                 if [ "${pkg_id}" = "hyprland-noctalia" ]; then
@@ -6022,11 +8269,13 @@ WAYLAND_SESSION_EOF
                 fi
 
                 # Ensure non-root ownership on all configured user dotfiles
-                local user_grp
-                user_grp=$(id -gn "${b_user}" 2>/dev/null || echo "users")
-                chown -R "${b_user}:${user_grp}" "${hypr_dir}" "${noct_dir}" 2>/dev/null || sudo chown -R "${b_user}:${user_grp}" "${hypr_dir}" "${noct_dir}" 2>/dev/null || true
-                if [ -d "${target_dir}/.config/easyeffects" ]; then
-                    chown -R "${b_user}:${user_grp}" "${target_dir}/.config/easyeffects" 2>/dev/null || sudo chown -R "${b_user}:${user_grp}" "${target_dir}/.config/easyeffects" 2>/dev/null || true
+                if [ "${target_dir}" != "/etc/skel" ] && [ -n "${target_user}" ] && [ "${target_user}" != "root" ]; then
+                    local user_grp
+                    user_grp=$(id -gn "${target_user}" 2>/dev/null || echo "users")
+                    chown -R "${target_user}:${user_grp}" "${hypr_dir}" "${noct_dir}" 2>/dev/null || sudo chown -R "${target_user}:${user_grp}" "${hypr_dir}" "${noct_dir}" 2>/dev/null || true
+                    if [ -d "${target_dir}/.config/easyeffects" ]; then
+                        chown -R "${target_user}:${user_grp}" "${target_dir}/.config/easyeffects" 2>/dev/null || sudo chown -R "${target_user}:${user_grp}" "${target_dir}/.config/easyeffects" 2>/dev/null || true
+                    fi
                 fi
             done
         fi
@@ -6042,7 +8291,7 @@ WAYLAND_SESSION_EOF
     fi
 
     rm -rf "${staging_base}" 2>/dev/null || true
-    trap - INT TERM
+    _gaming_trap_reset
 }
 
 deploy_gaming_packages_batch() {
@@ -6061,48 +8310,60 @@ deploy_gaming_packages_batch() {
     staging_base=$(mktemp -d "$(get_user_staging_dir)/gnome-batch.XXXXXX" 2>/dev/null || mktemp -d /tmp/slacky-gnome-batch.XXXXXX)
     local batch_cache="${staging_base}/downloads"
     mkdir -p "${batch_cache}"
-    trap 'rm -rf "${staging_base:-}" 2>/dev/null || true' INT TERM
+    # 6A-125: Ctrl-C/TERM removes the batch staging and stops; the per-package build restores this trap after itself
+    _GAMING_BATCH_STAGING="${staging_base}"
+    _gaming_trap_set "rm -rf -- $(printf '%q' "${staging_base}") 2>/dev/null"
 
     local dl_items=()
     local valid_entries=()
+    local failed_pids=()
 
     while IFS='|' read -r pid ver main_url lib32_url extra_url; do
         [ -n "${pid}" ] || continue
         if [ "${ver}" = "NONE" ] || [ -z "${main_url}" ] || [ "${main_url}" = "NONE" ]; then
-            log_warn "Skipping unresolved package: ${pid}"
+            local _why
+            _why=$(gaming_pkg_unavailable_reason "${pid}")
+            if [ -n "${_why}" ]; then
+                log_warn "${pid}: ${_why}"
+            else
+                log_warn "Skipping unresolved package: ${pid}"
+            fi
+            failed_pids+=("${pid}")  # 6A-125
             continue
         fi
         valid_entries+=("${pid}|${ver}|${main_url}|${lib32_url}|${extra_url}")
 
-        if [ "${main_url}" != "BUNDLED" ] && [ "${main_url}" != "GITHUB_THEME" ]; then
+        if [[ "${main_url}" =~ ^https?:// ]]; then
             local mf="${batch_cache}/$(basename "${main_url}")"
             if [[ "${main_url}" =~ (cachyos\.org|pkgbuild\.com|archlinux\.org|chaotic\.cx) ]] && [[ "${main_url}" =~ \.pkg\.tar\.zst$ ]]; then
                 dl_items+=("${main_url}|${mf}|${main_url}.sig|${mf}.sig")
             else
                 dl_items+=("${main_url}|${mf}")
             fi
+        fi
 
-            if [ "${lib32_url}" != "NONE" ] && [ -n "${lib32_url}" ]; then
-                local lf="${batch_cache}/$(basename "${lib32_url}")"
-                if [[ "${lib32_url}" =~ (cachyos\.org|pkgbuild\.com|archlinux\.org|chaotic\.cx) ]] && [[ "${lib32_url}" =~ \.pkg\.tar\.zst$ ]]; then
-                    dl_items+=("${lib32_url}|${lf}|${lib32_url}.sig|${lf}.sig")
-                else
-                    dl_items+=("${lib32_url}|${lf}")
-                fi
+        if [ "${lib32_url}" != "NONE" ] && [ -n "${lib32_url}" ] && [[ "${lib32_url}" =~ ^https?:// ]]; then
+            local lf="${batch_cache}/$(basename "${lib32_url}")"
+            if [[ "${lib32_url}" =~ (cachyos\.org|pkgbuild\.com|archlinux\.org|chaotic\.cx) ]] && [[ "${lib32_url}" =~ \.pkg\.tar\.zst$ ]]; then
+                dl_items+=("${lib32_url}|${lf}|${lib32_url}.sig|${lf}.sig")
+            else
+                dl_items+=("${lib32_url}|${lf}")
             fi
+        fi
 
-            if [ "${extra_url}" != "NONE" ] && [ -n "${extra_url}" ]; then
-                IFS=',' read -ra EXTRA_URLS <<< "${extra_url}"
-                for single_extra_url in "${EXTRA_URLS[@]}"; do
-                    [ -n "${single_extra_url}" ] || continue
+        if [ "${extra_url}" != "NONE" ] && [ -n "${extra_url}" ]; then
+            IFS=',' read -ra EXTRA_URLS <<< "${extra_url}"
+            for single_extra_url in "${EXTRA_URLS[@]}"; do
+                [ -n "${single_extra_url}" ] || continue
+                if [[ "${single_extra_url}" =~ ^https?:// ]]; then
                     local ef="${batch_cache}/$(basename "${single_extra_url}")"
                     if [[ "${single_extra_url}" =~ (cachyos\.org|pkgbuild\.com|archlinux\.org|chaotic\.cx) ]] && [[ "${single_extra_url}" =~ \.pkg\.tar\.zst$ ]]; then
                         dl_items+=("${single_extra_url}|${ef}|${single_extra_url}.sig|${ef}.sig")
                     else
                         dl_items+=("${single_extra_url}|${ef}")
                     fi
-                done
-            fi
+                fi
+            done
         fi
     done <<< "${metadata_raw}"
 
@@ -6110,6 +8371,8 @@ deploy_gaming_packages_batch() {
     if [ "${total_pkgs}" -eq 0 ]; then
         log_warn "No valid packages to install."
         rm -rf "${staging_base}"
+        _gaming_trap_reset; _GAMING_BATCH_STAGING=""
+        [ ${#failed_pids[@]} -eq 0 ] || return 1
         return 0
     fi
 
@@ -6119,6 +8382,7 @@ deploy_gaming_packages_batch() {
         if ! download_parallel_pacman "Underpants Gnomes Batch (${total_pkgs} packages)" "${dl_items[@]}"; then
             log_error "Failed to complete parallel download batch."
             rm -rf "${staging_base}"
+            _gaming_trap_reset; _GAMING_BATCH_STAGING=""
             return 1
         fi
     fi
@@ -6135,13 +8399,21 @@ deploy_gaming_packages_batch() {
         if transmute_and_deploy_gaming_pkg "${pid}" "${batch_cache}" "${ver}" "${main_url}" "${lib32_url}" "${extra_url}"; then
             success_count=$((success_count + 1))
         else
+            failed_pids+=("${pid}")
             log_error "Failed to deploy ${pid}. Continuing with remaining batch..."
         fi
         current_idx=$((current_idx + 1))
     done
 
     rm -rf "${staging_base}" 2>/dev/null || true
+    _gaming_trap_reset
+    _GAMING_BATCH_STAGING=""
     echo ""
+    # 6A-125: honest result; the caller (full update, --gaming-deploy, Rust) sees a failure
+    if [ "${success_count}" -lt "${total_pkgs}" ] || [ ${#failed_pids[@]} -gt 0 ]; then
+        log_error "${#failed_pids[@]} of ${#target_pkg_ids[@]} packages failed (${failed_pids[*]:-unknown}); their installed versions were kept."
+        return 1
+    fi
     log_success "🎉 Batch deployment complete! ${success_count}/${total_pkgs} packages successfully installed!"
 }
 
@@ -6153,6 +8425,12 @@ uninstall_cachyos_gaming_pkg() {
         [ -f "${p}" ] || continue
         local bname
         bname=$(basename "${p}")
+        # 6A-127: exact package name only (name-version-arch-build); "limine" must not match limine-entry-tool,
+        # "steam" must not match steam-devices
+        case "${bname%-*-*-*}" in
+            "underpants-${pkg_id}"|"cachyos-gnome-${pkg_id}") ;;
+            *) continue ;;
+        esac
         log_info "Removing package: ${bname}..."
         
         # Stop daemon if running
@@ -6172,6 +8450,11 @@ uninstall_cachyos_gaming_pkg() {
             sudo /etc/rc.d/rc.dmemcg-booster stop 2>/dev/null || true
         elif [ "${pkg_id}" = "gamemode" ] && [ -x /etc/rc.d/rc.gamemode ]; then
             sudo /etc/rc.d/rc.gamemode stop 2>/dev/null || true
+        elif [ "${pkg_id}" = "spacenav" ] || [ "${pkg_id}" = "spacenavd" ]; then
+            if [ -x /etc/rc.d/rc.spacenavd ]; then
+                sudo /etc/rc.d/rc.spacenavd stop 2>/dev/null || true
+            fi
+            pkill -x spacenavd 2>/dev/null || true
         elif [ "${pkg_id}" = "sunshine" ]; then
             pkill -x sunshine 2>/dev/null || true
         fi
@@ -6227,26 +8510,49 @@ except Exception:
     fi
 }
 
+# 6A-153: true when the installed package for this curated id was built by gnomes (underpants-<id>-*_gnomes)
+gaming_pkg_owned_by_gnomes() {
+    local pid="$1" f base
+    for f in /var/log/packages/underpants-"${pid}"-*_gnomes; do
+        [ -e "${f}" ] || continue
+        base="${f##*/}"
+        [ "${base%-*-*-*}" = "underpants-${pid}" ] && return 0
+    done
+    return 1
+}
+
+# rec 3 (2026-10-15): the curated build never replaces a program that gnomes installed (underpants-<id> with the _gnomes tag);
+# one plain sentence says how to switch. Mirrors the Rust app (PlanFailure::OtherEngine).
+gaming_pkg_other_engine_sentence() {
+    printf '%s is installed by the other engine, so it was left as it is. To switch, remove that one first.' "$1"
+}
+
 sync_all_installed_cachyos_gaming_packages() {
-    local outdated_pids=()
+    local outdated_pids=() sync_rc=0
     local fast_results=""
 
     # 1. Check if status cache already contains detected outdated packages
     fast_results=$(python3 -c "
 import os, json
-for p in ['/var/cache/slacky-update/status.json', os.path.expanduser('~/.cache/slacky-update/status.json'), '/tmp/slacky-update-status.json']:
+# status-cache split: the NEWEST trusted status.json wins (user cache or /var), not the first one that has a list
+best, best_ts = None, -1.0
+for p in ['/var/cache/slacky-update/status.json', os.path.expanduser('~/.cache/slacky-update/status.json')]:
     if os.path.exists(p):
         try:
+            # 6A-48: root acts on this list; only files owned by root or by this user, never through a symlink
+            st = os.lstat(p)
+            if os.path.islink(p) or st.st_uid not in (0, os.geteuid()):
+                continue
             with open(p, 'r', encoding='utf-8') as f:
                 d = json.load(f)
-            raw = d.get('cachyos_gaming_updates_raw', [])
-            if raw:
-                for line in raw:
-                    if line.strip():
-                        print(line.strip())
-                break
+            ts = float(d.get('last_check_ts', st.st_mtime))
+            if ts > best_ts:
+                best, best_ts = d, ts
         except Exception:
             pass
+for line in (best or {}).get('cachyos_gaming_updates_raw', []):
+    if line.strip():
+        print(line.strip())
 " 2>/dev/null || echo "")
 
     # 2. If status cache did not contain raw updates or was empty, perform fresh audit
@@ -6256,8 +8562,20 @@ for p in ['/var/cache/slacky-update/status.json', os.path.expanduser('~/.cache/s
     fi
 
     if [ -n "${fast_results}" ]; then
+        # 6A-48: only ids of the curated catalog are ever deployed (the list comes from a cache file)
+        local known_pids
+        known_pids=$(get_gaming_catalog 2>/dev/null | cut -d'|' -f1)
         while IFS='|' read -r pid name cur_ver latest_ver; do
             [[ -z "${pid}" || "${pid}" =~ ^# ]] && continue
+            if ! grep -qxF -- "${pid}" <<< "${known_pids}"; then
+                log_warn "Skipped an unknown package name in the update list: ${pid}"
+                continue
+            fi
+            # 6A-153: never rebuild an app that gnomes installed (an old status cache may still list it here)
+            if gaming_pkg_owned_by_gnomes "${pid}"; then
+                log_info "$(gaming_pkg_other_engine_sentence "${name:-${pid}}")"
+                continue
+            fi
             log_info "Upgrade available for ${name}: v${cur_ver} -> v${latest_ver}"
             outdated_pids+=("${pid}")
         done <<< "${fast_results}"
@@ -6265,42 +8583,48 @@ for p in ['/var/cache/slacky-update/status.json', os.path.expanduser('~/.cache/s
 
     if [ ${#outdated_pids[@]} -gt 0 ]; then
         log_info "Deploying unified batch upgrade for ${#outdated_pids[@]} packages..."
-        deploy_gaming_packages_batch "${outdated_pids[@]}"
+        deploy_gaming_packages_batch "${outdated_pids[@]}" || sync_rc=$?  # 6A-125: failures reach the caller
     else
         log_info "All installed Underpants Gnomes Gaming packages are up to date."
     fi
     trigger_silent_background_refresh 2>/dev/null || true
+    return "${sync_rc}"
 }
 
 # --- [ INTERACTIVE TUI GAMING MASTER STATION ] ---
 interactive_cachyos_gaming_menu() {
-    set_terminal_title "slacky-update: Underpants Gnomes Gaming Master Suite"
+    set_terminal_title "slacky-update: Slacky Curated Software"
 
     # Category keys and human labels
     local CAT_KEYS=("desktop" "engine" "launcher" "hardware" "streaming" "social" "audio" "creative" "ricing" "tools" "browser" "bootloader")
     local CAT_TITLES=(
-        "🪟 Wayland Desktops & Shells (Hyprland / Noctalia)"
-        "⚡ The Engine: Performance, HUD & Schedulers"
-        "🎮 Storefronts & Launcher Managers"
-        "🔧 Hardware Control, Tuning & DKMS Drivers"
-        "🎬 OBS Studio & Video Production Plugins"
-        "💬 Voice Chat, Social & Game Streaming"
-        "🎧 Studio Audio DSP & Acoustic Processing"
-        "🎨 Creative, 3D & Photography Studio"
-        "💎 Ricing & Desktop Aesthetics (Mac Tahoe & WhiteSur)"
-        "🛠️ Power Tools & Media Sync"
-        "🌐 Web Navigators & Browsers"
-        "🛡️ Secure Boot & UEFI Utilities"
+        "Wayland Desktops & Shells (Hyprland / Noctalia)"
+        "Performance, Gaming HUD & Schedulers"
+        "Storefronts & Game Launchers"
+        "Hardware Control, Tuning & DKMS Drivers"
+        "OBS Studio & Production Plugins"
+        "Voice Chat, Streaming & Communications"
+        "Studio Audio DSP & Sound Processing"
+        "Creative, 3D & Photography Studio"
+        "Desktop Aesthetics & Themes"
+        "Power Tools & Synchronization"
+        "Web Browsers"
+        "Secure Boot & UEFI Utilities"
     )
 
     while true; do
-        echo ""
-        echo -e "${BLUE}${BOLD}"
-        echo "================================================================================"
-        echo " 🧙  UNDERPANTS GNOMES: CACHYOS GAMING & HARDWARE MASTER SUITE (SLACKWARE)  🧙 "
-        echo "================================================================================"
-        echo -e "${RESET}"
-        echo -e " ${CYAN}Step 1: Steal Underpants  •  Step 2: Transmute to Slackware  •  Step 3: PROFIT!${RESET}"
+        local tui_py="${APP_DIR:-}/slacky_tui.py"
+        [ ! -f "${tui_py}" ] && [ -f "/usr/share/slacky-update/lib/slacky_tui.py" ] && tui_py="/usr/share/slacky-update/lib/slacky_tui.py"
+        local use_tui=false
+        if [ -f "${tui_py}" ] && command -v python3 >/dev/null 2>&1 && [ -t 0 ]; then
+            use_tui=true
+        fi
+
+        if [ "${use_tui}" = "false" ]; then
+            echo ""
+            echo -e " ${BOLD_WHITE}Slacky Curated Software:${RESET} ${DIM_WHITE}Premium verified software tried, tested and optimized${RESET}"
+            echo ""
+        fi
 
         local index=1
         local item_ids=()
@@ -6333,6 +8657,13 @@ if os.path.exists(pkg_dir):
                 if p_ver.isdigit() or p_ver == "INSTALLED":
                     p_ver = vm.group(2)
             installed[p_name] = p_ver
+            canon_name = p_name
+            for sfx in ("-bin", "-git", "-dkms", "-appimage"):
+                if canon_name.endswith(sfx):
+                    canon_name = canon_name[:-len(sfx)]
+                    break
+            if canon_name not in installed or p_ver > installed[canon_name]:
+                installed[canon_name] = p_ver
 
 # Check binaries & explicit files
 BINARY_MAP = {
@@ -6378,11 +8709,25 @@ BINARY_MAP = {
     "yabridge": ["yabridgectl"],
     "inkscape": ["inkscape"],
     "darktable": ["darktable"],
+    "dvcp-aac": ["/opt/resolve/IOPlugins/aac_decoder_probe.dvcp.bundle", "/opt/resolve/IOPlugins/aac_fdk_plugin.dvcp.bundle"],
     "syncthing": ["syncthing"],
+    "antigravity": ["antigravity", "/usr/bin/antigravity", "/usr/bin/agy", "/opt/antigravity/antigravity", "/opt/Antigravity/antigravity"],
+    "claude-desktop": ["claude-desktop", "/usr/bin/claude-desktop", "/usr/bin/claude", "/usr/lib/claude-desktop/claude-desktop", "/opt/claude-desktop/claude-desktop"],
+    "claude-code": ["claude-code", "/usr/bin/claude-code", "/opt/claude-code/claude-code", "/opt/claude-code/claude"],
+    "gemini-cli": ["gemini-cli", "/usr/bin/gemini-cli", "/usr/bin/gemini", "/opt/gemini-cli/bundle/gemini.js"],
     "google-chrome": ["google-chrome", "google-chrome-stable"],
     "microsoft-edge": ["microsoft-edge", "microsoft-edge-stable"],
     "brave": ["brave", "brave-browser"],
     "zen-browser": ["zen-browser", "zen"],
+    "opera": ["opera", "/usr/bin/opera", "/usr/lib64/opera/opera", "/usr/lib/opera/opera"],
+    "gnome-disk-utility": ["gnome-disks", "/usr/bin/gnome-disks"],
+    "spacenav": ["spacenavd", "spnavcfg", "/usr/bin/spacenavd"],
+    "volt-gui": ["volt-gui", "/usr/bin/volt-gui", "/opt/volt-gui/volt-gui", "/opt/volt-gui/volt-gui.py"],
+    "bambu-studio": ["bambu-studio", "/usr/bin/bambu-studio", "/opt/bambu-studio/bin/bambu-studio", "/usr/bin/BambuStudio"],
+    "blender": ["blender", "/usr/bin/blender", "/opt/blender/blender"],
+    "freecad": ["freecad", "FreeCAD", "/usr/bin/freecad", "/usr/bin/FreeCAD", "/usr/lib64/freecad/bin/FreeCAD"],
+    "plasticity": ["plasticity", "/usr/bin/plasticity", "/opt/plasticity/plasticity", "/opt/Plasticity/plasticity"],
+    "storyboarder": ["storyboarder", "/usr/bin/storyboarder", "/opt/storyboarder/storyboarder", "/opt/Storyboarder/storyboarder"],
     "sbctl": ["sbctl"],
     "mactahoe-icons": ["/usr/share/icons/MacTahoe*", "/usr/share/icons/MacTahoe"],
     "mactahoe-cursors": ["/usr/share/icons/MacTahoe-cursors", "/usr/share/icons/MacTahoe-dark-cursors"],
@@ -6447,8 +8792,10 @@ PYTUIFASTMAP
 
             [ ${cat_total} -gt 0 ] || continue
 
-            # Category Section Header
-            echo -e "\n${CYAN}${BOLD}── 📦 ${ctitle}${RESET} ${YELLOW}[${cat_installed}/${cat_total} installed]${RESET} ${CYAN}──${RESET}"
+            if [ "${use_tui}" = "false" ]; then
+                # Category Section Header
+                echo -e "\n${CYAN}${BOLD}── ${ctitle}${RESET} ${DIM}[${cat_installed}/${cat_total} installed]${RESET} ${CYAN}──${RESET}"
+            fi
 
             # Render 2-by-2 grid for category items
             local num_entries=${#cat_entries[@]}
@@ -6462,26 +8809,6 @@ PYTUIFASTMAP
                 local idx1=$index
                 index=$((index + 1))
 
-                local badge1
-                if [ "${p_ver1}" != "NONE" ]; then
-                    local sv1="${p_ver1}"
-                    if [ "${sv1}" = "INSTALLED" ]; then
-                        sv1="Inst"
-                    elif [ ${#sv1} -gt 6 ]; then
-                        sv1="${sv1:0:5}…"
-                    fi
-                    badge1="${GREEN}[v${sv1} ✓]${RESET}"
-                else
-                    badge1="${RED}[Not Inst]${RESET}"
-                fi
-
-                local sname1="${p_name1}"
-                if [ ${#sname1} -gt 24 ]; then
-                    sname1="${sname1:0:23}…"
-                fi
-                local col1
-                col1=$(printf " ${BOLD}%2d.${RESET} %-24s %b" "${idx1}" "${sname1}" "${badge1}")
-
                 # Column 2
                 local col2=""
                 if [ $((ei + 1)) -lt ${num_entries} ]; then
@@ -6492,42 +8819,68 @@ PYTUIFASTMAP
                     item_cats+=("${ckey}")
                     local idx2=$index
                     index=$((index + 1))
-
-                    local badge2
-                    if [ "${p_ver2}" != "NONE" ]; then
-                        local sv2="${p_ver2}"
-                        if [ "${sv2}" = "INSTALLED" ]; then
-                            sv2="Inst"
-                        elif [ ${#sv2} -gt 6 ]; then
-                            sv2="${sv2:0:5}…"
-                        fi
-                        badge2="${GREEN}[v${sv2} ✓]${RESET}"
-                    else
-                        badge2="${RED}[Not Inst]${RESET}"
-                    fi
-
-                    local sname2="${p_name2}"
-                    if [ ${#sname2} -gt 24 ]; then
-                        sname2="${sname2:0:23}…"
-                    fi
-                    col2=$(printf "   ${BOLD}%2d.${RESET} %-24s %b" "${idx2}" "${sname2}" "${badge2}")
                 fi
 
-                echo -e "${col1}${col2}"
+                if [ "${use_tui}" = "false" ]; then
+                    local badge1
+                    if [ "${p_ver1}" != "NONE" ]; then
+                        local sv1="${p_ver1}"
+                        if [ "${sv1}" = "INSTALLED" ]; then
+                            sv1="Inst"
+                        elif [ ${#sv1} -gt 6 ]; then
+                            sv1="${sv1:0:5}…"
+                        fi
+                        badge1="${GREEN}[v${sv1} ✓]${RESET}"
+                    else
+                        badge1="${RED}[Not Inst]${RESET}"
+                    fi
+
+                    local sname1="${p_name1}"
+                    if [ ${#sname1} -gt 24 ]; then
+                        sname1="${sname1:0:23}…"
+                    fi
+                    local col1
+                    col1=$(printf " ${BOLD}%2d.${RESET} %-24s %b" "${idx1}" "${sname1}" "${badge1}")
+
+                    if [ $((ei + 1)) -lt ${num_entries} ]; then
+                        local badge2
+                        if [ "${p_ver2}" != "NONE" ]; then
+                            local sv2="${p_ver2}"
+                            if [ "${sv2}" = "INSTALLED" ]; then
+                                sv2="Inst"
+                            elif [ ${#sv2} -gt 6 ]; then
+                                sv2="${sv2:0:5}…"
+                            fi
+                            badge2="${GREEN}[v${sv2} ✓]${RESET}"
+                        else
+                            badge2="${RED}[Not Inst]${RESET}"
+                        fi
+
+                        local sname2="${p_name2}"
+                        if [ ${#sname2} -gt 24 ]; then
+                            sname2="${sname2:0:23}…"
+                        fi
+                        col2=$(printf "   ${BOLD}%2d.${RESET} %-24s %b" "${idx2}" "${sname2}" "${badge2}")
+                    fi
+
+                    echo -e "${col1}${col2}"
+                fi
             done
         done
 
-        echo -e "\n${BLUE}================================================================================"
-        echo -e " ${BOLD}Batch & Automation Actions:${RESET}"
-        echo -e "  ${CYAN}${BOLD}S.${RESET}  🔍 Search & Transmute Upstream Packages (30,000+ CachyOS & Arch Packages)"
-        echo -e "  ${GREEN}${BOLD}A.${RESET}  ⚡ 1-Click Total Gaming Rig (Deploy All ${#item_ids[@]} Components in Unified Batch)"
-        echo -e "  ${MAGENTA}${BOLD}O.${RESET}  🎬 1-Click OBS Creator & Streamer Suite (Deploy Complete OBS Power-Pack)"
-        echo -e "  ${YELLOW}${BOLD}U.${RESET}  🔄 Synchronize & Upgrade All Installed Gaming Packages"
-        echo -e "  ${RED}${BOLD}D.${RESET}  🗑️  Uninstall a Component"
-        echo -e "  ${BOLD}Q.${RESET}  🚪 Catch You on the Flip Side (Return to Main Menu)"
-        echo -e "${BLUE}================================================================================${RESET}"
-        echo ""
-        read -r -p "Pick your play [1-${#item_ids[@]} (multi e.g. 1 3 5 or 1-4), S, O, A, U, D, Q]: " user_choice
+        local user_choice=""
+        if [ "${use_tui}" = "true" ]; then
+            user_choice=$(python3 "${tui_py}" --mode gnomes)
+        else
+            echo -e "\n${BOLD}Batch & Automation Actions:${RESET}"
+            echo -e "  ${CYAN}${BOLD}O.${RESET}  Install full OBS streaming and creation suite"
+            echo -e "  ${CYAN}${BOLD}U.${RESET}  Synchronize & Upgrade All Installed Gaming Packages"
+            echo -e "  ${CYAN}${BOLD}D.${RESET}  Uninstall a Component"
+            echo ""
+            echo -e " ${CYAN}[↑/↓] Navigate   [Enter] Select   [Shift + Drag] Copy Text   [Super + Drag/Click] Move/Resize   [ESC / q] Exit${RESET}"
+            echo ""
+            read -r -p "Enter your choice here (manual mode) [1-${#item_ids[@]}, O, U, D]: " user_choice
+        fi
         user_choice=$(echo "${user_choice}" | tr '[:lower:]' '[:upper:]' | xargs)
 
         case "${user_choice}" in
@@ -6548,7 +8901,7 @@ PYTUIFASTMAP
                 done
                 log_info "Starting 1-Click OBS Creator Suite Deployment (${#obs_pids[@]} packages in unified batch)..."
                 validate_privileges
-                deploy_gaming_packages_batch "${obs_pids[@]}"
+                deploy_gaming_packages_batch "${obs_pids[@]}" || true  # 6A-125: summary already shown; stay in the menu
                 echo ""
                 read -r -p "Press Enter to continue..."
                 ;;
@@ -6556,14 +8909,14 @@ PYTUIFASTMAP
                 echo ""
                 log_info "Starting 1-Click Total Gaming Rig Deployment (${#item_ids[@]} packages in unified batch)..."
                 validate_privileges
-                deploy_gaming_packages_batch "${item_ids[@]}"
+                deploy_gaming_packages_batch "${item_ids[@]}" || true  # 6A-125
                 echo ""
                 read -r -p "Press Enter to continue..."
                 ;;
             U)
                 echo ""
                 validate_privileges
-                sync_all_installed_cachyos_gaming_packages
+                sync_all_installed_cachyos_gaming_packages || true  # 6A-125
                 echo ""
                 read -r -p "Press Enter to continue..."
                 ;;
@@ -6621,13 +8974,24 @@ PYTUIFASTMAP
                 done
 
                 if [ ${#unique_pids[@]} -gt 0 ]; then
+                    local pkg_list_str="${unique_pids[*]}"
+                    local confirm_install="y"
+                    echo ""
+                    read -r -p "Do you want to install ${pkg_list_str} to your system? [Y/n]: " confirm_install || confirm_install="n"
+                    confirm_install=$(echo "${confirm_install:-y}" | tr '[:upper:]' '[:lower:]')
+                    if [[ ! "${confirm_install}" =~ ^(y|yes|j|ja|s|si)$ ]]; then
+                        log_info "Installation cancelled by user."
+                        sleep 1
+                        continue
+                    fi
+
                     echo ""
                     if [ ${#unique_pids[@]} -eq 1 ]; then
                         log_info "Deploying single package: ${unique_pids[0]}..."
                         transmute_and_deploy_gaming_pkg "${unique_pids[0]}" || log_error "Failed to deploy ${unique_pids[0]}"
                     else
                         log_info "Deploying ${#unique_pids[@]} selected packages in unified batch..."
-                        deploy_gaming_packages_batch "${unique_pids[@]}"
+                        deploy_gaming_packages_batch "${unique_pids[@]}" || true  # 6A-125
                     fi
                     echo ""
                     read -r -p "Press Enter to continue..."

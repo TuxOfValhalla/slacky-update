@@ -19,7 +19,6 @@ parallel_prefetch_packages() {
     [ -f "/var/lib/slackpkg/pkglist" ] || return 0
 
     sudo mkdir -p /var/cache/packages 2>/dev/null || true
-    sudo chmod -R a+rwX /var/cache/packages 2>/dev/null || true
 
     local candidates=()
     while IFS= read -r line; do
@@ -192,14 +191,11 @@ PYPREFETCH
     if [ -d "${stage_dir}" ] && [ -n "$(ls -A "${stage_dir}" 2>/dev/null)" ]; then
         if [ "$(id -u)" -eq 0 ]; then
             if cp -rn "${stage_dir}"/* /var/cache/packages/ 2>/dev/null; then
-                chmod -R a+rwX /var/cache/packages 2>/dev/null || true
                 rm -rf "${stage_dir}" 2>/dev/null || true
             fi
         elif sudo -n cp -rn "${stage_dir}"/* /var/cache/packages/ 2>/dev/null; then
-            sudo -n chmod -R a+rwX /var/cache/packages 2>/dev/null || true
             rm -rf "${stage_dir}" 2>/dev/null || true
         elif sudo cp -rn "${stage_dir}"/* /var/cache/packages/ 2>/dev/null; then
-            sudo chmod -R a+rwX /var/cache/packages 2>/dev/null || true
             rm -rf "${stage_dir}" 2>/dev/null || true
         fi
     fi
@@ -233,17 +229,154 @@ auto_reconcile_slackpkg_conf() {
         if [ -f "/etc/slackpkg/slackpkg.conf" ]; then
             sudo cp -a /etc/slackpkg/slackpkg.conf /etc/slackpkg/slackpkg.conf.bak 2>/dev/null || true
             if [ -n "${new_ver}" ] && grep -q '^[[:space:]]*VERSION=' /etc/slackpkg/slackpkg.conf 2>/dev/null; then
+                # 8B: only the VERSION line is edited (sed -i keeps owner, group and mode); the rest of the file is the user's
                 sudo sed -i -E "s|^[[:space:]]*VERSION=.*|VERSION=${new_ver}|" /etc/slackpkg/slackpkg.conf 2>/dev/null || true
+                if grep -qx "VERSION=${new_ver}" /etc/slackpkg/slackpkg.conf 2>/dev/null; then
+                    sudo rm -f /etc/slackpkg/slackpkg.conf.new 2>/dev/null || true
+                    log_success "Updated slackpkg.conf to match the newly installed slackpkg version (${new_ver}) while preserving user custom settings."
+                fi
             else
-                sudo cp -a /etc/slackpkg/slackpkg.conf.new /etc/slackpkg/slackpkg.conf 2>/dev/null || true
+                # 8B: a missing VERSION line on either side never lets the .new file replace the user's configuration
+                log_warn "slackpkg.conf was kept as it is because its version line could not be matched; the new version waits as slackpkg.conf.new."
             fi
         else
+            # no configuration yet: nothing of the user's can be lost, so the shipped file becomes the configuration
             sudo cp -a /etc/slackpkg/slackpkg.conf.new /etc/slackpkg/slackpkg.conf 2>/dev/null || true
+            sudo rm -f /etc/slackpkg/slackpkg.conf.new 2>/dev/null || true
         fi
-
-        sudo rm -f /etc/slackpkg/slackpkg.conf.new 2>/dev/null || true
-        log_success "Updated slackpkg.conf to match the newly installed slackpkg version (${new_ver:-updated}) while preserving user custom settings."
     fi
+}
+
+check_and_recommend_slackpkg_cacheupdate() {
+    [ -f "/etc/slackpkg/slackpkgplus.conf" ] || return 0
+    if grep -E "^[[:space:]]*CACHEUPDATE=on" /etc/slackpkg/slackpkgplus.conf >/dev/null 2>&1; then
+        return 0
+    fi
+
+    # Check 30-day cooldown state
+    local state_file="${XDG_CONFIG_HOME:-${HOME:-/root}/.config}/slacky-update/cacheupdate_prompt.state"
+    if [ -f "${state_file}" ]; then
+        local last_prompt_ts now_ts diff_days
+        last_prompt_ts=$(cat "${state_file}" 2>/dev/null || echo "0")
+        now_ts=$(date +%s)
+        diff_days=$(( (now_ts - last_prompt_ts) / 86400 ))
+        if [ "${diff_days}" -lt 30 ]; then
+            return 0
+        fi
+    fi
+
+    if [ -t 0 ] && [ "${NON_INTERACTIVE:-0}" != "1" ]; then
+        echo ""
+        echo -e "\033[1;36m⚡ Performance Optimization Tip (slackpkg+):\033[0m"
+        echo -e "   Enabling \033[1mCACHEUPDATE=on\033[0m in slackpkgplus.conf accelerates 'slackpkg update'"
+        echo -e "   by using conditional HTTP caching (wget -N) so unchanged metadata isn't re-downloaded."
+        local reply_cache="Y"
+        read -r -p "   Enable CACHEUPDATE=on in /etc/slackpkg/slackpkgplus.conf? [Y/n]: " reply_cache || reply_cache="Y"
+        reply_cache=${reply_cache:-Y}
+        if [[ "${reply_cache}" =~ ^[YyJjSsOo]$ ]]; then
+            sudo sed -i 's/^[#[:space:]]*CACHEUPDATE=.*/CACHEUPDATE=on/' /etc/slackpkg/slackpkgplus.conf 2>/dev/null || true
+            log_success "CACHEUPDATE=on enabled in /etc/slackpkg/slackpkgplus.conf! Metadata sync will now be significantly faster."
+        else
+            mkdir -p "$(dirname "${state_file}")" 2>/dev/null || true
+            date +%s > "${state_file}" 2>/dev/null || true
+            log_info "Keeping CACHEUPDATE=off. We won't prompt you about this again for 30 days."
+        fi
+    fi
+}
+
+# 6A-91 + 6A-92 (SS-1): checks after `slackpkg update`, before anything is installed. Returns 0 to go ahead, 1 to let the
+# Slackware base wait this time (one plain sentence printed). Read-only except the accepted ChangeLog date it records.
+#  - mirror older than the system: the top date of the mirror's ChangeLog must not be older than the last one accepted
+#    here (a stale or rolled-back mirror would otherwise make upgrade-all DOWNGRADE every package, glibc included);
+#  - root space: free space on / must cover twice the unpacked size of the packages that would change (old and new
+#    coexist during upgradepkg, and the snapshot keeps the old blocks) plus 1 GB.
+SLACKY_CHANGELOG_TOP="/var/lib/slacky-update/changelog-top"
+ss_base_preflight() {
+    local res
+    res=$(python3 -I - "${SLACKY_CHANGELOG_TOP}" <<'PYPRE'
+import os, sys, time, shutil
+from datetime import datetime
+state = sys.argv[1]
+wd = "/var/lib/slackpkg"
+top = 0
+try:
+    with open(os.path.join(wd, "ChangeLog.txt"), errors="replace") as fh:
+        first = fh.readline().strip()
+    top = int(datetime.strptime(first.replace("UTC", "+0000"), "%a %b %d %H:%M:%S %z %Y").timestamp())
+except (OSError, ValueError):
+    top = 0
+last = 0
+try:
+    last = int(open(state).read().split()[0])
+except (OSError, ValueError, IndexError):
+    last = 0
+if top and last and top < last:
+    print("OLDER %s %s" % (time.strftime("%Y-%m-%d", time.gmtime(top)), time.strftime("%Y-%m-%d", time.gmtime(last))))
+    sys.exit(0)
+installed = {}
+try:
+    for n in os.listdir("/var/lib/pkgtools/packages"):
+        parts = n.rsplit("-", 3)
+        if len(parts) == 4:
+            installed[parts[0]] = n
+except OSError:
+    pass
+changing = set()
+try:
+    for line in open(os.path.join(wd, "pkglist"), errors="replace"):
+        f = line.split()
+        if len(f) >= 6 and f[1] in installed and installed[f[1]] != f[5]:
+            changing.add(f[5])
+except OSError:
+    pass
+need_kb = 0
+cur = None
+try:
+    for line in open(os.path.join(wd, "PACKAGES.TXT"), errors="replace"):
+        if line.startswith("PACKAGE NAME:"):
+            cur = line.split(":", 1)[1].strip().rsplit(".", 1)[0]
+        elif line.startswith("PACKAGE SIZE (uncompressed):") and cur in changing:
+            v = line.split(":", 1)[1].split()
+            n = float(v[0]); unit = v[1].upper() if len(v) > 1 else "K"
+            need_kb += n * (1024 if unit.startswith("M") else 1)
+except (OSError, ValueError):
+    pass
+# SS-1 follow-up: stock kernels write to /boot; with /boot not mounted they would land on the root fs instead
+if os.environ.get("SLACKY_BOOT_UNREADY") == "1":
+    boot_pkgs = sorted(p for p in changing if p.startswith(("kernel-generic-", "kernel-huge-")))
+    if boot_pkgs:
+        print("BOOT " + " ".join(boot_pkgs[:3]))
+        sys.exit(0)
+need = int(2 * need_kb * 1024 + 1024 ** 3)
+free = shutil.disk_usage("/").free
+if free < need:
+    print("SPACE %.1f %.1f" % (need / 1e9, free / 1e9))
+    sys.exit(0)
+print("OK %d" % top)
+PYPRE
+)
+    case "${res}" in
+        OLDER*)
+            set -- ${res}
+            log_warn "Your Slackware mirror is older than your system (mirror ${2}, system ${3}), so Slackware updates wait to avoid downgrading. Pick another mirror with: slacky-update --rank-mirrors"
+            return 1 ;;
+        BOOT*)
+            log_warn "Slackware kernel updates need the boot partition (/boot), which is not mounted for writing, so Slackware updates wait; everything else updates now."
+            return 1 ;;
+        SPACE*)
+            set -- ${res}
+            log_warn "There is not enough free space on / for the Slackware updates (${2} GB needed, ${3} GB free), so they wait. Free some space and run the update again."
+            return 1 ;;
+        "OK "*)
+            local top="${res#OK }"
+            if [ -n "${top}" ] && [ "${top}" != "0" ]; then
+                sudo mkdir -p -m 0755 "${SLACKY_CHANGELOG_TOP%/*}" 2>/dev/null || true
+                printf '%s\n' "${top}" | sudo tee "${SLACKY_CHANGELOG_TOP}.new" >/dev/null 2>&1 \
+                    && sudo mv -f "${SLACKY_CHANGELOG_TOP}.new" "${SLACKY_CHANGELOG_TOP}" 2>/dev/null || true
+            fi
+            return 0 ;;
+    esac
+    return 0
 }
 
 update_slackware_core() {
@@ -259,25 +392,54 @@ update_slackware_core() {
 
     clear_stale_slackpkg_locks
     auto_reconcile_slackpkg_conf
+    check_and_recommend_slackpkg_cacheupdate
 
     if command -v check_and_shield_mirror_freshness >/dev/null 2>&1; then
         check_and_shield_mirror_freshness
     fi
 
     log_info "Synchronizing Slackware repository indexes..."
-    run_slackpkg -batch=on -default_answer=y update || {
-        log_warn "slackpkg update completed with non-zero exit code."
-    }
+    if ! run_slackpkg -batch=on -default_answer=y update; then
+        log_warn "Official Slackware repository mirror failed to update or is temporarily unavailable (e.g. syncing upstream)."
+        log_warn "Skipping Slackware Core upgrade passes to prevent incomplete or failed deployment. Other update suites will proceed."
+        heal_multilib_subsystem
+        heal_host_sovereignty_subsystem
+        reconcile_new_config_files
+        return 2
+    fi
+
+    # 6A-91/6A-92: a mirror older than the system or too little space on / -> the base waits, everything else proceeds
+    if ! ss_base_preflight; then
+        heal_multilib_subsystem
+        heal_host_sovereignty_subsystem
+        reconcile_new_config_files
+        return 2
+    fi
+
+    # 8A: remember which packages are installed now, and record the stock text of .new files that already wait
+    local cfg_before
+    cfg_before=$(mktemp /tmp/slacky-pkgs-before.XXXXXX 2>/dev/null || echo "")
+    if [ -n "${cfg_before}" ]; then
+        ls -1 /var/log/packages > "${cfg_before}" 2>/dev/null || true
+        slacky_config_capture waiting
+    fi
 
     # Engage Turbo Parallel Pre-fetch before install-new and upgrade-all
     parallel_prefetch_packages
 
     clear_stale_slackpkg_locks
 
+    # 6A-7: slackpkg exit status (man slackpkg): 0 ok, 20 nothing to do, 50 slackpkg upgraded itself.
+    # Anything else is a failure; the Slackware updates then stay pending instead of being cleared.
+    local sp_failed=0
+    local sp_rc=0
+
     log_info "Installing newly added distribution packages (install-new)..."
-    run_slackpkg -batch=on -default_answer=y -postinst=off install-new || {
-        log_warn "slackpkg install-new completed."
-    }
+    run_slackpkg -batch=on -default_answer=y -postinst=off install-new || sp_rc=$?
+    case "${sp_rc}" in
+        0|20|50) ;;
+        *) log_warn "slackpkg install-new failed (exit ${sp_rc})."; sp_failed=1 ;;
+    esac
 
     log_info "Upgrading existing distribution packages (upgrade-all)..."
 
@@ -288,17 +450,19 @@ update_slackware_core() {
         local tools_before tools_after
         tools_before=$(get_slackpkg_tools_snapshot)
 
-        run_slackpkg -batch=on -default_answer=y -postinst=off upgrade-all || {
-            log_warn "slackpkg upgrade-all completed pass ${current_pass}."
-        }
+        sp_rc=0
+        run_slackpkg -batch=on -default_answer=y -postinst=off upgrade-all || sp_rc=$?
+        case "${sp_rc}" in
+            0|20|50) ;;
+            *) log_warn "slackpkg upgrade-all failed in pass ${current_pass} (exit ${sp_rc})."; sp_failed=1 ;;
+        esac
 
         tools_after=$(get_slackpkg_tools_snapshot)
 
         # Check if slackpkg or core package tools were upgraded in this pass
         if [ "${tools_before}" != "${tools_after}" ] && [ "${current_pass}" -lt "${max_passes}" ]; then
             echo -e "\n${YELLOW}${BOLD}$(_ SLACKPKG_SELF_UPGRADED)${RESET}"
-            read -r -p "$(_ PROMPT_RESUME_UPGRADE)" reply_resume
-            reply_resume=${reply_resume:-Y}
+            read_update_prompt "$(_ PROMPT_RESUME_UPGRADE)" "Y" reply_resume
             if [[ "$reply_resume" =~ ^[YyJjSsOo]$ ]]; then
                 current_pass=$((current_pass + 1))
                 echo ""
@@ -323,9 +487,22 @@ update_slackware_core() {
         fi
     done
 
-    log_success "Slackware system package synchronization completed."
+    # 8A: right after the base step, before anything else looks at /etc: store the stock text of the changed packages
+    if [ -n "${cfg_before}" ]; then
+        slacky_config_capture "${cfg_before}"
+        rm -f "${cfg_before}" 2>/dev/null || true
+    fi
+
     heal_multilib_subsystem
+    heal_host_sovereignty_subsystem
     reconcile_new_config_files
+
+    if [ "${sp_failed}" -ne 0 ]; then
+        log_warn "Slackware package upgrade finished with errors. The pending updates are kept."
+        return 3
+    fi
+    log_success "Slackware system package synchronization completed."
+    return 0
 }
 
 heal_multilib_subsystem() {
@@ -389,8 +566,23 @@ heal_multilib_subsystem() {
         local glibc_pkg=""
         glibc_pkg=$(find /var/cache/packages -name "glibc-*-compat32*.txz" 2>/dev/null | sort -V | tail -n 1 || echo "")
         if [ -n "${glibc_pkg}" ] && [ -f "${glibc_pkg}" ]; then
-            log_info "Reinstalling 32-bit glibc from local cache: $(basename "${glibc_pkg}")..."
-            sudo "${PKG_UPGRADE_CMD}" --reinstall --install-new "${glibc_pkg}" 2>/dev/null || true
+            # 6A-84: the cache dir can be writable by other users; install only a root-held copy whose signature
+            # verifies against the keys slackpkg uses (root's keyring), never the cache file itself.
+            local g_tmp g_ok=0 g_gpg
+            g_gpg=$(command -v gpg1 || command -v gpg2 || command -v gpg || echo gpg)
+            g_tmp=$(sudo mktemp -d /root/slacky-compat32.XXXXXX 2>/dev/null || echo "")
+            if [ -n "${g_tmp}" ] && sudo cp -- "${glibc_pkg}" "${g_tmp}/" 2>/dev/null \
+               && sudo cp -- "${glibc_pkg}.asc" "${g_tmp}/" 2>/dev/null \
+               && sudo "${g_gpg}" --batch --verify "${g_tmp}/$(basename "${glibc_pkg}").asc" "${g_tmp}/$(basename "${glibc_pkg}")" >/dev/null 2>&1; then
+                g_ok=1
+            fi
+            if [ "${g_ok}" -eq 1 ]; then
+                log_info "Reinstalling 32-bit glibc from local cache: $(basename "${glibc_pkg}")..."
+                sudo "${PKG_UPGRADE_CMD}" --reinstall --install-new "${g_tmp}/$(basename "${glibc_pkg}")" 2>/dev/null || true
+            else
+                log_warn "The cached 32-bit glibc package could not be verified, so it was not installed. Run the update again to download it fresh."
+            fi
+            [ -n "${g_tmp}" ] && sudo rm -rf -- "${g_tmp}" 2>/dev/null || true
             if [ -d "/lib/incoming" ] && [ -n "$(ls -A /lib/incoming 2>/dev/null)" ]; then
                 sudo mv -f /lib/incoming/* /lib/ 2>/dev/null || true
                 sudo rmdir /lib/incoming 2>/dev/null || true
@@ -425,141 +617,163 @@ heal_multilib_subsystem() {
     fi
 }
 
-reconcile_new_config_files() {
+heal_host_sovereignty_subsystem() {
     validate_privileges
 
-    local new_files
-    new_files=$(find /etc -name "*.new" 2>/dev/null || true)
-    [ -n "${new_files}" ] || return 0
+    local gnomes_py=""
+    for cand in "${SCRIPT_DIR:-}/gnomes_pacman.py" \
+                "${APP_DIR:-}/gnomes_pacman.py" \
+                "${SCRIPT_DIR:-}/../lib/gnomes_pacman.py" \
+                "/usr/share/slacky-update/lib/gnomes_pacman.py" \
+                "/usr/local/lib/slacky-update/gnomes_pacman.py"; do
+        if [ -f "${cand}" ]; then
+            gnomes_py="${cand}"
+            break
+        fi
+    done
+    [ -n "${gnomes_py}" ] || return 0
 
-    log_info "Analyzing .new configuration files with Smart Reconciliation Engine..."
+    log_info "Auditing Host Sovereignty and /usr/bin/ wrapper scoping..."
+    local heal_out
+    # 6A-137: heal needs root to change anything; a run that could not finish is never reported as clean
+    local heal_rc=0
+    if [ "$(id -u)" -eq 0 ]; then
+        heal_out=$(python3 -I "${gnomes_py}" heal --json 2>/dev/null) || heal_rc=$?
+    else
+        heal_out=$(sudo python3 -I "${gnomes_py}" heal --json 2>/dev/null) || heal_rc=$?
+    fi
+    [ -n "${heal_out}" ] || heal_out="{}"
+    if [ "${heal_rc}" -ne 0 ] || [ "$(python3 -I -c "import sys, json; print(len(json.loads(sys.argv[1]).get('errors', [])))" "${heal_out}" 2>/dev/null || echo 1)" != "0" ]; then
+        log_warn "The check of program launchers in /usr/bin could not finish; nothing was changed there."
+        return 0
+    fi
+    # 6A-154: launchers that hide a Slackware file are kept; the user gets the exact command (advice only)
+    local kept_cmds
+    kept_cmds=$(python3 -I -c "import sys, json; d = json.loads(sys.argv[1]); print(' '.join(sorted({k['package'] for k in d.get('kept_stock_owned', []) if k.get('package')})))" "${heal_out}" 2>/dev/null || echo "")
+    if [ -n "${kept_cmds}" ]; then
+        log_warn "A launcher hides an original Slackware file; it was not deleted. To restore the original, run:"
+        for kpkg in ${kept_cmds}; do
+            log_info "  slackpkg reinstall ${kpkg}"
+        done
+    fi
+    # 6A-232: a launcher on a protected system name without a stock owner is never deleted; one sentence, the person decides
+    local prot_names
+    prot_names=$(python3 -I -c "import sys, json; d = json.loads(sys.argv[1]); print(' '.join(sorted({k['name'] for k in d.get('kept_protected', []) if k.get('name')})))" "${heal_out}" 2>/dev/null || echo "")
+    if [ -n "${prot_names}" ]; then
+        local pname
+        for pname in ${prot_names}; do
+            log_warn "A launcher named ${pname} sits where a system program belongs. Nothing was changed; check it by hand."
+        done
+    fi
+    local purged_count
+    purged_count=$(python3 -c "import sys, json; data = json.loads(sys.argv[1]); print(len(data.get('purged_wrappers', [])))" "${heal_out}" 2>/dev/null || echo "0")
+    if [ "${purged_count}" -gt 0 ]; then
+        log_warn "Purged ${purged_count} rogue wrapper(s) from /usr/bin/ to protect native Slackware binaries."
+        local aff_pkgs
+        aff_pkgs=$(python3 -c "import sys, json; data = json.loads(sys.argv[1]); print(' '.join(data.get('affected_packages', [])))" "${heal_out}" 2>/dev/null || echo "")
+        if [ -n "${aff_pkgs}" ]; then
+            log_info "Reinstalling affected native Slackware package(s): ${aff_pkgs}..."
+            if command -v slackpkg >/dev/null 2>&1; then
+                for apkg in ${aff_pkgs}; do
+                    run_slackpkg -batch=on -default_answer=y reinstall "${apkg}" || true
+                done
+            fi
+        fi
+        log_success "Host Sovereignty successfully healed."
+    else
+        :   # 6A-137: silent on success
+    fi
+}
 
-    python3 -c "
-import os, sys, shutil, subprocess
+# 8A-8C: find a lib helper (installed, or next to the source tree)
+slacky_find_helper() {
+    local name="$1" cand
+    for cand in "${SCRIPT_DIR:-}/../lib/${name}" "${APP_DIR:-}/${name}" "${SCRIPT_DIR:-}/${name}" \
+                "/usr/share/slacky-update/lib/${name}" "/usr/local/lib/slacky-update/${name}"; do
+        if [ -f "${cand}" ]; then
+            printf '%s\n' "${cand}"
+            return 0
+        fi
+    done
+    return 1
+}
 
-def get_files():
-    found = []
-    for root, _, files in os.walk('/etc'):
-        for f in files:
-            if f.endswith('.new'):
-                found.append(os.path.join(root, f))
-    return sorted(found)
+# 6A-202 (spec section 0 and 4): signing keys first. Inside an explicit full update, before any package is verified or
+# installed, a keyring package that the user phase staged (verified, newer, in the user's own cache) is installed by the
+# root phase, which checks the raw bytes again from scratch (gnomes_trust.py install-staged; nothing staged = nothing
+# happens, no sudo is asked). One plain sentence per refusal; the update itself continues (the old keys stay in force).
+slacky_keys_first() {
+    local sentinel trust stage out
+    sentinel=$(slacky_find_helper slacky_sentinel.py) || return 0
+    trust=$(slacky_find_helper gnomes_trust.py) || return 0
+    if [ "$(id -u)" -ne 0 ]; then
+        # user phase: stage a newer keyring when the synced database lists one (cheap when nothing is new)
+        python3 -I "${sentinel}" keys-check >/dev/null 2>&1 || true
+    fi
+    stage="${XDG_CACHE_HOME:-${HOME:-/nonexistent}/.cache}/slacky-update/sentinel/keyring_stage"
+    if [ "$(id -u)" -eq 0 ] && [ -n "${SUDO_USER:-}" ]; then
+        stage="$(getent passwd "${SUDO_USER}" | cut -d: -f6)/.cache/slacky-update/sentinel/keyring_stage"
+    fi
+    [ -d "${stage}" ] && [ -n "$(ls -A "${stage}" 2>/dev/null)" ] || return 0
+    local owner_uid
+    owner_uid=$(stat -c %u "${stage}" 2>/dev/null) || return 0
+    out=$(sudo env PYTHONSAFEPATH=1 python3 -I "${trust}" install-staged "${stage}" "${owner_uid}" 2>/dev/null) || true
+    if [ -n "${out}" ]; then
+        local line
+        while IFS= read -r line; do
+            [ -n "${line}" ] && log_warn "${line}"
+        done <<< "${out}"
+    fi
+    return 0
+}
 
-files = get_files()
-if not files:
-    sys.exit(0)
+# 6A-202: the alert sentences that are due (a whole family at risk: fewer than 2 working download servers, no fresh
+# server list for a month, a used signing key expiring within 60 days, new keys that could not be confirmed). Each
+# condition is shown at most once per 7 days. Silent when nothing is wrong; never asks for sudo.
+slacky_sentinel_alerts() {
+    local sentinel line
+    [ "$(id -u)" -ne 0 ] || return 0
+    sentinel=$(slacky_find_helper slacky_sentinel.py) || return 0
+    while IFS= read -r line; do
+        [ -n "${line}" ] && log_warn "${line}"
+    done < <(python3 -I "${sentinel}" alerts 2>/dev/null || true)
+    return 0
+}
 
-group_a = [] # New files (orig does not exist)
-group_b = [] # Identical content
-group_c = [] # Unmodified stock configs (trivial diffs/comments or identical)
-group_d = [] # User-customized configs
+# 8A: the stock text of etc/*.new files goes into /var/lib/slacky-config (format: docs/config_store_spec.md).
+# $1 = file with the package names installed before the base step ("waiting" instead: record .new files that already wait).
+# Silent on success; never changes /etc.
+slacky_config_capture() {
+    local helper
+    helper=$(slacky_find_helper slacky_config.py) || return 0
+    local rc=0
+    if [ "$(id -u)" -eq 0 ]; then
+        if [ "$1" = "waiting" ]; then python3 -I "${helper}" capture --waiting || rc=$?
+        else python3 -I "${helper}" capture --before "$1" || rc=$?; fi
+    else
+        if [ "$1" = "waiting" ]; then sudo python3 -I "${helper}" capture --waiting || rc=$?
+        else sudo python3 -I "${helper}" capture --before "$1" || rc=$?; fi
+    fi
+    return 0
+}
 
-for nf in files:
-    orig = nf[:-4]
-    if not os.path.exists(orig):
-        group_a.append((nf, orig))
-    else:
-        try:
-            with open(nf, 'rb') as f1, open(orig, 'rb') as f2:
-                c1, c2 = f1.read(), f2.read()
-            if c1 == c2:
-                group_b.append((nf, orig))
-            else:
-                t1 = [l.strip() for l in c1.decode(errors='ignore').splitlines() if l.strip() and not l.strip().startswith(('#', '//', ';'))]
-                t2 = [l.strip() for l in c2.decode(errors='ignore').splitlines() if l.strip() and not l.strip().startswith(('#', '//', ';'))]
-                if t1 == t2:
-                    group_c.append((nf, orig))
-                else:
-                    group_d.append((nf, orig))
-        except Exception:
-            group_d.append((nf, orig))
-
-is_non_interactive = os.environ.get('NON_INTERACTIVE') == '1' or not sys.stdin.isatty()
-
-def safe_prompt(prompt_text, default_val='Y'):
-    if is_non_interactive:
-        print(f'{prompt_text}{default_val} (non-interactive default)')
-        return default_val
-    try:
-        sys.stdout.flush()
-        val = input(prompt_text).strip()
-        return val if val else default_val
-    except (EOFError, KeyboardInterrupt):
-        return default_val
-
-total_found = len(files)
-print(f'\n\033[1;36m=== 🛠️ SMART .NEW CONFIGURATION RECONCILIATION ({total_found} files detected) ===\033[0m')
-
-# Group A: New Configurations
-if group_a:
-    print(f'\n\033[1;33m[Group A] New Configuration Files ({len(group_a)} files)\033[0m')
-    print('These are brand new configuration files for newly installed packages. Safe to apply.')
-    for nf, orig in group_a[:10]:
-        print(f'  • {orig}')
-    if len(group_a) > 10:
-        print(f'  ... and {len(group_a)-10} more files.')
-    r = safe_prompt('\nApply all new configuration files? [Y/n] ', 'Y')
-    if r.lower() in ('y', 'j', 's', 'o'):
-        for nf, orig in group_a:
-            try:
-                subprocess.run(['sudo', 'mv', '-f', nf, orig], check=True)
-            except Exception as e:
-                print(f'Error applying {orig}: {e}')
-        print('\033[1;32m✓ Applied all new configuration files.\033[0m')
-
-# Group B: Identical Redundant Files
-if group_b:
-    print(f'\n\033[1;33m[Group B] Identical Configuration Files ({len(group_b)} files)\033[0m')
-    print('Content is 100% byte-for-byte identical to your current files. Safe to delete.')
-    for nf, orig in group_b[:10]:
-        print(f'  • {nf}')
-    if len(group_b) > 10:
-        print(f'  ... and {len(group_b)-10} more files.')
-    r = safe_prompt('\nRemove all identical redundant .new files? [Y/n] ', 'Y')
-    if r.lower() in ('y', 'j', 's', 'o'):
-        for nf, orig in group_b:
-            try:
-                subprocess.run(['sudo', 'rm', '-f', nf], check=True)
-            except Exception as e:
-                print(f'Error removing {nf}: {e}')
-        print('\033[1;32m✓ Cleaned up all identical .new files.\033[0m')
-
-# Group C: Stock Unmodified Configs
-if group_c:
-    print(f'\n\033[1;33m[Group C] Standard Distribution Config Updates ({len(group_c)} files)\033[0m')
-    print('These files contain updated upstream defaults and comments. Safe to update.')
-    for nf, orig in group_c[:10]:
-        print(f'  • {orig}')
-    if len(group_c) > 10:
-        print(f'  ... and {len(group_c)-10} more files.')
-    r = safe_prompt('\nUpdate all unmodified configs to new upstream versions? [Y/n] ', 'Y')
-    if r.lower() in ('y', 'j', 's', 'o'):
-        for nf, orig in group_c:
-            try:
-                subprocess.run(['sudo', 'mv', '-f', nf, orig], check=True)
-            except Exception as e:
-                print(f'Error updating {orig}: {e}')
-        print('\033[1;32m✓ Updated unmodified configurations.\033[0m')
-
-# Group D: User-Customized Files
-if group_d:
-    print(f'\n\033[1;33m[Group D] User-Customized Configurations ({len(group_d)} files)\033[0m')
-    print('Slacky-Update detected custom user edits in the following files:')
-    for nf, orig in group_d:
-        print(f'  • \033[1;37m{orig}\033[0m  (new candidate: {nf})')
-    r = safe_prompt('\nKeep your customized files and preserve .new for manual review? [Y/n] ', 'Y')
-    if r.lower() in ('y', 'j', 's', 'o'):
-        print('\033[1;32m✓ Preserved your customized configuration files.\033[0m')
-    else:
-        ro = safe_prompt('Overwrite your customized files with .new files? [y/N] ', 'N')
-        if ro.lower() in ('y', 'j', 's', 'o'):
-            for nf, orig in group_d:
-                try:
-                    subprocess.run(['sudo', 'mv', '-f', nf, orig], check=True)
-                except Exception as e:
-                    print(f'Error overwriting {orig}: {e}')
-            print('\033[1;32m✓ Overwritten customized files with new versions.\033[0m')
-" || true
+# 8B/8C: .new configuration files. Only with a typed y, only the exact cases (you never edited the file -> replace,
+# Slackware did not change it -> drop the waiting copy, identical -> drop it, missing -> add it). Everything else stays as
+# it is. With -y, NON_INTERACTIVE or no terminal nothing is changed and one sentence says how many files wait.
+# There is no "overwrite all customized files" path any more.
+reconcile_new_config_files() {
+    validate_privileges
+    local helper
+    helper=$(slacky_find_helper slacky_config.py) || return 0
+    local extra=""
+    if [ "${NON_INTERACTIVE:-0}" = "1" ] || [ ! -t 0 ]; then
+        extra="--non-interactive"
+    fi
+    if [ "$(id -u)" -eq 0 ]; then
+        python3 -I "${helper}" reconcile ${extra} || true
+    else
+        sudo python3 -I "${helper}" reconcile ${extra} || true
+    fi
 }
 
 update_flatpaks() {
@@ -605,29 +819,20 @@ rank_slackware_mirrors_interactive() {
     if [ -n "${sel}" ] && [[ "${sel}" =~ ^[0-9]+$ ]] && [ "${sel}" -ge 1 ] && [ "${sel}" -le 10 ] && [ -n "${ranked_json}" ]; then
         local chosen_url
         chosen_url=$(python3 -c "import sys, json; data = json.loads(sys.argv[1]); print(data['slackware_ranked'][int(sys.argv[2])-1]['url'])" "${ranked_json}" "${sel}" 2>/dev/null || echo "")
-        if [ -n "${chosen_url}" ]; then
-            log_info "Updating /etc/slackpkg/mirrors with fastest mirror: ${chosen_url}..."
-            python3 -c "
-import sys, os
-mirrors_file = '/etc/slackpkg/mirrors'
-chosen = sys.argv[1].strip()
-if not chosen.endswith('/'): chosen += '/'
-lines = []
-if os.path.exists(mirrors_file):
-    with open(mirrors_file, 'r', encoding='utf-8', errors='ignore') as f:
-        for line in f:
-            sline = line.strip()
-            if sline and not sline.startswith('#') and (sline.startswith('http://') or sline.startswith('https://') or sline.startswith('ftp://')):
-                lines.append(f'# {line.rstrip()}\n')
-            else:
-                lines.append(line)
-lines.append(f'\n# Primary Slackware mirror set by Slacky-Update\n{chosen}\n')
-with open('/tmp/mirrors.tmp', 'w') as f:
-    f.writelines(lines)
-" "${chosen_url}"
-            sudo mv -f /tmp/mirrors.tmp /etc/slackpkg/mirrors 2>/dev/null || true
-            sudo chmod 0644 /etc/slackpkg/mirrors 2>/dev/null || true
-            log_success "Primary Slackware mirror updated! Exactly ONE active mirror is configured in /etc/slackpkg/mirrors."
+        # 6A-87: only a plain mirror URL, written to a private temp file (was the fixed /tmp/mirrors.tmp, which another
+        # local user could plant before root moved it into /etc/slackpkg/mirrors)
+        if [[ ! "${chosen_url}" =~ ^(https?|ftp)://[A-Za-z0-9._~:/%+-]+$ ]]; then
+            [ -n "${chosen_url}" ] && log_warn "That mirror address looks wrong, so /etc/slackpkg/mirrors was not changed."
+            chosen_url=""
+        fi
+        # 6A-140: one writer for /etc/slackpkg/mirrors (rank_mirrors.py --apply): same release branch, a ChangeLog at
+        # least as new as the current mirror, a marked block and a backup; it refuses otherwise and says why
+        if [ -n "${chosen_url}" ] && [ -n "${rank_py}" ]; then
+            if sudo python3 -I "${rank_py}" --apply "${chosen_url}" --yes; then
+                log_info "Your Slackware mirror is now ${chosen_url}."
+            else
+                log_warn "The mirror was not changed; /etc/slackpkg/mirrors is as it was."
+            fi
         fi
     fi
 }

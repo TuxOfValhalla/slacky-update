@@ -651,9 +651,10 @@ view_field_guide_terminal() {
 
 # --- [ EXPORT TO PDF ] ---
 export_field_guide_pdf() {
-    local current_user="${SUDO_USER:-${USER:-tux}}"
+    local current_user="${SUDO_USER:-${USER:-$(id -un)}}"
     local user_home
-    user_home=$(eval echo "~${current_user}")
+    user_home=$(getent passwd "${current_user}" 2>/dev/null | cut -d: -f6)
+    [ -n "${user_home}" ] && [ -d "${user_home}" ] || user_home="${HOME:-/tmp}"
 
     local dest_dir="${user_home}/Documents"
     if [ ! -d "${dest_dir}" ] || [ ! -w "${dest_dir}" ]; then
@@ -949,54 +950,98 @@ PYNET
 
 # --- [ INTERACTIVE FIELD GUIDE MENU ] ---
 manage_field_guide_interactive() {
+    local tui_py="${REPO_ROOT:-}/lib/slacky_tui.py"
+    [ ! -f "${tui_py}" ] && [ -f "${SCRIPT_DIR}/../lib/slacky_tui.py" ] && tui_py="${SCRIPT_DIR}/../lib/slacky_tui.py"
+    [ ! -f "${tui_py}" ] && [ -f "/usr/share/slacky-update/lib/slacky_tui.py" ] && tui_py="/usr/share/slacky-update/lib/slacky_tui.py"
+
+    local doctor_py="${REPO_ROOT:-}/lib/slacky_doctor.py"
+    [ ! -f "${doctor_py}" ] && [ -f "${SCRIPT_DIR}/../lib/slacky_doctor.py" ] && doctor_py="${SCRIPT_DIR}/../lib/slacky_doctor.py"
+    [ ! -f "${doctor_py}" ] && [ -f "${APP_DIR:-}/slacky_doctor.py" ] && doctor_py="${APP_DIR:-}/slacky_doctor.py"
+    [ ! -f "${doctor_py}" ] && [ -f "/usr/share/slacky-update/lib/slacky_doctor.py" ] && doctor_py="/usr/share/slacky-update/lib/slacky_doctor.py"
+
     while true; do
-        clear || true
-        echo -e "${BLUE}${BOLD}============================================================${RESET}"
-        echo -e "${BLUE}${BOLD}SLACKY-UPDATE MASTER FIELD GUIDE & MOBILE EXPORT${RESET}"
-        echo -e "${BLUE}${BOLD}============================================================${RESET}"
-        echo -e "  • ${BOLD}Document:${RESET}    Slackware -current / 15+ & 16 Alpha Complete System Manuals"
-        echo -e "  • ${BOLD}Language:${RESET}    English (Easy-to-Read Edition)"
-        echo -e "  • ${BOLD}Format:${RESET}      Terminal / PDF / HTML / Mobile QR / Email"
-        echo ""
-        echo -e "  ${BOLD}1.${RESET} Read Master Survival Guide in Terminal"
-        echo -e "  ${BOLD}2.${RESET} Read Technical Architecture & Companion Guide in Terminal"
-        echo -e "  ${BOLD}3.${RESET} Read Limine & BIOS Playbook in Terminal"
-        echo -e "  ${BOLD}4.${RESET} Read Disaster Recovery & Troubleshooting Guide in Terminal"
-        echo -e "  ${BOLD}5.${RESET} Export All Guides to PDF (Save to ~/Documents)"
-        echo -e "  ${BOLD}6.${RESET} Send Survival Guide via Email (Attach PDF in Mail Client)"
-        echo -e "  ${BOLD}7.${RESET} Transfer to Phone via Wi-Fi QR Code (Access in BIOS)"
-        echo -e "  ${BOLD}8.${RESET} Return to Previous Menu"
-        echo ""
-        echo -n "Select operation [1-8]: "
-        read -r choice
+        local choice=""
+        if [ -f "${tui_py}" ] && command -v python3 >/dev/null 2>&1 && [ -t 0 ]; then
+            choice=$(python3 "${tui_py}" --mode docs-main || true)
+        else
+            clear || true
+            echo -e "${BLUE}${BOLD}============================================================${RESET}"
+            echo -e "${BLUE}${BOLD}SLACKY-UPDATE MASTER FIELD GUIDE & DIAGNOSTICS${RESET}"
+            echo -e "${BLUE}${BOLD}============================================================${RESET}"
+            echo -e "  • ${BOLD}Document:${RESET}    Slackware -current / 15+ & 16 Alpha Complete System Manuals"
+            echo -e "  • ${BOLD}Language:${RESET}    English (Easy-to-Read Edition)"
+            echo -e "  • ${BOLD}Format:${RESET}      Terminal / PDF / HTML / Mobile QR / Email / Markdown"
+            echo ""
+            echo -e "  ${BOLD}1.${RESET} 🩺 Run System Health & Diagnostic Audit (Terminal)"
+            echo -e "  ${BOLD}2.${RESET} 📋 Export System Health Report to Markdown (~/slacky-system-health.md)"
+            echo -e "  ${BOLD}3.${RESET} Read Master Survival Guide in Terminal"
+            echo -e "  ${BOLD}4.${RESET} Read Technical Architecture & Companion Guide in Terminal"
+            echo -e "  ${BOLD}5.${RESET} Read Limine & BIOS Playbook in Terminal"
+            echo -e "  ${BOLD}6.${RESET} Read Disaster Recovery & Troubleshooting Guide in Terminal"
+            echo -e "  ${BOLD}7.${RESET} Export All Guides to PDF (Save to ~/Documents)"
+            echo -e "  ${BOLD}8.${RESET} Send Survival Guide via Email (Attach PDF in Mail Client)"
+            echo -e "  ${BOLD}9.${RESET} Transfer to Phone via Wi-Fi QR Code (Access in BIOS)"
+            echo -e "  ${BOLD}10.${RESET} Return to Previous Menu (ESC)"
+            echo ""
+            echo -n "Select operation [1-10]: "
+            read -r choice || choice="10"
+        fi
 
         case "${choice}" in
             1)
-                view_field_guide_terminal "$(get_master_field_guide_md_path)"
+                clear || true
+                validate_privileges
+                if [ -f "${doctor_py}" ]; then
+                    sudo python3 "${doctor_py}"
+                else
+                    log_error "Slacky-Update Doctor engine not found (${doctor_py})."
+                fi
+                echo ""
+                read -r -p "Press [ENTER] to return to menu..." || true
                 ;;
             2)
-                view_field_guide_terminal "$(get_technical_companion_guide_md_path)"
+                clear || true
+                validate_privileges
+                local target_user="${SUDO_USER:-${USER:-$(id -un)}}"
+                local target_home
+                target_home=$(getent passwd "${target_user}" 2>/dev/null | cut -d: -f6)
+                [ -n "${target_home}" ] && [ -d "${target_home}" ] || target_home="${HOME:-/tmp}"
+                local target_export="${target_home}/slacky-system-health.md"
+                if [ -f "${doctor_py}" ]; then
+                    sudo python3 "${doctor_py}" --export "${target_export}"
+                    [ -f "${target_export}" ] && sudo chown "${target_user}:$(id -gn "${target_user}")" "${target_export}" 2>/dev/null || true
+                else
+                    log_error "Slacky-Update Doctor engine not found (${doctor_py})."
+                fi
+                echo ""
+                read -r -p "Press [ENTER] to return to menu..." || true
                 ;;
             3)
-                view_field_guide_terminal "$(get_limine_field_guide_md_path)"
+                view_field_guide_terminal "$(get_master_field_guide_md_path)"
                 ;;
             4)
-                view_field_guide_terminal "$(get_troubleshooting_guide_md_path)"
+                view_field_guide_terminal "$(get_technical_companion_guide_md_path)"
                 ;;
             5)
+                view_field_guide_terminal "$(get_limine_field_guide_md_path)"
+                ;;
+            6)
+                view_field_guide_terminal "$(get_troubleshooting_guide_md_path)"
+                ;;
+            7)
                 export_field_guide_pdf
                 echo ""
                 read -r -p "Press [ENTER] to continue..." || true
                 ;;
-            6)
+            8)
                 send_field_guide_email
                 echo ""
                 read -r -p "Press [ENTER] to continue..." || true
                 ;;
-            7)
+            9)
                 transfer_field_guide_qr
                 ;;
-            8|q|Q)
+            10|q|Q)
                 return 0
                 ;;
             *)

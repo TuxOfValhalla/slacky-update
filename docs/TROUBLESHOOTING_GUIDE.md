@@ -1,21 +1,54 @@
 # 🚨 Slacky-Update Disaster Recovery & Troubleshooting Guide
 ### *The Symptom-Based Field Catalog for Emergency Recovery, Kernel Glitches, NVRAM Resets & Secure Boot Armor*
-#### `v1.0_RC2` — *"Dark Star"* (Stability & Hardware Release Candidate)
+#### `v1.0 LTS` — *"Dark Star"* (Official Long-Term Support Release)
 
 ---
 
 > [!IMPORTANT]
-> **TARGET DISTRIBUTION REQUIREMENT & VERSION DISCLAIMER**  
+> **TARGET DISTRIBUTION REQUIREMENT & VERSION MANDATE**  
 > **Slacky-Update is engineered strictly for Slackware 15+ (`slackware-current` / `Slackware 16 alpha`).**  
 > Legacy **Slackware 15.0 (stable)** is strictly unsupported. Older core libraries, toolchains, and sonames present in 15.0 cause conflicts that cannot be reliably detected or mediated. Slackware 15.0 users must upgrade to `-current` before using this suite.
 
 > [!CAUTION]
-> **PRE-RELEASE / EARLY ACCESS DISCLAIMER & LIABILITY NOTICE — USE AT YOUR OWN RISK**  
-> Slacky-Update is an active *Pre-Release / Early Access* edition. The software operates at a low system level with critical infrastructure, including Linux kernels, proprietary NVIDIA drivers, Dracut initramfs, Btrfs subvolumes, and bootloader topologies (Limine/GRUB).  
+> **COMPREHENSIVE TESTING, LIABILITY & USE-AT-YOUR-OWN-RISK DISCLAIMER**  
+> Slacky-Update operates at a low system level with critical infrastructure, including Linux kernels, proprietary NVIDIA drivers, Dracut initramfs, Btrfs subvolumes, and bootloader topologies (Limine/GRUB).  
 > **All troubleshooting, emergency recovery procedures, and system modifications are executed strictly at your own discretion and risk.** The developers, maintainers, and contributors assume no liability or warranty for system malfunction, unbootable states, hardware damage, or data loss.  
 > **Golden Rule:** Always ensure you have a bootable Slackware Live-USB accessible and maintain current, verified backups of `/home` and configuration files before performing system interventions.
 
 ---
+
+## 📑 Table of Contents
+1. [Core Philosophy: The Sacred Slackware Base & The Five Pillars](#1-core-philosophy-the-sacred-slackware-base--the-five-pillars)
+2. [🧭 Fast Selector: Identify Your Problem](#2--fast-selector-identify-your-problem)
+3. [🛠️ The 15 Critical Failure Scenarios](#3-the-15-critical-failure-scenarios)
+   - [Symptom 1: NVRAM Reset / "No bootable device found"](#1--black-screen--no-bootable-device-nvram-cleared-after-bios-update)
+   - [Symptom 2: BLAKE2B Hash Mismatch vs. Secure Boot Violation](#2--blake2b-hash-mismatch-vs-secure-boot-violation)
+   - [Symptom 3: NVIDIA TTY / Nouveau Crash after Kernel Switch](#3--nvidia-tty--nouveau-fallback-crash-after-kernel-switch)
+   - [Symptom 4: Windows Boot Manager Disappeared after Setup](#4--windows-boot-manager-disappeared-from-limine-scenario-c-multiboot)
+   - [Symptom 5: Dracut OOM / Out of Space during Initramfs](#5--dracut-out-of-memory-oom-during-initramfs-generation)
+   - [Symptom 6: Btrfs Snapshot Boots, but Locked Read-Only](#6--btrfs-snapshot-boots-but-remains-locked-read-only)
+   - [Symptom 7: sbctl enroll-keys Failed in BIOS (Setup Mode)](#7--sbctl-enroll-keys-failed-in-bios-setup-mode-not-active)
+   - [Symptom 8: Total Breakdown: Live-USB Chroot & --restore-limine](#8--total-system-failure-live-usb-chroot---restore-limine)
+   - [Symptom 9: Installed App 'Nowhere to be Found' / Missing Menu Icon](#9--installed-app--slackbuild-nowhere-to-be-found-missing-menu-icon-or-broken-symlink)
+   - [Symptom 10: Gaming, Proton or MangoHud Crash on Launch](#10--gaming-steam-proton-or-mangohud-crash-on-launch)
+   - [Symptom 11: Audio Silence / PipeWire Session Hiccup](#11--sound--audio-silence-or-wine-bridge-glitches)
+   - [Symptom 12: Hypridle 120s Self-Resetting Loop](#12--oled-screen-dims-but-never-powers-off-hypridle-120s-self-resetting-loop)
+   - [Symptom 13: 4K HiDPI Scaling Glitches under Wayland/Qt](#13--4k--hidpi-scaling-glitches-tiny-ui-or-blurry-xwayland-windows)
+   - [Symptom 14: Terminal Screen Duplicate Text / VT100 Glitch](#14--terminal-screen-duplicate-text-missing-scrollback-or-artifacts-during-updates)
+   - [Symptom 15: Accidental Terminal Close or Interrupt During Update (In-Flight Armor)](#15--accidental-terminal-interruption-or-power-loss-during-upgrade)
+4. [📞 Summary of Emergency Commands](#4--summary-of-emergency-commands)
+
+---
+
+## 1. Core Philosophy: The Sacred Slackware Base & The Five Pillars
+
+Slacky-Update’s recovery architecture is founded on **The Sacred Slackware Base System** and **The Five Engineering Pillars**:
+* **The Sacred Slackware Base System:** Stock Slackware kernels (`vmlinuz-generic`, `vmlinuz-huge`), stock initrds, and default bootloaders (GRUB, ELILO) are **never wiped or damaged**. If a custom kernel or configuration glitch occurs, your original Slackware foundation remains 100% intact and ready to boot.
+* **⚡ Speed:** FastBoot and Turbo Shutdown eliminate 10–15 seconds of boot/shutdown latency; emergency restore routines finish in seconds.
+* **🛋️ Comfort:** Native mouse text selection stays active across all menus so you can easily copy logs and errors directly to LLM assistants.
+* **🛡️ Safety:** In-flight signal armor (`trap '' INT QUIT TSTP`) prevents half-installed package or kernel states; BLAKE2B cryptographic hashes verify binary integrity; Snapper snapshots provide instantaneous rollbacks.
+* **🎨 UI Design:** Absolute cursor row addressing (`\033[{row};1H\033[2K`) completely eliminates staircase tearing, rendering crisp, legible diagnostic screens.
+* **🤝 Ease of Use:** Every failure scenario provides an ELI5 summary, root-cause diagnosis, and 1-line resolution.
 
 > [!NOTE]
 > ### 🧩 ELI5 Master Overview — What is this guide and why do you care?
@@ -23,7 +56,7 @@
 
 ---
 
-## 🧭 Fast Selector: Identify Your Problem
+## 2. 🧭 Fast Selector: Identify Your Problem
 
 ```mermaid
 flowchart TD
@@ -43,13 +76,14 @@ flowchart TD
     MatchSymptom -->|"OLED screens dim but never power off / DPMS resets"| S12["Symptom 12: Hypridle 120s Self-Resetting Loop"]
     MatchSymptom -->|"Tiny UI fonts / blurry scaling on 4K display"| S13["Symptom 13: 4K HiDPI Scaling Glitches under Wayland/Qt"]
     MatchSymptom -->|"Screen flickers / duplicate text during update"| S14["Symptom 14: Terminal Screen Duplicate Text / VT100 Glitch"]
+    MatchSymptom -->|"Terminal closed mid-install / Ctrl+C hit"| S15["Symptom 15: Interrupted Upgrade / In-Flight Armor"]
 
-    S1 & S2 & S3 & S4 & S5 & S6 & S7 & S8 & S9 & S10 & S11 & S12 & S13 & S14 --> Recovered["✓ System Restored to 100% Normal Operation"]
+    S1 & S2 & S3 & S4 & S5 & S6 & S7 & S8 & S9 & S10 & S11 & S12 & S13 & S14 & S15 --> Recovered["✓ System Restored to 100% Normal Operation"]
 ```
 
 ---
 
-## 🛠️ The 14 Critical Failure Scenarios
+## 3. 🛠️ The 15 Critical Failure Scenarios
 
 ---
 
@@ -409,7 +443,7 @@ If `mount` fails due to filesystem damage after unexpected power loss, run `btrf
 > *The delivery truck brought your new app and put it in the garage (`/usr/lib64/`), but nobody put a signpost in your hallway (`/usr/bin/`) or a button on your desktop menu. If an app doesn't appear after installing a package, 99% of the time it's because the desktop icon cache hasn't refreshed or the command link in `/usr/bin` was pointing to the wrong spot.*
 
 #### A. Symptom
-You successfully built and installed an application (such as Opera, DaVinci Resolve, or FreeOffice) via a SlackBuild or `installpkg`, but typing the app name in terminal returns `command not found`, and searching for the app in KDE Plasma or XFCE application menus yields no results.
+You successfully built and installed an application via a SlackBuild or `installpkg`, but typing the app name in terminal returns `command not found`, and searching for the app in KDE Plasma or XFCE application menus yields no results.
 
 #### B. Where are you?
 * **Position:** Running Slackware graphical desktop (KDE / XFCE).
@@ -431,7 +465,7 @@ You successfully built and installed an application (such as Opera, DaVinci Reso
 #### D. Fix
 1. **Fix Launcher Symlink in `/usr/bin`:**
    ```bash
-   # Example for Opera:
+   # Example:
    sudo ln -sf /usr/lib64/opera-stable/opera /usr/bin/opera
    sudo ln -sf /usr/lib64/opera-stable/opera /usr/bin/opera-stable
    ```
@@ -548,7 +582,6 @@ Check `hypridle.conf` for self-resetting keyword loops:
 ```bash
 grep -E 'keyword|dpms' ~/.config/hypr/hypridle.conf
 ```
-*Problematic pattern:* A listener running `hyprctl keyword decoration:dim_inactive true`. Modifying Hyprland keywords over IPC emits a config reload event, resetting Wayland's `ext-idle-notify-v1` idle tracker back to 0.
 
 #### D. Fix (Deploy Clean 3-Minute DPMS Listener with Lua Dispatcher Parity)
 1. **Update `~/.config/hypr/hypridle.conf`:**
@@ -625,35 +658,62 @@ Do not force static `GDK_SCALE=2` globally across all sessions if using mixed-DP
 
 ### 14. 📺 Terminal Screen Duplicate Text, Missing Scrollback, or Artifacts During Updates
 
-#### A. ELI5 Explanation
-> *When your computer is downloading packages, the terminal program is trying to draw little spinning wheels and progress bars. If the program doesn't know how to cleanly clear the line before drawing the next one, it paints new words on top of old words like messy graffiti, causing lines to duplicate or jump around. Updating Slacky-Update to the latest version installs a stream cleaner that makes sure every line is wiped neat and tidy before new text appears.*
+> [!TIP]
+> #### 🧩 ELI5 (Explain Like I'm 5)
+> *When your computer is downloading packages, the terminal program is trying to draw little spinning wheels and progress bars. If the program doesn't know how to cleanly clear the line before drawing the next one, it paints new words on top of old words like messy graffiti, causing lines to duplicate or jump around. Slacky-Update's TUI engine uses absolute cursor row addressing to keep every line pixel-perfect.*
 
-#### B. The Incident / Symptom
-While running system updates, `slackpkg`, or package installations, the terminal screen (Konsole, Foot, Alacritty, or Kitty) flickers, duplicates output lines, overwrites previous messages, drops scrollback history, or leaves orphaned spinner characters (`|`, `/`, `-`, `\`) on screen.
+#### A. Symptom
+While running system updates or interactive menus, the terminal screen (Konsole, Foot, Alacritty, or Kitty) flickers, duplicates output lines, overwrites previous messages, drops scrollback history, or tears when the window is resized.
 
-#### C. Root Cause
-Legacy or unpatched releases of the package runner execute `slackpkg` and `wget` directly without VT100/CSI/DEC escape-code stream normalization. Because `slackpkg` outputs raw carriage returns (`\r`), DEC cursor save/restore codes (`\x1b7`, `\x1b8`, `\x1b[s`, `\x1b[u`), and background `wget` redirection notices (`Redirecting output to 'wget-log.N'`), terminal emulators running in modern Wayland environments encounter scrollback tearing and line duplication.
+#### B. Root Cause
+Relative cursor movements (`\033[A`, `\033[B`) get offset if the terminal window geometry changes or if unbuffered streams write simultaneously.
 
-#### D. Fast Remediation
-1. **Update Slacky-Update to the latest version:**
-   ```bash
-   cd /home/tux/development/slacky-update/slackbuild
-   ./slacky-update.SlackBuild
-   sudo upgradepkg --install-new --reinstall /tmp/slacky-update-*.txz
-   ```
-2. **Verify Stream Normalization:**
-   Run an update check:
-   ```bash
-   slacky-update --check
-   ```
-   The output should stream cleanly with preserved scrollback and zero screen tearing.
+#### C. Fast Remediation
+Slacky-Update `v1.0 LTS` employs absolute cursor row positioning (`\033[{row};1H\033[2K`) in `lib/slacky_tui.py`.
+1. **To safely exit any menu:** Press **`ESC`**. Every menu in Slacky-Update explicitly maps Escape to return to the previous screen or exit cleanly.
+2. **To copy terminal text:** Simply click and drag your mouse. Slacky-Update preserves native terminal mouse selection without intercepting click events, so you can paste logs directly into LLMs.
 
-#### E. Stop-Line
+#### D. Stop-Line
 Never pipe `slackpkg` into raw unbuffered `tee` or complex terminal wrappers without escape sequence normalization; rely on Slacky-Update's native `run_slackpkg()` filter pipeline.
 
 ---
 
-## 📞 Summary of Emergency Commands
+### 15. 🛡️ Accidental Terminal Interruption or Power Loss During Upgrade
+
+> [!TIP]
+> #### 🧩 ELI5 (Explain Like I'm 5)
+> *Imagine updating your computer is like performing heart surgery. If you accidentally bump the table or hit `Ctrl+C` while the heart is disconnected, everything could break! Slacky-Update puts on an invisible forcefield (`trap '' INT QUIT TSTP`) during critical surgery so accidental keystrokes can't stop it midway. If a power outage pulls the plug, running one command heals any unfinished work.*
+
+#### A. Symptom
+During an active kernel installation or package upgrade transaction, the terminal window was accidentally closed, or the user pressed `Ctrl+C` repeatedly, or the system suffered sudden power loss.
+
+#### B. Diagnosis & In-Flight Armor
+* **Active Protection:** Slacky-Update wraps all atomic package installations, initramfs builds, and kernel registrations with **In-Flight Transaction Armor**:
+  ```bash
+  trap '' INT QUIT TSTP
+  ```
+  Accidental keystrokes (`Ctrl+C`, `Ctrl+\`, `Ctrl+Z`) are **completely ignored** during active package extractions, preventing half-written libraries.
+* **If Hard Power Loss Occurred:** Files may have been partially extracted before power failed.
+
+#### C. Recovery Procedure
+Re-open your terminal and run Slacky-Update's self-healing reconciliation:
+```bash
+# 1. Clear any stale lock files
+sudo rm -f /var/lock/slackpkg.* /var/run/slacky-update.lock
+
+# 2. Re-run package upgrade to catch any partially installed packages
+sudo slacky-update
+
+# 3. Reseal bootloader, initramfs, and Secure Boot signatures
+sudo slacky-update --sync-boot
+```
+
+#### D. Stop-Line
+Never shut down your PC with the physical power button while a kernel or glibc package is being extracted; allow the transaction to complete.
+
+---
+
+## 4. 📞 Summary of Emergency Commands
 
 | Objective | Slacky-Update CLI Command |
 | :--- | :--- |
@@ -666,8 +726,11 @@ Never pipe `slackpkg` into raw unbuffered `tee` or complex terminal wrappers wit
 | **Purge Old Kernels when Disk is Full** | `sudo slacky-update --clean` |
 | **Configure Secure Boot & sbctl** | `sudo slacky-update --limine` |
 | **Check System Health (Read-Only)** | `slacky-update --check` |
+| **Repair Transmuted App / Host Sovereignty** | `sudo gnomes heal` |
 
 ---
 
-*Manual Canonical Source: [GitHub](https://github.com/TuxOfValhalla/slacky-update) | Secondary Mirror: [Codeberg](https://codeberg.org/TuxOfValhalla/slacky-update)*
-
+<div align="center">
+<b>Slacky-Update Disaster Recovery & Troubleshooting Guide</b><br>
+<i>Canonical Source: <a href="https://github.com/TuxOfValhalla/slacky-update">GitHub</a> | Secondary Mirror: <a href="https://codeberg.org/TuxOfValhalla/slacky-update">Codeberg</a></i>
+</div>

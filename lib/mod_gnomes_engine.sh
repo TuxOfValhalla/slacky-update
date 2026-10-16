@@ -43,7 +43,7 @@ gnomes_ensure_db() {
     gnomes_init || return 1
     local has_db=false
 
-    for cdir in "${GNOMES_CACHE_DIR}/db" "${GNOMES_USER_CACHE}/db" "/tmp/slacky-update-gnomes/db"; do
+    for cdir in "${GNOMES_CACHE_DIR}/db" "${GNOMES_USER_CACHE}/db"; do
         if [ -d "${cdir}" ] && ls "${cdir}"/*.db.tar.* >/dev/null 2>&1; then
             has_db=true
             break

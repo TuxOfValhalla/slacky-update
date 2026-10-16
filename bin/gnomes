@@ -7,6 +7,8 @@
 # software ecosystems transmuted into native Slackware .txz packages.
 
 set -euo pipefail
+# 6A-51: python3 -c / python3 - run as root must never import modules from the current directory
+export PYTHONSAFEPATH=1
 
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 if [ -d "${SCRIPT_DIR}/../lib" ] && [ -f "${SCRIPT_DIR}/../lib/common.sh" ]; then
@@ -70,13 +72,18 @@ print_help() {
     echo -e "  ${GREEN}-Sd, deps <package>${RESET}         Inspect dependency DAG graph & Host Sovereignty Shield"
     echo -e "  ${GREEN}-S,  install <package>${RESET}      Transmute package & dependencies into genuine Slackware .txz"
     echo -e "  ${GREEN}-Sy, sync${RESET}                   Synchronize multi-repo sync databases from mirrors"
-    echo -e "  ${GREEN}-Syu, update${RESET}                Sync databases and inspect updates for transmuted packages"
+    echo -e "  ${GREEN}-Syu, update [--yes]${RESET}        Sync databases and upgrade transmuted packages (asks first; --yes without a terminal)"
     echo -e "  ${GREEN}-Sc, clean${RESET}                  Remove uninstalled package tarballs from download cache"
     echo -e "  ${GREEN}-Scc, clean --all${RESET}           Purge entire download cache and reclaim disk space"
     echo -e "  ${GREEN}-Sdd, deduplicate${RESET}           Hardlink duplicate library payloads across packages to save space"
+    echo -e "  ${GREEN}-Sh, heal${RESET}                  Audit /usr/bin/ & heal native Slackware packages from rogue wrappers"
     echo -e "  ${GREEN}-Q,  list${RESET}                   List all installed Underpants Gnomes packages"
-    echo -e "  ${GREEN}-R,  remove <package>${RESET}       Remove installed Underpants package via removepkg"
+    echo -e "  ${GREEN}-Qu [--json]${RESET}                List available updates from the last sync (read-only, no root)"
+    echo -e "  ${GREEN}-R,  remove <package> [--yes]${RESET} Remove installed Underpants package via removepkg (asks first)"
+    echo -e "  ${GREEN}--rollback <package>${RESET}        Go back to the previous version, rebuilt from a system snapshot"
     echo -e "  ${GREEN}runtime [status|profiles|install]${RESET} Manage shared runtime profiles (/opt/underpants/runtime/)"
+    # 6A-136: documented; asks first (default No), needs a terminal or --yes
+    echo -e "  ${GREEN}runtime remove [profile] [--yes]${RESET} Remove the shared runtime (alias: clean). Apps that use it stop working"
     echo -e "  ${GREEN}--check-host${RESET}                Audit CPU tier, glibc ABI limits, and host library cache"
     echo -e "  ${GREEN}-h,  --help${RESET}                 Show this bodacious help message\n"
     echo -e "${BOLD}EXAMPLES:${RESET}"
@@ -89,52 +96,150 @@ print_help() {
     echo -e "  gnomes deduplicate"
     echo -e "  gnomes clean --all"
     echo -e "  gnomes list\n"
+    # 6A-135: exit codes for scripts
+    echo -e "${BOLD}EXIT CODES:${RESET} 0 done, 1 error, 3 refused by the footprint guard (-S), 4 not confirmed (no terminal, no --yes)\n"
+}
+
+# 6A-41: exact package lookup by base name (name-version-arch-build stripped), never a prefix glob
+# D14: private build/output dir on disk (not the /tmp tmpfs), 0700
+gnomes_build_dir() {
+    local base
+    if [ "$(id -u)" -eq 0 ]; then base=/var/cache/slacky-update/gnomes/build
+    else base="${XDG_CACHE_HOME:-${HOME}/.cache}/slacky-update/gnomes/build"; fi
+    mkdir -p "${base}" && chmod 700 "${base}" && mktemp -d "${base}/$1.XXXXXX"
+}
+
+installed_pkg_by_base() {
+    local want="$1" p b
+    for p in /var/log/packages/*; do
+        [ -f "${p}" ] || continue
+        b="${p##*/}"
+        [ "${b%-*-*-*}" = "${want}" ] && { printf '%s\n' "${b}"; return 0; }
+    done
+    return 0
+}
+
+# 6A-50: the package this run built, from our private output dir only
+built_txz_for() {
+    local dir="$1" target="$2" count=0 f b found=""
+    for f in "${dir}"/underpants-"${target}"-*.txz; do
+        [ -f "${f}" ] || continue
+        b="${f##*/}"; b="${b%.txz}"
+        [ "${b%-*-*-*}" = "underpants-${target}" ] && found="${f}"
+    done
+    if [ -z "${found}" ] && [ "${3:-0}" = "1" ]; then
+        for f in "${dir}"/underpants-*.txz; do
+            [ -f "${f}" ] && { found="${f}"; count=$((count + 1)); }
+        done
+        [ "${count}" -eq 1 ] || found=""
+    fi
+    printf '%s\n' "${found}"
+}
+
+# 6A-136: an rc script is ours to stop/purge/delete only when no other package lists it, and it is either in the
+# removed package's own file list or carries the gnomes marker. Never a Slackware-owned /etc/rc.d/rc.<name>.
+rc_listed_by_other() {
+    local svc="$1" self="$2" p
+    for p in /var/log/packages/*; do
+        [ -f "${p}" ] || continue
+        [ "${p##*/}" = "${self}" ] && continue
+        grep -qxF -e "etc/rc.d/rc.${svc}" -e "etc/rc.d/rc.${svc}.new" "${p}" 2>/dev/null && return 0
+    done
+    return 1
+}
+
+rc_is_ours() {
+    local svc="$1" self="$2" in_list="$3"
+    case "${svc}" in ""|*/*|*" "*) return 1 ;; esac
+    rc_listed_by_other "${svc}" "${self}" && return 1
+    [ "${in_list}" = "1" ] && return 0
+    grep -q "Transmuted for Slackware by Underpants Gnomes" "/etc/rc.d/rc.${svc}" 2>/dev/null
+}
+
+# 6A-154: the Slackware package (not one of ours) whose file list holds /usr/bin/<name>; prints the package name, else nothing.
+# A launcher over such a file is never deleted (the stock file would be gone); the caller prints the reinstall advice.
+GNOMES_PKGDB_DIR="/var/log/packages"
+stock_owner_of_usr_bin() {
+    local name="$1" p b
+    for p in "${GNOMES_PKGDB_DIR}"/*; do
+        [ -f "${p}" ] || continue
+        b="${p##*/}"
+        case "${b}" in underpants-*|cachyos-*|*_slacky|*_gnomes) continue ;; esac
+        if grep -qxF -- "usr/bin/${name}" "${p}" 2>/dev/null; then
+            printf '%s\n' "${b}" | sed -e 's/-[^-]*-[^-]*-[^-]*$//'
+            return 0
+        fi
+    done
+    return 0
+}
+# removes a marker launcher unless a Slackware package owns the path; with an owner it only reports and advises
+remove_wrapper_unless_stock() {
+    local f="$1" owner
+    owner=$(stock_owner_of_usr_bin "$(basename "${f}")")
+    if [ -n "${owner}" ]; then
+        echo ":: Kept ${f}: it hides an original file of the Slackware package ${owner}. To restore the original, run: slackpkg reinstall ${owner}" >&2
+        return 0
+    fi
+    if [ "$(id -u)" -eq 0 ]; then
+        rm -f "${f}"
+    else
+        sudo rm -f "${f}" 2>/dev/null || true
+    fi
+}
+
+# 6A-230: true when an installed package of exactly this name exists. A package id is <name>-<version>-<arch>-<build>, so the
+# last three dash fields are cut off and the rest must equal the name ("underpants-foo" never matches "underpants-foo-bar-1-x86_64-1").
+pkg_name_installed() {
+    local want="$1" p b
+    for p in "${GNOMES_PKGDB_DIR}/${want}"-*; do
+        [ -e "${p}" ] || continue
+        b="${p##*/}"
+        b="${b%-*}"; b="${b%-*}"; b="${b%-*}"
+        [ "${b}" = "${want}" ] && return 0
+    done
+    return 1
+}
+
+# 6A-230: is a package of the app installed? Same variants as the Rust app: underpants-<app> with and without -bin, the
+# canonical name (suffix -bin/-git/-dkms/-appimage cut off) with -bin and -git, and cachyos-gnome-<app>.
+gnomes_app_package_installed() {
+    local app="$1" canon sfx base
+    canon="${app}"
+    for sfx in -bin -git -dkms -appimage; do canon="${canon%"${sfx}"}"; done
+    for base in "underpants-${app}" "underpants-${app}-bin" "underpants-${canon}" "underpants-${canon}-bin" "underpants-${canon}-git" "cachyos-gnome-${app}"; do
+        pkg_name_installed "${base}" && return 0
+    done
+    return 1
+}
+
+# 6A-232: a launcher on a protected system name is never deleted on a guess. With a stock owner the reinstall advice is
+# printed, without one a single sentence says that nothing was changed.
+advise_protected_wrapper() {
+    local f="$1" owner
+    owner=$(stock_owner_of_usr_bin "$(basename "${f}")")
+    if [ -n "${owner}" ]; then
+        echo ":: Kept ${f}: it hides an original file of the Slackware package ${owner}. To restore the original, run: slackpkg reinstall ${owner}" >&2
+    else
+        echo ":: A launcher named $(basename "${f}") sits where a system program belongs. Nothing was changed; check it by hand." >&2
+    fi
+    return 0
 }
 
 cleanup_stale_wrappers() {
-    # Core host sovereignty self-healing: ensure python/python3/pip are never hijacked
+    # Core host sovereignty check: python/python3/pip are never hijacked. 6A-231: this function no longer creates
+    # /usr/bin/python, python3 or python3-config (those belong to the Slackware python3 package); 6A-232: advice only.
     for host_bin in python python3 python3-config python2 pip pip3 idle idle3 pydoc pydoc3; do
         if [ -f "/usr/bin/${host_bin}" ] && grep -q "# --- [ Underpants Gnomes Launcher Wrapper for" "/usr/bin/${host_bin}" 2>/dev/null; then
-            if [ "$(id -u)" -eq 0 ]; then
-                rm -f "/usr/bin/${host_bin}"
-            else
-                sudo rm -f "/usr/bin/${host_bin}" 2>/dev/null || true
-            fi
+            advise_protected_wrapper "/usr/bin/${host_bin}"
         fi
     done
-    if [ ! -e "/usr/bin/python3" ] && [ -x "/usr/bin/python3.12" ]; then
-        if [ "$(id -u)" -eq 0 ]; then
-            ln -sf python3.12 /usr/bin/python3
-        else
-            sudo ln -sf python3.12 /usr/bin/python3 2>/dev/null || true
-        fi
-    fi
-    if [ ! -e "/usr/bin/python" ] && [ -e "/usr/bin/python3" ]; then
-        if [ "$(id -u)" -eq 0 ]; then
-            ln -sf python3 /usr/bin/python
-        else
-            sudo ln -sf python3 /usr/bin/python 2>/dev/null || true
-        fi
-    fi
-    if [ ! -e "/usr/bin/python3-config" ] && [ -x "/usr/bin/python3.12-config" ]; then
-        if [ "$(id -u)" -eq 0 ]; then
-            ln -sf python3.12-config /usr/bin/python3-config
-        else
-            sudo ln -sf python3.12-config /usr/bin/python3-config 2>/dev/null || true
-        fi
-    fi
-
     for f in /usr/bin/*; do
         if [ -f "${f}" ] && grep -q "# --- [ Underpants Gnomes Launcher Wrapper for" "${f}" 2>/dev/null; then
             app_name=$(grep '^APP_NAME=' "${f}" 2>/dev/null | cut -d'"' -f2 || true)
             bname=$(basename "${f}")
             if [ -n "${app_name}" ]; then
-                if ! ls /var/log/packages/underpants-"${app_name}"-* >/dev/null 2>&1 && ! ls /var/log/packages/cachyos-gnome-"${app_name}"-* >/dev/null 2>&1; then
-                    if [ "$(id -u)" -eq 0 ]; then
-                        rm -f "${f}"
-                    else
-                        sudo rm -f "${f}" 2>/dev/null || true
-                    fi
+                if ! gnomes_app_package_installed "${app_name}"; then
+                    remove_wrapper_unless_stock "${f}"
                 fi
             fi
         fi
@@ -149,7 +254,7 @@ cleanup_stale_wrappers() {
 
             if [ -n "${svc_name}" ]; then
                 # Check if parent package is still installed
-                if ! ls /var/log/packages/underpants-"${pkg_name}"-* >/dev/null 2>&1 && ! grep -q "etc/rc\.d/rc\.${svc_name}\$" /var/log/packages/underpants-* 2>/dev/null; then
+                if ! gnomes_app_package_installed "${pkg_name}" && ! grep -q "etc/rc\.d/rc\.${svc_name}\$" /var/log/packages/underpants-* 2>/dev/null; then
                     if [ "$(id -u)" -eq 0 ]; then
                         "${rc}" stop 2>/dev/null || true
                         rm -f "${rc}"
@@ -221,21 +326,60 @@ case "${OP}" in
 
         TARGET_STR=$(IFS=', '; echo "${TARGETS[*]}")
         echo -e "${BOLD}${CYAN}:: Transmuting [${TARGET_STR}] in Underpants Gnomes Factory...${RESET}"
-        if python3 "${GNOMES_PY}" transmute "${TARGETS[@]}" "${EXTRA_ARGS[@]}"; then
+        GNOMES_OUT=$(gnomes_build_dir out) || exit 1
+        single_target=0; [ ${#TARGETS[@]} -eq 1 ] && single_target=1
+        # 6A-135: exit codes of -S: 0 all installed (or built), 1 error (no package built, bad archive, install failed),
+        # 3 only footprint-guard refusals (every other target is fine). An error wins over a refusal.
+        refused=0
+        failed=0
+        if python3 "${GNOMES_PY}" transmute "${TARGETS[@]}" "${EXTRA_ARGS[@]}" --output-dir "${GNOMES_OUT}"; then
             for TARGET in "${TARGETS[@]}"; do
-                TXZ_PATH=$(ls -1t /tmp/underpants-"${TARGET}"-*.txz 2>/dev/null | head -n1 || true)
+                TXZ_PATH=$(built_txz_for "${GNOMES_OUT}" "${TARGET}" "${single_target}")
+                if [ -z "${TXZ_PATH}" ] || [ ! -f "${TXZ_PATH}" ]; then
+                    # 6A-135: a target that produced no package is a failure, never a silent skip
+                    echo -e "${RED}:: No package was built for ${TARGET}.${RESET}"
+                    failed=1
+                    continue
+                fi
                 if [ -n "${TXZ_PATH}" ] && [ -f "${TXZ_PATH}" ]; then
                     PKG_NAME_BASE=$(basename "${TXZ_PATH}")
                     if [ "${build_only}" -eq 0 ]; then
+                        # 2C: refuse archives with non-root entries
+                        python3 "${GNOMES_PY}" footprint-guard --verify-archive "${TXZ_PATH}" || { failed=1; continue; }
+                        # WP-1: never overwrite a file of another package (Slackware, curated or another gnomes app)
+                        vhp_rc=0
+                        python3 "${GNOMES_PY}" footprint-guard --verify-host-paths "${TXZ_PATH}" --mode gnomes || vhp_rc=$?
+                        if [ "${vhp_rc}" -eq 3 ]; then
+                            refused=1
+                            continue
+                        elif [ "${vhp_rc}" -ne 0 ]; then
+                            failed=1
+                            continue
+                        fi
                         echo -e "\n${BOLD}${CYAN}:: Deploying ${PKG_NAME_BASE} to Slackware host via upgradepkg (requires sudo)...${RESET}"
-                        sudo upgradepkg --install-new --reinstall "${TXZ_PATH}"
+                        if ! sudo upgradepkg --install-new --reinstall "${TXZ_PATH}"; then
+                            echo -e "${RED}:: ${PKG_NAME_BASE} could not be installed.${RESET}"
+                            failed=1
+                            continue
+                        fi
                         cleanup_stale_wrappers
-                        for old_cg in /var/log/packages/cachyos-gnome-"${TARGET}"-*; do
-                            if [ -f "${old_cg}" ]; then
-                                old_id=$(basename "${old_cg}")
-                                echo -e "${BOLD}${YELLOW}:: Purging superseded legacy package: ${old_id}...${RESET}"
-                                sudo removepkg "${old_id}" >/dev/null 2>&1 || true
-                            fi
+                        clean_t="${TARGET#underpants-}"
+                        clean_t="${clean_t#cachyos-gnome-}"
+                        canon_t="${clean_t%-bin}"
+                        canon_t="${canon_t%-git}"
+                        canon_t="${canon_t%-dkms}"
+                        canon_t="${canon_t%-appimage}"
+
+                        # 6A-41: only gnomes' own variant predecessors (exact name, _gnomes build), shown and checked
+                        for old_base in "underpants-${clean_t}" "underpants-${clean_t}-bin" "underpants-${canon_t}" \
+                                        "underpants-${canon_t}-bin" "underpants-${canon_t}-git"; do
+                            old_id=$(installed_pkg_by_base "${old_base}")
+                            [ -n "${old_id}" ] || continue
+                            [ "${old_id}" != "${PKG_NAME_BASE%.txz}" ] || continue
+                            [[ "${old_id}" == *_gnomes ]] || continue
+                            [ "${old_base}" != "${PKG_NAME_BASE%-*-*-*}" ] || continue
+                            echo -e "${BOLD}${YELLOW}:: Removing older variant: ${old_id}...${RESET}"
+                            sudo removepkg "${old_id}" >/dev/null 2>&1 || echo -e "${YELLOW}:: Could not remove ${old_id}. Remove it by hand with: removepkg ${old_id}${RESET}"
                         done
                         RUN_BINS=()
                         if [ -f "/var/log/packages/${PKG_NAME_BASE%.txz}" ]; then
@@ -247,15 +391,36 @@ case "${OP}" in
                         fi
                         if [ ${#RUN_BINS[@]} -gt 0 ]; then
                             RUN_STR=$(IFS=', '; echo "${RUN_BINS[*]}")
-                            echo -e "\n${BOLD}${GREEN}🎉 Bodacious! ${TARGET} is now installed and ready to run via: ${CYAN}${RUN_STR}${RESET}\n"
+                            echo -e "\n${BOLD}${GREEN}🧙 💰 PROFIT! ${TARGET} is now installed and ready to run via: ${CYAN}${RUN_STR}${RESET}\n"
                         else
-                            echo -e "\n${BOLD}${GREEN}🎉 Bodacious! ${TARGET} is now installed and ready to run directly from /usr/bin/${TARGET}${RESET}\n"
+                            echo -e "\n${BOLD}${GREEN}🧙 💰 PROFIT! ${TARGET} is now installed and ready to run directly from /usr/bin/${TARGET}${RESET}\n"
                         fi
                     else
                         echo -e "\n${BOLD}${GREEN}✓ Transmutation complete. Package ready at: ${TXZ_PATH}${RESET}\n"
                     fi
                 fi
             done
+            # build-only keeps the package for the user; otherwise the private output dir goes away
+            [ "${build_only}" -eq 1 ] || rm -rf "${GNOMES_OUT}"
+            [ "${failed}" -eq 0 ] || exit 1
+            [ "${refused}" -eq 0 ] || exit 3
+        else
+            rm -rf "${GNOMES_OUT}"
+            # 6A-71: a build-only run never installs anything, and the curated fallback (a root install) only runs
+            # after the user said yes on a terminal
+            handled_any=0
+            if [ "${build_only}" -eq 0 ] && [ -t 0 ] && command -v slacky-update >/dev/null 2>&1; then
+                for TARGET in "${TARGETS[@]}"; do
+                    read -r -p ":: Gnomes could not build ${TARGET}. Try the slacky-update version instead (needs sudo)? [y/N] " reply_fb || reply_fb=""
+                    if [[ "${reply_fb}" =~ ^[YyJj]$ ]] && sudo slacky-update --gnomes-deploy "${TARGET}"; then
+                        handled_any=1
+                    fi
+                done
+            fi
+            if [ "${handled_any}" -eq 0 ]; then
+                echo -e "\n${RED}Major Bummer! Could not resolve or transmute requested package(s).${RESET}\n"
+                exit 1
+            fi
         fi
         ;;
     -Sy|sync|--sync)
@@ -281,11 +446,18 @@ case "${OP}" in
             done
             reply="Y"
             if [ "${auto_yes}" -eq 0 ]; then
-                read -r -p "Upgrade ${#targets[@]} Underpants Gnomes package(s)? [Y/n] " reply || reply="Y"
+                # 6A-135: without a terminal nothing is upgraded unless --yes was given; a failed read is never a yes
+                if [ ! -t 0 ]; then
+                    echo ":: Nothing was upgraded: run this in a terminal to confirm, or add --yes."
+                    exit 4
+                fi
+                read -r -p "Upgrade ${#targets[@]} Underpants Gnomes package(s)? [Y/n] " reply || reply="n"
                 reply=${reply:-Y}
             fi
             if [[ "$reply" =~ ^[YyJjSsOo]$ ]]; then
-                "$0" -S "${targets[@]}"
+                upg_rc=0
+                "$0" -S "${targets[@]}" || upg_rc=$?
+                exit "${upg_rc}"
             fi
         fi
         ;;
@@ -297,8 +469,81 @@ case "${OP}" in
         python3 "${GNOMES_PY}" clean --all "$@"
         cleanup_stale_wrappers
         ;;
+    -Qu|--query-updates|list-updates)
+        # 6A-139: read-only update list (no sync, no prompt, no build, no root); --json prints [] when there are none
+        qu_args=(list-updates --no-sync)
+        for arg in "$@"; do [ "${arg}" = "--json" ] && qu_args+=(--json); done
+        python3 -I "${GNOMES_PY}" "${qu_args[@]}"
+        ;;
     -Q|-Qs|list|--list)
         python3 "${GNOMES_PY}" list-installed "$@"
+        ;;
+    --rollback|rollback)
+        # WP-2: previous version from the newest snapshot that has it (no stored second copy of every package)
+        if [ $# -eq 0 ]; then
+            echo -e "${RED}Major Bummer! Name the app to roll back (e.g. 'gnomes --rollback goverlay').${RESET}"
+            exit 1
+        fi
+        rb_app="$1"; shift || true
+        rb_yes=0
+        for arg in "$@"; do [ "${arg}" = "-y" ] || [ "${arg}" = "--yes" ] && rb_yes=1; done
+        rb_base=""
+        for cand in "${rb_app}" "underpants-${rb_app}" "cachyos-gnome-${rb_app}"; do
+            [ -n "$(installed_pkg_by_base "${cand}")" ] && { rb_base="${cand}"; break; }
+        done
+        if [ -z "${rb_base}" ]; then
+            echo -e "${RED}:: ${rb_app} is not installed.${RESET}"
+            exit 1
+        fi
+        rb_plan=$(sudo python3 -I "${GNOMES_PY}" rollback --plan "${rb_base}") || { echo "${rb_plan}"; exit 1; }
+        IFS='|' read -r rb_cur rb_old rb_snap rb_date rb_desc <<< "${rb_plan}"
+        rb_cur_ver=$(echo "${rb_cur}" | rev | cut -d- -f3 | rev)
+        rb_old_ver=$(echo "${rb_old}" | rev | cut -d- -f3 | rev)
+        echo -e ":: ${BOLD}${rb_app}${RESET}: go back from ${rb_cur_ver} to ${rb_old_ver} (rebuilt from snapshot #${rb_snap}, ${rb_date})."
+        if [ "${rb_yes}" -eq 0 ]; then
+            if [ ! -t 0 ]; then
+                echo ":: Run this in a terminal to confirm, or add --yes."
+                exit 1
+            fi
+            read -r -p ":: Roll back now? [y/N] " rb_reply || rb_reply=""
+            [[ "${rb_reply}" =~ ^[YyJj]$ ]] || { echo ":: Nothing was changed."; exit 0; }
+        fi
+        # B8-style safety net: a snapshot of the current state first (fail closed when snapper exists but fails)
+        # 6A-95: the 48-hour pruner leaves every snapshot alone while a rollback reads them
+        if command -v flock >/dev/null 2>&1; then
+            sudo install -m 0644 -o root -g root /dev/null /run/lock/slacky-rollback.lock 2>/dev/null || true
+            exec 7</run/lock/slacky-rollback.lock 2>/dev/null && flock -n 7 2>/dev/null || true
+        fi
+        if command -v snapper >/dev/null 2>&1; then
+            # 6A-94: tagged as ours, no snapper cleanup algorithm (removed by the 48-hour pruner)
+            sudo snapper -c root create --type single \
+                --description "gnomes: before rollback of ${rb_base}" \
+                --userdata "slacky=1,slacky-app=gnomes,slacky-kind=single" >/dev/null \
+                || { echo -e "${RED}:: Could not take a snapshot first. Nothing was changed.${RESET}"; exit 1; }
+        fi
+        # D14: root-phase work dir on disk (not tmpfs), root-only
+        rb_root="${SLACKY_GNOMES_BUILD_ROOT:-/var/cache/slacky-update/gnomes/build}"
+        sudo mkdir -p -m 0755 "${rb_root%/*}" && sudo mkdir -p -m 0700 "${rb_root}" || exit 1
+        RB_OUT=$(sudo mktemp -d "${rb_root}/rollback.XXXXXX") || exit 1
+        rb_ok=0
+        if RB_TXZ=$(sudo python3 -I "${GNOMES_PY}" rollback --build "${rb_base}" --snapshot "${rb_snap}" --output-dir "${RB_OUT}") \
+           && sudo python3 -I "${GNOMES_PY}" footprint-guard --verify-archive "${RB_TXZ}"; then
+            rb_mode=curated; [[ "${rb_old}" == *_gnomes ]] && rb_mode=gnomes
+            if sudo python3 -I "${GNOMES_PY}" footprint-guard --verify-host-paths "${RB_TXZ}" --mode "${rb_mode}" \
+               && sudo upgradepkg --reinstall "${rb_cur}%${RB_TXZ}" >/dev/null; then
+                rb_ok=1
+            fi
+        else
+            echo "${RB_TXZ:-}"
+        fi
+        sudo rm -rf "${RB_OUT}"
+        if [ "${rb_ok}" -eq 1 ] && [ -e "/var/log/packages/${rb_old}" ]; then
+            sudo python3 -I "${GNOMES_PY}" rollback --hold "${rb_base}" "${rb_cur_ver}" || true
+            echo -e "${GREEN}:: ${rb_app} is back at ${rb_old_ver}. Updates will skip ${rb_cur_ver}; a newer release is offered as usual.${RESET}"
+        else
+            echo -e "${RED}:: ${rb_app} was not rolled back. ${rb_cur_ver} is still installed.${RESET}"
+            exit 1
+        fi
         ;;
     -R|remove|uninstall|--remove)
         if [ $# -eq 0 ]; then
@@ -322,20 +567,24 @@ case "${OP}" in
 
         FOUND_PAIRS=()
         for TARGET in "${TARGETS[@]}"; do
-            CLEAN_TARGET=$(echo "${TARGET}" | sed -e 's/^underpants-//')
-            FOUND_PKG=$(ls -1 /var/log/packages/underpants-"${CLEAN_TARGET}"-* 2>/dev/null | head -n1 || true)
+            CLEAN_TARGET=$(echo "${TARGET}" | sed -e 's/^underpants-//; s/^cachyos-gnome-//')
+            # 6A-41: exact base name ("gnomes -R obs" must never pick underpants-obs-3d-effect)
+            FOUND_PKG=$(installed_pkg_by_base "underpants-${CLEAN_TARGET}")
+            if [ -z "${FOUND_PKG}" ]; then
+                FOUND_PKG=$(installed_pkg_by_base "cachyos-gnome-${CLEAN_TARGET}")
+            fi
             if [ -n "${FOUND_PKG}" ]; then
-                PKG_ID=$(basename "${FOUND_PKG}")
+                PKG_ID="${FOUND_PKG}"
                 FOUND_PAIRS+=("${CLEAN_TARGET}:::${PKG_ID}")
             else
-                NATIVE_PKG=$(ls -1 /var/log/packages/"${CLEAN_TARGET}"-* 2>/dev/null | head -n1 || true)
+                NATIVE_PKG=$(installed_pkg_by_base "${CLEAN_TARGET}")
                 if [ -n "${NATIVE_PKG}" ]; then
-                    NATIVE_ID=$(basename "${NATIVE_PKG}")
+                    NATIVE_ID="${NATIVE_PKG}"
                     echo -e "${YELLOW}:: Notice: '${CLEAN_TARGET}' is a genuine native Slackware package (${NATIVE_ID}).${RESET}"
-                    echo -e "${YELLOW}:: Underpants Gnomes only removes 'underpants-*' packages to preserve host integrity.${RESET}"
+                    echo -e "${YELLOW}:: Underpants Gnomes only removes 'underpants-*' and 'cachyos-gnome-*' packages to preserve host integrity.${RESET}"
                     echo -e "   To remove native packages, use: ${BOLD}${RED}sudo removepkg ${NATIVE_ID}${RESET}\n"
                 else
-                    echo -e "${RED}Major Bummer: Package 'underpants-${CLEAN_TARGET}' is not installed in /var/log/packages/.${RESET}"
+                    echo -e "${RED}Major Bummer: Package '${CLEAN_TARGET}' (underpants-* / cachyos-gnome-*) is not installed in /var/log/packages/.${RESET}"
                 fi
             fi
         done
@@ -355,17 +604,20 @@ case "${OP}" in
         if [ "${auto_yes}" -eq 1 ]; then
             do_remove=1
         elif [ -t 0 ]; then
+            # 6A-135: a failed read (EOF) is a no
             if [ ${#FOUND_PAIRS[@]} -eq 1 ]; then
-                read -r -p ":: Remove this package from your Slackware system? [Y/n] " reply_rm || reply_rm="Y"
+                read -r -p ":: Remove this package from your Slackware system? [Y/n] " reply_rm || reply_rm="n"
             else
-                read -r -p ":: Remove all ${#FOUND_PAIRS[@]} packages from your Slackware system? [Y/n] " reply_rm || reply_rm="Y"
+                read -r -p ":: Remove all ${#FOUND_PAIRS[@]} packages from your Slackware system? [Y/n] " reply_rm || reply_rm="n"
             fi
             reply_rm=${reply_rm:-Y}
             if [[ "$reply_rm" =~ ^[YyJjSsOo]$ ]]; then
                 do_remove=1
             fi
         else
-            do_remove=1
+            # 6A-135: never remove without a terminal unless --yes was given
+            echo ":: Nothing was removed: run this in a terminal to confirm, or add --yes."
+            exit 4
         fi
 
         if [ "${do_remove}" -eq 1 ]; then
@@ -375,14 +627,21 @@ case "${OP}" in
 
                 # Pre-removal: Detect and cleanly stop any associated background services
                 PKG_SERVICES=()
+                LISTED_SVCS=" "
                 if [ -f "/var/log/packages/${p_id}" ]; then
                     while IFS= read -r line; do
-                        if [[ "${line}" =~ ^etc/rc\.d/rc\.(.+)$ ]]; then
-                            PKG_SERVICES+=("${BASH_REMATCH[1]}")
+                        if [[ "${line}" =~ ^etc/rc\.d/rc\.([^/]+)$ ]]; then
+                            svc_n="${BASH_REMATCH[1]%.new}"
+                            # 6A-136: only scripts no other package owns
+                            rc_is_ours "${svc_n}" "${p_id}" 1 || continue
+                            PKG_SERVICES+=("${svc_n}")
+                            LISTED_SVCS+="${svc_n} "
                         fi
                     done < "/var/log/packages/${p_id}"
                 fi
-                if [ -f "/etc/rc.d/rc.${c_target}" ]; then
+                # 6A-136: rc.<name> outside the file list only when it carries the gnomes marker and nobody else owns it
+                if [ -f "/etc/rc.d/rc.${c_target}" ] && [[ "${LISTED_SVCS}" != *" ${c_target} "* ]] \
+                   && rc_is_ours "${c_target}" "${p_id}" 0; then
                     PKG_SERVICES+=("${c_target}")
                 fi
 
@@ -413,7 +672,8 @@ case "${OP}" in
 
                 # Cleanup leftover rc scripts if removepkg didn't remove them
                 for svc in "${PKG_SERVICES[@]}"; do
-                    if [ -f "/etc/rc.d/rc.${svc}" ]; then
+                    # 6A-136: re-checked after removepkg; a script another package lists stays
+                    if [ -f "/etc/rc.d/rc.${svc}" ] && ! rc_listed_by_other "${svc}" "${p_id}"; then
                         if [ "$(id -u)" -eq 0 ]; then
                             rm -f "/etc/rc.d/rc.${svc}"
                         else
@@ -440,6 +700,9 @@ case "${OP}" in
     --check-host|check-host|audit)
         python3 "${GNOMES_PY}" check-host "$@"
         ;;
+    -Sh|heal|--heal|audit-wrappers|--audit-wrappers)
+        python3 "${GNOMES_PY}" heal "$@"
+        ;;
     -Sdd|deduplicate|dedup|--deduplicate)
         python3 "${GNOMES_PY}" deduplicate "$@"
         ;;
@@ -454,11 +717,10 @@ case "${OP}" in
             prof="${1:-core}"
             shift || true
             echo -e "${BOLD}${CYAN}:: Transmuting Underpants Shared Runtime Pool [${prof}]...${RESET}"
-            if python3 "${GNOMES_PY}" runtime install "${prof}" "$@"; then
-                TXZ_PATH=$(ls -1t /tmp/underpants-runtime-"${prof}"-*.txz 2>/dev/null | head -n1 || true)
-                if [ -z "${TXZ_PATH}" ]; then
-                    TXZ_PATH=$(ls -1t /tmp/underpants-runtime-*.txz 2>/dev/null | head -n1 || true)
-                fi
+            GNOMES_OUT=$(gnomes_build_dir out) || exit 1
+            if python3 "${GNOMES_PY}" runtime install "${prof}" "$@" --output-dir "${GNOMES_OUT}"; then
+                # 6A-50: only the runtime package this run built (private output dir)
+                TXZ_PATH=$(built_txz_for "${GNOMES_OUT}" "runtime-${prof}" 1)
                 if [ -n "${TXZ_PATH}" ] && [ -f "${TXZ_PATH}" ]; then
                     PKG_NAME_BASE=$(basename "${TXZ_PATH}")
                     auto_yes=0
@@ -473,43 +735,85 @@ case "${OP}" in
                         do_install=1
                     elif [ -t 0 ]; then
                         echo ""
-                        read -r -p ":: Deploy ${PKG_NAME_BASE} to /opt/underpants/runtime/ now? [Y/n] " reply_inst || reply_inst="Y"
+                        read -r -p ":: Deploy ${PKG_NAME_BASE} to /opt/underpants/runtime/ now? [Y/n] " reply_inst || reply_inst="n"  # 6A-135: EOF is a no
                         reply_inst=${reply_inst:-Y}
                         if [[ "$reply_inst" =~ ^[YyJjSsOo]$ ]]; then
                             do_install=1
                         fi
                     fi
                     if [ "${do_install}" -eq 1 ]; then
+                        # 2C: refuse archives with non-root entries
+                        python3 "${GNOMES_PY}" footprint-guard --verify-archive "${TXZ_PATH}" || exit 1
+                        # WP-1: the runtime may not overwrite a file of another package either
+                        if ! python3 "${GNOMES_PY}" footprint-guard --verify-host-paths "${TXZ_PATH}" --mode gnomes; then
+                            rm -rf "${GNOMES_OUT}"
+                            exit 1
+                        fi
                         echo -e "\n${BOLD}${CYAN}:: Deploying ${PKG_NAME_BASE} to Slackware host via upgradepkg (requires sudo)...${RESET}"
                         sudo upgradepkg --install-new --reinstall "${TXZ_PATH}"
-                        echo -e "\n${BOLD}${GREEN}🎉 Bodacious! Underpants Shared Runtime [${prof}] is now active in /opt/underpants/runtime/${RESET}\n"
+                        echo -e "\n${BOLD}${GREEN}🧙 💰 PROFIT! Underpants Shared Runtime [${prof}] is now active in /opt/underpants/runtime/${RESET}\n"
                     fi
                 fi
             fi
+            rm -rf "${GNOMES_OUT}"
         elif [ "${sub}" = "clean" ] || [ "${sub}" = "remove" ]; then
-            prof="${1:-}"
-            if [ -n "${prof}" ]; then
-                FOUND_PKGS=$(ls -1 /var/log/packages/underpants-runtime-"${prof}"-* 2>/dev/null || true)
-            else
-                FOUND_PKGS=$(ls -1 /var/log/packages/underpants-runtime-* 2>/dev/null || true)
-            fi
-            if [ -n "${FOUND_PKGS}" ]; then
-                for pfile in ${FOUND_PKGS}; do
-                    PKG_ID=$(basename "${pfile}")
+            # 6A-136: removing the runtime breaks the apps; it is listed, confirmed (default No) and needs a terminal or --yes
+            prof=""
+            rt_yes=0
+            for arg in "$@"; do
+                case "${arg}" in
+                    -y|--yes|--noconfirm) rt_yes=1 ;;
+                    -*) ;;
+                    *) [ -n "${prof}" ] || prof="${arg}" ;;
+                esac
+            done
+            FOUND_IDS=()
+            APP_IDS=()
+            for pfile in /var/log/packages/*; do
+                [ -f "${pfile}" ] || continue
+                pb="${pfile##*/}"
+                pbase="${pb%-*-*-*}"
+                if [ -n "${prof}" ]; then
+                    [ "${pbase}" = "underpants-runtime-${prof}" ] && FOUND_IDS+=("${pb}")
+                elif [[ "${pbase}" == underpants-runtime-* ]]; then
+                    FOUND_IDS+=("${pb}")
+                fi
+                if [[ "${pb}" == *_gnomes ]] && [[ "${pbase}" != underpants-runtime-* ]] \
+                   && { [[ "${pbase}" == underpants-* ]] || [[ "${pbase}" == cachyos-gnome-* ]]; }; then
+                    APP_IDS+=("${pbase}")
+                fi
+            done
+            if [ ${#FOUND_IDS[@]} -gt 0 ]; then
+                echo -e "${BOLD}${YELLOW}:: Runtime package(s) to remove: ${FOUND_IDS[*]}${RESET}"
+                if [ ${#APP_IDS[@]} -gt 0 ]; then
+                    echo -e "${YELLOW}:: These apps use the shared runtime and may stop working: ${APP_IDS[*]}${RESET}"
+                fi
+                if [ "${rt_yes}" -eq 0 ]; then
+                    if [ ! -t 0 ]; then
+                        echo ":: Nothing was removed: run this in a terminal to confirm, or add --yes."
+                        exit 4
+                    fi
+                    read -r -p ":: Remove the shared runtime now? [y/N] " rt_reply || rt_reply=""
+                    if [[ ! "${rt_reply}" =~ ^[YyJj]$ ]]; then
+                        echo ":: Nothing was removed."
+                        exit 0
+                    fi
+                fi
+                for PKG_ID in "${FOUND_IDS[@]}"; do
                     echo -e "\n${BOLD}${CYAN}:: Removing ${PKG_ID} with removepkg...${RESET}"
                     if [ "$(id -u)" -eq 0 ]; then
                         removepkg "${PKG_ID}"
                     else
                         sudo removepkg "${PKG_ID}"
                     fi
-                    echo -e "${BOLD}${GREEN}✓ Removed ${PKG_ID}.${RESET}"
+                    echo -e "${BOLD}${GREEN}:: Removed ${PKG_ID}.${RESET}"
                 done
-                echo -e "\n${BOLD}${GREEN}🎉 Underpants Runtime packages removed.${RESET}\n"
+                echo -e "\n${BOLD}${GREEN}:: Underpants Runtime packages removed.${RESET}\n"
             else
                 echo -e "${YELLOW}:: No Underpants Runtime packages are installed.${RESET}"
             fi
         else
-            echo -e "${RED}Unknown runtime subcommand: ${sub}. Use 'status', 'profiles', 'install [profile]', or 'clean'.${RESET}"
+            echo -e "${RED}Unknown runtime subcommand: ${sub}. Use 'status', 'profiles', 'install [profile]', or 'remove [profile]'.${RESET}"
             exit 1
         fi
         ;;

@@ -1,11 +1,11 @@
 # ⚡ Limine Bootloader & Secure Boot Field Guide
-### *Slackware Linux 15.0 & -current — Unified Boot, Cryptographic Sealing & Secure Boot Playbook*
-#### `v1.0_RC2` — *"Dark Star"* (Stability & Hardware Release Candidate)
+### *Slackware Linux 15+ — Unified Boot, Cryptographic Sealing & Secure Boot Playbook*
+#### `v1.0 LTS` — *"Dark Star"* (Official Long-Term Support Release)
 
 ---
 
 > [!IMPORTANT]
-> **TARGET DISTRIBUTION REQUIREMENT & VERSION DISCLAIMER**  
+> **TARGET DISTRIBUTION REQUIREMENT & VERSION MANDATE**  
 > **Slacky-Update is engineered strictly for Slackware 15+ (`slackware-current` / `Slackware 16 alpha`).**  
 > Legacy **Slackware 15.0 (stable)** is strictly unsupported due to older core libraries, toolchains, and sonames that cause conflicts that cannot be detected or resolved. Slackware 15.0 users must upgrade to `-current` before using this suite.
 
@@ -22,26 +22,41 @@
 ---
 
 ## 📑 Table of Contents
-1. [🧩 ELI5: How Modern UEFI Booting & Limine Work](#1-eli5-how-modern-uefi-booting--limine-work)
-2. [🛠️ The Gold Standard: Manual Pre-Configuration Guide (A to Z)](#2-the-gold-standard-manual-pre-configuration-guide-a-to-z)
-3. [🤖 What Slacky-Update Does Under Automatic Configuration](#3-what-slacky-update-does-under-automatic-configuration)
+1. [Core Philosophy: The Sacred Slackware Base & The Five Pillars](#1-core-philosophy-the-sacred-slackware-base--the-five-pillars)
+2. [🧩 ELI5: How Modern UEFI Booting & Limine Work](#2-eli5-how-modern-uefi-booting--limine-work)
+3. [🛠️ The Gold Standard: Manual Pre-Configuration Guide (A to Z)](#3-the-gold-standard-manual-pre-configuration-guide-a-to-z)
+4. [🤖 What Slacky-Update Does Under Automatic Configuration](#4-what-slacky-update-does-under-automatic-configuration)
    - [Scenario B: Existing Best Practice (Current System)](#scenario-b-existing-best-practice-current-system)
    - [Scenario A: In-Place ESP Promotion (/boot/efi -> /boot)](#scenario-a-in-place-esp-promotion-bootefi---boot)
    - [Scenario C: New Dedicated ESP Partition Adoption](#scenario-c-new-dedicated-esp-partition-adoption)
-4. [🎨 Customization & Ricing Playbook](#4-customization--ricing-playbook)
-5. [🔒 Safe Hashing & Anti-Lockout Model](#5-safe-hashing--anti-lockout-model)
-6. [🛡️ Secure Boot Setup with sbctl](#6-secure-boot-setup-with-sbctl)
-7. [🖥️ Motherboard UEFI/BIOS Configuration Matrix](#7-motherboard-uefibios-configuration-matrix)
+5. [🎨 Customization, CMDLINE & Gaming Optimization Hub](#5-customization-cmdline--gaming-optimization-hub)
+   - [Two-Zone Architecture](#the-two-zone-limineconf-architecture)
+   - [Split-Lock Mitigation Toggle (split_lock_mitigate=0)](#split-lock-mitigation-toggle-split_lock_mitigate0)
+6. [🔒 Safe Hashing & Anti-Lockout Model](#6-safe-hashing--anti-lockout-model)
+7. [🛡️ Secure Boot Setup with sbctl (Guided Manual Setup, Automatic Future)](#7-secure-boot-setup-with-sbctl-guided-manual-setup-automatic-future)
+8. [🖥️ Motherboard UEFI/BIOS Configuration Matrix](#8-motherboard-uefibios-configuration-matrix)
    - [🔴 ASUS (ROG, TUF Gaming, Prime)](#-asus-rog-tuf-gaming-prime)
    - [🔵 ASRock](#-asrock)
-   - [🐉 MSI (Click BIOS 5 / X)](#-msi-click-bios-5--x)
+   - [🐉 MSI (Click BIOS 5 / Click BIOS X)](#-msi-click-bios-5--click-bios-x)
    - [🟠 Gigabyte / AORUS](#-gigabyte--aorus)
-8. [🌲 Btrfs Snapper Snapshot Rollbacks & Auto-Sync Engine](#8-btrfs-snapper-snapshot-rollbacks--auto-sync-engine)
-9. [🚑 Emergency Recovery & Zero-Destruction Coexistence](#9-emergency-recovery--zero-destruction-coexistence)
+9. [🌲 Btrfs Snapper Snapshot Rollbacks & Auto-Sync Engine](#9-btrfs-snapper-snapshot-rollbacks--auto-sync-engine)
+10. [🚑 Emergency Recovery & Zero-Destruction Coexistence](#10-emergency-recovery--zero-destruction-coexistence)
 
 ---
 
-## 1. 🧩 ELI5: How Modern UEFI Booting & Limine Work
+## 1. Core Philosophy: The Sacred Slackware Base & The Five Pillars
+
+Slacky-Update’s bootloader management is built directly upon **The Sacred Slackware Base System** and **The Five Engineering Pillars**:
+* **The Sacred Slackware Base System:** Stock Slackware kernels (`vmlinuz-generic`, `vmlinuz-huge`), stock initrds, and default bootloaders (GRUB, ELILO) are **never wiped, modified, or overwritten**. Limine coexists side-by-side with GRUB in UEFI NVRAM, guaranteeing you can always boot your original system.
+* **⚡ Speed:** Limine loads kernels in under 20 milliseconds directly from FAT32, eliminating GRUB's massive filesystem parsing overhead.
+* **🛋️ Comfort:** Automated ChangeLog tracking, dual-zone configuration that protects your custom themes, and instant snapshot rollbacks.
+* **🛡️ Safety:** Cryptographic BLAKE2B hashes seal every kernel and initramfs binary. Guided manual Secure Boot setup ensures your motherboard keys are enrolled safely, and active kernel armor protects your current system.
+* **🎨 UI Design:** Clean retro Dark Star theme, native 4K UHD rendering, WinAmp style translucent background box, and zero visual artifacts.
+* **🤝 Ease of Use:** 1-Click self-heal, guided manual MOK setup that handles all future kernel signing 100% automatically, and universal `(ESC)` navigation across all menus.
+
+---
+
+## 2. 🧩 ELI5: How Modern UEFI Booting & Limine Work
 
 ### What is a Bootloader, really?
 Think of your computer when it turns on like a librarian in a huge library:
@@ -65,7 +80,7 @@ By mounting a dedicated **$\ge 3.5\text{ GB}$ (recommended 4 GB) FAT32 partition
 
 ---
 
-## 2. 🛠️ The Gold Standard: Manual Pre-Configuration Guide (A to Z)
+## 3. 🛠️ The Gold Standard: Manual Pre-Configuration Guide (A to Z)
 
 > [!TIP]
 > **Best Practice Recommendation:**
@@ -79,7 +94,7 @@ flowchart LR
     Step2 --> Step3["3. Format FAT32\n(mkfs.vfat -F32)"]
     Step3 --> Step4["4. Copy Boot Files\n(/boot/* & EFI/*)"]
     Step4 --> Step5["5. Update fstab\n(Mount to /boot)"]
-    Step5 --> Step6["6. Fix mkinitrd.conf\n(SOURCE_TREE=/tmp)"]
+    Step5 --> Step6["6. Fix mkinitrd.conf\n(SOURCE_TREE=/var/tmp)"]
     Step6 --> Step7["7. Deploy Limine\n(slacky-update --limine)"]
 ```
 
@@ -99,154 +114,123 @@ Run using `sgdisk` or `parted`:
 ```bash
 # Using sgdisk (Replace /dev/nvme0n1 and partition number 4 with your drive):
 sudo sgdisk -t 4:ef00 /dev/nvme0n1
-
-# Or using parted:
-sudo parted /dev/nvme0n1 set 4 esp on
-sudo parted /dev/nvme0n1 set 4 boot on
 ```
 
 ---
 
-### Step 3: Format the Partition as FAT32
-Format the partition with a 32-bit File Allocation Table and a clear label:
+### Step 3: Format the Partition with FAT32
+Format with standard 32-bit FAT and set the label to `ESP` or `LIMINE_BOOT`:
 ```bash
-sudo mkfs.vfat -F32 -n "SLACK_BOOT" /dev/nvme0n1p4
+sudo mkfs.vfat -F32 -n "LIMINE_BOOT" /dev/nvme0n1p4
 ```
 
 ---
 
-### Step 4: Resolve the New Partition's UUID
-Find the unique UUID of your new partition:
+### Step 4: Stash and Copy Existing Boot Files
+1. Create a temporary mount point:
+   ```bash
+   sudo mkdir -p /mnt/new_boot
+   sudo mount /dev/nvme0n1p4 /mnt/new_boot
+   ```
+2. Copy all current kernel binaries, System.maps, and initramfs files from `/boot/*`:
+   ```bash
+   sudo cp -a /boot/* /mnt/new_boot/
+   ```
+3. If `/boot/efi` exists, copy the EFI directory structure:
+   ```bash
+   sudo mkdir -p /mnt/new_boot/EFI
+   sudo cp -a /boot/efi/EFI/* /mnt/new_boot/EFI/
+   ```
+4. Unmount the temporary mount:
+   ```bash
+   sudo umount /mnt/new_boot
+   sudo rmdir /mnt/new_boot
+   ```
+
+---
+
+### Step 5: Update `/etc/fstab`
+Obtain the UUID of your new partition:
 ```bash
 sudo blkid -s UUID -o value /dev/nvme0n1p4
-# Output example: 10B6-F5E0
 ```
-
----
-
-### Step 5: Copy Existing Boot Files & Multiboot Entries
-Mount the new partition temporarily and copy all existing kernels and EFI entries:
-```bash
-# 1. Mount new partition temporarily
-sudo mkdir -p /mnt/new_boot
-sudo mount -t vfat /dev/nvme0n1p4 /mnt/new_boot
-
-# 2. Copy existing kernels, initrds, and system maps from current /boot
-sudo find /boot -maxdepth 1 ! -name 'efi' ! -name 'EFI' ! -path '/boot' -exec cp -a {} /mnt/new_boot/ \;
-
-# 3. Preserve Multiboot: If you have existing EFI entries (Windows Boot Manager, GRUB), copy them over:
-if [ -d "/boot/efi/EFI" ]; then
-    sudo mkdir -p /mnt/new_boot/EFI
-    sudo cp -a /boot/efi/EFI/* /mnt/new_boot/EFI/
-elif [ -d "/boot/EFI" ]; then
-    sudo mkdir -p /mnt/new_boot/EFI
-    sudo cp -a /boot/EFI/* /mnt/new_boot/EFI/
-fi
-
-# 4. Unmount temporary directory
-sudo umount /mnt/new_boot
-sudo rmdir /mnt/new_boot
-```
-
----
-
-### Step 6: Update `/etc/fstab` to Mount ESP at `/boot`
-1. Create a backup of your `/etc/fstab`:
+Edit `/etc/fstab` (`sudo nano /etc/fstab`):
+1. Comment out or remove any existing `/boot/efi` or `/boot` mount entries.
+2. Add the new entry directly at `/boot`:
+   ```text
+   UUID=XXXX-XXXX    /boot    vfat    defaults,noatime,umask=0077,fmask=0077,dmask=0077    0    2
+   ```
+3. Test mount:
    ```bash
-   sudo cp /etc/fstab /etc/fstab.bak.$(date +%Y%m%d)
-   ```
-2. Open `/etc/fstab` in your text editor (`sudo nano /etc/fstab`).
-3. Comment out any old `/boot/efi` line:
-   ```text
-   # Old EFI mount:
-   # UUID=ABCD-1234  /boot/efi  vfat  defaults  0  2
-   ```
-4. Add the new entry pointing to `/boot`:
-   ```text
-   # Dedicated 4GB ESP for Limine Bootloader & Secure Boot
-   UUID=10B6-F5E0     /boot     vfat     defaults,noatime,umask=0077     0     2
+   sudo mount /boot
    ```
 
 ---
 
-### Step 7: Configure `/etc/mkinitrd.conf` (Crucial for FAT32!)
+### Step 6: Configure `/etc/mkinitrd.conf` (Crucial for FAT32!)
 Because FAT32 does not support POSIX symlinks or device nodes, Slackware's standard `mkinitrd` tool will complain with hundreds of `tar: Cannot create symlink` errors if it builds directly on `/boot`.
 
-Ensure `/etc/mkinitrd.conf` builds the staging tree in RAM (`/tmp`):
+Ensure `/etc/mkinitrd.conf` builds the staging tree in `/var/tmp` (`/var/tmp/slacky-initrd-tree`):
 ```bash
 sudo bash -c '
 if grep -q "^[[:space:]]*SOURCE_TREE=" /etc/mkinitrd.conf 2>/dev/null; then
-    sed -i '\''s|^[[:space:]]*SOURCE_TREE=.*|SOURCE_TREE="/tmp/initrd-tree"|'\'' /etc/mkinitrd.conf
+    sed -i '\''s|^[[:space:]]*SOURCE_TREE=.*|SOURCE_TREE="/var/tmp/slacky-initrd-tree"|'\'' /etc/mkinitrd.conf
 else
-    echo -e "\n# Use /tmp for staging on FAT32 /boot\nSOURCE_TREE=\"/tmp/initrd-tree\"" >> /etc/mkinitrd.conf
+    echo -e "\n# Use /var/tmp for staging on FAT32 /boot\nSOURCE_TREE=\"/var/tmp/slacky-initrd-tree\"" >> /etc/mkinitrd.conf
 fi
 '
 ```
 
 ---
 
-### Step 8: Mount the New `/boot` and Test
-Unmount old paths and mount the new partition:
+### Step 7: Deploy Limine with Slacky-Update
+Now run:
 ```bash
-sudo umount /boot/efi 2>/dev/null || true
-sudo mount /boot
-
-# Verify with findmnt:
-findmnt /boot
+sudo slacky-update --limine
 ```
-*(You should see `vfat` with your new 4 GB partition size)*.
+Slacky-Update will detect the properly sized `/boot` partition, install Limine UEFI binaries, autogenerate the two-zone `limine.conf`, calculate BLAKE2B hashes, and create the UEFI NVRAM boot entry!
 
 ---
 
-### Step 9: Launch Limine Deployment in Slacky-Update
-Now that your disk is manually pre-configured, deploy Limine in one click:
-```bash
-slacky-update
-```
-Select **Option 5** (or **Limine Bootloader Menu**) -> **Option 1 (Install / Re-deploy Limine Bootloader)**. Slacky-Update will instantly recognize your optimal topology, install the UEFI binaries, generate `limine.conf`, enroll BLAKE2B hashes, and sign with `sbctl`!
+## 4. 🤖 What Slacky-Update Does Under Automatic Configuration
 
----
-
-## 3. 🤖 What Slacky-Update Does Under Automatic Configuration
-
-If you choose not to configure partitions manually, `slacky-update` includes a built-in **Topological Guard & Migration Wizard**. Here is exactly what happens under each scenario:
+If you choose not to configure partitions manually, `slacky-update` includes a built-in partition detection engine that evaluates three scenarios:
 
 ### Scenario B: Existing Best Practice (Current System)
 * **Detection:** `findmnt /boot` is `vfat` and total size is $\ge 3500\text{ MB}$.
 * **Action:**
-  1. Checks `/etc/mkinitrd.conf` and guarantees `SOURCE_TREE="/tmp/initrd-tree"` is configured.
+  1. Checks `/etc/mkinitrd.conf` and guarantees `SOURCE_TREE="/var/tmp/slacky-initrd-tree"` is configured.
   2. Leaves `/etc/fstab` **100% untouched**.
   3. Proceeds directly with deploying Limine, generating `limine.conf`, and signing.
 
-### Scenario A: In-Place ESP Promotion (`/boot/efi` $\rightarrow$ `/boot`)
-* **Detection:** `/boot` is on the root filesystem (ext4/Btrfs), but `/boot/efi` is already mounted as a FAT32 ESP of $\ge 3500\text{ MB}$.
+### Scenario A: In-Place ESP Promotion (`/boot/efi` -> `/boot`)
+* **Detection:** `/boot/efi` is mounted, is `vfat`, and is $\ge 3500\text{ MB}$, while `/boot` is just a standard folder on root.
 * **Action:**
-  1. Prompts the user with full details and asks for confirmation `[Y/n]`.
-  2. Ensures GPT type `ef00` and `esp on / boot on` flags are set on the partition.
+  1. Prompts the user with a visual confirmation dialog.
+  2. Checks for `chattr +i` immutability flags on `/boot` and unsets them.
   3. Creates a timestamped safety backup: `/etc/fstab.bak.<timestamp>`.
   4. Copies all kernel files and System.maps from `/boot/*` into `/boot/efi/`.
   5. Updates `/etc/fstab`: changes `/boot/efi` to `/boot`.
-  6. Enforces `SOURCE_TREE="/tmp/initrd-tree"` in `/etc/mkinitrd.conf`.
+  6. Enforces `SOURCE_TREE="/var/tmp/slacky-initrd-tree"` in `/etc/mkinitrd.conf`.
   7. Unmounts `/boot/efi` and mounts the partition directly at `/boot`.
 
 ### Scenario C: New Dedicated ESP Partition Adoption
-* **Detection:** Current `/boot/efi` is too small ($< 3.5\text{ GB}$, e.g. 100–512 MB) or missing, and the user wants to allocate an unmounted or newly created partition.
+* **Detection:** `/boot/efi` is too small (< 3500 MB) or missing, and a spare unformatted/clean partition ($\ge 3500\text{ MB}$) is selected by the user.
 * **Action:**
-  1. Scans all system block devices and filters partitions $\ge 3.5\text{ GB}$ (excluding `/`, `/home`, `/var`, `swap`).
-  2. Presents an interactive partition picker to the user.
-  3. Prompts for confirmation with explicit device warnings (`[y/N]`).
-  4. Sets GPT partition type to `ef00` via `sgdisk` / `parted`.
-  5. Formats as FAT32 (`mkfs.vfat -F32`) if not already clean FAT32.
-  6. Mounts temporarily to `/mnt/slacky_new_boot_<PID>`.
-  7. Copies all kernels and initramfs files from `/boot/*`.
-  8. **Preserves Multiboot:** Copies `/boot/efi/EFI/*` into the new partition so Windows Boot Manager and GRUB are kept intact!
-  9. Creates a timestamped backup of `/etc/fstab` and inserts the new UUID for `/boot`.
-  10. Sets `SOURCE_TREE="/tmp/initrd-tree"` in `/etc/mkinitrd.conf`.
-  11. Unmounts temporary and old paths, then mounts the new ESP at `/boot`.
+  1. Checks partition sizes and presents interactive selection menu.
+  2. Sets GPT partition type to `ef00` (EFI System Partition).
+  3. Formats the target with `mkfs.vfat -F32 -n "LIMINE_BOOT"`.
+  4. Temporarily mounts the new partition at `/mnt/slacky_new_esp_XXXXXX`.
+  5. Unsets immutable flags on `/boot` if present.
+  6. Copies all kernels and initramfs files from `/boot/*`.
+  7. **Preserves Multiboot:** Copies `/boot/efi/EFI/*` into the new partition so Windows Boot Manager and GRUB are kept intact!
+  8. Creates a timestamped backup of `/etc/fstab` and inserts the new UUID for `/boot`.
+  9. Sets `SOURCE_TREE="/var/tmp/slacky-initrd-tree"` in `/etc/mkinitrd.conf`.
+  10. Unmounts temporary and old paths, then mounts the new ESP at `/boot`.
 
 ---
 
-## 4. 🎨 Customization & Ricing Playbook
+## 5. 🎨 Customization, CMDLINE & Gaming Optimization Hub
 
 ### The Two-Zone `limine.conf` Architecture
 Your configuration at `/boot/limine.conf` is split into two distinct zones:
@@ -279,53 +263,20 @@ term_foreground: 55ffff
 * **🎨 Theme Zone (Top)**: 100% owned by you. Customize resolution, font size, colors, branding, and wallpapers. `slacky-update` **never** overwrites your tweaks during kernel updates.
 * **⚡ Autogenerated Matrix (Bottom)**: Automatically refreshed by `slacky-update` whenever kernels or snapshots change.
 
-### Adding a Custom Wallpaper
-1. **Prepare and copy your image to `/boot`**:
-   ```zsh
-   # Convert JPG to PNG
-   magick /path/to/my-wallpaper.jpg /tmp/limine-splash.png
-   sudo cp /tmp/limine-splash.png /boot/limine-splash.png
-   ```
+### Split-Lock Mitigation Toggle (`split_lock_mitigate=0`)
+> [!NOTE]
+> ### 🧒 ELI5: What is a Split-Lock and why do gamers care?
+> Imagine your CPU is a mail delivery truck, and standard memory requests fit neatly into one standard mailbox. A "split-lock" happens when a program (frequently older Windows games running in Wine/Proton, or poorly optimized game engines) requests a piece of data that awkwardly spills across two mailboxes at the same time. The CPU halts *everything* to safely grab both pieces, causing massive micro-stutters and frame drops in games like *God of War*, *Cyberpunk 2077*, and Unreal Engine titles.
+> 
+> By setting `split_lock_mitigate=0`, the Linux kernel skips the artificial CPU throttling penalty, restoring buttery-smooth framerates.
 
-2. **Activate the wallpaper in `/boot/limine.conf`**:
-   Open `/boot/limine.conf` in your editor (`sudo nano /boot/limine.conf`) and set:
-   ```text
-   wallpaper: boot():/limine-splash.png
-   wallpaper_style: stretched
-   ```
-   *(Use `wallpaper_style: centered` for square badges/logos, or `stretched` for full widescreen wallpapers)*.
-
-3. **Auto-hash and apply**:
-   ```zsh
-   sudo slacky-update --limine-config
-   ```
-   `slacky-update` automatically computes the BLAKE2B hash of your image, injects `#<hash>` into `limine.conf`, and re-signs the EFI binary!
-
-### Display Resolution & Typography
-* **Screen Resolution**: Set native display mode for crisp rendering:
-  ```text
-  interface_resolution: 3840x2160x32   # 4K UHD
-  interface_resolution: 2560x1440x32   # 1440p QHD
-  interface_resolution: 1920x1080x32   # 1080p FHD
-  ```
-* **Font Scaling**:
-  ```text
-  term_font_scale: 1x1   # Standard, crisp modern terminal font (Recommended)
-  term_font_scale: 2x2   # HiDPI / Large retro font (2x integer scaling)
-  ```
-* **Retro 90s Color Palette & Transparency (WinAmp Style)**:
-  ```text
-  term_background: e0000000            # Translucent Box (TTRRGGBB: e0 = 88% transparent glass tint)
-  term_foreground: 55ffff              # Slackware Cyan/Light Blue
-  term_highlight_background: 0055aa    # Deep Royal Blue
-  term_highlight_foreground: ffffff    # Pure White
-  backdrop: 000000                     # Pure Black Screen (when no wallpaper is loaded)
-  ```
-  *(Note on `term_background`: Format is `TTRRGGBB` where `TT` is transparency. `ff000000` = 100% transparent with no box; `e0000000` / `d0000000` = ~85% transparent light glass tint; `000000` = solid opaque black)*.
+In Slacky-Update, you can toggle `split_lock_mitigate=0` directly via:
+* **Interactive TUI:** Run `slacky-update --limine-cmdline` or navigate to Limine Hub -> Option 4 (`⚙️ Configure Kernel Boot Parameters`).
+* **Manual CMDLINE:** Add `split_lock_mitigate=0` to the CMDLINE flags in `/boot/limine.conf`.
 
 ---
 
-## 5. Safe Hashing & Anti-Lockout Model
+## 6. 🔒 Safe Hashing & Anti-Lockout Model
 
 Limine uses **BLAKE2B cryptographic hashes** to verify all kernel binaries, initramfs images, and configuration files.
 
@@ -336,42 +287,48 @@ Limine uses **BLAKE2B cryptographic hashes** to verify all kernel binaries, init
 
 ---
 
-## 6. Secure Boot Setup with sbctl
+## 7. 🛡️ Secure Boot Setup with sbctl (Guided Manual Setup, Automatic Future)
+
+> [!IMPORTANT]
+> **Guided Manual Setup vs. Automatic Operation**  
+> Enrolling Secure Boot keys into your motherboard's UEFI firmware requires physical human presence in the BIOS to delete factory keys and authorize custom keys. Therefore, **initial Secure Boot key setup is guided manually**.  
+> 
+> However, once your custom keys are enrolled, **everything runs 100% on auto**: every new kernel build, initramfs update, and NVIDIA module compilation is automatically signed by `slacky-update` with zero manual intervention!
 
 With Limine, only the bootloader binary (`/boot/EFI/limine/limine_x64.efi`) needs Authenticode signing. Limine itself protects the kernels and initramfs via BLAKE2B hashes.
 
 ### Initial Setup Workflow
 1. **Check Current Secure Boot Status**:
-   ```zsh
+   ```bash
    sudo sbctl status
    ```
    *(Verify that `Setup Mode` is `Enabled` before creating keys).*
 
 2. **Generate Your Custom Keys**:
-   ```zsh
+   ```bash
    sudo sbctl create-keys
    ```
 
 3. **Enroll Keys with Microsoft Vendor Compatibility**:
-   ```zsh
+   ```bash
    sudo sbctl enroll-keys -m
    ```
    *Note: The `-m` flag is essential! It retains Microsoft 3rd-party UEFI certificates needed for GPU Option ROMs (Nvidia/AMD display output during POST) and external add-in cards.*
 
 4. **Sign Limine Bootloader**:
-   ```zsh
+   ```bash
    sudo sbctl sign -s /boot/EFI/limine/limine_x64.efi
    sudo sbctl sign -s /boot/EFI/BOOT/BOOTX64.EFI
    ```
 
 5. **Verify Signing Database**:
-   ```zsh
+   ```bash
    sudo sbctl list-files
    ```
 
 ---
 
-## 7. Motherboard UEFI/BIOS Configuration Matrix
+## 8. 🖥️ Motherboard UEFI/BIOS Configuration Matrix
 
 To enroll custom Secure Boot keys, your motherboard firmware must first be placed into **Setup Mode** (by clearing or deleting the factory Platform Key `PK`).
 
@@ -425,7 +382,7 @@ To enroll custom Secure Boot keys, your motherboard firmware must first be place
 
 ---
 
-## 8. Btrfs Snapper Snapshot Rollbacks & Auto-Sync Engine
+## 9. 🌲 Btrfs Snapper Snapshot Rollbacks & Auto-Sync Engine
 
 If your Slackware system is formatted with Btrfs, `slacky-update` includes a built-in **Btrfs Snapper Boot Sync Engine**:
 
@@ -435,8 +392,8 @@ If your Slackware system is formatted with Btrfs, `slacky-update` includes a bui
   * Select your desired kernel under the snapshot (e.g. `////Linux Cachyos BORE`).
   * Limine boots directly into that read-only snapshot with `rootflags=subvol=@snapshots/<NUM>/snapshot`.
 
-* **Interactive Snapper Hub (Option 4 in Limine Menu)**:
-  * Run `slacky-update --limine` -> Option 4 (`🌲 Btrfs Snapper Snapshot Sync & Boot Hub`).
+* **Interactive Snapper Hub (Option 5 in Limine Menu)**:
+  * Run `slacky-update --limine` -> Option 5 (`🌲 Snapper Btrfs Snapshot Rollback Engine`).
   * **Toggle Background Auto-Sync**: Enable or disable the silent hourly synchronization engine.
   * **Retention Policies**:
     * **`Daily Spread` (Recommended)**: Selects 1 snapshot per distinct calendar day across the past week, providing a **full 7-day rollback safety net** rather than only the last few hours.
@@ -451,19 +408,20 @@ If your Slackware system is formatted with Btrfs, `slacky-update` includes a bui
 
 ---
 
-## 9. Emergency Recovery & Zero-Destruction Coexistence
+## 10. 🚑 Emergency Recovery & Zero-Destruction Coexistence
 
 `slacky-update` follows a strict **Zero-Destruction policy**:
 * **GRUB Coexistence**: Your original Slackware GRUB installation (`/EFI/Slackware/grubx64.efi`) is never deleted and is registered as `Boot0005` in UEFI NVRAM.
 * **UEFI One-Shot Boot Menu**: Tap `F8` (ASUS), `F11` (MSI/ASRock), or `F12` (Gigabyte) during boot to select between **Limine Slackware** and **GRUB Bootloader**.
 * **Self-Healing Backup Restoration**:
   If `/boot` is ever wiped or corrupted, restore your verified signed setup with:
-  ```zsh
+  ```bash
   sudo slacky-update --restore-limine
   ```
   *(Or manually restore from `~/.limine_backup/`)*.
 
-For detailed symptom recovery scenarios and emergency Live-USB chroot procedures, see **[docs/TROUBLESHOOTING_GUIDE.md](TROUBLESHOOTING_GUIDE.md)**.
+For detailed symptom recovery scenarios and emergency Live-USB chroot procedures:  
+👉 **See [docs/TROUBLESHOOTING_GUIDE.md](TROUBLESHOOTING_GUIDE.md)**
 
 ---
 

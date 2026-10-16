@@ -2,6 +2,8 @@
 # --- [ SLACKY-UPDATE CLI INTERFACE & MAIN CONTROLLER ] ---
 
 set -euo pipefail
+# 6A-51: python3 -c / python3 - run as root must never import modules from the current directory
+export PYTHONSAFEPATH=1
 
 CURRENT_VERSION="1.0_RC2"
 RELEASE_CODENAME="Dark Star"
@@ -97,6 +99,9 @@ cleanup_on_exit() {
         if [ "${lpid}" = "$$" ]; then
             rm -f "/tmp/slacky-update-running.lock" 2>/dev/null || true
         fi
+    fi
+    if [ -t 1 ]; then
+        printf "\033]0;\007\033]2;\007\033]30;\007" 2>/dev/null || true
     fi
     if [ "${INTERACTIVE_SESSION}" -eq 1 ] && [ -t 0 ] && [ "${exit_code}" -ne 0 ]; then
         echo ""
@@ -205,7 +210,8 @@ get_kernel_driver_snapshot() {
     python3 -c "
 import os
 pkgs = os.listdir('/var/log/packages') if os.path.exists('/var/log/packages') else []
-k_pkgs = sorted([p for p in pkgs if p.startswith(('kernel-', 'linux-', 'dkms', 'nvidia'))])
+# 6A-61: kernel-headers / kernel-source are userspace/build files; they need no initramfs, signing or restart
+k_pkgs = sorted([p for p in pkgs if p.startswith(('kernel-', 'linux-', 'nvidia')) and not p.startswith(('kernel-headers', 'kernel-source'))])
 print(';'.join(k_pkgs))
 " 2>/dev/null || echo ""
 }
@@ -215,33 +221,62 @@ prompt_reboot_or_close() {
     local snap_after_file="$2"
     local force_flag="${3:-0}"
 
+    # SpiderSense phase 1 (spec 9): after a refused/failed boot chain there is no restart offer and the exit code is 30
+    if [ "${SLACKY_BOOT_CHAIN_FAILED:-0}" = "1" ]; then
+        rm -f "${snap_before_file}" "${snap_after_file}" 2>/dev/null || true
+        echo ""
+        echo -e "${RED}${BOLD}The startup menu could not be updated safely, so do not restart yet. Run: sudo slacky-update --sync-boot${RESET}"
+        exit 30
+    fi
+
     local needs_reboot=0
     if [ "${force_flag}" -eq 1 ]; then
         needs_reboot=1
     fi
 
+    local reboot_reasons=()
     if [ "${needs_reboot}" -eq 0 ] && [ -f "${snap_before_file}" ] && [ -f "${snap_after_file}" ]; then
-        if python3 -c "
+        local reasons_raw
+        reasons_raw=$(python3 - "${snap_before_file}" "${snap_after_file}" << 'PYREBOOT'
 import sys, os
+
 b_file = sys.argv[1]
 a_file = sys.argv[2]
 
-with open(b_file, 'r', encoding='utf-8', errors='ignore') as f:
-    b = set(line.strip() for line in f if line.strip())
-with open(a_file, 'r', encoding='utf-8', errors='ignore') as f:
-    a = set(line.strip() for line in f if line.strip())
+try:
+    with open(b_file, 'r', encoding='utf-8', errors='ignore') as f:
+        b = set(line.strip() for line in f if line.strip())
+    with open(a_file, 'r', encoding='utf-8', errors='ignore') as f:
+        a = set(line.strip() for line in f if line.strip())
 
-diff = a - b
-for p in diff:
-    if p.startswith('glibc-zoneinfo'):
-        continue
-    if p.startswith(('glibc-solibs', 'glibc-2', 'glibc-3')) or any(kw in p for kw in ['plasma-', 'kwin-', 'sddm-', 'wayland-', 'nvidia-', 'kernel-', 'linux-cachyos']):
-        sys.exit(1)
-sys.exit(0)
-" "${snap_before_file}" "${snap_after_file}" 2>/dev/null; then
-            needs_reboot=0
-        else
+    diff = a - b
+    active_kver = os.uname().release
+    reasons = []
+
+    for p in sorted(diff):
+        if p.startswith('glibc-zoneinfo'):
+            continue
+        if p.startswith(('glibc-solibs', 'glibc-2', 'glibc-3')):
+            reasons.append(f"Core C library updated ({p})")
+        elif 'mesa-' in p or p.startswith('mesa'):
+            reasons.append(f"Mesa graphics / Vulkan driver updated ({p})")
+        elif 'nvidia-' in p or 'nvidia' in p:
+            reasons.append(f"NVIDIA graphics driver suite updated ({p})")
+        elif any(kw in p for kw in ['plasma-', 'kwin-', 'sddm-', 'wayland-']):
+            reasons.append(f"Display server / Desktop environment updated ({p})")
+        elif any(kw in p for kw in ['kernel-', 'linux-cachyos']):
+            if active_kver in p:
+                reasons.append(f"Active kernel package updated ({p})")
+
+    for r in reasons:
+        print(r)
+except Exception:
+    pass
+PYREBOOT
+)
+        if [ -n "${reasons_raw}" ]; then
             needs_reboot=1
+            mapfile -t reboot_reasons <<< "${reasons_raw}"
         fi
     fi
     rm -f "${snap_before_file}" "${snap_after_file}" 2>/dev/null || true
@@ -250,7 +285,14 @@ sys.exit(0)
         if [ "${needs_reboot}" -eq 1 ]; then
             echo ""
             echo -e "${YELLOW}${BOLD}🔄 $(_ REBOOT_RECOMMENDED_TITLE)${RESET}"
-            echo -e "$(_ REBOOT_RECOMMENDED_DESC)"
+            if [ ${#reboot_reasons[@]} -gt 0 ]; then
+                echo -e "\033[1;36mDetected system components triggering this recommendation:\033[0m"
+                for r in "${reboot_reasons[@]}"; do
+                    [ -n "${r}" ] && echo -e "  • ${r}"
+                done
+            else
+                echo -e "$(_ REBOOT_RECOMMENDED_DESC)"
+            fi
             log_info "Non-interactive mode: Reboot deferred. Please reboot when convenient."
         else
             echo ""
@@ -262,10 +304,16 @@ sys.exit(0)
     if [ "${needs_reboot}" -eq 1 ]; then
         echo ""
         echo -e "${YELLOW}${BOLD}🔄 $(_ REBOOT_RECOMMENDED_TITLE)${RESET}"
-        echo -e "$(_ REBOOT_RECOMMENDED_DESC)"
+        if [ ${#reboot_reasons[@]} -gt 0 ]; then
+            echo -e "\033[1;36mDetected system components triggering this recommendation:\033[0m"
+            for r in "${reboot_reasons[@]}"; do
+                [ -n "${r}" ] && echo -e "  • ${r}"
+            done
+        else
+            echo -e "$(_ REBOOT_RECOMMENDED_DESC)"
+        fi
         echo ""
-        read -r -p "$(_ PROMPT_REBOOT_NOW)" reply_reboot || reply_reboot="N"
-        reply_reboot=${reply_reboot:-Y}
+        read_update_prompt "$(_ PROMPT_REBOOT_NOW)" "N" reply_reboot
         if [[ "$reply_reboot" =~ ^[YyJjSsOo]$ ]]; then
             echo ""
             echo -e "${CYAN}${BOLD}$(_ REBOOTING_IN_5S)${RESET}"
@@ -289,24 +337,25 @@ sys.exit(0)
 run_full_update() {
     echo -e "\n${CYAN}$(_ VALIDATING_ADMIN)${RESET}"
     validate_privileges
+    # 6A-89: the sudo ticket stays valid for the whole run
+    start_sudo_keepalive
 
     run_preflight_check 0
 
-    local lock_file="/tmp/slacky-update-running.lock"
-    if [ -f "${lock_file}" ]; then
-        local lpid
-        lpid=$(cat "${lock_file}" 2>/dev/null || echo "")
-        if [ -n "${lpid}" ] && [[ "${lpid}" =~ ^[0-9]+$ ]] && kill -0 "${lpid}" 2>/dev/null && [ "${lpid}" -ne "$$" ]; then
-            log_warn "Another Slacky-Update process (PID: ${lpid}) is currently running. Please wait for it to finish."
-            return 1
-        else
-            rm -f "${lock_file}" 2>/dev/null || true
-        fi
-    fi
-    echo "$$" > "${lock_file}" 2>/dev/null || true
+    # 6A-47: run lock in /run/lock (flock, released on exit) instead of a PID file in /tmp
+    acquire_run_lock || return 1
+    # 6A-93: report a previous run that was cut off (this run then finishes its work)
+    ss_tx_check_interrupted || ss_mark_if_limine   # 6A-147: the marker means "reseal Limine"; nothing to do elsewhere
+    # 6A-95: our snapshots never live past 48 hours (before this run makes new ones)
+    ss_prune_our_snapshots
+    # 6A-117: what hardware is in this machine now, and what changed since boot / the last run
+    ss_hw_check
 
     export DEFER_BOOT_SYNC=1
     export SLACKY_UPDATE_RUNNING=1
+    # 6A-102: the boot lock is taken when the boot-chain step starts (below), not here. Nothing writes the live boot
+    # files before that step any more (6A-97/98/99/101), the hourly job waits for the run lock, and holding the boot
+    # lock for the whole run made limine-snapper-sync time out and write the menu without it.
 
     local slack_done=0
     local cachy_done=0
@@ -325,8 +374,9 @@ run_full_update() {
     k_snap_before=$(get_kernel_driver_snapshot)
 
     local boot_snap_before boot_snap_after
-    boot_snap_before=$(ls -1 /boot/vmlinuz* /var/log/packages/*limine* /var/log/packages/*sbctl* /var/log/packages/*grub* /var/log/packages/*elilo* 2>/dev/null || true)
+    boot_snap_before=$(ls -1 /boot/vmlinuz* /boot/initrd* /boot/limine*.efi /boot/EFI/*/*.efi 2>/dev/null || true)
     local kernel_or_driver_changed=0
+    export SLACKY_LIMINE_SEALED=0
 
     local is_headless=0
     if [ "${NON_INTERACTIVE:-0}" = "1" ] || [ ! -t 0 ]; then
@@ -338,112 +388,204 @@ run_full_update() {
     plus_count=$(get_status_key_count "slackpkgplus_updates")
     total_slack_pkgs=$(( slack_count + plus_count ))
 
+    local cachy_count
+    cachy_count=$(get_status_key_count "cachyos_kernel_updates")
+
+    local flatpak_count=0
+    local nvidia_mismatch="false"
+    if command -v flatpak >/dev/null 2>&1; then
+        flatpak_count=$(get_status_key_count "flatpak_updates")
+        # status-cache split: the newest status.json of the user cache and /var wins (get_status_key_count does that)
+        if [ "$(get_status_key_count "nvidia_gl_mismatch")" != "0" ]; then
+            nvidia_mismatch="true"
+        fi
+    fi
+
+    local sbo_count=0
+    if is_sbotools_installed; then
+        sbo_count=$(get_status_key_count "sbo_updates")
+    fi
+
+    local gaming_count=0
+    if command -v sync_all_installed_cachyos_gaming_packages >/dev/null 2>&1; then
+        gaming_count=$(get_status_key_count "cachyos_gaming_updates")
+    fi
+
+    local gnomes_count=0
+    if [ -f "${APP_DIR}/gnomes_pacman.py" ]; then
+        gnomes_count=$(python3 "${APP_DIR}/gnomes_pacman.py" list-updates --count 2>/dev/null || echo "0")
+    fi
+
+    local nv_count=0
+    if [ "${HAS_NVIDIA}" = "true" ] && [ "$(has_cachyos_kernels_installed 2>/dev/null || echo false)" != "true" ]; then
+        nv_count=$(get_status_key_count "nvidia_driver_updates")
+    fi
+
+    local active_suites=0
+    [ "${total_slack_pkgs}" -gt 0 ] && active_suites=$(( active_suites + 1 ))
+    [ "${cachy_count}" -gt 0 ] && active_suites=$(( active_suites + 1 ))
+    { [ "${flatpak_count}" -gt 0 ] || [ "${nvidia_mismatch}" = "true" ]; } && active_suites=$(( active_suites + 1 ))
+    [ "${sbo_count}" -gt 0 ] && active_suites=$(( active_suites + 1 ))
+    [ "${gaming_count}" -gt 0 ] && active_suites=$(( active_suites + 1 ))
+    [ "${gnomes_count}" -gt 0 ] && active_suites=$(( active_suites + 1 ))
+    [ "${nv_count}" -gt 0 ] && active_suites=$(( active_suites + 1 ))
+
+    # 9C: a package of the Slackware update set that has a folder replaced by a link is held BEFORE anything changes
+    # (detect only: one sentence with the exact command; nothing is repaired, renamed or asked)
     if [ "${total_slack_pkgs}" -gt 0 ]; then
+        local heal_helper hold_rc=0
+        if heal_helper=$(slacky_find_helper slacky_heal.py); then
+            python3 -I "${heal_helper}" hold --from-status || hold_rc=$?
+            if [ "${hold_rc}" -eq 30 ]; then
+                exit 30
+            fi
+        fi
+    fi
+
+    local auto_approve_all=0
+    if [ "${is_headless}" -eq 0 ] && [ "${active_suites}" -gt 1 ]; then
+        echo ""
+        echo -e "${CYAN}${BOLD}⚡ Full System Upgrade Plan (${active_suites} suites with pending updates):${RESET}"
+        [ "${total_slack_pkgs}" -gt 0 ] && echo -e "  • Slackware Core & Multilib : ${total_slack_pkgs} package(s)"
+        [ "${cachy_count}" -gt 0 ] && echo -e "  • CachyOS Kernels           : ${cachy_count} flavor update(s)"
+        { [ "${flatpak_count}" -gt 0 ] || [ "${nvidia_mismatch}" = "true" ]; } && echo -e "  • Flatpak Runtimes & Apps   : ${flatpak_count} update(s)"
+        [ "${sbo_count}" -gt 0 ] && echo -e "  • SlackBuilds (sbotools)    : ${sbo_count} package(s)"
+        [ "${gaming_count}" -gt 0 ] && echo -e "  • CachyOS Gaming Suite      : ${gaming_count} package(s)"
+        [ "${gnomes_count}" -gt 0 ] && echo -e "  • Underpants Gnomes Apps    : ${gnomes_count} package(s)"
+        [ "${nv_count}" -gt 0 ] && echo -e "  • NVIDIA Driver Suite       : ${nv_count} update(s)"
+        echo ""
+        local reply_batch="Y"
+        read_update_prompt "Apply all pending updates in a single automated pass? [Y/n/c(ustom)]: " "Y" reply_batch
+        if [[ "${reply_batch}" =~ ^[YyJjSsOo]$ ]]; then
+            auto_approve_all=1
+            echo -e "${GREEN}✓ Automated batch upgrade engaged.${RESET}\n"
+        else
+            echo -e "${CYAN}:: Interactive step-by-step confirmation engaged.${RESET}\n"
+        fi
+    fi
+
+    begin_atomic_transaction "Full System Upgrade"
+    # 6A-102: Ctrl-C / TERM become a stop request that never leaves the boot chain half done
+    ss_arm_abort_handler
+
+    # SpiderSense phase 1 (spec 4.4): pre-update snapshot after consent, before the first change. If it fails, kernel,
+    # graphics driver and boot chain wait (they are what a snapshot protects most); the Slackware base still updates.
+    local ss_hold_boot=0
+    local ss_failed=""   # 6A-146 (verifier MAJOR-2): suites that did not finish stay pending and are named at the end
+    if [ "${active_suites}" -gt 0 ]; then
+        local snap_rc=0
+        create_pre_update_snapshot || snap_rc=$?
+        if [ "${snap_rc}" -eq 1 ]; then
+            ss_hold_boot=1
+            log_warn "A safety snapshot could not be created, so kernel and graphics driver updates wait until next time; everything else updates now."
+        fi
+    fi
+    # 6A-88: a separate /boot that is not mounted read-write -> kernel, driver and boot menu wait (they would land in the
+    # wrong place); everything else updates
+    local ss_boot_unready=0
+    if ! ss_boot_ready; then
+        ss_boot_unready=1
+        export SLACKY_BOOT_UNREADY=1
+        ss_hold_boot=1
+        log_warn "The boot partition (/boot) is not mounted for writing, so kernel and graphics driver updates and the boot menu wait; everything else updates now."
+    fi
+    # 6A-202: signing keys first (a staged, re-verified keyring is installed before any package is checked or installed)
+    if command -v slacky_keys_first >/dev/null 2>&1; then
+        slacky_keys_first || true
+    fi
+    # 6A-93: journal (a cut-off run is reported next time)
+    ss_tx_mark started-packages
+
+    if [ "${total_slack_pkgs}" -gt 0 ] && ss_continue; then
         local reply_slack="Y"
-        if [ "${is_headless}" -eq 0 ]; then
-            read -r -p "$(_ PROMPT_UPGRADE_SLACKWARE)" reply_slack || reply_slack="Y"
-            reply_slack=${reply_slack:-Y}
+        if [ "${is_headless}" -eq 0 ] && [ "${auto_approve_all}" -eq 0 ]; then
+            read_update_prompt "$(_ PROMPT_UPGRADE_SLACKWARE)" "Y" reply_slack
         fi
         if [[ "$reply_slack" =~ ^[YyJjSsOo]$ ]]; then
             echo -e "\n${BLUE}${BOLD}$(_ UPGRADING_SLACKWARE)${RESET}"
-            update_slackware_core
-            slack_done=1
+            local sc_ret=0
+            update_slackware_core || sc_ret=$?
+            # 6A-146 (LTS B2): a Slackware kernel changed -> the boot chain must run; mark it now so a run that is cut
+            # off later is still repaired by the hourly check
+            if [ "$(get_kernel_driver_snapshot)" != "${k_snap_before}" ]; then
+                kernel_or_driver_changed=1
+                ss_mark_if_limine
+            fi
+            if [ "${sc_ret}" -eq 0 ]; then
+                slack_done=1
+            elif [ "${sc_ret}" -eq 2 ]; then
+                slack_done=2
+            fi
         fi
     else
         log_info "$(_ SLACKWARE_CORE_UP_TO_DATE)"
     fi
 
-    local cachy_count
-    cachy_count=$(get_status_key_count "cachyos_kernel_updates")
-    if [ "${cachy_count}" -gt 0 ]; then
+    if [ "${cachy_count}" -gt 0 ] && [ "${ss_hold_boot}" -eq 0 ] && ss_continue; then
         local reply_cachy="Y"
-        if [ "${is_headless}" -eq 0 ]; then
-            read -r -p "$(_ PROMPT_INSTALL_CACHY_KERNEL)" reply_cachy || reply_cachy="Y"
-            reply_cachy=${reply_cachy:-Y}
+        if [ "${is_headless}" -eq 0 ] && [ "${auto_approve_all}" -eq 0 ]; then
+            read_update_prompt "$(_ PROMPT_INSTALL_CACHY_KERNEL)" "Y" reply_cachy
         fi
         if [[ "$reply_cachy" =~ ^[YyJjSsOo]$ ]]; then
             echo -e "\n${BLUE}${BOLD}$(_ UPGRADING_CACHYOS_KERNEL)${RESET}"
-            update_cachyos_kernels
+            # 6A-146: a failed suite never ends the run before the boot chain
+            update_cachyos_kernels || { log_warn "The CachyOS kernel update did not finish; the boot menu is still checked below."; ss_failed+=" cachyos"; }
             kernel_or_driver_changed=1
-            cachy_done=1
+            [[ "${ss_failed}" == *" cachyos"* ]] || cachy_done=1
         fi
     fi
 
-    if command -v flatpak >/dev/null 2>&1; then
-        local flatpak_count
-        flatpak_count=$(get_status_key_count "flatpak_updates")
-        local nvidia_mismatch="false"
-        if [ -f "/var/cache/slacky-update/status.json" ]; then
-            nvidia_mismatch=$(python3 -c "
-import json
-try:
-    with open('/var/cache/slacky-update/status.json') as f:
-        print('true' if json.load(f).get('nvidia_gl_mismatch', False) else 'false')
-except Exception:
-    print('false')
-" 2>/dev/null || echo "false")
-        fi
-
+    if command -v flatpak >/dev/null 2>&1 && ss_continue; then
         if [ "${flatpak_count}" -gt 0 ] || [ "${nvidia_mismatch}" = "true" ]; then
             local reply_flatpak="Y"
-            if [ "${is_headless}" -eq 0 ]; then
-                read -r -p "$(_ PROMPT_UPGRADE_FLATPAK)" reply_flatpak || reply_flatpak="Y"
-                reply_flatpak=${reply_flatpak:-Y}
+            if [ "${is_headless}" -eq 0 ] && [ "${auto_approve_all}" -eq 0 ]; then
+                read_update_prompt "$(_ PROMPT_UPGRADE_FLATPAK)" "Y" reply_flatpak
             fi
             if [[ "$reply_flatpak" =~ ^[YyJjSsOo]$ ]]; then
                 echo -e "\n${BLUE}${BOLD}$(_ UPGRADING_FLATPAK)${RESET}"
-                update_flatpaks
+                update_flatpaks || { log_warn "The Flatpak update did not finish; the other updates continue."; ss_failed+=" flatpak"; }
                 if [ "${nvidia_mismatch}" = "true" ]; then
                     local act_nv
                     act_nv=$(cat /sys/module/nvidia/version 2>/dev/null || head -n 1 /proc/driver/nvidia/version 2>/dev/null | awk '{print $8}' || true)
                     register_flatpak_gl_sync "${act_nv}"
                 fi
-                flatpak_done=1
+                [[ "${ss_failed}" == *" flatpak"* ]] || flatpak_done=1
             fi
         fi
     fi
 
-    if is_sbotools_installed; then
-        local sbo_count
-        sbo_count=$(get_status_key_count "sbo_updates")
+    if is_sbotools_installed && ss_continue; then
         if [ "${sbo_count}" -gt 0 ]; then
             local reply_sbo="Y"
-            if [ "${is_headless}" -eq 0 ]; then
-                read -r -p "$(_ PROMPT_UPGRADE_SBO)" reply_sbo || reply_sbo="Y"
-                reply_sbo=${reply_sbo:-Y}
+            if [ "${is_headless}" -eq 0 ] && [ "${auto_approve_all}" -eq 0 ]; then
+                read_update_prompt "$(_ PROMPT_UPGRADE_SBO)" "Y" reply_sbo
             fi
             if [[ "$reply_sbo" =~ ^[YyJjSsOo]$ ]]; then
-                update_sbo_packages
-                sbo_done=1
+                update_sbo_packages || { log_warn "The SlackBuilds update did not finish; the other updates continue."; ss_failed+=" sbo"; }
+                [[ "${ss_failed}" == *" sbo"* ]] || sbo_done=1
             fi
         fi
     fi
 
-    if command -v sync_all_installed_cachyos_gaming_packages >/dev/null 2>&1; then
-        local gaming_count
-        gaming_count=$(get_status_key_count "cachyos_gaming_updates")
+    if command -v sync_all_installed_cachyos_gaming_packages >/dev/null 2>&1 && ss_continue; then
         if [ "${gaming_count}" -gt 0 ]; then
             local reply_gaming="Y"
-            if [ "${is_headless}" -eq 0 ]; then
-                read -r -p "$(_ PROMPT_UPGRADE_GAMING)" reply_gaming || reply_gaming="Y"
-                reply_gaming=${reply_gaming:-Y}
+            if [ "${is_headless}" -eq 0 ] && [ "${auto_approve_all}" -eq 0 ]; then
+                read_update_prompt "$(_ PROMPT_UPGRADE_GAMING)" "Y" reply_gaming
             fi
             if [[ "$reply_gaming" =~ ^[YyJjSsOo]$ ]]; then
                 echo -e "\n${BLUE}${BOLD}$(_ UPGRADING_GAMING)${RESET}"
-                sync_all_installed_cachyos_gaming_packages
-                gaming_done=1
+                sync_all_installed_cachyos_gaming_packages || { log_warn "Some curated app updates did not finish; the apps you had are kept."; ss_failed+=" gaming"; }
+                [[ "${ss_failed}" == *" gaming"* ]] || gaming_done=1
             fi
         fi
     fi
 
-    if [ -f "${APP_DIR}/gnomes_pacman.py" ]; then
-        local gnomes_count
-        gnomes_count=$(python3 "${APP_DIR}/gnomes_pacman.py" list-updates --count 2>/dev/null || echo "0")
+    if [ -f "${APP_DIR}/gnomes_pacman.py" ] && ss_continue; then
         if [ "${gnomes_count}" -gt 0 ]; then
             local reply_gnomes="Y"
-            if [ "${is_headless}" -eq 0 ]; then
-                read -r -p "$(_ PROMPT_UPGRADE_GNOMES)" reply_gnomes || reply_gnomes="Y"
-                reply_gnomes=${reply_gnomes:-Y}
+            if [ "${is_headless}" -eq 0 ] && [ "${auto_approve_all}" -eq 0 ]; then
+                read_update_prompt "$(_ PROMPT_UPGRADE_GNOMES)" "Y" reply_gnomes
             fi
             if [[ "$reply_gnomes" =~ ^[YyJjSsOo]$ ]]; then
                 echo -e "\n${BLUE}${BOLD}$(_ UPGRADING_GNOMES)${RESET}"
@@ -455,39 +597,48 @@ except Exception:
                 done < <(python3 -c "import sys, json; [print(x['name']) for x in json.loads(sys.argv[1]) if 'name' in x]" "${gnomes_json}" 2>/dev/null || true)
                 if [ ${#g_targets[@]} -gt 0 ]; then
                     if [ -x "${SCRIPT_DIR}/gnomes" ]; then
-                        "${SCRIPT_DIR}/gnomes" -S --yes "${g_targets[@]}"
+                        "${SCRIPT_DIR}/gnomes" -S --yes "${g_targets[@]}" || { log_warn "Some Gnomes app updates did not finish; the apps you had are kept."; ss_failed+=" gnomes"; }
                     elif command -v gnomes >/dev/null 2>&1; then
-                        gnomes -S --yes "${g_targets[@]}"
+                        gnomes -S --yes "${g_targets[@]}" || { log_warn "Some Gnomes app updates did not finish; the apps you had are kept."; ss_failed+=" gnomes"; }
                     else
-                        python3 "${APP_DIR}/gnomes_pacman.py" transmute "${g_targets[@]}" --yes
+                        # 6A-50: private output dir, only packages this run built
+                        local g_out
+                        g_out=$(mktemp -d /tmp/gnomes-out-XXXXXX)
+                        python3 "${APP_DIR}/gnomes_pacman.py" transmute "${g_targets[@]}" --yes --output-dir "${g_out}" \
+                            || { log_warn "Some Gnomes app updates did not finish; the apps you had are kept."; ss_failed+=" gnomes"; }
                         for gt in "${g_targets[@]}"; do
-                            local txz_cand
-                            txz_cand=$(ls -1t /tmp/underpants-"${gt}"-*.txz 2>/dev/null | head -n1 || true)
+                            local txz_cand=""
+                            for f in "${g_out}"/underpants-"${gt}"-*.txz; do
+                                [ -f "${f}" ] || continue
+                                b="${f##*/}"; b="${b%.txz}"
+                                [ "${b%-*-*-*}" = "underpants-${gt}" ] && txz_cand="${f}"
+                            done
                             [ -n "${txz_cand}" ] && [ -f "${txz_cand}" ] && upgradepkg --install-new --reinstall "${txz_cand}" || true
                             for old_cg in /var/log/packages/cachyos-gnome-"${gt}"-*; do
-                                [ -f "${old_cg}" ] && removepkg "$(basename "${old_cg}")" >/dev/null 2>&1 || true
+                                # 6A-41: exact base name only
+                                [ -f "${old_cg}" ] && [ "$(basename "${old_cg%-*-*-*}")" = "cachyos-gnome-${gt}" ] \
+                                    && { removepkg "$(basename "${old_cg}")" >/dev/null 2>&1 || true; }
                             done
                         done
+                        rm -rf "${g_out}"
                     fi
-                    gnomes_done=1
+                    [[ "${ss_failed}" == *" gnomes"* ]] || gnomes_done=1
                 fi
             fi
         fi
     fi
 
     if [ "${HAS_NVIDIA}" = "true" ] && [ "$(has_cachyos_kernels_installed 2>/dev/null || echo false)" != "true" ]; then
-        local nv_count
-        nv_count=$(get_status_key_count "nvidia_driver_updates")
-        if [ "${nv_count}" -gt 0 ]; then
+        # 6A-131: pre-Turing, nouveau or opted-out cards are left as they are (one plain line from the gate)
+        if [ "${nv_count}" -gt 0 ] && [ "${ss_hold_boot}" -eq 0 ] && ss_continue && nvidia_generation_supported; then
             local reply_nv="Y"
-            if [ "${is_headless}" -eq 0 ]; then
-                read -r -p "$(_ PROMPT_UPGRADE_NVIDIA_DRIVER)" reply_nv || reply_nv="Y"
-                reply_nv=${reply_nv:-Y}
+            if [ "${is_headless}" -eq 0 ] && [ "${auto_approve_all}" -eq 0 ]; then
+                read_update_prompt "$(_ PROMPT_UPGRADE_NVIDIA_DRIVER)" "Y" reply_nv
             fi
             if [[ "$reply_nv" =~ ^[YyJjSsOo]$ ]]; then
-                install_nvidia_run_driver "production"
+                install_nvidia_run_driver "production" || { log_warn "The NVIDIA driver update did not finish; the boot menu is still checked below."; ss_failed+=" nvidia"; }
                 kernel_or_driver_changed=1
-                nvidia_done=1
+                [[ "${ss_failed}" == *" nvidia"* ]] || nvidia_done=1
             fi
         fi
     fi
@@ -495,7 +646,7 @@ except Exception:
     k_snap_after=$(get_kernel_driver_snapshot)
     get_full_pkg_snapshot_file "${snap_after_file}"
 
-    boot_snap_after=$(ls -1 /boot/vmlinuz* /var/log/packages/*limine* /var/log/packages/*sbctl* /var/log/packages/*grub* /var/log/packages/*elilo* 2>/dev/null || true)
+    boot_snap_after=$(ls -1 /boot/vmlinuz* /boot/initrd* /boot/limine*.efi /boot/EFI/*/*.efi 2>/dev/null || true)
     if [ "${boot_snap_before}" != "${boot_snap_after}" ]; then
         kernel_or_driver_changed=1
     fi
@@ -503,42 +654,88 @@ except Exception:
         kernel_or_driver_changed=1
     fi
 
+    # 6A-97/6A-99/6A-100: boot orders recorded during the run (images, a new Limine or sbctl, a curated DKMS module)
+    if [ "${#SS_INITRD_ORDERS[@]}" -gt 0 ] || [ "${SS_MENU_ORDER:-0}" = "1" ]; then
+        kernel_or_driver_changed=1
+    fi
+    local ss_dkms_pending=0
+    if [ -f /var/cache/slacky-update/dkms-build-pending ]; then
+        ss_dkms_pending=1
+        kernel_or_driver_changed=1
+    fi
+
+    local ss_chain_skipped=0
+    if [ "${kernel_or_driver_changed}" -eq 1 ] && [ "${ss_boot_unready}" -eq 1 ]; then
+        # 6A-88: never write kernels, initramfs or the menu behind an unmounted /boot; the next run or the hourly check does it
+        ss_mark_if_limine
+        log_warn "The boot menu was not updated because /boot is not mounted. Do not restart until /boot is mounted and you have run: sudo slacky-update --sync-boot"
+        kernel_or_driver_changed=0
+        ss_chain_skipped=1
+        export SLACKY_BOOT_CHAIN_FAILED=1
+    fi
+
+    # 6A-102: G0. The boot-chain step takes the boot lock now; a stop request waits until the step is done
+    local ss_chain_locked=0
     if [ "${kernel_or_driver_changed}" -eq 1 ]; then
+        SS_BOOT_COMMIT=1
+        if acquire_boot_lock; then
+            ss_chain_locked=1
+        else
+            ss_mark_if_limine
+            SLACKY_BOOT_CHAIN_FAILED=1
+        fi
+    fi
+
+    if [ "${ss_chain_locked}" -eq 1 ]; then
+        ss_tx_mark started-boot-chain
         local active_kver
         active_kver=$(uname -r)
+        # 6A-98: this commit builds the menu from the kernels that stay; the old ones are removed after it (F1)
+        export SS_KEEP_SET_MENU=1
 
         echo ""
         log_info "⚡ Post-Upgrade Hardening & Bootloader Matrix:"
 
+        # 6A-100: a curated DKMS module that was only registered during the run is built once here, before the images
+        if [ "${ss_dkms_pending}" -eq 1 ] && command -v build_dkms_modules_for_all_kernels >/dev/null 2>&1; then
+            build_dkms_modules_for_all_kernels >/dev/null 2>&1 || true
+            sudo rm -f /var/cache/slacky-update/dkms-build-pending 2>/dev/null || true
+        fi
+
         # [1/5] NVIDIA Driver & DKMS Modules
-        local nv_status="Up to date"
-        if [ "${HAS_NVIDIA}" = "true" ] && [ "$(has_cachyos_kernels_installed 2>/dev/null || echo false)" = "true" ]; then
+        # 6A-44: every status line reports the real result (was always green, with a hard-coded fallback version)
+        local nv_status="Up to date" nv_color="${GREEN}"
+        if [ "${HAS_NVIDIA}" = "true" ] && ! nvidia_generation_supported >/dev/null 2>&1; then
+            # 6A-131: not managed by slacky-update (older than Turing, nouveau, or switched off by the user)
+            nv_status="Left as it is (not managed by slacky-update)"; nv_color="${YELLOW}"
+        elif [ "${HAS_NVIDIA}" = "true" ] && [ "$(has_cachyos_kernels_installed 2>/dev/null || echo false)" = "true" ]; then
             if command -v ensure_cachyos_nvidia_duties >/dev/null 2>&1; then
-                ensure_cachyos_nvidia_duties >/dev/null 2>&1 || true
-                local cachy_nv_ver="615.71.09"
+                local cachy_nv_ver=""
                 if ls /var/log/packages/cachyos-nvidia-utils-* 1>/dev/null 2>&1; then
-                    cachy_nv_ver=$(basename "$(ls /var/log/packages/cachyos-nvidia-utils-* 2>/dev/null | head -n 1)" | sed -E 's/cachyos-nvidia-utils-([0-9]+\.[0-9]+(\.[0-9]+)?).*/\1/' || echo "615.71.09")
+                    cachy_nv_ver=$(basename "$(ls /var/log/packages/cachyos-nvidia-utils-* 2>/dev/null | head -n 1)" | sed -E 's/cachyos-nvidia-utils-([0-9]+\.[0-9]+(\.[0-9]+)?).*/\1/' || true)
                 fi
-                nv_status="Up to date (v${cachy_nv_ver})"
+                if ensure_cachyos_nvidia_duties >/dev/null 2>&1; then
+                    nv_status="Up to date${cachy_nv_ver:+ (v${cachy_nv_ver})}"
+                else
+                    nv_status="Could not confirm the graphics driver for every kernel (see the log)"; nv_color="${YELLOW}"
+                fi
             fi
         elif [ "${HAS_NVIDIA}" = "true" ]; then
-            build_nvidia_modules "${active_kver}" >/dev/null 2>&1 || true
-            nv_status="Synchronized for ${active_kver}"
+            # 6A-133 (M6): every kept kernel, not only the running one
+            if build_nvidia_modules "ALL" >/dev/null 2>&1; then
+                nv_status="Synchronized for every kernel"
+            else
+                nv_status="FAILED for at least one kernel - the screen may stay black on it (see the log)"; nv_color="${RED}"
+            fi
         else
             nv_status="Up to date (Non-NVIDIA)"
         fi
-        echo -e "  \033[1;36m[1/5]\033[0m \033[1mNVIDIA Driver & DKMS Modules\033[0m : ${GREEN}${nv_status}${RESET}"
+        echo -e "  \033[1;36m[1/5]\033[0m \033[1mNVIDIA Driver & DKMS Modules\033[0m : ${nv_color}${nv_status}${RESET}"
 
-        # Clean obsolete kernels silently
-        if command -v purge_old_slackware_kernels >/dev/null 2>&1; then
-            purge_old_slackware_kernels --no-sync >/dev/null 2>&1 || true
-        fi
-        if command -v purge_old_cachyos_kernels >/dev/null 2>&1; then
-            purge_old_cachyos_kernels --no-sync >/dev/null 2>&1 || true
-        fi
+        # 6A-98: obsolete kernels are no longer removed here (before the new menu); see F1 below
 
         # [2/5] Secure Boot MOK Signing
-        local mok_status="Verified signed with active MOK"
+        local mok_status="Skipped"
         if command -v enforce_secure_boot_armor >/dev/null 2>&1; then
             local mok_out
             mok_out=$(enforce_secure_boot_armor --pipeline 2>/dev/null || true)
@@ -546,47 +743,116 @@ except Exception:
                 mok_status="${mok_out}"
             fi
         fi
-        echo -e "  \033[1;36m[2/5]\033[0m \033[1mSecure Boot MOK Signing\033[0m      : ${GREEN}${mok_status}${RESET}"
+        local mok_color="${GREEN}"
+        case "${mok_status}" in "Could not sign"*) mok_color="${YELLOW}" ;; esac
+        echo -e "  \033[1;36m[2/5]\033[0m \033[1mSecure Boot MOK Signing\033[0m      : ${mok_color}${mok_status}${RESET}"
 
-        # [3/5] Dracut Initramfs Generation
+        # [3/5] Dracut Initramfs Generation (prints its own status line; 6A-44: a failure is shown in red there)
         if command -v generate_kernel_initramfs >/dev/null 2>&1; then
-            generate_kernel_initramfs "TARGETED_PIPELINE"
+            generate_kernel_initramfs "TARGETED_PIPELINE" || true
         fi
+        # 6A-97: the orders recorded during the run are now built (once per kernel)
+        SS_INITRD_ORDERS=()
 
         # [4/5] Secure Boot Kernel & Bootloader Pre-Signing (sbctl)
-        local sb_status="Skipped (sbctl not active)"
-        if command -v sign_kernel_binaries_sbctl >/dev/null 2>&1; then
-            sign_kernel_binaries_sbctl >/dev/null 2>&1 || true
-            sb_status="Signed kernel binaries & verified Secure Boot state"
+        local sb_status="Skipped (sbctl not active)" sb_color="${GREEN}"
+        if command -v sign_kernel_binaries_sbctl >/dev/null 2>&1 && command -v is_sbctl_keys_configured >/dev/null 2>&1 \
+            && is_sbctl_keys_configured; then
+            if sign_kernel_binaries_sbctl >/dev/null 2>&1; then
+                sb_status="Signed kernel binaries & verified Secure Boot state"
+            else
+                sb_status="Some kernels could not be signed (see the log)"; sb_color="${RED}"
+            fi
         fi
-        echo -e "  \033[1;36m[4/5]\033[0m \033[1mSecure Boot Kernel Signing\033[0m    : ${GREEN}${sb_status}${RESET}"
+        echo -e "  \033[1;36m[4/5]\033[0m \033[1mSecure Boot Kernel Signing\033[0m    : ${sb_color}${sb_status}${RESET}"
 
         # [5/5] Limine Config, BLAKE2B Hash Matrix & Bootloader Reseal
         local lim_installed=false
         if command -v is_limine_installed >/dev/null 2>&1 && [ "$(is_limine_installed)" = "true" ]; then
             lim_installed=true
+            # 6A-8b: report the real result (was green "BLAKE2B enrolled & EFI signed" regardless)
+            local seal_ok=1
+            # 6A-8e: always regenerate + enroll here. An earlier seal in this run (SLACKY_LIMINE_SEALED) is stale once
+            # [3/5] rewrote initramfs images and [4/5] re-signed the kernels; skipping left entries with wrong hashes.
             if command -v generate_limine_configuration >/dev/null 2>&1; then
-                generate_limine_configuration >/dev/null 2>&1 || true
+                generate_limine_configuration >/dev/null 2>&1 || seal_ok=0
             fi
-            if command -v enroll_and_sign_limine >/dev/null 2>&1; then
-                enroll_and_sign_limine >/dev/null 2>&1 || true
+            if [ "${seal_ok}" -eq 1 ] && command -v enroll_and_sign_limine >/dev/null 2>&1; then
+                enroll_and_sign_limine >/dev/null 2>&1 || seal_ok=0
             fi
-            echo -e "  \033[1;36m[5/5]\033[0m \033[1mLimine Matrix & Boot Sync\033[0m     : ${GREEN}BLAKE2B enrolled & EFI signed${RESET}"
+            if [ "${seal_ok}" -eq 1 ] && command -v verify_limine_seal >/dev/null 2>&1; then
+                verify_limine_seal || seal_ok=0
+            fi
+            if [ "${seal_ok}" -eq 1 ]; then
+                echo -e "  \033[1;36m[5/5]\033[0m \033[1mLimine Matrix & Boot Sync\033[0m     : ${GREEN}BLAKE2B enrolled & EFI signed${RESET}"
+            else
+                echo -e "  \033[1;36m[5/5]\033[0m \033[1mLimine Matrix & Boot Sync\033[0m     : ${RED}FAILED - do not reboot; run: sudo slacky-update --sync-boot${RESET}"
+                # SpiderSense phase 1 (spec 9): no restart offer, exit code 30
+                SLACKY_BOOT_CHAIN_FAILED=1
+            fi
         else
             echo -e "  \033[1;36m[5/5]\033[0m \033[1mLimine Matrix & Boot Sync\033[0m     : ${YELLOW}Skipped (Limine not active)${RESET}"
+            command -v limine_unmanaged_notice >/dev/null 2>&1 && limine_unmanaged_notice || true   # 6A-122
+            # 6A-133: LILO/ELILO are left alone; after a kernel change the user is told what to run
+            [ "${kernel_or_driver_changed}" -eq 1 ] && command -v print_boot_loader_reminder >/dev/null 2>&1 && print_boot_loader_reminder || true
         fi
+        # 6A-98 F1: remove obsolete kernels only now. With Limine only after the new menu was enrolled and verified
+        # (a failed seal keeps them, the live menu may still list them); without Limine before the GRUB scan as before.
+        # 6A-122 (verifier MAJOR-3): a Limine menu that slacky-update does not manage is never rewritten, so its kernels
+        # are never removed underneath it
+        local ss_unmanaged_menu=0
+        if [ "${lim_installed}" != "true" ] && { [ -f /etc/default/limine ] || sudo test -f /boot/limine.conf 2>/dev/null; }; then
+            ss_unmanaged_menu=1
+        fi
+        if [ "${ss_unmanaged_menu}" -eq 0 ] && { [ "${lim_installed}" != "true" ] || [ "${SLACKY_BOOT_CHAIN_FAILED:-0}" != "1" ]; }; then
+            if command -v purge_old_slackware_kernels >/dev/null 2>&1; then
+                purge_old_slackware_kernels --no-sync >/dev/null 2>&1 || true
+            fi
+            if command -v purge_old_cachyos_kernels >/dev/null 2>&1; then
+                purge_old_cachyos_kernels --no-sync >/dev/null 2>&1 || true
+            fi
+        fi
+        unset SS_KEEP_SET_MENU || true
         if command -v sync_grub_configuration >/dev/null 2>&1; then
             sync_grub_configuration >/dev/null 2>&1 || true
         fi
-    else
+        # 6A-102: F2, the boot lock is released before the post snapshot (snapper's Limine plugin needs it)
+        release_boot_lock
+    elif [ "${kernel_or_driver_changed}" -eq 0 ] && [ "${ss_chain_skipped}" -eq 0 ]; then
         log_info "No kernel or driver changes detected. Skipping initramfs generation and signing."
+    elif [ "${ss_chain_skipped}" -eq 0 ]; then
+        # 6A-102: the lock wait timed out; prompt_reboot_or_close prints the "do not restart" line and exits 30
+        log_warn "Another program was still changing the startup files, so this update could not finish them."
     fi
+    SS_BOOT_COMMIT=0
 
-    rm -f /tmp/slacky-update-running.lock 2>/dev/null || true
+    # 6A-93: everything above finished (a failed boot chain is reported separately and keeps its own marker)
+    ss_tx_mark done
+    ss_disarm_abort_handler
+    end_atomic_transaction
+    stop_sudo_keepalive
     unset DEFER_BOOT_SYNC || true
     unset SLACKY_UPDATE_RUNNING || true
 
+    ss_wait_background_check   # 6A-150: the run's own background check first, then what this run updated
     reconcile_post_update_status "${slack_done}" "${cachy_done}" "${flatpak_done}" "${sbo_done}" "${gaming_done}" "${gnomes_done}" "${nvidia_done}"
+
+    # SpiderSense phase 1: post snapshot paired with the pre snapshot ("undo this update")
+    create_post_update_snapshot
+
+    # 6A-102: a stop request ends the run here (the boot chain, if needed, has been completed above)
+    if [ "${SS_ABORT:-0}" -gt 0 ]; then
+        if [ "${SLACKY_BOOT_CHAIN_FAILED:-0}" = "1" ]; then
+            prompt_reboot_or_close "${snap_before_file}" "${snap_after_file}" "${kernel_or_driver_changed}"
+        fi
+        rm -f "${snap_before_file}" "${snap_after_file}" 2>/dev/null || true
+        if [ "${kernel_or_driver_changed}" -eq 1 ]; then
+            echo -e "\n${YELLOW}The update was stopped early. The startup files are complete; run slacky-update again to install the rest.${RESET}"
+        else
+            echo -e "\n${YELLOW}The update was stopped early. The startup files were not changed; run slacky-update again to install the rest.${RESET}"
+        fi
+        exit 130
+    fi
 
     python3 -c "
 import os, json, time
@@ -604,7 +870,11 @@ except Exception:
     pass
 " 2>/dev/null || true
 
-    run_post_update_smoke_test
+    if [ "${slack_done}" -eq 2 ]; then
+        run_post_update_smoke_test "SKIPPED_MIRROR_ERROR"
+    else
+        run_post_update_smoke_test
+    fi
 
     if [ "${is_headless}" -eq 0 ] && [ -f "${APP_DIR}/gnomes_pacman.py" ]; then
         local gnomes_cache_sz gnomes_cache_human
@@ -631,14 +901,31 @@ else:
 " 2>/dev/null || echo "0 MB")
             echo ""
             local reply_clean="n"
-            read -r -p "🩲 $(_ PROMPT_CLEAR_GNOMES_CACHE "${gnomes_cache_human}") " reply_clean || reply_clean="n"
+            # 6A-60: pass the size as the {0} argument the message expects (was printed raw)
+            local clean_prompt
+            clean_prompt="$(_ PROMPT_CLEAR_GNOMES_CACHE)"
+            clean_prompt="${clean_prompt//\{0\}/${gnomes_cache_human}}"
+            read_update_prompt "🩲 ${clean_prompt} " "n" reply_clean
             if [[ "$reply_clean" =~ ^[YyJjSsOo]$ ]]; then
                 python3 "${APP_DIR}/gnomes_pacman.py" clean-cache --all
             fi
         fi
     fi
 
-    echo -e "\n${GREEN}${BOLD}$(_ UPGRADE_COMPLETE_SYSTEM)${RESET}"
+    # 9C: after the update one sentence when installed packages are damaged (silent when clean; detect only)
+    if [ "${slack_done}" -ne 0 ]; then
+        local heal_helper_post
+        if heal_helper_post=$(slacky_find_helper slacky_heal.py); then
+            python3 -I "${heal_helper_post}" post || true
+        fi
+    fi
+
+    if [ -n "${ss_failed}" ]; then
+        # 6A-146: honest end; the unfinished parts stay listed and are offered again next time
+        log_warn "Not everything was updated (${ss_failed# }); those updates stay listed and are tried again next time."
+    else
+        echo -e "\n${GREEN}${BOLD}$(_ UPGRADE_COMPLETE_SYSTEM)${RESET}"
+    fi
 
     prompt_reboot_or_close "${snap_before_file}" "${snap_after_file}" "${kernel_or_driver_changed}"
 }
@@ -663,33 +950,41 @@ manage_cachyos_kernel_interactive() {
     local installed_flavors
     installed_flavors=$(get_installed_cachyos_flavors)
 
-    while true; do
-        echo ""
-        echo -e "${CYAN}============================================================${RESET}"
-        echo -e "${YELLOW}${BOLD}$(_ MENU_KERNEL)${RESET}"
-        echo -e "${CYAN}============================================================${RESET}"
-        
-        if [ -n "${installed_flavors}" ]; then
-            echo -e "${BOLD}Installed CachyOS Kernel Flavors:${RESET}"
-            for flv in ${installed_flavors}; do
-                local cur_ver
-                cur_ver=$(get_installed_cachyos_flavor_version "${flv}")
-                echo -e "  • \033[1;32m${flv}\033[0m: v${cur_ver}"
-            done
-        else
-            echo -e "${YELLOW}$(_ KERNEL_NOT_INSTALLED)${RESET}"
-        fi
+    local tui_py="${SCRIPT_DIR}/../lib/slacky_tui.py"
+    [ ! -f "${tui_py}" ] && [ -f "/usr/share/slacky-update/lib/slacky_tui.py" ] && tui_py="/usr/share/slacky-update/lib/slacky_tui.py"
 
-        echo ""
-        echo -e "${BOLD}Actions:${RESET}"
-        echo -e "  1. $(_ CACHY_MENU_UPGRADE_INSTALLED | sed -E 's/^[0-9]+\.\s*//')"
-        echo -e "  2. $(_ CACHY_MENU_PICKER | sed -E 's/^[0-9]+\.\s*//')"
-        echo -e "  3. $(_ CACHY_MENU_MANAGE_KERNELS | sed -E 's/^[0-9]+\.\s*//')"
-        echo -e "  4. $(_ CACHY_MENU_REBUILD_ACTIVE active="${active_kver}" | sed -E 's/^[0-9]+\.\s*//')"
-        echo -e "  5. $(_ MOK_OPTION_RETURN | sed -E 's/^[0-9]+\.\s*//')"
-        echo ""
-        echo -n "$(_ SELECT_OPERATION_RANGE range="1-5") "
-        read -r kchoice || kchoice="5"
+    while true; do
+        local kchoice=""
+        if [ -f "${tui_py}" ] && command -v python3 >/dev/null 2>&1 && [ -t 0 ]; then
+            kchoice=$(python3 "${tui_py}" --mode kernel-main)
+        else
+            echo ""
+            echo -e "${CYAN}============================================================${RESET}"
+            echo -e "${YELLOW}${BOLD}$(_ MENU_KERNEL)${RESET}"
+            echo -e "${CYAN}============================================================${RESET}"
+            
+            if [ -n "${installed_flavors}" ]; then
+                echo -e "${BOLD}Installed CachyOS Kernel Flavors:${RESET}"
+                for flv in ${installed_flavors}; do
+                    local cur_ver
+                    cur_ver=$(get_installed_cachyos_flavor_version "${flv}")
+                    echo -e "  • \033[1;32m${flv}\033[0m: v${cur_ver}"
+                done
+            else
+                echo -e "${YELLOW}$(_ KERNEL_NOT_INSTALLED)${RESET}"
+            fi
+
+            echo ""
+            echo -e "${BOLD}Actions:${RESET}"
+            echo -e "  1. $(_ CACHY_MENU_UPGRADE_INSTALLED | sed -E 's/^[0-9]+\.\s*//')"
+            echo -e "  2. $(_ CACHY_MENU_PICKER | sed -E 's/^[0-9]+\.\s*//')"
+            echo -e "  3. $(_ CACHY_MENU_MANAGE_KERNELS | sed -E 's/^[0-9]+\.\s*//')"
+            echo -e "  4. $(_ CACHY_MENU_REBUILD_ACTIVE active="${active_kver}" | sed -E 's/^[0-9]+\.\s*//')"
+            echo -e "  5. $(_ MOK_OPTION_RETURN | sed -E 's/^[0-9]+\.\s*//')"
+            echo ""
+            echo -n "$(_ SELECT_OPERATION_RANGE range="1-5") "
+            read -r kchoice || kchoice="5"
+        fi
 
         case "${kchoice}" in
             1)
@@ -741,24 +1036,31 @@ manage_nvidia_interactive() {
     gpu_gen=$(detect_nvidia_gpu)
     log_info "Detected GPU Architecture: ${gpu_gen}"
 
+    local tui_py="${SCRIPT_DIR}/../lib/slacky_tui.py"
+    [ ! -f "${tui_py}" ] && [ -f "/usr/share/slacky-update/lib/slacky_tui.py" ] && tui_py="/usr/share/slacky-update/lib/slacky_tui.py"
+
     while true; do
-        echo ""
-        echo -e "${BLUE}${BOLD}============================================================${RESET}"
-        echo -e "${BLUE}${BOLD}$(_ MENU_NVIDIA_CACHY_TITLE)${RESET}"
-        echo -e "${BLUE}${BOLD}============================================================${RESET}"
-        echo -e "  \033[1;33m1.\033[0m $(_ NVIDIA_CACHYOS_MASTER_SYNC)"
-        echo -e "  \033[1;33m2.\033[0m $(_ NVIDIA_OPTION_REBUILD)"
-        echo -e "  \033[1;33m3.\033[0m $(_ NVIDIA_OPTION_LEGACY_RUN)"
-        echo -e "  \033[1;33m4.\033[0m $(_ NVIDIA_OPTION_RETURN)"
-        echo ""
-        echo -n "$(_ SELECT_OPERATION_RANGE range="1-4") "
-        local n_choice
-        read -r n_choice || n_choice="4"
+        local n_choice=""
+        if [ -f "${tui_py}" ] && command -v python3 >/dev/null 2>&1 && [ -t 0 ]; then
+            n_choice=$(python3 "${tui_py}" --mode nvidia-main || true)
+        else
+            echo ""
+            echo -e "${BLUE}${BOLD}============================================================${RESET}"
+            echo -e "${BLUE}${BOLD}$(_ MENU_NVIDIA_CACHY_TITLE)${RESET}"
+            echo -e "${BLUE}${BOLD}============================================================${RESET}"
+            echo -e "  \033[1;33m1.\033[0m $(_ NVIDIA_CACHYOS_MASTER_SYNC)"
+            echo -e "  \033[1;33m2.\033[0m $(_ NVIDIA_OPTION_REBUILD)"
+            echo -e "  \033[1;33m3.\033[0m $(_ NVIDIA_OPTION_LEGACY_RUN)"
+            echo -e "  \033[1;33m4.\033[0m $(_ NVIDIA_OPTION_RETURN)"
+            echo ""
+            echo -n "$(_ SELECT_OPERATION_RANGE range="1-4") "
+            read -r n_choice || n_choice="4"
+        fi
 
         case "${n_choice}" in
             1)
                 validate_privileges
-                INTERACTIVE_NVIDIA=1 ensure_cachyos_nvidia_duties
+                INTERACTIVE_NVIDIA=1 ensure_cachyos_nvidia_duties || true   # 6A-132: honest non-zero result, already reported
                 echo ""
                 read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
                 ;;
@@ -775,7 +1077,7 @@ manage_nvidia_interactive() {
             3)
                 manage_legacy_nvidia_run_interactive
                 ;;
-            4)
+            4|[Qq])
                 return 0
                 ;;
             *)
@@ -799,33 +1101,50 @@ interactive_menu() {
         local has_cachy
         has_cachy=$(has_cachyos_kernels_installed 2>/dev/null || echo "false")
 
-        echo ""
-        echo -e "${BLUE}${BOLD}Slacky-Update (v${CURRENT_VERSION} '${RELEASE_CODENAME}') [Pre-Release / Early Access]${RESET}"
-        echo -e "${BLUE}Slackware Core Update & High-Performance Modernization Engine${RESET}"
-        check_slacky_update_self_update "${CURRENT_VERSION}"
-        echo ""
-        run_preflight_check 0
-        display_pending_status
-        echo -e "${BOLD}$(_ CLI_ACTIONS_HEADER)${RESET}"
+        local tui_py="${APP_DIR:-}/slacky_tui.py"
+        [ ! -f "${tui_py}" ] && [ -f "/usr/share/slacky-update/lib/slacky_tui.py" ] && tui_py="/usr/share/slacky-update/lib/slacky_tui.py"
+
+        local choice=""
+        local use_tui=false
+        if [ -f "${tui_py}" ] && command -v python3 >/dev/null 2>&1 && [ -t 0 ]; then
+            use_tui=true
+            local gpu_mode="intel"
+            if [ "${HAS_NVIDIA:-false}" = "true" ]; then
+                gpu_mode="nvidia"
+            elif [ "${HAS_AMD:-false}" = "true" ]; then
+                gpu_mode="amd"
+            fi
+            choice=$(python3 "${tui_py}" --mode main --gpu "${gpu_mode}")
+        fi
 
         if [ "${HAS_NVIDIA}" = "true" ]; then
-            echo -e "  $(_ MENU_FULL_UPDATE)"
-            echo -e "  $(_ MENU_KERNEL)"
-            if [ "${has_cachy}" = "true" ]; then
-                echo -e "  $(_ MENU_NVIDIA_CACHY)"
-            else
-                echo -e "  $(_ MENU_NVIDIA)"
+            if [ "${use_tui}" = "false" ]; then
+                echo ""
+                echo -e "${BLUE}${BOLD}Slacky-Update (v${CURRENT_VERSION} '${RELEASE_CODENAME}') [Pre-Release / Early Access]${RESET}"
+                echo -e "${BLUE}Slackware Core Update & High-Performance Modernization Engine${RESET}"
+                check_slacky_update_self_update "${CURRENT_VERSION}"
+                echo ""
+                run_preflight_check 0
+                display_pending_status
+                echo -e "${BOLD}$(_ CLI_ACTIONS_HEADER)${RESET}"
+
+                echo -e "  $(_ MENU_FULL_UPDATE)"
+                echo -e "  $(_ MENU_KERNEL)"
+                if [ "${has_cachy}" = "true" ]; then
+                    echo -e "  $(_ MENU_NVIDIA_CACHY)"
+                else
+                    echo -e "  $(_ MENU_NVIDIA)"
+                fi
+                echo -e "  4. $(_ MENU_GAMING | sed -E 's/^[0-9]+\.\s*//')"
+                echo -e "  5. $(_ MENU_CLEAN | sed -E 's/^[0-9]+\.\s*//')"
+                echo -e "  6. \033[1;36m$(_ MENU_LIMINE | sed -E 's/^[0-9]+\.\s*//')\033[0m"
+                echo -e "  7. $(_ MENU_ARMOR | sed -E 's/^[0-9]+\.\s*//')"
+                echo -e "  8. \033[1;32m$(_ MENU_FIELD_GUIDE | sed -E 's/^[0-9]+\.\s*//')\033[0m"
+                echo -e "  9. $(_ MENU_EXIT | sed -E 's/^[0-9]+\.\s*//')"
+                echo ""
+                echo -n "$(_ SELECT_OPERATION_RANGE range="1-9")"
+                read -r choice || choice="9"
             fi
-            echo -e "  4. $(_ MENU_GAMING | sed -E 's/^[0-9]+\.\s*//')"
-            echo -e "  5. $(_ MENU_CLEAN | sed -E 's/^[0-9]+\.\s*//')"
-            echo -e "  6. \033[1;36m$(_ MENU_LIMINE | sed -E 's/^[0-9]+\.\s*//')\033[0m"
-            echo -e "  7. $(_ MENU_ARMOR | sed -E 's/^[0-9]+\.\s*//')"
-            echo -e "  8. \033[1;32m$(_ MENU_FIELD_GUIDE | sed -E 's/^[0-9]+\.\s*//')\033[0m"
-            echo -e "  9. $(_ MENU_EXIT | sed -E 's/^[0-9]+\.\s*//')"
-            echo ""
-            echo -n "$(_ SELECT_OPERATION_RANGE range="1-9")"
-            local choice
-            read -r choice || choice="9"
 
             case "${choice}" in
                 1)
@@ -834,17 +1153,11 @@ interactive_menu() {
                     ;;
                 2)
                     echo ""
-                    ensure_dkms_installed_interactive
                     manage_cachyos_kernel_interactive
-                    echo ""
-                    read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
                     ;;
                 3)
                     echo ""
-                    ensure_dkms_installed_interactive
                     manage_nvidia_interactive
-                    echo ""
-                    read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
                     ;;
                 4)
                     echo ""
@@ -852,9 +1165,7 @@ interactive_menu() {
                     ;;
                 5)
                     echo ""
-                    clean_system_cache_and_orphans
-                    echo ""
-                    read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                    manage_system_clean_interactive
                     ;;
                 6)
                     echo ""
@@ -865,8 +1176,6 @@ interactive_menu() {
                 7)
                     echo ""
                     manage_secureboot_interactive
-                    echo ""
-                    read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
                     ;;
                 8)
                     echo ""
@@ -884,19 +1193,20 @@ interactive_menu() {
                     ;;
             esac
         elif [ "${HAS_AMD}" = "true" ]; then
-            echo -e "  $(_ MENU_FULL_UPDATE)"
-            echo -e "  $(_ MENU_KERNEL)"
-            echo -e "  3. $(_ MENU_AMD_ROCM | sed -E 's/^[0-9]+\.\s*//')"
-            echo -e "  4. $(_ MENU_GAMING | sed -E 's/^[0-9]+\.\s*//')"
-            echo -e "  5. $(_ MENU_CLEAN | sed -E 's/^[0-9]+\.\s*//')"
-            echo -e "  6. \033[1;36m$(_ MENU_LIMINE | sed -E 's/^[0-9]+\.\s*//')\033[0m"
-            echo -e "  7. $(_ MENU_ARMOR | sed -E 's/^[0-9]+\.\s*//')"
-            echo -e "  8. \033[1;32m$(_ MENU_FIELD_GUIDE | sed -E 's/^[0-9]+\.\s*//')\033[0m"
-            echo -e "  9. $(_ MENU_EXIT | sed -E 's/^[0-9]+\.\s*//')"
-            echo ""
-            echo -n "$(_ SELECT_OPERATION_RANGE range="1-9")"
-            local choice
-            read -r choice || choice="9"
+            if [ "${use_tui}" = "false" ]; then
+                echo -e "  $(_ MENU_FULL_UPDATE)"
+                echo -e "  $(_ MENU_KERNEL)"
+                echo -e "  3. $(_ MENU_AMD_ROCM | sed -E 's/^[0-9]+\.\s*//')"
+                echo -e "  4. $(_ MENU_GAMING | sed -E 's/^[0-9]+\.\s*//')"
+                echo -e "  5. $(_ MENU_CLEAN | sed -E 's/^[0-9]+\.\s*//')"
+                echo -e "  6. \033[1;36m$(_ MENU_LIMINE | sed -E 's/^[0-9]+\.\s*//')\033[0m"
+                echo -e "  7. $(_ MENU_ARMOR | sed -E 's/^[0-9]+\.\s*//')"
+                echo -e "  8. \033[1;32m$(_ MENU_FIELD_GUIDE | sed -E 's/^[0-9]+\.\s*//')\033[0m"
+                echo -e "  9. $(_ MENU_EXIT | sed -E 's/^[0-9]+\.\s*//')"
+                echo ""
+                echo -n "$(_ SELECT_OPERATION_RANGE range="1-9")"
+                read -r choice || choice="9"
+            fi
 
             case "${choice}" in
                 1)
@@ -906,8 +1216,6 @@ interactive_menu() {
                 2)
                     echo ""
                     manage_cachyos_kernel_interactive
-                    echo ""
-                    read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
                     ;;
                 3)
                     echo ""
@@ -925,9 +1233,7 @@ interactive_menu() {
                     ;;
                 5)
                     echo ""
-                    clean_system_cache_and_orphans
-                    echo ""
-                    read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                    manage_system_clean_interactive
                     ;;
                 6)
                     echo ""
@@ -938,8 +1244,6 @@ interactive_menu() {
                 7)
                     echo ""
                     manage_secureboot_interactive
-                    echo ""
-                    read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
                     ;;
                 8)
                     echo ""
@@ -958,18 +1262,19 @@ interactive_menu() {
             esac
         else
             # Pure Intel / Headless Menu (No dedicated GPU menu)
-            echo -e "  1. $(_ MENU_FULL_UPDATE | sed -E 's/^[0-9]+\.\s*//')"
-            echo -e "  2. $(_ MENU_KERNEL | sed -E 's/^[0-9]+\.\s*//')"
-            echo -e "  3. $(_ MENU_GAMING | sed -E 's/^[0-9]+\.\s*//')"
-            echo -e "  4. $(_ MENU_CLEAN | sed -E 's/^[0-9]+\.\s*//')"
-            echo -e "  5. \033[1;36m$(_ MENU_LIMINE | sed -E 's/^[0-9]+\.\s*//')\033[0m"
-            echo -e "  6. $(_ MENU_ARMOR | sed -E 's/^[0-9]+\.\s*//')"
-            echo -e "  7. \033[1;32m$(_ MENU_FIELD_GUIDE | sed -E 's/^[0-9]+\.\s*//')\033[0m"
-            echo -e "  8. $(_ MENU_EXIT | sed -E 's/^[0-9]+\.\s*//')"
-            echo ""
-            echo -n "$(_ SELECT_OPERATION_RANGE range="1-8")"
-            local choice
-            read -r choice || choice="8"
+            if [ "${use_tui}" = "false" ]; then
+                echo -e "  1. $(_ MENU_FULL_UPDATE | sed -E 's/^[0-9]+\.\s*//')"
+                echo -e "  2. $(_ MENU_KERNEL | sed -E 's/^[0-9]+\.\s*//')"
+                echo -e "  3. $(_ MENU_GAMING | sed -E 's/^[0-9]+\.\s*//')"
+                echo -e "  4. $(_ MENU_CLEAN | sed -E 's/^[0-9]+\.\s*//')"
+                echo -e "  5. \033[1;36m$(_ MENU_LIMINE | sed -E 's/^[0-9]+\.\s*//')\033[0m"
+                echo -e "  6. $(_ MENU_ARMOR | sed -E 's/^[0-9]+\.\s*//')"
+                echo -e "  7. \033[1;32m$(_ MENU_FIELD_GUIDE | sed -E 's/^[0-9]+\.\s*//')\033[0m"
+                echo -e "  8. $(_ MENU_EXIT | sed -E 's/^[0-9]+\.\s*//')"
+                echo ""
+                echo -n "$(_ SELECT_OPERATION_RANGE range="1-8")"
+                read -r choice || choice="8"
+            fi
 
             case "${choice}" in
                 1)
@@ -979,8 +1284,6 @@ interactive_menu() {
                 2)
                     echo ""
                     manage_cachyos_kernel_interactive
-                    echo ""
-                    read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
                     ;;
                 3)
                     echo ""
@@ -988,9 +1291,7 @@ interactive_menu() {
                     ;;
                 4)
                     echo ""
-                    clean_system_cache_and_orphans
-                    echo ""
-                    read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+                    manage_system_clean_interactive
                     ;;
                 5)
                     echo ""
@@ -1001,8 +1302,6 @@ interactive_menu() {
                 6)
                     echo ""
                     manage_secureboot_interactive
-                    echo ""
-                    read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
                     ;;
                 7)
                     echo ""
@@ -1030,6 +1329,10 @@ if [ "${1:-}" = "--non-interactive" ] || [ "${1:-}" = "-y" ]; then
 elif [ "${1:-}" = "--check" ]; then
     run_preflight_check 1
     display_pending_status
+    # 6A-202: a family at risk is named in one sentence, at most once per 7 days (silent otherwise)
+    if command -v slacky_sentinel_alerts >/dev/null 2>&1; then
+        slacky_sentinel_alerts || true
+    fi
 elif [ "${1:-}" = "--rank-mirrors" ] || [ "${1:-}" = "--mirrors" ] || [ "${1:-}" = "-M" ]; then
     INTERACTIVE_SESSION=1
     rank_slackware_mirrors_interactive
@@ -1107,6 +1410,7 @@ elif [ "${1:-}" = "--gnomes-data" ] || [ "${1:-}" = "--gaming-json" ]; then
 elif [ "${1:-}" = "--gnomes-deploy" ] || [ "${1:-}" = "--gaming-deploy" ]; then
     shift
     validate_privileges
+    acquire_run_lock || exit 1   # 6A-149: never beside a running update or another deploy
     if [ $# -eq 1 ]; then
         transmute_and_deploy_gaming_pkg "$1"
     else
@@ -1116,15 +1420,36 @@ elif [ "${1:-}" = "--gnomes-deploy" ] || [ "${1:-}" = "--gaming-deploy" ]; then
 elif [ "${1:-}" = "--gnomes-uninstall" ] || [ "${1:-}" = "--gaming-uninstall" ]; then
     shift
     validate_privileges
+    acquire_run_lock || exit 1   # 6A-149
     uninstall_cachyos_gaming_pkg "$1"
     exit $?
 elif [ "${1:-}" = "--heal-multilib" ] || [ "${1:-}" = "-m" ]; then
     validate_privileges
     heal_multilib_subsystem
     run_post_update_smoke_test
+elif [ "${1:-}" = "--heal-check" ]; then
+    # 9B: read only; silent when nothing is damaged; exit 51 with damage; never repairs, never asks for sudo
+    if heal_helper=$(slacky_find_helper slacky_heal.py); then
+        python3 -I "${heal_helper}" check
+        exit $?
+    fi
+    exit 0
+elif [ "${1:-}" = "--heal-host" ] || [ "${1:-}" = "--heal-sovereignty" ]; then
+    validate_privileges
+    heal_host_sovereignty_subsystem
+    run_post_update_smoke_test
 elif [ "${1:-}" = "--slackbuilds" ] || [ "${1:-}" = "-s" ]; then
     INTERACTIVE_SESSION=1
     manage_slackbuilds_interactive
+elif [ "${1:-}" = "--protect-links" ]; then
+    case "${2:-status}" in
+        on)  validate_privileges; deploy_protect_links ;;
+        off) validate_privileges; revert_protect_links ;;
+        status)
+            if is_protect_links_active; then echo "Link protection: on"; else echo "Link protection: off"; fi ;;
+        *) echo "Usage: slacky-update --protect-links on|off|status"; exit 2 ;;
+    esac
+    exit 0
 elif [ "${1:-}" = "--tweaks" ] || [ "${1:-}" = "-t" ]; then
     INTERACTIVE_SESSION=1
     manage_tweaks_interactive
@@ -1172,10 +1497,27 @@ elif [ "${1:-}" = "--hash-check" ] || [ "${1:-}" = "--check-hashes" ] || [ "${1:
     fi
 elif [ "${1:-}" = "--clean" ] || [ "${1:-}" = "--purge-kernels" ]; then
     validate_privileges
-    clean_system_cache_and_orphans
+    begin_atomic_transaction "system cleanup" || exit 1   # 6A-149: never prune beside a running update
+    clean_system_full_sweep
+    end_atomic_transaction
 elif [ "${1:-}" = "--restore-limine" ]; then
     validate_privileges
     restore_limine_self_heal
+elif [ "${1:-}" = "--hardware" ]; then
+    # 6A-117: what SpiderSense knows about this machine (read-only)
+    PYTHONSAFEPATH=1 python3 -I "${APP_DIR}/spidersense_hw.py" show
+    exit $?
+elif [ "${1:-}" = "--doctor" ] || [ "${1:-}" = "--health" ] || [ "${1:-}" = "--diag" ]; then
+    shift
+    validate_privileges
+    if [ -f "${SCRIPT_DIR}/../lib/slacky_doctor.py" ]; then
+        sudo python3 "${SCRIPT_DIR}/../lib/slacky_doctor.py" "$@"
+    elif [ -f "${APP_DIR}/slacky_doctor.py" ]; then
+        sudo python3 "${APP_DIR}/slacky_doctor.py" "$@"
+    else
+        sudo python3 "/usr/share/slacky-update/lib/slacky_doctor.py" "$@"
+    fi
+    exit $?
 elif [ "${1:-}" = "--list-langs" ]; then
     python3 "${I18N_PY}" --list-langs
     exit 0
@@ -1202,6 +1544,8 @@ elif [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
     echo "Options:"
     echo "  -y, --non-interactive   Run full unattended system upgrade (Slackware, Flatpaks, Kernels, Drivers, SBo)"
     echo "      --check             Run non-modifying read-only status check"
+    echo "      --doctor, --health  Run instant system health audit & hardware diagnostics (non-destructive)"
+    echo "      --hardware          Show what SpiderSense knows about this machine (graphics, processor, boot setup)"
     echo "  -H, --hash-check        Dynamically verify on-disk kernel & initramfs BLAKE2B hashes against Limine"
     echo "  -l, --limine            Open Limine Bootloader & Secure Boot Matrix"
     echo "  -c, --cmdline           Configure Kernel Boot Parameters (CMDLINE & Gaming Hub)"
@@ -1215,9 +1559,11 @@ elif [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
     echo "      --hyprland          Install curated Hyprland Desktop Suite (Noctalia Shell)"
     echo "      --hyprland-core     Install Hyprland Minimal Core Compositor"
     echo "  -m, --heal-multilib     Audit and repair AlienBOB 32-bit Multilib subsystem"
+    echo "      --heal-check        Look for damaged installed packages (read only; prints the slackpkg command to restore them)"
+    echo "      --heal-host         Audit /usr/bin/ and restore Host Sovereignty for native packages"
     echo "  -s, --slackbuilds       Open SlackBuilds and sbotools management hub"
     echo "  -t, --tweaks            Open system performance and gaming tweaks menu"
-    echo "  -d, --guide, --manual   Open Master Field Guide and multi-format export suite (PDF/QR/Email)"
+    echo "  -d, --guide, --manual   Open Master Field Guide & Diagnostics menu (Doctor/PDF/QR/Email)"
     echo "      --lang <code|nb|en> Set system language preference"
     echo "      --list-langs        List all available languages"
     echo "  -v, --version           Display version and release codename"

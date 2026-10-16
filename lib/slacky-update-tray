@@ -24,6 +24,10 @@ try:
 except ImportError:
     def _(key, **kwargs):
         return key
+    class _FallbackI18n:
+        current_language = "en"
+        current_lang = "en"
+    i18n = _FallbackI18n()
 
 # --- [ CONSTANTS & PATHS ] ---
 STATUS_FILE = os.path.join(os.environ.get("XDG_CACHE_HOME", os.path.expanduser("~/.cache")), "slacky-update", "status.json")
@@ -31,6 +35,7 @@ ICON_OK = "/usr/share/icons/hicolor/128x128/apps/slacky-update-ok.png"
 ICON_PENDING = "/usr/share/icons/hicolor/128x128/apps/slacky-update-pending.png"
 ICON_CHECKING = "/usr/share/icons/hicolor/128x128/apps/slacky-update-checking.png"
 ICON_KOFI = "/usr/share/icons/hicolor/128x128/apps/ko-fi.png"
+ICON_CURATED = "/usr/share/icons/hicolor/128x128/apps/slacky-curated-hieroglyph.png"
 CHECKER_BIN = "/usr/share/slacky-update/lib/check_backend.sh"
 INTERVAL_1_HOUR_MS = 3600000
 
@@ -46,6 +51,8 @@ if not os.path.exists(ICON_OK) and os.path.exists(DEV_ASSETS):
 
 if not os.path.exists(ICON_KOFI) and os.path.exists(DEV_ASSETS):
     ICON_KOFI = os.path.join(DEV_ASSETS, "ko-fi.png")
+if not os.path.exists(ICON_CURATED) and os.path.exists(DEV_ASSETS):
+    ICON_CURATED = os.path.join(DEV_ASSETS, "slacky-curated-hieroglyph.png")
 
 KOFI_SETTINGS_FILE = os.path.expanduser("~/.config/slacky-update/kofi.json")
 
@@ -168,9 +175,10 @@ class SlackyUpdateTray(QSystemTrayIcon):
 
         self.poll_timer = QTimer()
         self.poll_timer.timeout.connect(self.update_status)
-        self.poll_timer.start(5000)
+        self.poll_timer.start(30000)
 
         self.is_updating = False
+        self._last_packages_fingerprint = None
 
         self.check_timer = QTimer()
         self.check_timer.timeout.connect(self.trigger_check)
@@ -200,6 +208,8 @@ class SlackyUpdateTray(QSystemTrayIcon):
         self.menu.addAction(self.upgrade_action)
 
         self.gnomes_action = QAction("", self.menu)
+        if os.path.exists(ICON_CURATED):
+            self.gnomes_action.setIcon(QIcon(ICON_CURATED))
         self.gnomes_action.triggered.connect(self.launch_gaming_tui)
         self.menu.addAction(self.gnomes_action)
 
@@ -227,6 +237,7 @@ class SlackyUpdateTray(QSystemTrayIcon):
 
         self.setContextMenu(self.menu)
         self.menu.aboutToShow.connect(self.update_menu_content)
+        self.pending_menu.aboutToShow.connect(self.update_menu_content)
         self.activated.connect(self.on_activated)
 
         cache_dirs = ["/var/cache/slacky-update", os.path.expanduser("~/.cache/slacky-update")]
@@ -451,30 +462,45 @@ class SlackyUpdateTray(QSystemTrayIcon):
         total_updates = len(slack_list) + len(slackpkgplus_list) + len(flatpak_list) + len(sbo_list) + len(cachy_list) + len(gaming_list) + len(gnomes_list) + len(nvidia_list)
 
         self.pending_menu.setTitle(_("UPDATES_AVAILABLE", count=total_updates))
-        self.pending_menu.clear()
 
-        if total_updates > 0:
-            pipeline = [
-                (_("CAT_SLACKWARE"), slack_list),
-                (_("CAT_SLACKPKGPLUS"), slackpkgplus_list),
-                (_("CAT_FLATPAK"), flatpak_list),
-                (_("CAT_SBO"), sbo_list),
-                (_("CAT_KERNEL"), cachy_list),
-                (_("CAT_GAMING"), gaming_list),
-                (_("CAT_GNOMES"), gnomes_list),
-                (_("CAT_NVIDIA"), nvidia_list)
-            ]
-            for title, pkgs in pipeline:
-                if pkgs:
-                    self.pending_menu.addSection(f"{title} ({len(pkgs)})")
-                    for pkg in pkgs:
-                        action = QAction(f"  {pkg}", self.pending_menu)
-                        action.setEnabled(False)
-                        self.pending_menu.addAction(action)
-        else:
-            no_up = QAction(_("ALL_PACKAGES_UP_TO_DATE"), self.pending_menu)
-            no_up.setEnabled(False)
-            self.pending_menu.addAction(no_up)
+        packages_fingerprint = (
+            tuple(slack_list),
+            tuple(slackpkgplus_list),
+            tuple(flatpak_list),
+            tuple(sbo_list),
+            tuple(cachy_list),
+            tuple(gaming_list),
+            tuple(gnomes_list),
+            tuple(nvidia_list),
+            i18n.current_language
+        )
+
+        if getattr(self, "_last_packages_fingerprint", None) != packages_fingerprint or not self.pending_menu.actions():
+            self._last_packages_fingerprint = packages_fingerprint
+            self.pending_menu.clear()
+
+            if total_updates > 0:
+                pipeline = [
+                    (_("CAT_SLACKWARE"), slack_list),
+                    (_("CAT_SLACKPKGPLUS"), slackpkgplus_list),
+                    (_("CAT_FLATPAK"), flatpak_list),
+                    (_("CAT_SBO"), sbo_list),
+                    (_("CAT_KERNEL"), cachy_list),
+                    (_("CAT_GAMING"), gaming_list),
+                    (_("CAT_GNOMES"), gnomes_list),
+                    (_("CAT_NVIDIA"), nvidia_list)
+                ]
+                for title, pkgs in pipeline:
+                    if pkgs:
+                        self.pending_menu.addSection(f"{title} ({len(pkgs)})")
+                        for pkg in pkgs:
+                            action = QAction(f"  {pkg}", self.pending_menu)
+                            action.setEnabled(False)
+                            self.pending_menu.addAction(action)
+            else:
+                no_up = QAction(_("ALL_PACKAGES_UP_TO_DATE"), self.pending_menu)
+                no_up.setEnabled(False)
+                self.pending_menu.addAction(no_up)
 
         time_since = get_time_since_last_check(data)
         next_in = get_next_check_in(self.check_timer)
@@ -484,7 +510,9 @@ class SlackyUpdateTray(QSystemTrayIcon):
 
         self.check_action.setText(_("CHECK_FOR_UPDATES"))
         self.upgrade_action.setText(_("UPDATE_NOW"))
-        self.gnomes_action.setText(_("MENU_UNDERPANTS_GNOMES_TRAY"))
+        self.gnomes_action.setText(_("SLACKY_CURATED_SOFTWARE", default="Slacky Curated Software"))
+        if os.path.exists(ICON_CURATED) and self.gnomes_action.icon().isNull():
+            self.gnomes_action.setIcon(QIcon(ICON_CURATED))
         self.slackbuilds_action.setText(_("MENU_SLACKBUILDS_TRAY"))
         self.lang_menu.setTitle(_("LANGUAGE_SELECTION"))
 

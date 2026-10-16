@@ -22,12 +22,12 @@ audit_sbctl_status() {
     local status_json
     status_json=$("${sbctl_bin}" status --json 2>/dev/null || echo "{}")
 
-    python3 -c "
+    echo "${status_json}" | python3 -c "
 import json, sys
 
 data = {}
 try:
-    data = json.loads('''${status_json}''')
+    data = json.load(sys.stdin)
 except Exception:
     pass
 
@@ -151,66 +151,93 @@ setup_sbctl_keys_interactive() {
     echo -e "${YELLOW}${BOLD}Would you like to create keys and enroll them with Microsoft OEM certificates (-m)?${RESET}"
     echo -e "${CYAN}(Note: -m includes Microsoft OEM certificates, essential for GPU Option ROMs and Windows 11 dual-boot)${RESET}"
     echo ""
-    read -r -p "Proceed with enrollment? [Y/n]: " reply_enroll
+    # 6A-124 (LTS boot M10): closed input means no
+    local reply_enroll=""
+    read -r -p "Proceed with enrollment? [Y/n]: " reply_enroll || reply_enroll="n"
     reply_enroll=${reply_enroll:-Y}
     if [[ ! "${reply_enroll}" =~ ^[YyJjSsOo]$ ]]; then
         log_info "Operation cancelled by user."
         return 0
     fi
 
+    # 6A-124: every step is checked; the wizard stops at the first failure with one plain line and never says
+    # "complete" or "turn on Secure Boot" unless the boot loader seal was verified.
     log_info "Creating cryptographic keys with sbctl create-keys..."
-    sudo "${sbctl_bin}" create-keys || true
+    if ! sudo "${sbctl_bin}" create-keys; then
+        local k_ok=0 kdir
+        for kdir in "/var/lib/sbctl/keys/db" "/usr/share/secureboot/keys/db"; do
+            if sudo test -f "${kdir}/db.key"; then k_ok=1; fi
+        done
+        if [ "${k_ok}" -ne 1 ]; then
+            log_error "The Secure Boot keys could not be created, so nothing was enrolled; keep Secure Boot turned off."
+            return 1
+        fi
+    fi
 
     log_info "Enrolling keys with Microsoft OEM vendor certificates (sbctl enroll-keys -m)..."
     if sudo "${sbctl_bin}" enroll-keys -m; then
         log_success "Secure Boot keys successfully enrolled in UEFI NVRAM keyring!"
     else
         log_warn "Standard enroll-keys failed. Retrying with sbctl enroll-keys --microsoft..."
-        sudo "${sbctl_bin}" enroll-keys --microsoft || true
+        if ! sudo "${sbctl_bin}" enroll-keys --microsoft; then
+            log_error "The Secure Boot keys could not be stored in the firmware; keep Secure Boot turned off."
+            return 1
+        fi
     fi
 
-    # Sign Limine EFI binaries
-    local esp_path
-    esp_path=$(detect_limine_esp_path 2>/dev/null || echo "/boot/efi")
-    for efi in "${esp_path}/EFI/limine/limine_x64.efi" "${esp_path}/EFI/BOOT/BOOTX64.EFI"; do
-        if [ -f "${efi}" ]; then
-            log_info "Signing EFI executable: ${efi}..."
-            sudo "${sbctl_bin}" sign -s "${efi}" 2>/dev/null || true
-        fi
-    done
-
-    # Enroll Limine config if Limine is installed
-    if command -v enroll_and_sign_limine >/dev/null 2>&1; then
-        enroll_and_sign_limine || true
+    # 6A-124: no in-place signing of the live EFI files here (6A-101). Limine is signed as a staged copy and only then
+    # swapped in by enroll_and_sign_limine, and the result is read back by verify_limine_seal.
+    if ! command -v is_limine_installed >/dev/null 2>&1 || [ "$(is_limine_installed 2>/dev/null || echo false)" != "true" ]; then
+        log_warn "The keys are enrolled, but slacky-update only signs Limine and Limine is not managed here, so do not turn on Secure Boot until your boot loader is signed."
+        read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+        return 1
+    fi
+    if ! enroll_and_sign_limine; then
+        log_error "Limine could not be signed with the new keys, so keep Secure Boot turned off for now."
+        read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+        return 1
+    fi
+    if ! verify_limine_seal; then
+        log_error "The signed Limine boot files did not pass the check, so keep Secure Boot turned off for now."
+        read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
+        return 1
     fi
 
     echo ""
     echo -e "${CYAN}============================================================${RESET}"
-    echo -e "${GREEN}${BOLD}🎉 SECURE BOOT ENROLLMENT COMPLETE! 🎉${RESET}"
+    echo -e "${GREEN}${BOLD}SECURE BOOT ENROLLMENT COMPLETE${RESET}"
     echo -e "${CYAN}============================================================${RESET}"
     echo -e "  1. Reboot into UEFI BIOS Setup."
     echo -e "  2. Turn \033[1;32mSecure Boot: Enabled (Standard Mode)\033[0m."
-    echo -e "  3. Boot directly into Limine or GRUB with 100% cryptographic protection!"
+    echo -e "  3. Boot into Limine; its files are signed and checked."
     echo -e "${CYAN}============================================================${RESET}"
     echo ""
     read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
 }
 
 manage_secureboot_interactive() {
+    local tui_py="${REPO_ROOT:-}/lib/slacky_tui.py"
+    [ ! -f "${tui_py}" ] && [ -f "${SCRIPT_DIR}/../lib/slacky_tui.py" ] && tui_py="${SCRIPT_DIR}/../lib/slacky_tui.py"
+    [ ! -f "${tui_py}" ] && [ -f "/usr/share/slacky-update/lib/slacky_tui.py" ] && tui_py="/usr/share/slacky-update/lib/slacky_tui.py"
+
     while true; do
-        echo ""
-        echo -e "${CYAN}============================================================${RESET}"
-        echo -e "${YELLOW}${BOLD}🔒 UEFI SECURE BOOT CONTROL CENTER (SBCTL & MOK) 🔒${RESET}"
-        echo -e "${CYAN}============================================================${RESET}"
-        echo -e "  \033[1;33m1.\033[0m Audit Secure Boot & Cryptographic Status"
-        echo -e "  \033[1;33m2.\033[0m Run 1-Click sbctl Secure Boot Key Enrollment Wizard"
-        echo -e "  \033[1;33m3.\033[0m Sign All Bootloaders & Linux Kernels with sbctl"
-        echo -e "  \033[1;33m4.\033[0m Manage Classic MOK (Kernel Module Signatures)"
-        echo -e "  \033[1;33m5.\033[0m Return to Main Menu"
-        echo ""
-        echo -n "Select operation [1-5]: "
-        local sb_choice
-        read -r sb_choice || sb_choice="5"
+        local sb_choice=""
+        if [ -f "${tui_py}" ] && command -v python3 >/dev/null 2>&1 && [ -t 0 ]; then
+            sb_choice=$(python3 "${tui_py}" --mode secureboot-main || true)
+        else
+            echo ""
+            echo -e "${CYAN}============================================================${RESET}"
+            echo -e "${YELLOW}${BOLD}🔒 UEFI SECURE BOOT CONTROL CENTER (SBCTL & MOK) 🔒${RESET}"
+            echo -e "${CYAN}============================================================${RESET}"
+            echo -e "  \033[1;33m1.\033[0m Audit Secure Boot & Cryptographic Status"
+            echo -e "  \033[1;33m2.\033[0m Run 1-Click sbctl Secure Boot Key Enrollment Wizard"
+            echo -e "  \033[1;33m3.\033[0m Sign All Bootloaders & Linux Kernels with sbctl"
+            echo -e "  \033[1;33m4.\033[0m Manage Classic MOK (Kernel Module Signatures)"
+            echo -e "  \033[1;33m5.\033[0m Return to Main Menu"
+            echo ""
+            echo -n "Select operation [1-5]: "
+            read -r sb_choice || sb_choice="5"
+        fi
 
         case "${sb_choice}" in
             1)
@@ -218,7 +245,8 @@ manage_secureboot_interactive() {
                 read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
                 ;;
             2)
-                setup_sbctl_keys_interactive
+                # 6A-124: the wizard now returns 1 when it stops; stay in this menu
+                setup_sbctl_keys_interactive || true
                 ;;
             3)
                 validate_privileges
@@ -244,7 +272,7 @@ manage_secureboot_interactive() {
 
                 echo ""
                 # Step 3 & 4: Limine Matrix & Sealing (or GRUB/ELILO fallback)
-                if command -v is_limine_installed >/dev/null 2>&1 && is_limine_installed; then
+                if command -v is_limine_installed >/dev/null 2>&1 && is_limine_installed >/dev/null; then
                     log_info "[3/4] Generating Limine bootloader matrix with BLAKE2B integrity hashes..."
                     generate_limine_configuration
                     echo ""
@@ -269,7 +297,7 @@ manage_secureboot_interactive() {
                     manage_armor_interactive
                 fi
                 ;;
-            5)
+            5|[Qq])
                 return 0
                 ;;
             *)
