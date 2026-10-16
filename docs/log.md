@@ -1,5 +1,10 @@
 # Slacky-Update-RS Development Changelog
 
+## [OBS plugin updates from GitHub (6A-242)] - 2026-10-16
+
+### Fixes
+- **`lib/mod_gaming.sh`** (6A-242): the update check now asks GitHub releases for the six OBS plugins that are installed from GitHub (move-transition, source-record, advanced-scene-switcher, multi-rtmp, composite-blur, teleport), using the same asset pattern and version rule as the install. Newest non-prerelease, non-draft release only; https to api.github.com, 5 s timeout, 4 MiB cap, cached 30 min (shared with the resolver); any failure lists no update. The install table for these six also skips prereleases now. Rust mirror: Rust reads pinned releases (obs_pins.rs); no change.
+
 ## [Pinned theme sources, package name and permission rules, Hyprland suites (6A-193..6A-198)] - 2026-10-15
 
 ### Fixes
@@ -1944,3 +1949,6 @@
 - 220/221: expiry radar uses the Rust key set and only future expiries, shipped floor judged when no generation exists; key and mirror sentences use the Rust wording (security keys, download server), en and nb.
 - 230..233: exact package-name match in `bin/gnomes` cleanup, no `ln -sf` of python links, protected launcher names are advice only, one case rule (`is_protected_host_binary`).
 - Tested offline in temp dirs; not tested against real servers or as root.
+
+### Build 87 (pending) - 6A-241: gnomes -Qu used a stale system cache (lib/gnomes_pacman.py)
+- `list-updates --no-sync` now uses the system database cache only when it is at least as new as the user's own; before, a cache from 3 days earlier hid the claude-desktop update from `gnomes -Qu` and the Rust app.

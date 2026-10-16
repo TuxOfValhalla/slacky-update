@@ -6363,9 +6363,24 @@ def main():
     elif cmd == "list-updates":
         no_sync = "--no-sync" in sys.argv
         if no_sync:
-            # 6A-139: read the system cache when it has databases (a user cache is often empty); nothing is downloaded
-            sys_db = os.path.join(DEFAULT_CACHE_BASE, "db")
-            if os.path.isdir(sys_db) and any(n.endswith((".db.tar.zst", ".db.tar.gz")) for n in os.listdir(sys_db)):
+            # 6A-139: read the system cache when it has databases (a user cache is often empty); nothing is downloaded.
+            # 6A-241: but only when it is newer than the user's own cache: a stale system cache (root synced days ago)
+            # hid updates the user's last sync already knows (same rule as the status files: the newest wins).
+            def _newest_db(base):
+                d = os.path.join(base, "db")
+                try:
+                    names = [n for n in os.listdir(d) if n.endswith((".db.tar.zst", ".db.tar.gz"))]
+                except OSError:
+                    return None
+                times = []
+                for n in names:
+                    try:
+                        times.append(os.stat(os.path.join(d, n)).st_mtime)
+                    except OSError:
+                        pass
+                return max(times) if times else None
+            sys_t, user_t = _newest_db(DEFAULT_CACHE_BASE), _newest_db(USER_CACHE_BASE)
+            if sys_t is not None and (user_t is None or sys_t >= user_t):
                 engine = GnomesPacmanEngine(cache_dir=DEFAULT_CACHE_BASE)
         elif "--sync" in sys.argv or "-y" in sys.argv or "-Sy" in sys.argv:
             engine.sync_repositories(force=True, verbose=False)

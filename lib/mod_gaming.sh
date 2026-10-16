@@ -946,6 +946,79 @@ def rolled_back(pid, best_ver):
             return True
     return False
 
+# 6A-242: the six OBS plugins are DEPLOYED from GitHub releases (github_and_direct_pkgs in the resolver below), so the update scan must
+# ask the same source: newest non-prerelease, non-draft release that has an asset matching the same pattern (keep the patterns identical
+# to the resolver table). One https call to api.github.com per repo, 5 s timeout, 4 MiB cap, cached 30 min in the same file the resolver
+# uses (unauthenticated limit is 60/h; 6 repos at most every 30 min is 12/h). Any failure = no candidate = no update listed, silent.
+GITHUB_OBS_SCAN = {
+    "obs-move-transition": ("exeldro/obs-move-transition", r"move-transition-([0-9\.]+)-x86_64-linux-gnu\.deb"),
+    "obs-source-record": ("exeldro/obs-source-record", r"source-record-([0-9\.]+)-ubuntu.*\.tar\.gz"),
+    "obs-advanced-scene-switcher": ("WarmUpTill/SceneSwitcher", r"advanced-scene-switcher-([0-9\.]+)-x86_64-ubuntu.*-linux-gnu\.deb"),
+    "obs-multi-rtmp": ("sorayuki/obs-multi-rtmp", r"obs-multi-rtmp-([0-9\.]+)-x86_64-linux-gnu-ubuntu.*\.deb"),
+    "obs-composite-blur": ("FiniteSingularity/obs-composite-blur", r"obs-composite-blur-([0-9\.]+)-ubuntu.*\.zip"),
+    "obs-teleport": ("fzwoch/obs-teleport", r"obs-teleport\.zip"),
+}
+GH_SCAN_CAP = 4 << 20
+
+def gh_releases_cached(repo, cdir, ttl=1800):
+    if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repo or ""):
+        return []
+    url = f"https://api.github.com/repos/{repo}/releases"
+    cache_file = os.path.join(cdir, f"repo_idx_{hashlib.sha256(url.encode('utf-8')).hexdigest()[:16]}.html")
+
+    def load_cache():
+        try:
+            if os.path.getsize(cache_file) > GH_SCAN_CAP:
+                return None
+            with open(cache_file, "r", encoding="utf-8", errors="ignore") as f:
+                data = json.loads(f.read())
+            return data if isinstance(data, list) else None
+        except Exception:
+            return None
+
+    try:
+        if (time.time() - os.path.getmtime(cache_file)) < ttl:
+            data = load_cache()
+            if data is not None:
+                return data
+    except Exception:
+        pass
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64)", "Accept": "application/vnd.github+json"})
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            if not resp.geturl().startswith("https://api.github.com/"):
+                raise ValueError("redirected away from api.github.com")
+            raw = resp.read(GH_SCAN_CAP + 1)
+        if len(raw) > GH_SCAN_CAP:
+            raise ValueError("answer too large")
+        data = json.loads(raw.decode("utf-8", errors="ignore"))
+        if not isinstance(data, list):
+            raise ValueError("not a release list")
+        try:
+            tmp = cache_file + f".{os.getpid()}.tmp"
+            with open(tmp, "wb") as f:
+                f.write(raw)
+            os.replace(tmp, cache_file)
+        except Exception:
+            pass
+        return data
+    except Exception:
+        stale = load_cache()
+        return stale if stale is not None else []
+
+def github_obs_version(pid):
+    repo, asset_re = GITHUB_OBS_SCAN[pid]
+    for rel in gh_releases_cached(repo, cache_dir):
+        if not isinstance(rel, dict) or rel.get("prerelease") or rel.get("draft"):
+            continue
+        tag = str(rel.get("tag_name", "")).lstrip("v")
+        for asset in rel.get("assets") or []:
+            m = re.search(asset_re, str(asset.get("name", "")) if isinstance(asset, dict) else "")
+            if m:
+                ver = m.group(1) if m.groups() else tag   # the same way the deploy takes it
+                return ver if re.fullmatch(r"[0-9]+(?:\.[0-9]+)*", ver or "") else None
+    return None
+
 def check_single_package(pid, cur_ver):
     if pid not in catalog:
         return None
@@ -972,6 +1045,13 @@ def check_single_package(pid, cur_ver):
                     break
         except Exception:
             pass
+    # 6A-242: the six GitHub-deployed OBS plugins are checked against GitHub releases, not the Arch/CachyOS repos
+    elif pid in GITHUB_OBS_SCAN:
+        gv = github_obs_version(pid)
+        if gv:
+            cv = clean_pkg_version(pid, gv)
+            if cv:
+                main_candidates.append(cv)
     # 6A-193: the four themes are built from pinned commit archives (same pins as the Rust engine); no moving AUR version
     elif pid in ("mactahoe-icons", "mactahoe-cursors", "whitesur-icons", "whitesur-cursors"):
         main_candidates.append({"mactahoe-icons": "2026.09.10.r0.839848b9", "mactahoe-cursors": "2026.09.10.r0.839848b9",
@@ -1671,32 +1751,38 @@ github_and_direct_pkgs = {
     "obs-move-transition": {
         "type": "github_release",
         "repo": "exeldro/obs-move-transition",
-        "asset_pattern": r"move-transition-([0-9\.]+)-x86_64-linux-gnu\.deb"
+        "asset_pattern": r"move-transition-([0-9\.]+)-x86_64-linux-gnu\.deb",
+        "skip_prerelease": True
     },
     "obs-source-record": {
         "type": "github_release",
         "repo": "exeldro/obs-source-record",
-        "asset_pattern": r"source-record-([0-9\.]+)-ubuntu.*\.tar\.gz"
+        "asset_pattern": r"source-record-([0-9\.]+)-ubuntu.*\.tar\.gz",
+        "skip_prerelease": True
     },
     "obs-advanced-scene-switcher": {
         "type": "github_release",
         "repo": "WarmUpTill/SceneSwitcher",
-        "asset_pattern": r"advanced-scene-switcher-([0-9\.]+)-x86_64-ubuntu.*-linux-gnu\.deb"
+        "asset_pattern": r"advanced-scene-switcher-([0-9\.]+)-x86_64-ubuntu.*-linux-gnu\.deb",
+        "skip_prerelease": True
     },
     "obs-multi-rtmp": {
         "type": "github_release",
         "repo": "sorayuki/obs-multi-rtmp",
-        "asset_pattern": r"obs-multi-rtmp-([0-9\.]+)-x86_64-linux-gnu-ubuntu.*\.deb"
+        "asset_pattern": r"obs-multi-rtmp-([0-9\.]+)-x86_64-linux-gnu-ubuntu.*\.deb",
+        "skip_prerelease": True
     },
     "obs-composite-blur": {
         "type": "github_release",
         "repo": "FiniteSingularity/obs-composite-blur",
-        "asset_pattern": r"obs-composite-blur-([0-9\.]+)-ubuntu.*\.zip"
+        "asset_pattern": r"obs-composite-blur-([0-9\.]+)-ubuntu.*\.zip",
+        "skip_prerelease": True
     },
     "obs-teleport": {
         "type": "github_release",
         "repo": "fzwoch/obs-teleport",
-        "asset_pattern": r"obs-teleport\.zip"
+        "asset_pattern": r"obs-teleport\.zip",
+        "skip_prerelease": True
     },
     "openghub": {
         "type": "github_release",
@@ -2353,32 +2439,38 @@ github_and_direct_pkgs = {
     "obs-move-transition": {
         "type": "github_release",
         "repo": "exeldro/obs-move-transition",
-        "asset_pattern": r"move-transition-([0-9\.]+)-x86_64-linux-gnu\.deb"
+        "asset_pattern": r"move-transition-([0-9\.]+)-x86_64-linux-gnu\.deb",
+        "skip_prerelease": True
     },
     "obs-source-record": {
         "type": "github_release",
         "repo": "exeldro/obs-source-record",
-        "asset_pattern": r"source-record-([0-9\.]+)-ubuntu.*\.tar\.gz"
+        "asset_pattern": r"source-record-([0-9\.]+)-ubuntu.*\.tar\.gz",
+        "skip_prerelease": True
     },
     "obs-advanced-scene-switcher": {
         "type": "github_release",
         "repo": "WarmUpTill/SceneSwitcher",
-        "asset_pattern": r"advanced-scene-switcher-([0-9\.]+)-x86_64-ubuntu.*-linux-gnu\.deb"
+        "asset_pattern": r"advanced-scene-switcher-([0-9\.]+)-x86_64-ubuntu.*-linux-gnu\.deb",
+        "skip_prerelease": True
     },
     "obs-multi-rtmp": {
         "type": "github_release",
         "repo": "sorayuki/obs-multi-rtmp",
-        "asset_pattern": r"obs-multi-rtmp-([0-9\.]+)-x86_64-linux-gnu-ubuntu.*\.deb"
+        "asset_pattern": r"obs-multi-rtmp-([0-9\.]+)-x86_64-linux-gnu-ubuntu.*\.deb",
+        "skip_prerelease": True
     },
     "obs-composite-blur": {
         "type": "github_release",
         "repo": "FiniteSingularity/obs-composite-blur",
-        "asset_pattern": r"obs-composite-blur-([0-9\.]+)-ubuntu.*\.zip"
+        "asset_pattern": r"obs-composite-blur-([0-9\.]+)-ubuntu.*\.zip",
+        "skip_prerelease": True
     },
     "obs-teleport": {
         "type": "github_release",
         "repo": "fzwoch/obs-teleport",
-        "asset_pattern": r"obs-teleport\.zip"
+        "asset_pattern": r"obs-teleport\.zip",
+        "skip_prerelease": True
     },
     "openghub": {
         "type": "github_release",

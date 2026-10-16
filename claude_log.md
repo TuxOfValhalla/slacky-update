@@ -1,5 +1,12 @@
 # Claude patch-note log (slacky-update, legacy)
 
+### 2026-10-16 Build 76_slacky (next build: 77) - 6A-242 - OBS plugin updates are found on GitHub
+- Installed obs-multi-rtmp 0.7.4.0 now shows the update to 0.7.4.4: the update check asks the same GitHub release source the install uses for obs-move-transition, obs-source-record, obs-advanced-scene-switcher, obs-multi-rtmp, obs-composite-blur and obs-teleport (before, it only looked in the Arch/CachyOS repos, which no longer carry them). If GitHub cannot be reached, no update is listed.
+- Technical: new helpers `gh_releases_cached` / `github_obs_version` in `PYFASTCHECK` (https to api.github.com only, 5 s timeout, 4 MiB cap, cache 30 min in the same file the resolver uses, so 12 API calls per hour at most). Newest non-prerelease, non-draft release with an asset matching the deploy `asset_pattern`; version taken like the deploy (group 1, else tag). The six deploy table entries (both tables) now also skip prereleases so install and scan agree.
+- Files touched: `lib/mod_gaming.sh`, `claude_log.md`, `docs/log.md`, `docs/log_nb.md`.
+- Verification: `bash -n`; offline tests with patched urlopen (newest prerelease and draft skipped, no matching asset, API down, redirect away, non-list answer, oversize, cache hit, stale cache, bad repo name) all green; one read-only real call per repo: move-transition 3.2.1, source-record 0.4.8, advanced-scene-switcher 1.36.1, multi-rtmp 0.7.4.4, composite-blur 1.5.2, teleport 0.7.7. Not verified: a full `slacky-update --check` on the installed system.
+- Rust mirror: Rust reads pinned releases (obs_pins.rs); no change.
+
 ### 2026-10-10 Build 72_slacky - G1 (prep) - Roadmap reference fix
 - No program behaviour changed. `rs_and_legacy_roadmap.md` header now says it is referenced from `CLAUDE.md`
   in the Rust repo and `AGENTS.md` in this repo (the Rust `AGENTS.md` was removed by the owner). Copy kept
@@ -1267,3 +1274,9 @@
 - Files touched: `bin/gnomes`, `lib/gnomes_pacman.py`, `lib/mod_packages.sh`, `locales/en.json`, `locales/nb.json`, `claude_log.md`, `docs/log.md`, `docs/log_nb.md`.
 - Verification: `bash -n`, py_compile, a fake package folder for the name matching (foo vs foo-bar, -bin variant, cachyos-gnome-), no `ln -sf` left in `cleanup_stale_wrappers`, `heal_host_sovereignty(dry_run=True)` read-only run as a user. NOT verified: a real root cleanup on the machine.
 - Known limits: the orphan-folder prune in `gnomes_pacman.py` (`/opt/underpants/pkgs/<app>`) still uses a prefix match on purpose: a false match there only keeps a folder. The second loop of `cleanup_stale_wrappers` has no protected-name list in bash; it relies on the stock-owner check.
+
+### 2026-10-16 Build 87_slacky (pending) - 6A-241 - gnomes -Qu read a stale system cache
+- User-visible: `gnomes -Qu` (and so the Rust app, which asks it) showed no gnomes updates although the legacy check found claude-desktop 2.42304.0-1.
+- Cause: `list-updates --no-sync` always preferred `/var/cache/slacky-update/gnomes/db` when it held any database, even when the user's own cache was days newer (system cache from 2026-10-13, user cache 2026-10-16).
+- Fix: `lib/gnomes_pacman.py`: the system cache is used only when its newest database is at least as new as the user's (the same "newest wins" rule as the status files).
+- Verification: from the working tree, `list-updates --no-sync --json` now lists claude-desktop; ast parse clean. Rust mirror: the Rust pipeline asks `gnomes -Qu`, so it is fixed by this; the native engine is not used by the pipeline yet.
