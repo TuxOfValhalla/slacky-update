@@ -58,19 +58,19 @@ audacity|Audacity (Digital Audio Editor & Recording Studio)|audio|audacity-(?:[0
 yabridge|Yabridge (+ yabridgectl VST2/VST3 Plugin Bridge)|audio|yabridge-(?:bin-)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||yabridgectl-(?:bin-)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos,arch-extra,chaotic-aur
 spotify|Spotify Launcher (Official Native Client Bootstrap)|audio|spotify-launcher-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||sequoia-sqv-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libayatana-appindicator-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libayatana-indicator-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,ayatana-ido-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libcurl-gnutls-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|arch-extra,cachyos,arch-core
 inkscape|Inkscape (Professional Vector Graphics Editor)|creative|inkscape-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||lib2geom-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,double-conversion-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,graphicsmagick-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libcdr-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,poppler-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libvisio-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libwpg-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,librevenge-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos-extra-v3,arch-extra,cachyos
-darktable|Darktable (Advanced RAW Photo Workflow & Editor)|creative|darktable-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||libavif-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libheif-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libde265-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libyuv-(?:r)?[0-9a-zA-Z_\.\+-]*\.pkg\.tar\.zst,rav1e-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,svt-av1-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,openh264-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,pugixml-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,colord-gtk-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,osm-gps-map-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,gmic-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,flickcurl-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos-extra-v3,arch-extra,cachyos
+darktable|Darktable (Advanced RAW Photo Workflow & Editor)|creative|darktable-(?:[0-9]+(?:%3A|:))?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||libavif-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libheif-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libde265-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libyuv-(?:r)?[0-9a-zA-Z_\.\+-]*\.pkg\.tar\.zst,rav1e-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,svt-av1-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,openh264-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,pugixml-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,colord-gtk-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,osm-gps-map-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,gmic-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,flickcurl-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos-extra-v3,arch-extra,cachyos
 dvcp-aac|DaVinci Resolve AAC Audio Bridge (GloriousEggroll Native AAC Fix)|creative|dvcp-aac-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|||github,gloriouseggroll
 bambu-studio|Bambu Studio (High-Speed 3D Slicer for Bambu Lab)|creative|BambuStudio_ubuntu24\.04-v[0-9][0-9.]*-[0-9]+\.AppImage||webkit2gtk-4\.1-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libsoup3-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libavif-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libyuv-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,rav1e-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,svt-av1-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|github,arch-extra,cachyos
-blender|Blender (3D Creation & Animation Studio)|creative|blender-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||onetbb-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,openimageio-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,opencolorio-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,embree-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,openimagedenoise-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,alembic-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,openvdb-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos-extra-v3,arch-extra,cachyos
-freecad|FreeCAD (Parametric Open-Source 3D CAD Modeler)|creative|freecad-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||opencascade-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,med-file-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,coin-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos-extra-v4,cachyos-extra-v3,arch-extra,cachyos
+blender|Blender (3D Creation & Animation Studio)|creative|blender-(?:[0-9]+(?:%3A|:))?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||onetbb-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,openimageio-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,opencolorio-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,embree-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,openimagedenoise-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,alembic-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,openvdb-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos-extra-v3,arch-extra,cachyos
+freecad|FreeCAD (Parametric Open-Source 3D CAD Modeler)|creative|freecad-(?:[0-9]+(?:%3A|:))?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||opencascade-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,med-file-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,coin-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos-extra-v4,cachyos-extra-v3,arch-extra,cachyos
 plasticity|Plasticity (3D CAD for Concept Artists & Industrial Design)|creative|plasticity-bin-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|||chaotic-aur,chaotic-cdn,aur,cachyos|hidden
 storyboarder|Storyboarder (Fast Visual Storytelling & Pre-Vis Animatics)|creative|storyboarder-bin-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|||chaotic-aur,chaotic-cdn,aur,cachyos|hidden
-syncthing|Syncthing (Continuous P2P File Synchronization)|tools|syncthing-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||arch-extra,cachyos-extra-v3,cachyos
+syncthing|Syncthing (Continuous P2P File Synchronization)|tools|syncthing-(?:[0-9]+(?:%3A|:))?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||arch-extra,cachyos-extra-v3,cachyos
 antigravity|Google Antigravity 2.0 (AI Agent Command Center & IDE)|tools|antigravity(?:-bin|-ide)?-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|||chaotic-aur,chaotic-cdn,cachyos,aur
 claude-desktop|Anthropic Claude Desktop (Official Linux Beta App)|tools|claude-desktop-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|||aur,anthropic
 claude-code|Anthropic Claude Code (Official Terminal AI Agent)|tools|claude-code-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|||npm,anthropic
 gemini-cli|Google Gemini CLI (Official Terminal AI Agent)|tools|gemini-cli-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|||npm,google
-gnome-disk-utility|GNOME Disk Utility (Storage Management & S.M.A.R.T. + libhandy)|tools|gnome-disk-utility-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||libhandy-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,libdvdread-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|cachyos-extra-v4,cachyos-extra-v3,arch-extra,cachyos
+gnome-disk-utility|GNOME Disk Utility (Storage Management & S.M.A.R.T. + libhandy)|tools|gnome-disk-utility-(?:[0-9]+(?:%3A|:))?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||libhandy-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,libdvdread-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|cachyos-extra-v4,cachyos-extra-v3,arch-extra,cachyos
 obs-studio|OBS Studio (Isolated App-Bundle & Python 3.14)|streaming|obs-studio-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst||python-3\.[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,mbedtls-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,obs-studio-plugin-browser-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,cef-minimal-obs(?:-bin)?-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,libdatachannel-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,libjuice-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,librist-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,libusrsctp-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|arch-extra,arch-core,cachyos
 obs-vkcapture|OBS VKCapture (+ 32-bit Multilib Vulkan/GL)|streaming|obs-vkcapture-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|lib32-obs-vkcapture-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||cachyos,arch-extra
 obs-move-transition|OBS Move Transition (Source & Scene Motion)|streaming|obs-move-transition(?:-bin|-git)?-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||chaotic-aur,cachyos-extra,cachyos
@@ -85,7 +85,7 @@ vesktop|Vesktop (Discord Client with Vencord & Wayland Screen)|social|vesktop(?:
 sunshine|Sunshine (Self-Hosted Game Stream Host)|social|sunshine-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||libayatana-appindicator-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,miniupnpc-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,numactl-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos,arch-extra
 google-chrome|Google Chrome (Official Web Browser)|browser|google-chrome-[0-9a-zA-Z_\.:-]*\.pkg\.tar\.zst|||chaotic-aur,chaotic-cdn,cachyos
 microsoft-edge|Microsoft Edge (Official Web Browser)|browser|microsoft-edge-(?:stable|beta|dev)-bin-[0-9a-zA-Z_\.:-]*\.pkg\.tar\.zst|||chaotic-aur,chaotic-cdn,cachyos
-brave|Brave Browser (Privacy Browser with AdBlock)|browser|brave-bin-(?:1%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos,chaotic-aur,chaotic-cdn
+brave|Brave Browser (Privacy Browser with AdBlock)|browser|brave-bin-(?:1(?:%3A|:))?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos,chaotic-aur,chaotic-cdn
 zen-browser|Zen Browser (High-Performance Gecko Browser)|browser|zen-browser-bin-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos,chaotic-aur,chaotic-cdn
 opera|Opera Web Browser (Fast & Secure with Built-In Free VPN)|browser|opera-[0-9a-zA-Z_\.:-]*\.pkg\.tar\.zst|||chaotic-aur,chaotic-cdn,cachyos|hidden
 sbctl|sbctl (Secure Boot Key Manager & Signer)|bootloader|sbctl-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||arch-extra,cachyos
@@ -840,8 +840,8 @@ for line in raw_catalog_lines:
         if len(right_parts) == 4:
             main_pat, l32_pat, ext_pat, repos_str = right_parts
             r_list = [r.strip() for r in repos_str.split(",") if r.strip()]
-            href_pat = rf'href=[\'\"]?({main_pat})[\'\"]?' if main_pat else None
-            l32_href_pat = rf'href=[\'\"]?({l32_pat})[\'\"]?' if l32_pat else None
+            href_pat = rf'href=[\'\"]?(?:\./)?({main_pat})[\'\"]?' if main_pat else None
+            l32_href_pat = rf'href=[\'\"]?(?:\./)?({l32_pat})[\'\"]?' if l32_pat else None
             catalog[pid] = (name, href_pat, l32_href_pat, r_list)
 
 def fetch_url_cached(url, cdir, ttl=1800):
@@ -1423,238 +1423,238 @@ if cpu_tier == "generic":
     repos["cachyos-extra-znver4"] = repos["cachyos-extra"]
 
 catalog = {
-    "mangohud": (r'href=[\'\"]?(mangohud-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(lib32-mangohud-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(glfw-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["cachyos-extra-v3", "arch-extra", "cachyos"], ["arch-multilib", "cachyos"]),
-    "gamemode": (r'href=[\'\"]?(gamemode-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(lib32-gamemode-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, ["cachyos-extra-v3", "arch-extra", "cachyos"], ["arch-multilib", "cachyos"]),
-    "goverlay": (r'href=[\'\"]?(goverlay-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(qt6pas-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["arch-extra", "cachyos"], []),
-    "scx": (r'href=[\'\"]?(scx-manager-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
-        r'href=[\'\"]?(scx-scheds(?:-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(scx-tools(?:-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    "mangohud": (r'href=[\'\"]?(?:\./)?(mangohud-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(?:\./)?(lib32-mangohud-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(?:\./)?(glfw-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["cachyos-extra-v3", "arch-extra", "cachyos"], ["arch-multilib", "cachyos"]),
+    "gamemode": (r'href=[\'\"]?(?:\./)?(gamemode-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(?:\./)?(lib32-gamemode-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, ["cachyos-extra-v3", "arch-extra", "cachyos"], ["arch-multilib", "cachyos"]),
+    "goverlay": (r'href=[\'\"]?(?:\./)?(goverlay-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(?:\./)?(qt6pas-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["arch-extra", "cachyos"], []),
+    "scx": (r'href=[\'\"]?(?:\./)?(scx-manager-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(?:\./)?(scx-scheds(?:-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(scx-tools(?:-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["cachyos", "arch-extra"], []),
-    "easyeffects": (r'href=[\'\"]?(easyeffects-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
-        r'href=[\'\"]?(lsp-plugins-lv2-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(calf-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(mda\.lv2-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(zam-plugins-lv2-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(zita-convolver-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(rnnoise-(?:1%3A|1:)?([0-9a-zA-Z_\.:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libbs2b-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(soundtouch-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libebur128-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(webrtc-audio-processing-(?:2|1)-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(lilv-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(serd-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(sord-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(sratom-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(qt6-graphs-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(onetbb-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libmysofa-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(zix-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    "easyeffects": (r'href=[\'\"]?(?:\./)?(easyeffects-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(?:\./)?(lsp-plugins-lv2-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(calf-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(mda\.lv2-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(zam-plugins-lv2-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(zita-convolver-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(rnnoise-(?:1%3A|1:)?([0-9a-zA-Z_\.:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libbs2b-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(soundtouch-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libebur128-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(webrtc-audio-processing-(?:2|1)-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(lilv-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(serd-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(sord-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(sratom-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(qt6-graphs-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(onetbb-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libmysofa-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(zix-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["arch-extra", "cachyos", "arch-core"], []),
-    "pear-desktop": (r'href=[\'\"]?(pear-desktop-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
-        r'href=[\'\"]?(electron42-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libjpeg-turbo-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    "pear-desktop": (r'href=[\'\"]?(?:\./)?(pear-desktop-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(?:\./)?(electron42-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libjpeg-turbo-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["chaotic-aur", "chaotic-cdn", "arch-extra"], []),
     # 6A-189: no repository carries lib32-yabridge, so the 32-bit part is not required (same as the Rust app): the lib32 pattern is None
-    "yabridge": (r'href=[\'\"]?(yabridge-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(yabridgectl-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["arch-extra", "cachyos", "chaotic-aur"], ["arch-multilib", "cachyos"]),
-    "audacity": (r'href=[\'\"]?(audacity-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
-        r'href=[\'\"]?(suil-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(lilv-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(serd-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(sord-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(sratom-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(zix-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(portsmf-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(portaudio-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(portmidi-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libsbsms-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(vamp-plugin-sdk-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(soundtouch-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(twolame-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libid3tag-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libsoxr-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libmspack-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(wxwidgets-gtk3-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(wxwidgets-common-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libjpeg-turbo-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    "yabridge": (r'href=[\'\"]?(?:\./)?(yabridge-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(?:\./)?(yabridgectl-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["arch-extra", "cachyos", "chaotic-aur"], ["arch-multilib", "cachyos"]),
+    "audacity": (r'href=[\'\"]?(?:\./)?(audacity-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(?:\./)?(suil-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(lilv-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(serd-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(sord-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(sratom-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(zix-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(portsmf-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(portaudio-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(portmidi-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libsbsms-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(vamp-plugin-sdk-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(soundtouch-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(twolame-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libid3tag-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libsoxr-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libmspack-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(wxwidgets-gtk3-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(wxwidgets-common-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libjpeg-turbo-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["arch-extra", "cachyos-extra-v3", "cachyos", "arch-core"], []),
-    "spotify": (r'href=[\'\"]?(spotify(?:-launcher)?-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
-        r'href=[\'\"]?(sequoia-sqv-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libayatana-appindicator-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libayatana-indicator-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(ayatana-ido-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libcurl-gnutls-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    "spotify": (r'href=[\'\"]?(?:\./)?(spotify(?:-launcher)?-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(?:\./)?(sequoia-sqv-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libayatana-appindicator-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libayatana-indicator-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(ayatana-ido-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libcurl-gnutls-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["arch-extra", "cachyos-extra-v3", "cachyos", "arch-core"], []),
-    "inkscape": (r'href=[\'\"]?(inkscape-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
-        r'href=[\'\"]?(lib2geom-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(double-conversion-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(graphicsmagick-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libcdr-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(poppler-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libvisio-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libwpg-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(librevenge-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    "inkscape": (r'href=[\'\"]?(?:\./)?(inkscape-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(?:\./)?(lib2geom-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(double-conversion-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(graphicsmagick-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libcdr-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(poppler-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libvisio-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libwpg-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(librevenge-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["cachyos-extra-v3", "arch-extra", "cachyos"], []),
-    "darktable": (r'href=[\'\"]?(darktable-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
-        r'href=[\'\"]?(libavif-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libheif-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libde265-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libyuv-((?:r[0-9]+|[0-9])[a-zA-Z0-9_\.\+%-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(rav1e-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(svt-av1-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(openh264-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(pugixml-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(colord-gtk-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(osm-gps-map-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(gmic-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(flickcurl-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    "darktable": (r'href=[\'\"]?(?:\./)?(darktable-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(?:\./)?(libavif-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libheif-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libde265-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libyuv-((?:r[0-9]+|[0-9])[a-zA-Z0-9_\.\+%-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(rav1e-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(svt-av1-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(openh264-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(pugixml-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(colord-gtk-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(osm-gps-map-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(gmic-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(flickcurl-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["cachyos-extra-v3", "arch-extra", "cachyos"], []),
-    "syncthing": (r'href=[\'\"]?(syncthing-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos-extra-v3", "cachyos"], []),
-    "antigravity": (r'href=[\'\"]?(antigravity(?:-bin|-ide)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "chaotic-cdn", "cachyos", "arch-extra"], []),
-    "ananicy": (r'href=[\'\"]?(ananicy-cpp(?:-git)?-([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
-        r'href=[\'\"]?(cachyos-ananicy-rules(?:-git)?-([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libbpf-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    "syncthing": (r'href=[\'\"]?(?:\./)?(syncthing-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos-extra-v3", "cachyos"], []),
+    "antigravity": (r'href=[\'\"]?(?:\./)?(antigravity(?:-bin|-ide)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "chaotic-cdn", "cachyos", "arch-extra"], []),
+    "ananicy": (r'href=[\'\"]?(?:\./)?(ananicy-cpp(?:-git)?-([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(?:\./)?(cachyos-ananicy-rules(?:-git)?-([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libbpf-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["cachyos", "cachyos-extra-v3", "arch-core"], []),
-    "gamescope": (r'href=[\'\"]?(gamescope-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(lib32-gamescope-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(libavif-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["cachyos", "arch-extra"], ["cachyos", "arch-multilib"]),
-    "heroic": (r'href=[\'\"]?(heroic-games-launcher-bin-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "arch-extra"], []),
-    "lutris": (r'href=[\'\"]?(lutris(?:-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
-        r'href=[\'\"]?(webkit2gtk-4\.1-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libsoup3-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(python-moddb-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(python-pypresence-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(python-evdev-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(python-distro-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    "gamescope": (r'href=[\'\"]?(?:\./)?(gamescope-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(?:\./)?(lib32-gamescope-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(?:\./)?(libavif-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["cachyos", "arch-extra"], ["cachyos", "arch-multilib"]),
+    "heroic": (r'href=[\'\"]?(?:\./)?(heroic-games-launcher-bin-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "arch-extra"], []),
+    "lutris": (r'href=[\'\"]?(?:\./)?(lutris(?:-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(?:\./)?(webkit2gtk-4\.1-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libsoup3-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(python-moddb-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(python-pypresence-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(python-evdev-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(python-distro-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["arch-extra", "cachyos", "arch-core", "cachyos-extra-v3"], []),
-    "faugus": (r'href=[\'\"]?(faugus-launcher-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
-        r'href=[\'\"]?(python-vdf-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(icoextract-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(python-pefile-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    "faugus": (r'href=[\'\"]?(?:\./)?(faugus-launcher-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(?:\./)?(python-vdf-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(icoextract-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(python-pefile-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["cachyos", "arch-extra"], []),
-    "protonplus": (r'href=[\'\"]?((?:proton-plus|protonplus)-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "arch-extra"], []),
-    "steam": (r'href=[\'\"]?(steam-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-multilib", "cachyos"], []),
+    "protonplus": (r'href=[\'\"]?(?:\./)?((?:proton-plus|protonplus)-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "arch-extra"], []),
+    "steam": (r'href=[\'\"]?(?:\./)?(steam-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-multilib", "cachyos"], []),
     "steam-devices": (None, None, None, [], []),
-    "retroarch": (r'href=[\'\"]?(retroarch-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(retroarch-assets-ozone-(?:[0-9]+%3A)?([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["arch-extra", "cachyos"], []),
-    "lact": (r'href=[\'\"]?(lact-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
-    "openrgb": (r'href=[\'\"]?(openrgb(?:-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "arch-extra"], []),
-    "solaar": (r'href=[\'\"]?(solaar-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
-        r'href=[\'\"]?(python-pyudev-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(python-typing_extensions-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(python-xlib-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    "retroarch": (r'href=[\'\"]?(?:\./)?(retroarch-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(?:\./)?(retroarch-assets-ozone-(?:[0-9]+%3A)?([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["arch-extra", "cachyos"], []),
+    "lact": (r'href=[\'\"]?(?:\./)?(lact-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
+    "openrgb": (r'href=[\'\"]?(?:\./)?(openrgb(?:-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "arch-extra"], []),
+    "solaar": (r'href=[\'\"]?(?:\./)?(solaar-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(?:\./)?(python-pyudev-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(python-typing_extensions-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(python-xlib-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["arch-extra", "cachyos-extra-v3", "cachyos"], []),
-    "openghub": (r'href=[\'\"]?(openghub(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
-        r'href=[\'\"]?(webkit2gtk-4\.1-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libsoup3-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libmanette-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    "openghub": (r'href=[\'\"]?(?:\./)?(openghub(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(?:\./)?(webkit2gtk-4\.1-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libsoup3-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libmanette-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["arch-extra", "cachyos", "chaotic-aur"], []),
     # 6A-192: the program is the official GitHub release AppImage (github_and_direct_pkgs below); these are its library parts
-    "bambu-studio": (r'href=[\'\"]?(BambuStudio_ubuntu24\.04-v([0-9][0-9.]*)-[0-9]+\.AppImage)[\'\"]?', None, [
-        r'href=[\'\"]?(webkit2gtk-4\.1-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libsoup3-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libavif-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libyuv-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(rav1e-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(svt-av1-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    "bambu-studio": (r'href=[\'\"]?(?:\./)?(BambuStudio_ubuntu24\.04-v([0-9][0-9.]*)-[0-9]+\.AppImage)[\'\"]?', None, [
+        r'href=[\'\"]?(?:\./)?(webkit2gtk-4\.1-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libsoup3-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libavif-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libyuv-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(rav1e-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(svt-av1-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["arch-extra", "cachyos"], []),
-    "coolercontrol": (r'href=[\'\"]?(coolercontrol-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(coolercontrold-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["cachyos", "arch-extra"], []),
-    "asusctl": (r'href=[\'\"]?(asusctl-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
-    "brave": (r'href=[\'\"]?(brave-bin-(?:1%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "chaotic-aur", "chaotic-cdn"], []),
-    "zen-browser": (r'href=[\'\"]?(zen-browser-bin-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "chaotic-aur", "chaotic-cdn"], []),
-    "google-chrome": (r'href=[\'\"]?(google-chrome-([0-9][a-zA-Z0-9_\.:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "chaotic-cdn", "cachyos"], []),
-    "microsoft-edge": (r'href=[\'\"]?(microsoft-edge-(?:stable|beta|dev)-bin-([0-9][a-zA-Z0-9_\.:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "chaotic-cdn", "cachyos"], []),
-    "obs-studio": (r'href=[\'\"]?(obs-studio-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
-        r'href=[\'\"]?(python-(3\.[0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(mbedtls-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(obs-studio-plugin-browser-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(cef-minimal-obs(?:-bin)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libdatachannel-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libjuice-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(librist-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libusrsctp-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    "coolercontrol": (r'href=[\'\"]?(?:\./)?(coolercontrol-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(?:\./)?(coolercontrold-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["cachyos", "arch-extra"], []),
+    "asusctl": (r'href=[\'\"]?(?:\./)?(asusctl-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
+    "brave": (r'href=[\'\"]?(?:\./)?(brave-bin-(?:1(?:%3A|:))?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "chaotic-aur", "chaotic-cdn"], []),
+    "zen-browser": (r'href=[\'\"]?(?:\./)?(zen-browser-bin-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "chaotic-aur", "chaotic-cdn"], []),
+    "google-chrome": (r'href=[\'\"]?(?:\./)?(google-chrome-([0-9][a-zA-Z0-9_\.:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "chaotic-cdn", "cachyos"], []),
+    "microsoft-edge": (r'href=[\'\"]?(?:\./)?(microsoft-edge-(?:stable|beta|dev)-bin-([0-9][a-zA-Z0-9_\.:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "chaotic-cdn", "cachyos"], []),
+    "obs-studio": (r'href=[\'\"]?(?:\./)?(obs-studio-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(?:\./)?(python-(3\.[0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(mbedtls-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(obs-studio-plugin-browser-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(cef-minimal-obs(?:-bin)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libdatachannel-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libjuice-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(librist-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libusrsctp-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["arch-extra", "cachyos", "cachyos-extra-v3", "chaotic-aur", "arch-core"], []),
-    "discord": (r'href=[\'\"]?(discord-(?:[0-9]+%3A|[0-9]+:)?([0-9][a-zA-Z0-9_\.:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
-    "vesktop": (r'href=[\'\"]?(vesktop(?:-bin)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos"], []),
-    "obs-vkcapture": (r'href=[\'\"]?(obs-vkcapture-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(lib32-obs-vkcapture-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, ["cachyos", "arch-extra"], ["cachyos", "arch-multilib"]),
-    "obs-move-transition": (r'href=[\'\"]?(obs-move-transition(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos-extra", "cachyos"], []),
-    "obs-source-record": (r'href=[\'\"]?(obs-source-record(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos-extra", "cachyos"], []),
-    "obs-pipewire-audio-capture": (r'href=[\'\"]?(obs-pipewire-audio-capture(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos-extra", "cachyos"], []),
-    "obs-advanced-scene-switcher": (r'href=[\'\"]?(obs-advanced-scene-switcher(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
-        r'href=[\'\"]?(opencv-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    "discord": (r'href=[\'\"]?(?:\./)?(discord-(?:[0-9]+%3A|[0-9]+:)?([0-9][a-zA-Z0-9_\.:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
+    "vesktop": (r'href=[\'\"]?(?:\./)?(vesktop(?:-bin)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos"], []),
+    "obs-vkcapture": (r'href=[\'\"]?(?:\./)?(obs-vkcapture-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(?:\./)?(lib32-obs-vkcapture-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, ["cachyos", "arch-extra"], ["cachyos", "arch-multilib"]),
+    "obs-move-transition": (r'href=[\'\"]?(?:\./)?(obs-move-transition(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos-extra", "cachyos"], []),
+    "obs-source-record": (r'href=[\'\"]?(?:\./)?(obs-source-record(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos-extra", "cachyos"], []),
+    "obs-pipewire-audio-capture": (r'href=[\'\"]?(?:\./)?(obs-pipewire-audio-capture(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos-extra", "cachyos"], []),
+    "obs-advanced-scene-switcher": (r'href=[\'\"]?(?:\./)?(obs-advanced-scene-switcher(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(?:\./)?(opencv-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["chaotic-aur", "cachyos-extra", "arch-extra", "cachyos"], []),
-    "obs-multi-rtmp": (r'href=[\'\"]?(obs-multi-rtmp(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos-extra", "cachyos"], []),
-    "obs-composite-blur": (r'href=[\'\"]?(obs-composite-blur(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos-extra", "cachyos"], []),
-    "obs-teleport": (r'href=[\'\"]?(obs-teleport(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos-extra", "cachyos"], []),
-    "zenpower3": (r'href=[\'\"]?(zenpower3-dkms-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos", "arch-extra"], []),
-    "v4l2loopback": (r'href=[\'\"]?(v4l2loopback-dkms-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos", "chaotic-aur"], []),
-    "rtl8821cu": (r'href=[\'\"]?(rtl8821cu-morrownr-dkms-git-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos"], []),
-    "rtl88x2bu": (r'href=[\'\"]?(rtl88x2bu-dkms-git-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos"], []),
-    "rtl8812au": (r'href=[\'\"]?(rtl8812au-dkms-git-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos"], []),
-    "broadcom-wl": (r'href=[\'\"]?(broadcom-wl-dkms-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
-    "r8125": (r'href=[\'\"]?(r8125-dkms-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos-extra-v3", "cachyos-extra", "cachyos"], []),
-    "sunshine": (r'href=[\'\"]?(sunshine-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
-        r'href=[\'\"]?(libayatana-appindicator-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(miniupnpc-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(numactl-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    "obs-multi-rtmp": (r'href=[\'\"]?(?:\./)?(obs-multi-rtmp(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos-extra", "cachyos"], []),
+    "obs-composite-blur": (r'href=[\'\"]?(?:\./)?(obs-composite-blur(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos-extra", "cachyos"], []),
+    "obs-teleport": (r'href=[\'\"]?(?:\./)?(obs-teleport(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos-extra", "cachyos"], []),
+    "zenpower3": (r'href=[\'\"]?(?:\./)?(zenpower3-dkms-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos", "arch-extra"], []),
+    "v4l2loopback": (r'href=[\'\"]?(?:\./)?(v4l2loopback-dkms-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos", "chaotic-aur"], []),
+    "rtl8821cu": (r'href=[\'\"]?(?:\./)?(rtl8821cu-morrownr-dkms-git-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos"], []),
+    "rtl88x2bu": (r'href=[\'\"]?(?:\./)?(rtl88x2bu-dkms-git-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos"], []),
+    "rtl8812au": (r'href=[\'\"]?(?:\./)?(rtl8812au-dkms-git-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos"], []),
+    "broadcom-wl": (r'href=[\'\"]?(?:\./)?(broadcom-wl-dkms-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
+    "r8125": (r'href=[\'\"]?(?:\./)?(r8125-dkms-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos-extra-v3", "cachyos-extra", "cachyos"], []),
+    "sunshine": (r'href=[\'\"]?(?:\./)?(sunshine-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(?:\./)?(libayatana-appindicator-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(miniupnpc-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(numactl-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["cachyos", "arch-extra"], []),
-    "vram-booster": (r'href=[\'\"]?(dmemcg-booster-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(plasma-foreground-booster-([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["cachyos", "chaotic-aur", "arch-extra"], []),
-    "limine": (r'href=[\'\"]?(limine-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "arch-extra"], []),
-    "limine-entry-tool": (r'href=[\'\"]?(limine-entry-tool-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos"], []),
-    "limine-snapper-sync": (r'href=[\'\"]?(limine-snapper-sync-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos"], []),
-    "sbctl": (r'href=[\'\"]?(sbctl-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
-    "hyprland-noctalia": (r'href=[\'\"]?(hyprland-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
-        r'href=[\'\"]?(libjpeg-turbo-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',  # 6A-13: libjpeg.so.8 for libhyprgraphics
-        r'href=[\'\"]?(noctalia(?:-shell)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(xdg-desktop-portal-hyprland-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hyprlock-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hypridle-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hyprpaper-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hyprpicker-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hyprland-guiutils-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(aquamarine-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hyprlang-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hyprcursor-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hyprgraphics-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hyprutils-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hyprpolkitagent-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hyprwire-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hyprtoolkit-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(sdbus-cpp-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(tomlplusplus-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(muparser-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(re2-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(md4c-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(lua-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libical-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(ddcui-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(wlr-randr-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(nwg-displays-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(python-i3ipc-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    "vram-booster": (r'href=[\'\"]?(?:\./)?(dmemcg-booster-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(?:\./)?(plasma-foreground-booster-([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["cachyos", "chaotic-aur", "arch-extra"], []),
+    "limine": (r'href=[\'\"]?(?:\./)?(limine-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "arch-extra"], []),
+    "limine-entry-tool": (r'href=[\'\"]?(?:\./)?(limine-entry-tool-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos"], []),
+    "limine-snapper-sync": (r'href=[\'\"]?(?:\./)?(limine-snapper-sync-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos"], []),
+    "sbctl": (r'href=[\'\"]?(?:\./)?(sbctl-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
+    "hyprland-noctalia": (r'href=[\'\"]?(?:\./)?(hyprland-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(?:\./)?(libjpeg-turbo-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',  # 6A-13: libjpeg.so.8 for libhyprgraphics
+        r'href=[\'\"]?(?:\./)?(noctalia(?:-shell)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(xdg-desktop-portal-hyprland-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hyprlock-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hypridle-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hyprpaper-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hyprpicker-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hyprland-guiutils-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(aquamarine-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hyprlang-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hyprcursor-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hyprgraphics-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hyprutils-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hyprpolkitagent-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hyprwire-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hyprtoolkit-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(sdbus-cpp-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(tomlplusplus-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(muparser-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(re2-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(md4c-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(lua-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libical-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(ddcui-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(wlr-randr-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(nwg-displays-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(python-i3ipc-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["cachyos-extra-v3", "cachyos-v3", "cachyos", "arch-extra", "chaotic-aur"], []),
-    "hyprland-core": (r'href=[\'\"]?(hyprland-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
-        r'href=[\'\"]?(libjpeg-turbo-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',  # 6A-13: libjpeg.so.8 for libhyprgraphics
-        r'href=[\'\"]?(xdg-desktop-portal-hyprland-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hyprlock-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hypridle-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hyprpaper-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hyprpicker-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hyprland-guiutils-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(aquamarine-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hyprlang-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hyprcursor-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hyprgraphics-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hyprutils-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hyprpolkitagent-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hyprwire-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hyprtoolkit-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(sdbus-cpp-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(tomlplusplus-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(muparser-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(re2-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(lua-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(ddcui-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(wlr-randr-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(nwg-displays-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(python-i3ipc-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    "hyprland-core": (r'href=[\'\"]?(?:\./)?(hyprland-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(?:\./)?(libjpeg-turbo-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',  # 6A-13: libjpeg.so.8 for libhyprgraphics
+        r'href=[\'\"]?(?:\./)?(xdg-desktop-portal-hyprland-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hyprlock-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hypridle-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hyprpaper-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hyprpicker-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hyprland-guiutils-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(aquamarine-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hyprlang-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hyprcursor-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hyprgraphics-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hyprutils-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hyprpolkitagent-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hyprwire-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hyprtoolkit-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(sdbus-cpp-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(tomlplusplus-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(muparser-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(re2-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(lua-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(ddcui-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(wlr-randr-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(nwg-displays-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(python-i3ipc-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["cachyos-extra-v3", "cachyos-v3", "cachyos", "arch-extra"], []),
-    "hyprpicker": (r'href=[\'\"]?(hyprpicker-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos-extra-v3", "cachyos-v3", "cachyos", "arch-extra"], [])
+    "hyprpicker": (r'href=[\'\"]?(?:\./)?(hyprpicker-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos-extra-v3", "cachyos-v3", "cachyos", "arch-extra"], [])
 }
 
 if pkg_id not in catalog:
@@ -2104,250 +2104,250 @@ if cpu_tier == "generic":
     repos["cachyos-extra-znver4"] = repos["cachyos-extra"]
 
 catalog = {
-    "mangohud": (r'href=[\'\"]?(mangohud-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(lib32-mangohud-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(glfw-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["cachyos-extra-v3", "arch-extra", "cachyos"], ["arch-multilib", "cachyos"]),
-    "gamemode": (r'href=[\'\"]?(gamemode-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(lib32-gamemode-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, ["cachyos-extra-v3", "arch-extra", "cachyos"], ["arch-multilib", "cachyos"]),
-    "goverlay": (r'href=[\'\"]?(goverlay-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(qt6pas-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["arch-extra", "cachyos"], []),
-    "scx": (r'href=[\'\"]?(scx-manager-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
-        r'href=[\'\"]?(scx-scheds(?:-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(scx-tools(?:-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    "mangohud": (r'href=[\'\"]?(?:\./)?(mangohud-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(?:\./)?(lib32-mangohud-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(?:\./)?(glfw-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["cachyos-extra-v3", "arch-extra", "cachyos"], ["arch-multilib", "cachyos"]),
+    "gamemode": (r'href=[\'\"]?(?:\./)?(gamemode-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(?:\./)?(lib32-gamemode-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, ["cachyos-extra-v3", "arch-extra", "cachyos"], ["arch-multilib", "cachyos"]),
+    "goverlay": (r'href=[\'\"]?(?:\./)?(goverlay-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(?:\./)?(qt6pas-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["arch-extra", "cachyos"], []),
+    "scx": (r'href=[\'\"]?(?:\./)?(scx-manager-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(?:\./)?(scx-scheds(?:-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(scx-tools(?:-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["cachyos", "arch-extra"], []),
-    "easyeffects": (r'href=[\'\"]?(easyeffects-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
-        r'href=[\'\"]?(lsp-plugins-lv2-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(calf-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(mda\.lv2-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(zam-plugins-lv2-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(zita-convolver-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(rnnoise-(?:1%3A|1:)?([0-9a-zA-Z_\.:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libbs2b-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(soundtouch-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libebur128-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(webrtc-audio-processing-(?:2|1)-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(lilv-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(serd-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(sord-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(sratom-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(qt6-graphs-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(onetbb-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libmysofa-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(zix-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    "easyeffects": (r'href=[\'\"]?(?:\./)?(easyeffects-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(?:\./)?(lsp-plugins-lv2-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(calf-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(mda\.lv2-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(zam-plugins-lv2-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(zita-convolver-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(rnnoise-(?:1%3A|1:)?([0-9a-zA-Z_\.:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libbs2b-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(soundtouch-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libebur128-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(webrtc-audio-processing-(?:2|1)-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(lilv-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(serd-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(sord-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(sratom-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(qt6-graphs-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(onetbb-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libmysofa-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(zix-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["arch-extra", "cachyos", "arch-core"], []),
-    "pear-desktop": (r'href=[\'\"]?(pear-desktop-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
-        r'href=[\'\"]?(electron42-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libjpeg-turbo-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    "pear-desktop": (r'href=[\'\"]?(?:\./)?(pear-desktop-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(?:\./)?(electron42-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libjpeg-turbo-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["chaotic-aur", "chaotic-cdn", "arch-extra"], []),
     # 6A-189: no repository carries lib32-yabridge, so the 32-bit part is not required (same as the Rust app): the lib32 pattern is None
-    "yabridge": (r'href=[\'\"]?(yabridge-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(yabridgectl-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["arch-extra", "cachyos", "chaotic-aur"], ["arch-multilib", "cachyos"]),
-    "audacity": (r'href=[\'\"]?(audacity-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
-        r'href=[\'\"]?(suil-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(lilv-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(serd-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(sord-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(sratom-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(zix-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(portsmf-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(portaudio-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(portmidi-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libsbsms-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(vamp-plugin-sdk-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(soundtouch-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(twolame-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libid3tag-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libsoxr-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libmspack-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(wxwidgets-gtk3-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(wxwidgets-common-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libjpeg-turbo-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    "yabridge": (r'href=[\'\"]?(?:\./)?(yabridge-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(?:\./)?(yabridgectl-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["arch-extra", "cachyos", "chaotic-aur"], ["arch-multilib", "cachyos"]),
+    "audacity": (r'href=[\'\"]?(?:\./)?(audacity-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(?:\./)?(suil-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(lilv-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(serd-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(sord-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(sratom-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(zix-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(portsmf-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(portaudio-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(portmidi-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libsbsms-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(vamp-plugin-sdk-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(soundtouch-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(twolame-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libid3tag-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libsoxr-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libmspack-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(wxwidgets-gtk3-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(wxwidgets-common-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libjpeg-turbo-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["arch-extra", "cachyos-extra-v3", "cachyos", "arch-core"], []),
-    "spotify": (r'href=[\'\"]?(spotify(?:-launcher)?-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
-        r'href=[\'\"]?(sequoia-sqv-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libayatana-appindicator-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libayatana-indicator-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(ayatana-ido-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libcurl-gnutls-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    "spotify": (r'href=[\'\"]?(?:\./)?(spotify(?:-launcher)?-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(?:\./)?(sequoia-sqv-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libayatana-appindicator-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libayatana-indicator-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(ayatana-ido-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libcurl-gnutls-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["arch-extra", "cachyos-extra-v3", "cachyos", "arch-core"], []),
-    "inkscape": (r'href=[\'\"]?(inkscape-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
-        r'href=[\'\"]?(lib2geom-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(double-conversion-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(graphicsmagick-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libcdr-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(poppler-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libvisio-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libwpg-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(librevenge-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    "inkscape": (r'href=[\'\"]?(?:\./)?(inkscape-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(?:\./)?(lib2geom-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(double-conversion-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(graphicsmagick-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libcdr-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(poppler-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libvisio-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libwpg-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(librevenge-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["cachyos-extra-v3", "arch-extra", "cachyos"], []),
-    "darktable": (r'href=[\'\"]?(darktable-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
-        r'href=[\'\"]?(libavif-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libheif-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libde265-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libyuv-((?:r[0-9]+|[0-9])[a-zA-Z0-9_\.\+%-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(rav1e-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(svt-av1-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(openh264-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(pugixml-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(colord-gtk-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(osm-gps-map-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(gmic-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(flickcurl-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    "darktable": (r'href=[\'\"]?(?:\./)?(darktable-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(?:\./)?(libavif-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libheif-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libde265-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libyuv-((?:r[0-9]+|[0-9])[a-zA-Z0-9_\.\+%-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(rav1e-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(svt-av1-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(openh264-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(pugixml-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(colord-gtk-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(osm-gps-map-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(gmic-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(flickcurl-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["cachyos-extra-v3", "arch-extra", "cachyos"], []),
-    "syncthing": (r'href=[\'\"]?(syncthing-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos-extra-v3", "cachyos"], []),
-    "antigravity": (r'href=[\'\"]?(antigravity(?:-bin|-ide)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "chaotic-cdn", "cachyos", "arch-extra"], []),
-    "ananicy": (r'href=[\'\"]?(ananicy-cpp(?:-git)?-([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
-        r'href=[\'\"]?(cachyos-ananicy-rules(?:-git)?-([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libbpf-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    "syncthing": (r'href=[\'\"]?(?:\./)?(syncthing-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos-extra-v3", "cachyos"], []),
+    "antigravity": (r'href=[\'\"]?(?:\./)?(antigravity(?:-bin|-ide)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "chaotic-cdn", "cachyos", "arch-extra"], []),
+    "ananicy": (r'href=[\'\"]?(?:\./)?(ananicy-cpp(?:-git)?-([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(?:\./)?(cachyos-ananicy-rules(?:-git)?-([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libbpf-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["cachyos", "cachyos-extra-v3", "arch-core"], []),
-    "gamescope": (r'href=[\'\"]?(gamescope-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(lib32-gamescope-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(libavif-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["cachyos", "arch-extra"], ["cachyos", "arch-multilib"]),
-    "heroic": (r'href=[\'\"]?(heroic-games-launcher-bin-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "arch-extra"], []),
-    "lutris": (r'href=[\'\"]?(lutris(?:-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
-        r'href=[\'\"]?(webkit2gtk-4\.1-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libsoup3-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(python-moddb-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(python-pypresence-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(python-evdev-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(python-distro-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    "gamescope": (r'href=[\'\"]?(?:\./)?(gamescope-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(?:\./)?(lib32-gamescope-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(?:\./)?(libavif-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["cachyos", "arch-extra"], ["cachyos", "arch-multilib"]),
+    "heroic": (r'href=[\'\"]?(?:\./)?(heroic-games-launcher-bin-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "arch-extra"], []),
+    "lutris": (r'href=[\'\"]?(?:\./)?(lutris(?:-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(?:\./)?(webkit2gtk-4\.1-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libsoup3-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(python-moddb-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(python-pypresence-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(python-evdev-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(python-distro-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["arch-extra", "cachyos", "arch-core", "cachyos-extra-v3"], []),
-    "faugus": (r'href=[\'\"]?(faugus-launcher-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
-        r'href=[\'\"]?(python-vdf-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(icoextract-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(python-pefile-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    "faugus": (r'href=[\'\"]?(?:\./)?(faugus-launcher-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(?:\./)?(python-vdf-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(icoextract-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(python-pefile-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["cachyos", "arch-extra"], []),
-    "protonplus": (r'href=[\'\"]?((?:proton-plus|protonplus)-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "arch-extra"], []),
-    "steam": (r'href=[\'\"]?(steam-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-multilib", "cachyos"], []),
+    "protonplus": (r'href=[\'\"]?(?:\./)?((?:proton-plus|protonplus)-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "arch-extra"], []),
+    "steam": (r'href=[\'\"]?(?:\./)?(steam-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-multilib", "cachyos"], []),
     "steam-devices": (None, None, None, [], []),
-    "retroarch": (r'href=[\'\"]?(retroarch-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(retroarch-assets-ozone-(?:[0-9]+%3A)?([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["arch-extra", "cachyos"], []),
-    "lact": (r'href=[\'\"]?(lact-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
-    "openrgb": (r'href=[\'\"]?(openrgb(?:-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "arch-extra"], []),
-    "solaar": (r'href=[\'\"]?(solaar-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
-        r'href=[\'\"]?(python-pyudev-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(python-typing_extensions-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(python-xlib-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    "retroarch": (r'href=[\'\"]?(?:\./)?(retroarch-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(?:\./)?(retroarch-assets-ozone-(?:[0-9]+%3A)?([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["arch-extra", "cachyos"], []),
+    "lact": (r'href=[\'\"]?(?:\./)?(lact-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
+    "openrgb": (r'href=[\'\"]?(?:\./)?(openrgb(?:-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "arch-extra"], []),
+    "solaar": (r'href=[\'\"]?(?:\./)?(solaar-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(?:\./)?(python-pyudev-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(python-typing_extensions-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(python-xlib-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["arch-extra", "cachyos-extra-v3", "cachyos"], []),
-    "openghub": (r'href=[\'\"]?(openghub(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
-        r'href=[\'\"]?(webkit2gtk-4\.1-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libsoup3-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libmanette-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    "openghub": (r'href=[\'\"]?(?:\./)?(openghub(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(?:\./)?(webkit2gtk-4\.1-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libsoup3-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libmanette-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["arch-extra", "cachyos", "chaotic-aur"], []),
     # 6A-192: the program is the official GitHub release AppImage (github_and_direct_pkgs below); these are its library parts
-    "bambu-studio": (r'href=[\'\"]?(BambuStudio_ubuntu24\.04-v([0-9][0-9.]*)-[0-9]+\.AppImage)[\'\"]?', None, [
-        r'href=[\'\"]?(webkit2gtk-4\.1-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libsoup3-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libavif-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libyuv-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(rav1e-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(svt-av1-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    "bambu-studio": (r'href=[\'\"]?(?:\./)?(BambuStudio_ubuntu24\.04-v([0-9][0-9.]*)-[0-9]+\.AppImage)[\'\"]?', None, [
+        r'href=[\'\"]?(?:\./)?(webkit2gtk-4\.1-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libsoup3-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libavif-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libyuv-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(rav1e-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(svt-av1-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["arch-extra", "cachyos"], []),
-    "coolercontrol": (r'href=[\'\"]?(coolercontrol-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(coolercontrold-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["cachyos", "arch-extra"], []),
-    "asusctl": (r'href=[\'\"]?(asusctl-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
-    "brave": (r'href=[\'\"]?(brave-bin-(?:1%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "chaotic-aur", "chaotic-cdn"], []),
-    "zen-browser": (r'href=[\'\"]?(zen-browser-bin-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "chaotic-aur", "chaotic-cdn"], []),
-    "google-chrome": (r'href=[\'\"]?(google-chrome-([0-9][a-zA-Z0-9_\.:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "chaotic-cdn", "cachyos"], []),
-    "microsoft-edge": (r'href=[\'\"]?(microsoft-edge-(?:stable|beta|dev)-bin-([0-9][a-zA-Z0-9_\.:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "chaotic-cdn", "cachyos"], []),
-    "obs-studio": (r'href=[\'\"]?(obs-studio-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
-        r'href=[\'\"]?(python-(3\.[0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(mbedtls-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(obs-studio-plugin-browser-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(cef-minimal-obs(?:-bin)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libdatachannel-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libjuice-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(librist-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libusrsctp-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    "coolercontrol": (r'href=[\'\"]?(?:\./)?(coolercontrol-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(?:\./)?(coolercontrold-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["cachyos", "arch-extra"], []),
+    "asusctl": (r'href=[\'\"]?(?:\./)?(asusctl-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
+    "brave": (r'href=[\'\"]?(?:\./)?(brave-bin-(?:1(?:%3A|:))?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "chaotic-aur", "chaotic-cdn"], []),
+    "zen-browser": (r'href=[\'\"]?(?:\./)?(zen-browser-bin-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "chaotic-aur", "chaotic-cdn"], []),
+    "google-chrome": (r'href=[\'\"]?(?:\./)?(google-chrome-([0-9][a-zA-Z0-9_\.:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "chaotic-cdn", "cachyos"], []),
+    "microsoft-edge": (r'href=[\'\"]?(?:\./)?(microsoft-edge-(?:stable|beta|dev)-bin-([0-9][a-zA-Z0-9_\.:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "chaotic-cdn", "cachyos"], []),
+    "obs-studio": (r'href=[\'\"]?(?:\./)?(obs-studio-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(?:\./)?(python-(3\.[0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(mbedtls-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(obs-studio-plugin-browser-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(cef-minimal-obs(?:-bin)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libdatachannel-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libjuice-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(librist-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libusrsctp-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["arch-extra", "arch-core", "cachyos"], []),
-    "discord": (r'href=[\'\"]?(discord-(?:[0-9]+%3A|[0-9]+:)?([0-9][a-zA-Z0-9_\.:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
-    "vesktop": (r'href=[\'\"]?(vesktop(?:-bin)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos"], []),
-    "obs-vkcapture": (r'href=[\'\"]?(obs-vkcapture-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(lib32-obs-vkcapture-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, ["cachyos", "arch-extra"], ["cachyos", "arch-multilib"]),
-    "obs-move-transition": (r'href=[\'\"]?(obs-move-transition(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos-extra", "cachyos"], []),
-    "obs-source-record": (r'href=[\'\"]?(obs-source-record(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos-extra", "cachyos"], []),
-    "obs-pipewire-audio-capture": (r'href=[\'\"]?(obs-pipewire-audio-capture(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos-extra", "cachyos"], []),
-    "obs-advanced-scene-switcher": (r'href=[\'\"]?(obs-advanced-scene-switcher(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
-        r'href=[\'\"]?(opencv-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    "discord": (r'href=[\'\"]?(?:\./)?(discord-(?:[0-9]+%3A|[0-9]+:)?([0-9][a-zA-Z0-9_\.:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
+    "vesktop": (r'href=[\'\"]?(?:\./)?(vesktop(?:-bin)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos"], []),
+    "obs-vkcapture": (r'href=[\'\"]?(?:\./)?(obs-vkcapture-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', r'href=[\'\"]?(?:\./)?(lib32-obs-vkcapture-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, ["cachyos", "arch-extra"], ["cachyos", "arch-multilib"]),
+    "obs-move-transition": (r'href=[\'\"]?(?:\./)?(obs-move-transition(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos-extra", "cachyos"], []),
+    "obs-source-record": (r'href=[\'\"]?(?:\./)?(obs-source-record(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos-extra", "cachyos"], []),
+    "obs-pipewire-audio-capture": (r'href=[\'\"]?(?:\./)?(obs-pipewire-audio-capture(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos-extra", "cachyos"], []),
+    "obs-advanced-scene-switcher": (r'href=[\'\"]?(?:\./)?(obs-advanced-scene-switcher(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(?:\./)?(opencv-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["chaotic-aur", "cachyos-extra", "arch-extra", "cachyos"], []),
-    "obs-multi-rtmp": (r'href=[\'\"]?(obs-multi-rtmp(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos-extra", "cachyos"], []),
-    "obs-composite-blur": (r'href=[\'\"]?(obs-composite-blur(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos-extra", "cachyos"], []),
-    "obs-teleport": (r'href=[\'\"]?(obs-teleport(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos-extra", "cachyos"], []),
-    "zenpower3": (r'href=[\'\"]?(zenpower3-dkms-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos", "arch-extra"], []),
-    "v4l2loopback": (r'href=[\'\"]?(v4l2loopback-dkms-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos", "chaotic-aur"], []),
-    "rtl8821cu": (r'href=[\'\"]?(rtl8821cu-morrownr-dkms-git-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos"], []),
-    "rtl88x2bu": (r'href=[\'\"]?(rtl88x2bu-dkms-git-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos"], []),
-    "rtl8812au": (r'href=[\'\"]?(rtl8812au-dkms-git-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos"], []),
-    "broadcom-wl": (r'href=[\'\"]?(broadcom-wl-dkms-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
-    "r8125": (r'href=[\'\"]?(r8125-dkms-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos-extra-v3", "cachyos-extra", "cachyos"], []),
-    "sunshine": (r'href=[\'\"]?(sunshine-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
-        r'href=[\'\"]?(libayatana-appindicator-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(miniupnpc-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(numactl-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    "obs-multi-rtmp": (r'href=[\'\"]?(?:\./)?(obs-multi-rtmp(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos-extra", "cachyos"], []),
+    "obs-composite-blur": (r'href=[\'\"]?(?:\./)?(obs-composite-blur(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos-extra", "cachyos"], []),
+    "obs-teleport": (r'href=[\'\"]?(?:\./)?(obs-teleport(?:-bin|-git)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos-extra", "cachyos"], []),
+    "zenpower3": (r'href=[\'\"]?(?:\./)?(zenpower3-dkms-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos", "arch-extra"], []),
+    "v4l2loopback": (r'href=[\'\"]?(?:\./)?(v4l2loopback-dkms-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos", "chaotic-aur"], []),
+    "rtl8821cu": (r'href=[\'\"]?(?:\./)?(rtl8821cu-morrownr-dkms-git-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos"], []),
+    "rtl88x2bu": (r'href=[\'\"]?(?:\./)?(rtl88x2bu-dkms-git-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos"], []),
+    "rtl8812au": (r'href=[\'\"]?(?:\./)?(rtl8812au-dkms-git-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos"], []),
+    "broadcom-wl": (r'href=[\'\"]?(?:\./)?(broadcom-wl-dkms-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
+    "r8125": (r'href=[\'\"]?(?:\./)?(r8125-dkms-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "cachyos-extra-v3", "cachyos-extra", "cachyos"], []),
+    "sunshine": (r'href=[\'\"]?(?:\./)?(sunshine-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(?:\./)?(libayatana-appindicator-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(miniupnpc-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(numactl-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["cachyos", "arch-extra"], []),
-    "vram-booster": (r'href=[\'\"]?(dmemcg-booster-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(plasma-foreground-booster-([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["cachyos", "chaotic-aur", "arch-extra"], []),
-    "limine": (r'href=[\'\"]?(limine-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "arch-extra"], []),
-    "limine-entry-tool": (r'href=[\'\"]?(limine-entry-tool-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos"], []),
-    "limine-snapper-sync": (r'href=[\'\"]?(limine-snapper-sync-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos"], []),
-    "sbctl": (r'href=[\'\"]?(sbctl-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
-    "hyprland-noctalia": (r'href=[\'\"]?(hyprland-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
-        r'href=[\'\"]?(libjpeg-turbo-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',  # 6A-13: libjpeg.so.8 for libhyprgraphics
-        r'href=[\'\"]?(noctalia(?:-shell)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(xdg-desktop-portal-hyprland-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hyprlock-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hypridle-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hyprpaper-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hyprpicker-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hyprland-guiutils-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(aquamarine-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hyprlang-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hyprcursor-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hyprgraphics-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hyprutils-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hyprpolkitagent-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hyprwire-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hyprtoolkit-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(sdbus-cpp-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(tomlplusplus-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(muparser-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(re2-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(md4c-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(lua-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libical-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(ddcui-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(wlr-randr-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(nwg-displays-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(python-i3ipc-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    "vram-booster": (r'href=[\'\"]?(?:\./)?(dmemcg-booster-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, r'href=[\'\"]?(?:\./)?(plasma-foreground-booster-([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["cachyos", "chaotic-aur", "arch-extra"], []),
+    "limine": (r'href=[\'\"]?(?:\./)?(limine-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos", "arch-extra"], []),
+    "limine-entry-tool": (r'href=[\'\"]?(?:\./)?(limine-entry-tool-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos"], []),
+    "limine-snapper-sync": (r'href=[\'\"]?(?:\./)?(limine-snapper-sync-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos"], []),
+    "sbctl": (r'href=[\'\"]?(?:\./)?(sbctl-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
+    "hyprland-noctalia": (r'href=[\'\"]?(?:\./)?(hyprland-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(?:\./)?(libjpeg-turbo-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',  # 6A-13: libjpeg.so.8 for libhyprgraphics
+        r'href=[\'\"]?(?:\./)?(noctalia(?:-shell)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(xdg-desktop-portal-hyprland-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hyprlock-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hypridle-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hyprpaper-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hyprpicker-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hyprland-guiutils-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(aquamarine-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hyprlang-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hyprcursor-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hyprgraphics-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hyprutils-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hyprpolkitagent-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hyprwire-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hyprtoolkit-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(sdbus-cpp-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(tomlplusplus-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(muparser-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(re2-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(md4c-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(lua-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libical-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(ddcui-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(wlr-randr-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(nwg-displays-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(python-i3ipc-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["cachyos-extra-v3", "cachyos-v3", "cachyos", "arch-extra", "chaotic-aur"], []),
-    "hyprland-core": (r'href=[\'\"]?(hyprland-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
-        r'href=[\'\"]?(libjpeg-turbo-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',  # 6A-13: libjpeg.so.8 for libhyprgraphics
-        r'href=[\'\"]?(xdg-desktop-portal-hyprland-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hyprlock-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hypridle-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hyprpaper-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hyprpicker-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hyprland-guiutils-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(aquamarine-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hyprlang-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hyprcursor-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hyprgraphics-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hyprutils-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hyprpolkitagent-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hyprwire-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(hyprtoolkit-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(sdbus-cpp-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(tomlplusplus-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(muparser-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(re2-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(lua-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(ddcui-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(wlr-randr-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(nwg-displays-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(python-i3ipc-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    "hyprland-core": (r'href=[\'\"]?(?:\./)?(hyprland-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(?:\./)?(libjpeg-turbo-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',  # 6A-13: libjpeg.so.8 for libhyprgraphics
+        r'href=[\'\"]?(?:\./)?(xdg-desktop-portal-hyprland-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hyprlock-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hypridle-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hyprpaper-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hyprpicker-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hyprland-guiutils-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(aquamarine-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hyprlang-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hyprcursor-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hyprgraphics-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hyprutils-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hyprpolkitagent-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hyprwire-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(hyprtoolkit-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(sdbus-cpp-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(tomlplusplus-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(muparser-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(re2-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(lua-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(ddcui-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(wlr-randr-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(nwg-displays-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(python-i3ipc-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["cachyos-extra-v3", "cachyos-v3", "cachyos", "arch-extra"], []),
-    "hyprpicker": (r'href=[\'\"]?(hyprpicker-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos-extra-v3", "cachyos-v3", "cachyos", "arch-extra"], []),
+    "hyprpicker": (r'href=[\'\"]?(?:\./)?(hyprpicker-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["cachyos-extra-v3", "cachyos-v3", "cachyos", "arch-extra"], []),
     "mactahoe-icons": (None, None, None, [], []),
     "mactahoe-cursors": (None, None, None, [], []),
     "whitesur-icons": (None, None, None, [], []),
     "whitesur-cursors": (None, None, None, [], []),
-    "opera": (r'href=[\'\"]?(opera-([0-9a-zA-Z_\.:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "chaotic-cdn", "cachyos"], []),
-    "gnome-disk-utility": (r'href=[\'\"]?(gnome-disk-utility-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
-        r'href=[\'\"]?(libhandy-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(libdvdread-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    "opera": (r'href=[\'\"]?(?:\./)?(opera-([0-9a-zA-Z_\.:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "chaotic-cdn", "cachyos"], []),
+    "gnome-disk-utility": (r'href=[\'\"]?(?:\./)?(gnome-disk-utility-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(?:\./)?(libhandy-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(libdvdread-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["cachyos-extra-v4", "cachyos-extra-v3", "arch-extra", "cachyos"], []),
-    "spacenav": (r'href=[\'\"]?(spacenavd-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
-        r'href=[\'\"]?(libspnav-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
-        r'href=[\'\"]?(spnavcfg-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+    "spacenav": (r'href=[\'\"]?(?:\./)?(spacenavd-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
+        r'href=[\'\"]?(?:\./)?(libspnav-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
+        r'href=[\'\"]?(?:\./)?(spnavcfg-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
     ], ["arch-extra", "cachyos", "chaotic-aur"], [])
 }
 
@@ -2595,33 +2595,33 @@ def resolve_single(pid):
             pass
         return pid, ver, "GITHUB_DVCP_AAC", "NONE", "NONE"
     if pid == "spacenav":
-        pat = r'href=[\'\"]?(spacenavd-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+        pat = r'href=[\'\"]?(?:\./)?(spacenavd-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
         ver, url = fetch_match(pat, ["arch-extra", "cachyos", "chaotic-aur"], pid)
         ver = ver or "1.3"
         extra1 = ""
-        e_ver1, e_url1 = fetch_match(r'href=[\'\"]?(libspnav-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["arch-extra", "cachyos", "chaotic-aur"], "libspnav")
+        e_ver1, e_url1 = fetch_match(r'href=[\'\"]?(?:\./)?(libspnav-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["arch-extra", "cachyos", "chaotic-aur"], "libspnav")
         if e_url1:
             extra1 = e_url1
         extra2 = ""
-        e_ver2, e_url2 = fetch_match(r'href=[\'\"]?(spnavcfg-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["arch-extra", "cachyos", "chaotic-aur"], "spnavcfg")
+        e_ver2, e_url2 = fetch_match(r'href=[\'\"]?(?:\./)?(spnavcfg-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["arch-extra", "cachyos", "chaotic-aur"], "spnavcfg")
         if e_url2:
             extra2 = e_url2
         return pid, ver, url or "NONE", extra1 or "NONE", extra2 or "NONE"
     if pid == "gnome-disk-utility":
-        pat = r'href=[\'\"]?(gnome-disk-utility-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+        pat = r'href=[\'\"]?(?:\./)?(gnome-disk-utility-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
         ver, url = fetch_match(pat, ["cachyos-extra-v4", "cachyos-extra-v3", "arch-extra", "cachyos"], pid)
         ver = ver or "46.1"
         extra1 = ""
-        e_ver1, e_url1 = fetch_match(r'href=[\'\"]?(libhandy-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["cachyos-extra-v4", "cachyos-extra-v3", "arch-extra", "cachyos"], "libhandy")
+        e_ver1, e_url1 = fetch_match(r'href=[\'\"]?(?:\./)?(libhandy-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["cachyos-extra-v4", "cachyos-extra-v3", "arch-extra", "cachyos"], "libhandy")
         if e_url1:
             extra1 = e_url1
         extra2 = ""
-        e_ver2, e_url2 = fetch_match(r'href=[\'\"]?(libdvdread-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["cachyos-extra-v4", "cachyos-extra-v3", "arch-extra", "cachyos"], "libdvdread")
+        e_ver2, e_url2 = fetch_match(r'href=[\'\"]?(?:\./)?(libdvdread-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["cachyos-extra-v4", "cachyos-extra-v3", "arch-extra", "cachyos"], "libdvdread")
         if e_url2:
             extra2 = e_url2
         return pid, ver, url or "NONE", extra1 or "NONE", extra2 or "NONE"
     if pid == "volt-gui":
-        pat = r'href=[\'\"]?(volt-gui(?:-bin)?-([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
+        pat = r'href=[\'\"]?(?:\./)?(volt-gui(?:-bin)?-([0-9a-zA-Z_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
         ver, url = fetch_match(pat, ["chaotic-aur", "chaotic-cdn", "cachyos"], pid)
         if not ver or not url:
             try:
@@ -7527,7 +7527,7 @@ DKMS_DOUNINST_EOF
     # 6A-125: a failed or truncated archive is never installed
     if ! (
         cd "${staging_root}" || exit 1
-        find ./ | LC_COLLATE=C sort | sed '2,$s,^\./,,' | tar --owner=0 --group=0 --numeric-owner --no-recursion -T - -cf - | xz -T0 -1 > "${txz_out}" 2>/dev/null
+        find ./ | LC_COLLATE=C sort | sed '2,$s,^\./,,' | tar --owner=0 --group=0 --numeric-owner --mode='go+rX' --no-recursion -T - -cf - | xz -T0 -1 > "${txz_out}" 2>/dev/null
     ) || ! xz -t "${txz_out}" 2>/dev/null; then
         gaming_build_failed "The ${pkg_name} package could not be created. Nothing was changed."
         return 1

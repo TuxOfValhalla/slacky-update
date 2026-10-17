@@ -74,6 +74,7 @@
   "ENTER_SEARCH_QUERY": "Tast inn søketekst",
   "GNOMES_CACHE_CLEANED": "Ryddet {0} med hurtigbufrede pakker fra Underpants Gnomes-cachen.",
   "GNOMES_CURATED_COLLISION_WARN": "Advarsel: \"{0}\" er allerede installert som en kuratert Slackware-pakke ({1}). Transmutering vil overstyre oppstartsfilen i /usr/bin/. Vil du fortsette? [j/N] ",
+  "GNOMES_SERVICE_NOT_SET_UP": "{0} har en bakgrunnstjeneste ({1}) som ikke starter av seg selv; for å starte den for hånd, kjør: {2}",
   "GNOMES_EXCLUDES_SHIELD": "Vertssystem-skjold: Slackware-base og glibc er 100 % beskyttet.",
   "GNOMES_PROMPT_INSTALL": "Skriv inn pakkenavn som skal transmuteres/installeres (eller trykk Enter for å gå tilbake): ",
   "GNOMES_PROMPT_SEARCH": "Skriv inn søkeord eller pakkenavn: ",

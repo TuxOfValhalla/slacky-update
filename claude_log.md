@@ -1321,3 +1321,45 @@
 - Files touched: `bin/gnomes`, `lib/gnomes_pacman.py`, `lib/mod_gaming.sh`.
 - Verification: `bash -n bin/gnomes lib/mod_gaming.sh`, `compile()` of `lib/gnomes_pacman.py` clean (no `__pycache__` created); a code point scan (U+1F000-1FFFF, U+2600-27BF, U+2B00-2BFF, U+2190-21FF, U+FE0F, U+200D, check marks) finds 0 lines in the three files. Not run against the real system.
 - Known limits: other legacy files (`lib/common.sh`, TUI, doctor) were not part of this task; the colour palette is untouched by design.
+
+### 2026-10-16 Build 90_slacky (pending) - 6A-266 - Chaotic-AUR epoch packages were missed by the curated check
+- User-visible: a newer curated program on Chaotic-AUR whose package name carries an epoch (Brave `brave-bin-1:1.97.59-1`) is now offered as an update, like the Rust app already does.
+- Technical: epoch groups in the catalog and source patterns accept `%3A` or `:`; every `href=` pattern accepts an optional `./` prefix (Chaotic's index writes `href="./name..."`). Optional groups only; the captured file name is unchanged.
+- Files touched: `lib/mod_gaming.sh`.
+- Verification: `bash -n`; the new patterns run against the cached Chaotic and CachyOS indexes find Brave 1.97.59 (Chaotic), 1.97.57 (CachyOS) and Edge 155.0.4283.60. Not run end to end on the real system.
+- Known limits: 438 pattern lines got the optional `./`; only Chaotic-sourced entries are affected in practice.
+
+### 2026-10-17 Build 90_slacky (pending) - 6A-267 - restart advice only when something in use changed (bin/slacky-update)
+- User-visible: after updating a kernel that is not the running one (zen while bore runs) plus ordinary packages, the update no longer says "System reboot recommended" without a reason. The advice now needs a concrete reason: the running kernel's flavor got a newer version, its `/lib/modules` folder is gone, a Slackware kernel package of the running release was replaced or removed, or NVIDIA, glibc (not zoneinfo), Mesa or the desktop changed. Rust mirror: G5-21.
+- Technical: the boot chain flag `kernel_or_driver_changed` still runs the boot chain but no longer forces the advice (`force_flag` is ignored). The decision moved from an inline heredoc into `slacky_reboot_reasons` (testable; `SLACKY_RUNNING_RELEASE` overrides `uname -r`). `get_full_pkg_snapshot_file` appends `MOD:<release>` lines for `/lib/modules`. Rules: `docs/reboot_rules.md`.
+- Files touched: `bin/slacky-update`, `docs/reboot_rules.md`, `claude_log.md`, `docs/log.md`, `docs/log_nb.md`. No BUILD bump (collects for Build 90). No new locale keys (`REBOOT_RECOMMENDED_DESC` is now unreachable but kept).
+- Verification: `bash -n`; a temporary script ran the function against fake snapshot files (16 cases: owner's zen case, new flavor, older version, rc, boot tooling, zoneinfo, bore updated, modules gone, Slackware kernel replaced/removed/other version/headers, nvidia, glibc, mesa, desktop); all passed and the script was deleted. NOT verified: a real full update.
+- Known limits: a plain first run after upgrading to this build has no MOD lines in the before snapshot only if the snapshot was made by an older process (cannot happen within one run).
+
+### 2026-10-17 Build 90_slacky (pending) - 6A-268 - the file check no longer flags scratch folders and says what it found (lib/slacky_heal.py)
+- User-visible: the file check no longer reports packages as damaged because of scratch paths they list (for example `var/lib/rpm/tmp/Packages`). For a package that is not an official Slackware one, the message now says how many files are missing and gives one example: `<pkg> is missing N of its files (for example /path); it is not an official Slackware package, so rebuild or reinstall it with the tool you used to install it.` Rust mirror: the Rust app already skipped `/tmp/` paths; its wording was aligned in Rust commit 5e969f1.
+- Technical: `audit_one` skips entries containing `/tmp/`; `report` builds the non-official sentence with the damaged count and example.
+- Files touched: `lib/slacky_heal.py`, `claude_log.md`, `docs/log.md`, `docs/log_nb.md`.
+- Verification: `compile()` clean. Not run against the real system.
+- Known limits: any package path that legitimately contains `/tmp/` is no longer checked (same as Rust).
+
+### 2026-10-17 Build 90_slacky (pending) - 6A-269 - packages built under a strict umask no longer carry private folder modes
+- User-visible: a package built while the builder's umask is 077 (or similar) used to carry `usr/` and `usr/bin/` as 0700 and files as 0600/0700, and `installpkg` would apply that to the host's `/usr` and `/usr/bin` (normal users could no longer run programs). Every package we build now has world-readable modes (folders 0755, files 0644 or 0755) whatever the umask. Rust mirror: commit a3b099c `normalize_modes`.
+- Technical: the archive step of every builder now passes `--mode='go+rX'` to `tar`: group and others gain read, and execute only on folders and on files the owner can already execute. Setuid/setgid/sticky bits and existing permissions are kept (nothing is removed), symlinks are untouched. Chosen over a `os.umask(0o022)` or a chmod pass on the staging tree because the fix then lives in the one place that decides what is installed (the archive), does not depend on how the files got into staging, and never changes files in the staging tree (which may hardlink to cached runtime files); a umask would not repair modes that tar had already masked during extraction.
+- Files touched: `lib/gnomes_pacman.py` (`_run_makepkg_with_progress`, used by app transmute and the runtime builder), `lib/mod_gaming.sh` (curated packager), `lib/mod_rocm.sh`, `lib/mod_nvidia.sh`.
+- Verification: a temporary script built a tree under `umask 077` (0700 folders, a 0600 file, a 0700 and a 4700 program, a 1700 folder, a symlink) and packed it with the exact pipeline; modes in the archive were 0755, 0644, 0755, 4755 (setuid kept), 1755 (sticky kept), symlink unchanged; the script was deleted. `bash -n` on the three shell files, `compile()` of the Python file. Not run against the real system.
+- Known limits: a file that was deliberately private (0600) in an upstream package becomes world-readable; nothing we ship installs secrets, and the previous behaviour (host folders at 0700) was worse. The tar step of `rollback` (re-packing installed files) copies real modes and is unchanged.
+
+### 2026-10-17 Build 90_slacky (pending) - 6A-270 - CachyOS package lists are fetched as the signed `.db` file
+- User-visible: the CachyOS package lists no longer lag behind the mirror (the unsigned `<repo>.db.tar.zst` was found hours older than the signed `<repo>.db`, with older versions such as davinci-resolve 21.1.0 instead of 21.1.1). Rust mirror: commit 859ad1f.
+- Technical: the 13 CachyOS repo URLs in `get_default_repositories` end in `.db`; `sync_repositories` still stores them as `<repo>.db.tar.zst` so the cache layout, the parser and the other readers are unchanged. Arch (`.db.tar.gz`) is untouched. No other legacy code fetches CachyOS databases.
+- Files touched: `lib/gnomes_pacman.py`.
+- Verification: read-only fetch of `cachyos-extra-znver4.db` into a temp dir (zstd magic, 7418 packages parsed by `PacmanDBParser.parse_archive`); `gpgv` with `keys/cachyos.gpg` and the mirror's `.db.sig` reported Good signature from CachyOS. Temp dir removed. The download itself was not run through `sync_repositories`.
+- Known limits: no signature gate is added (none existed); Arch and Chaotic publish no `.db.sig`.
+
+### 2026-10-17 Build 90_slacky (pending) - 6A-271 - no boot hook for a service script the Footprint Guard dropped
+- User-visible: when the guard removes the start script of a dependency's background service, the package no longer adds a line to `rc.local` that calls a script that does not exist. For each dropped service one sentence is printed: `<app> has a background service (<svc>) that does not start by itself; to start it by hand, run: <command>`. Rust mirror: commit 1dda156 (GAP-3).
+- Technical: `transmute` runs `footprint_guard` right after `_transmute_systemd_services` (the pack-time run then finds nothing more), keeps only services whose `etc/rc.d/rc.<svc>` still exists for `doinst.sh` and `douninst.sh`; the command comes from the unit's ExecStart (recorded in `_service_cmds`). Locale key `GNOMES_SERVICE_NOT_SET_UP` added to en/nb (the Python prints English like its other messages).
+- Files touched: `lib/gnomes_pacman.py`, `locales/en.json`, `locales/nb.json`.
+- Verification: temp staging tree with two fake units: service conversion recorded both commands, the guard dropped both scripts, `etc/rc.d` ended empty. The inline keep/skip step in `transmute` was not exercised end to end (needs a full app build); `compile()` and JSON load clean.
+- Known limits: the guard message also appears at this earlier point; services the guard keeps (own daemons) are hooked as before.

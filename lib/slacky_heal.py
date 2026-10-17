@@ -103,7 +103,8 @@ def audit_one(full):
         if e.startswith("./"):
             e = e[2:]
         e = decode(e)
-        if e.endswith(".new") or e.startswith(SKIP_PREFIX):
+        # 6A-268: scratch folders a package may list (rpm lists var/lib/rpm/tmp/Packages), like the Rust check
+        if e.endswith(".new") or e.startswith(SKIP_PREFIX) or "/tmp/" in e:
             continue
         path = P("/" + e.rstrip("/"))
         try:
@@ -258,7 +259,7 @@ def report(res):
             lines.append("%s: /%s is an account, security, boot or personal file, and a repair never touches those." % (base, next(d for d in damaged if is_never(d))))
             continue
         if not is_official(full):
-            lines.append("%s is not an official Slackware package; rebuild or reinstall it with the tool you used to install it." % base)
+            lines.append("%s is missing %d of its files (for example /%s); it is not an official Slackware package, so rebuild or reinstall it with the tool you used to install it." % (base, len(damaged), example))
             continue
         if mi:
             lines.append("%s is missing %d of its files (for example /%s), so some programs may not start." % (base, len(mi), mi[0]))

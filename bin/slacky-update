@@ -205,6 +205,102 @@ PYSTATUS
 get_full_pkg_snapshot_file() {
     local target_file="$1"
     ls /var/log/packages 2>/dev/null | sort > "${target_file}" || true
+    # 6A-267: the kernel module directories travel in the same file (MOD: lines); the reboot decision needs them
+    ls /lib/modules 2>/dev/null | sort | sed 's/^/MOD:/' >> "${target_file}" || true
+}
+
+# 6A-267: why a restart is wanted. Prints one concrete sentence per reason, nothing when nothing in use changed.
+# Rules: docs/reboot_rules.md. $1/$2 = snapshot files before/after; SLACKY_RUNNING_RELEASE overrides uname -r (tests).
+slacky_reboot_reasons() {
+    SLACKY_RUNNING_RELEASE="${SLACKY_RUNNING_RELEASE:-$(uname -r)}" python3 - "$1" "$2" << 'PYREBOOT' 2>/dev/null || true
+import sys, os, re
+
+def load(path):
+    pk, md = set(), set()
+    with open(path, 'r', encoding='utf-8', errors='ignore') as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            (md if line.startswith('MOD:') else pk).add(line[4:] if line.startswith('MOD:') else line)
+    return pk, md
+
+def parse_release(rel):
+    # 7.2.10-1-cachyos-bore -> ((7,2,10), rc, 1, 'cachyos-bore'); 6.18.52 -> flavor None
+    parts = rel.split('-')
+    try:
+        ver = tuple(int(n) for n in parts[0].split('.'))
+    except ValueError:
+        return None
+    rest = parts[1:]
+    rc = None
+    for t in rest:
+        m = re.fullmatch(r'rc(\d+)', t)
+        if m:
+            rc = int(m.group(1))
+    rel_at = next((i for i, t in enumerate(rest) if t.isdigit()), None)
+    if rel_at is None:
+        return (ver, rc, 0, None)
+    flavor = '-'.join(rest[rel_at + 1:]) or None
+    return (ver, rc, int(rest[rel_at]), flavor)
+
+def order_key(r):
+    return (r[0], 10**9 if r[1] is None else r[1], r[2])
+
+def pkg_version(entry):
+    f = entry.rsplit('-', 3)
+    return f[-3] if len(f) == 4 else None
+
+def is_running_kernel_pkg(entry, running):
+    low = entry.lower()
+    if not low.startswith('kernel-') or low.startswith(('kernel-headers', 'kernel-source', 'kernel-firmware', 'kernel-docs')):
+        return False
+    v = pkg_version(entry)
+    return v is not None and running in (v, v + '-smp')
+
+try:
+    b_pk, b_md = load(sys.argv[1])
+    a_pk, a_md = load(sys.argv[2])
+    running = os.environ.get('SLACKY_RUNNING_RELEASE', '')
+    reasons = []
+    def add(r):
+        if r not in reasons:
+            reasons.append(r)
+
+    for p in sorted(a_pk - b_pk):
+        if p.startswith('glibc-zoneinfo'):
+            continue
+        if p.startswith(('glibc-solibs', 'glibc-2', 'glibc-3')):
+            add(f"Core C library updated ({p})")
+        elif 'mesa-' in p or p.startswith('mesa'):
+            add(f"Mesa graphics / Vulkan driver updated ({p})")
+        elif 'nvidia' in p:
+            add(f"NVIDIA graphics driver suite updated ({p})")
+        elif any(kw in p for kw in ['plasma-', 'kwin-', 'sddm-', 'wayland-']):
+            add(f"Display server / Desktop environment updated ({p})")
+        elif running and is_running_kernel_pkg(p, running):
+            add(f"The running kernel package was replaced ({p})")
+
+    if running:
+        for p in sorted(b_pk - a_pk):
+            if is_running_kernel_pkg(p, running):
+                add(f"The running kernel package was replaced or removed ({p})")
+        cur = parse_release(running)
+        if cur and cur[3]:
+            newer = []
+            for m in a_md - b_md:
+                k = parse_release(m)
+                if k and k[3] == cur[3] and order_key(k) > order_key(cur):
+                    newer.append((order_key(k), m))
+            if newer:
+                add(f"The running kernel ({cur[3]}) was updated to {max(newer)[1]}")
+        if running in b_md and running not in a_md:
+            add(f"The modules of the running kernel ({running}) were removed")
+    for r in reasons:
+        print(r)
+except Exception:
+    pass
+PYREBOOT
 }
 
 get_kernel_driver_snapshot() {
@@ -220,7 +316,7 @@ print(';'.join(k_pkgs))
 prompt_reboot_or_close() {
     local snap_before_file="$1"
     local snap_after_file="$2"
-    local force_flag="${3:-0}"
+    local force_flag="${3:-0}"   # unused since 6A-267 (kept so the callers stay as they are)
 
     # SpiderSense phase 1 (spec 9): after a refused/failed boot chain there is no restart offer and the exit code is 30
     if [ "${SLACKY_BOOT_CHAIN_FAILED:-0}" = "1" ]; then
@@ -230,51 +326,13 @@ prompt_reboot_or_close() {
         exit 30
     fi
 
+    # 6A-267: ${force_flag} (boot chain ran) is accepted but no longer forces the advice; only a change of what runs now does
     local needs_reboot=0
-    if [ "${force_flag}" -eq 1 ]; then
-        needs_reboot=1
-    fi
 
     local reboot_reasons=()
-    if [ "${needs_reboot}" -eq 0 ] && [ -f "${snap_before_file}" ] && [ -f "${snap_after_file}" ]; then
+    if [ -f "${snap_before_file}" ] && [ -f "${snap_after_file}" ]; then
         local reasons_raw
-        reasons_raw=$(python3 - "${snap_before_file}" "${snap_after_file}" << 'PYREBOOT'
-import sys, os
-
-b_file = sys.argv[1]
-a_file = sys.argv[2]
-
-try:
-    with open(b_file, 'r', encoding='utf-8', errors='ignore') as f:
-        b = set(line.strip() for line in f if line.strip())
-    with open(a_file, 'r', encoding='utf-8', errors='ignore') as f:
-        a = set(line.strip() for line in f if line.strip())
-
-    diff = a - b
-    active_kver = os.uname().release
-    reasons = []
-
-    for p in sorted(diff):
-        if p.startswith('glibc-zoneinfo'):
-            continue
-        if p.startswith(('glibc-solibs', 'glibc-2', 'glibc-3')):
-            reasons.append(f"Core C library updated ({p})")
-        elif 'mesa-' in p or p.startswith('mesa'):
-            reasons.append(f"Mesa graphics / Vulkan driver updated ({p})")
-        elif 'nvidia-' in p or 'nvidia' in p:
-            reasons.append(f"NVIDIA graphics driver suite updated ({p})")
-        elif any(kw in p for kw in ['plasma-', 'kwin-', 'sddm-', 'wayland-']):
-            reasons.append(f"Display server / Desktop environment updated ({p})")
-        elif any(kw in p for kw in ['kernel-', 'linux-cachyos']):
-            if active_kver in p:
-                reasons.append(f"Active kernel package updated ({p})")
-
-    for r in reasons:
-        print(r)
-except Exception:
-    pass
-PYREBOOT
-)
+        reasons_raw=$(slacky_reboot_reasons "${snap_before_file}" "${snap_after_file}")
         if [ -n "${reasons_raw}" ]; then
             needs_reboot=1
             mapfile -t reboot_reasons <<< "${reasons_raw}"

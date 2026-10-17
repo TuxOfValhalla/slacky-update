@@ -671,75 +671,75 @@ def get_default_repositories(cpu_tier: Optional[str] = None) -> List[Dict[str, A
     if tier == "znver4":
         repos.append({
             "name": "cachyos-znver4",
-            "url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_v4/cachyos-znver4/cachyos-znver4.db.tar.zst",
+            "url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_v4/cachyos-znver4/cachyos-znver4.db",
             "base_url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_v4/cachyos-znver4",
             "priority": 100
         })
         repos.append({
             "name": "cachyos-extra-znver4",
-            "url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_v4/cachyos-extra-znver4/cachyos-extra-znver4.db.tar.zst",
+            "url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_v4/cachyos-extra-znver4/cachyos-extra-znver4.db",
             "base_url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_v4/cachyos-extra-znver4",
             "priority": 98
         })
         repos.append({
             "name": "cachyos-core-znver4",
-            "url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_v4/cachyos-core-znver4/cachyos-core-znver4.db.tar.zst",
+            "url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_v4/cachyos-core-znver4/cachyos-core-znver4.db",
             "base_url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_v4/cachyos-core-znver4",
             "priority": 96
         })
         repos.append({
             "name": "cachyos-v4",
-            "url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_v4/cachyos-v4/cachyos-v4.db.tar.zst",
+            "url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_v4/cachyos-v4/cachyos-v4.db",
             "base_url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_v4/cachyos-v4",
             "priority": 94
         })
         repos.append({
             "name": "cachyos-extra-v4",
-            "url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_v4/cachyos-extra-v4/cachyos-extra-v4.db.tar.zst",
+            "url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_v4/cachyos-extra-v4/cachyos-extra-v4.db",
             "base_url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_v4/cachyos-extra-v4",
             "priority": 92
         })
         repos.append({
             "name": "cachyos-core-v4",
-            "url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_v4/cachyos-core-v4/cachyos-core-v4.db.tar.zst",
+            "url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_v4/cachyos-core-v4/cachyos-core-v4.db",
             "base_url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_v4/cachyos-core-v4",
             "priority": 90
         })
     elif tier == "v4":
         repos.append({
             "name": "cachyos-v4",
-            "url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_v4/cachyos-v4/cachyos-v4.db.tar.zst",
+            "url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_v4/cachyos-v4/cachyos-v4.db",
             "base_url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_v4/cachyos-v4",
             "priority": 100
         })
         repos.append({
             "name": "cachyos-extra-v4",
-            "url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_v4/cachyos-extra-v4/cachyos-extra-v4.db.tar.zst",
+            "url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_v4/cachyos-extra-v4/cachyos-extra-v4.db",
             "base_url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_v4/cachyos-extra-v4",
             "priority": 98
         })
         repos.append({
             "name": "cachyos-core-v4",
-            "url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_v4/cachyos-core-v4/cachyos-core-v4.db.tar.zst",
+            "url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_v4/cachyos-core-v4/cachyos-core-v4.db",
             "base_url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_v4/cachyos-core-v4",
             "priority": 96
         })
     elif tier == "v3":
         repos.append({
             "name": "cachyos-v3",
-            "url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_v3/cachyos-v3/cachyos-v3.db.tar.zst",
+            "url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_v3/cachyos-v3/cachyos-v3.db",
             "base_url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_v3/cachyos-v3",
             "priority": 100
         })
         repos.append({
             "name": "cachyos-extra-v3",
-            "url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_v3/cachyos-extra-v3/cachyos-extra-v3.db.tar.zst",
+            "url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_v3/cachyos-extra-v3/cachyos-extra-v3.db",
             "base_url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_v3/cachyos-extra-v3",
             "priority": 98
         })
         repos.append({
             "name": "cachyos-core-v3",
-            "url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_v3/cachyos-core-v3/cachyos-core-v3.db.tar.zst",
+            "url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_v3/cachyos-core-v3/cachyos-core-v3.db",
             "base_url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64_v3/cachyos-core-v3",
             "priority": 96
         })
@@ -747,7 +747,7 @@ def get_default_repositories(cpu_tier: Optional[str] = None) -> List[Dict[str, A
     # 2. CachyOS Standard
     repos.append({
         "name": "cachyos",
-        "url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64/cachyos/cachyos.db.tar.zst",
+        "url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64/cachyos/cachyos.db",
         "base_url": f"{DEFAULT_CACHYOS_MIRROR}/x86_64/cachyos",
         "priority": 85
     })
@@ -1376,7 +1376,9 @@ class GnomesPacmanEngine:
         def sync_single_repo(repo: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]:
             rname = repo["name"]
             url = repo["url"]
-            local_ext = ".db.tar.zst" if url.endswith(".zst") else ".db.tar.gz"
+            # 6A-270: CachyOS signs `<repo>.db` (a zstd tar); `<repo>.db.tar.zst` is a separate, unsigned file that was
+            # found stale on the mirror. Fetch `.db`, keep the local cache name `<repo>.db.tar.zst` (layout unchanged).
+            local_ext = ".db.tar.zst" if (url.endswith(".zst") or url.endswith(".db")) else ".db.tar.gz"
             local_path = os.path.join(self.db_dir, f"{rname}{local_ext}")
             local_meta = local_path + ".meta"
 
@@ -4193,7 +4195,7 @@ exec "${{TARGET_BIN}}" "$@"
             print(f":: Footprint check could not run ({fp_err}).")
         # 6A-139: pipefail, so a find/tar error fails the package instead of leaving a short archive; paths as arguments
         cmd = ("set -o pipefail; cd \"$1\" && find ./ | LC_COLLATE=C sort | sed '2,$s,^\\./,,' | "
-               "tar --owner=0 --group=0 --numeric-owner --no-recursion -T - -cf - | xz -T0 -1 > \"$2\"")
+               "tar --owner=0 --group=0 --numeric-owner --mode='go+rX' --no-recursion -T - -cf - | xz -T0 -1 > \"$2\"")
 
         p = subprocess.Popen(["bash", "-c", cmd, "slacky-pack", staging_pkg, txz_output_path],
                              stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
@@ -4940,6 +4942,20 @@ exec "${{TARGET_BIN}}" "$@"
 
             # Transmute systemd services into Slackware BSD /etc/rc.d/rc.<service> scripts
             created_services = self._transmute_systemd_services(staging_pkg, opt_app_dir, actual_name) if not is_runtime else []
+            # 6A-271 (mirror of Rust GAP-3): the Footprint Guard drops rc scripts of dependency services. Hook only the
+            # services whose script is still in the package, and say once how to start each dropped one by hand.
+            if created_services:
+                try:
+                    footprint_guard(staging_pkg, f"underpants-{actual_name}")
+                except Exception:
+                    pass   # the guard runs again when packing and refuses there if it cannot run
+                kept = [sv for sv in created_services if os.path.lexists(os.path.join(staging_pkg, "etc/rc.d", f"rc.{sv}"))]
+                for sv in created_services:
+                    if sv not in kept:
+                        cmd_line = getattr(self, "_service_cmds", {}).get(sv, "")
+                        print(f":: {actual_name} has a background service ({sv}) that does not start by itself; "
+                              f"to start it by hand, run: {cmd_line}")
+                created_services = kept
 
             # Write install/slack-desc
             slack_desc_path = os.path.join(install_dir, "slack-desc")
@@ -5097,6 +5113,7 @@ fi
         Slackware BSD init scripts (/etc/rc.d/rc.<service>) with start/stop/restart/status routines.
         """
         created_services = []
+        self._service_cmds = {}   # 6A-271: service -> command its rc script starts (for the by-hand hint)
         if not os.path.isdir(opt_app_dir):
             return created_services
 
@@ -5284,6 +5301,7 @@ esac
                     rcf.write(rc_script_content)
                 os.chmod(rc_script_path, 0o755)
                 created_services.append(svc_name)
+                self._service_cmds[svc_name] = exec_cmd.strip()
             except Exception:
                 pass
 

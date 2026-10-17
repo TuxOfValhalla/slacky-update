@@ -249,7 +249,7 @@ DOINST_EOF
     (
         cd "${staging_root}"
         # 2C: explicit root ownership in the archive
-        find ./ | LC_COLLATE=C sort | sed '2,$s,^\./,,' | tar --owner=0 --group=0 --numeric-owner --no-recursion -T - -cf - | xz -T0 -1 > "${target_pkg}" 2>/dev/null || true
+        find ./ | LC_COLLATE=C sort | sed '2,$s,^\./,,' | tar --owner=0 --group=0 --numeric-owner --mode='go+rX' --no-recursion -T - -cf - | xz -T0 -1 > "${target_pkg}" 2>/dev/null || true
     )
 
     # 2C: never install an archive with non-root entries

@@ -1046,7 +1046,7 @@ DOINST_EOF
     (
         cd "${staging_root}"
         # 2C: root-owned archive (was built with the build user's ownership)
-        find ./ | LC_COLLATE=C sort | sed '2,$s,^\./,,' | tar --owner=0 --group=0 --numeric-owner --no-recursion -T - -cf - | xz -T0 -1 > "${txz_out}" 2>/dev/null
+        find ./ | LC_COLLATE=C sort | sed '2,$s,^\./,,' | tar --owner=0 --group=0 --numeric-owner --mode='go+rX' --no-recursion -T - -cf - | xz -T0 -1 > "${txz_out}" 2>/dev/null
     ) || pack_ok=0
     if [ "${pack_ok}" -eq 1 ] && { [ ! -s "${txz_out}" ] || ! xz -t "${txz_out}" 2>/dev/null; }; then
         pack_ok=0

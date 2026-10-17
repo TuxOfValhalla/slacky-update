@@ -1977,3 +1977,21 @@
 
 ### Build 87 (pending) - 6A-246: no emoji in gnomes and curated deploy output (bin/gnomes, lib/gnomes_pacman.py, lib/mod_gaming.sh)
 - Emoji and decorative pictographs (wizard, money bag, underpants, party, stop sign, warning, sparkles, shield, package, link, lightning, clapper, check marks, arrows) replaced by plain words in the same tone; the "Step 1 ... Step 3: PROFIT!" banner and the curated slack-desc keep their humour in words. Colours and behaviour unchanged. Checked with `bash -n`, a `compile()` of the Python file and a code point scan (0 hits). Rust mirror: 6A-246 (output filter in the Rust app).
+
+### Build 90 (pending) - 6A-266: curated updates from Chaotic-AUR with an epoch were missed (lib/mod_gaming.sh)
+- Chaotic-AUR lists epoch packages with a literal colon and an `./` link prefix (`./brave-bin-1:1.97.59-1-...`); the catalog and source patterns only accepted `1%3A` and no `./`, so legacy never saw the newer Brave on Chaotic (Rust did). The epoch groups now accept `%3A` or `:` and every `href=` pattern accepts an optional `./`. Checked with `bash -n` and against the cached Chaotic and CachyOS indexes (Brave 1.97.59 and Edge .60 are found). Rust mirror: none needed (Rust already matched).
+
+### Build 90 (pending) - 6A-267: restart advice only when something in use changed (bin/slacky-update)
+- The boot chain flag no longer forces "System reboot recommended"; the advice needs a concrete reason: the running kernel's flavor got a newer version, its `/lib/modules` folder is gone, a Slackware kernel package of the running release was replaced or removed, or NVIDIA, glibc (not zoneinfo), Mesa or desktop changed. The decision is the testable function `slacky_reboot_reasons`; the snapshot files carry `MOD:<release>` lines. Rules in `docs/reboot_rules.md`. Checked with `bash -n` and 16 cases against fake snapshot files. Rust mirror: G5-21.
+
+### Build 90 (pending) - 6A-268: the file check ignores scratch folders and names what is missing (lib/slacky_heal.py)
+- Entries containing `/tmp/` (for example `var/lib/rpm/tmp/Packages`) are no longer checked, and the non-official package message now reads `<pkg> is missing N of its files (for example /path); it is not an official Slackware package, so rebuild or reinstall it with the tool you used to install it.` Checked with `compile()`. Rust mirror: the Rust app already skipped `/tmp/`; wording aligned in Rust commit 5e969f1.
+
+### Build 90 (pending) - 6A-269: packages keep readable modes whatever the builder's umask (gnomes_pacman.py, mod_gaming.sh, mod_rocm.sh, mod_nvidia.sh)
+- With `umask 077` a built package carried `usr/` and `usr/bin/` as 0700 and `installpkg` would have applied that to the host. All four archive steps now use `tar --mode='go+rX'`: folders become 0755, files get group/other read (and execute where the owner has it); setuid, setgid and sticky bits stay, symlinks are untouched. Chosen over a umask or a staging chmod because it fixes exactly what is installed and never alters staging files (possible hardlinks to cached runtime files). Tested with a temporary tree built under `umask 077` (script deleted), `bash -n`, `compile()`. Rust mirror: commit a3b099c `normalize_modes`.
+
+### Build 90 (pending) - 6A-270: CachyOS package lists are fetched as the signed .db file (gnomes_pacman.py)
+- `<repo>.db.tar.zst` is unsigned and was found stale on the mirror; the 13 CachyOS URLs now end in `.db` (signed) and are cached under the same `<repo>.db.tar.zst` name. Checked read-only: parses (7418 packages) and `gpgv` with `keys/cachyos.gpg` says Good. Rust mirror: commit 859ad1f.
+
+### Build 90 (pending) - 6A-271: no rc.local hook for a service script the Footprint Guard dropped (gnomes_pacman.py, locales)
+- `doinst.sh`/`douninst.sh` now hook only services whose `rc.<svc>` is still in the package after the guard; each dropped service prints one sentence with the manual start command from its ExecStart. Tested with a temp staging tree (guard drop confirmed); the inline step was not run in a full build. Rust mirror: commit 1dda156 (GAP-3).

@@ -74,6 +74,7 @@
   "ENTER_SEARCH_QUERY": "Enter search query",
   "GNOMES_CACHE_CLEANED": "Cleaned {0} of cached packages from Underpants Gnomes cache.",
   "GNOMES_CURATED_COLLISION_WARN": "Warning: \"{0}\" is already installed as a curated Slackware package ({1}). Transmuting it will override its launcher in /usr/bin/. Proceed? [y/N] ",
+  "GNOMES_SERVICE_NOT_SET_UP": "{0} has a background service ({1}) that does not start by itself; to start it by hand, run: {2}",
   "GNOMES_EXCLUDES_SHIELD": "Host Sovereignty Shield: Core Slackware base system protected.",
   "GNOMES_PROMPT_INSTALL": "Enter package name to transmute/install (or press Enter to return): ",
   "GNOMES_PROMPT_SEARCH": "Enter search keyword or package name: ",
