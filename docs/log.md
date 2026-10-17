@@ -1995,3 +1995,12 @@
 
 ### Build 90 (pending) - 6A-271: no rc.local hook for a service script the Footprint Guard dropped (gnomes_pacman.py, locales)
 - `doinst.sh`/`douninst.sh` now hook only services whose `rc.<svc>` is still in the package after the guard; each dropped service prints one sentence with the manual start command from its ExecStart. Tested with a temp staging tree (guard drop confirmed); the inline step was not run in a full build. Rust mirror: commit 1dda156 (GAP-3).
+
+### Build 90 (pending) - 6A-272: the restart question defaults to no (bin/slacky-update, locales)
+- `Reboot system now? [y/N] (Enter = no)`: Enter or end of input never restarts (the code default was already N; the text said [Y/n]). `y`, `yes`, `j`, `ja`, `s`, `o` restart. All 24 locale files now show the capital N. Locales whose answer letter is not in the accepted set (Turkish t, Russian d) are an older gap. bash -n and JSON checks ran; not run on a real update. Rust mirror: pending Build 80.
+
+### Build 90 (pending) - 6A-273: one warning when patchelf is missing or fails (gnomes_pacman.py, locales)
+- `patch_elf_rpaths` prints ONE line per app (app name, and the count of failed files) when patchelf is missing or fails; it never blocks the build or install. Tested with a fake patchelf (3 failing files -> one line) and with no patchelf. Limit: a patchelf that fails already on `--print-needed` is still treated as a static binary (6A-19). Rust refuses instead (intended difference).
+
+### Build 90 (pending) - 6A-274: standalone `spidersense` command, no link to the Rust app (bin/spidersense, SlackBuild, bin/slacky-update)
+- `bin/spidersense` no longer starts another program; it is a read-only window built only on the legacy modules: `status` (package damage, mirror sentinel age, hardware change), `heal-check`, `hardware`, `snapshots` (snapper list), `prune-plan` (what the 48 hour rule would delete), `log[-boot|-gpu|-kernel|-initramfs|-cpu|-update|-snapshot|-system|-supply] [--json]` (flight recorder). `--prune-snapshots`, `--snapshot`, `--watch` answer in one sentence that legacy does these elsewhere or not at all. The SlackBuild installs it as `/usr/bin/spidersense` unless another package owns that path (the Rust SlackBuild does not install that name). `--help` mentions it. Tested with `bash -n` and a fake HOME/cache/sysfs/root; `status` and `snapshots` also ran read-only on the real machine.

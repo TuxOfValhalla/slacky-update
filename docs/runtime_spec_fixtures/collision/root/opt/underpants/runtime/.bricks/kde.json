@@ -1,0 +1,41 @@
+{
+  "schema": 1,
+  "spec": "underpants-runtime-bricks/1",
+  "brick": "kde",
+  "revision": 1,
+  "built": "2026-10-17T10:00:00Z",
+  "content_id": "b95ffe77a612d328fd57fa78dec1afe2c7a781a7054d7b0795248575d78bf41c",
+  "update_set": "",
+  "requires": [
+    "core",
+    "qt6"
+  ],
+  "abi": {},
+  "built_against": {
+    "qt6": "6.12"
+  },
+  "packages": [
+    {
+      "name": "kcoreaddons",
+      "version": "6.31.0-1.1",
+      "repo": "extra",
+      "archive_sha256": "",
+      "files": [
+        {
+          "path": "lib/libKF6CoreAddons.so.6.31.0",
+          "type": "file",
+          "sha256": "e11602669d95055a2e10fe050f9716086ed1d11732848507f27f9944fab60059",
+          "size": 24,
+          "mode": "0755"
+        },
+        {
+          "path": "lib/libfoo.so.1.0",
+          "type": "file",
+          "sha256": "c7b4ba38fe9ec2324c1313de480a41c896129ced48dffbe32cbe02b400412b1e",
+          "size": 28,
+          "mode": "0755"
+        }
+      ]
+    }
+  ]
+}

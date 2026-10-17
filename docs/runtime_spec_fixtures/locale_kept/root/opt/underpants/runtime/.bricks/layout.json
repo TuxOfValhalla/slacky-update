@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "spec": "underpants-runtime-bricks/1",
+  "profile": "all",
+  "generation": 1,
+  "built": "2026-10-17T10:00:00Z",
+  "bricks": [
+    "core"
+  ],
+  "host_only": [
+    "mesa",
+    "libdrm",
+    "vulkan-icd-loader"
+  ]
+}

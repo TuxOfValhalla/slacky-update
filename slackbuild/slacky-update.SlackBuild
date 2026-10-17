@@ -52,6 +52,14 @@ install -m 0755 "${SRC_DIR}/bin/slacky-prime-run" "${PKG_DIR}/usr/bin/"
 if [ -f "${SRC_DIR}/bin/gnomes" ]; then
     install -m 0755 "${SRC_DIR}/bin/gnomes" "${PKG_DIR}/usr/bin/"
 fi
+# 6A-274: the read-only SpiderSense window; skipped when another package already owns /usr/bin/spidersense
+if [ -f "${SRC_DIR}/bin/spidersense" ]; then
+    if grep -l '^usr/bin/spidersense$' /var/log/packages/* 2>/dev/null | grep -qv '/slacky-update-[0-9]'; then
+        echo "Note: /usr/bin/spidersense belongs to another package; the spidersense command is not installed."
+    else
+        install -m 0755 "${SRC_DIR}/bin/spidersense" "${PKG_DIR}/usr/bin/"
+    fi
+fi
 
 install -m 0755 "${SRC_DIR}"/lib/*.sh "${PKG_DIR}/usr/share/slacky-update/lib/"
 install -m 0755 "${SRC_DIR}/lib/slacky-update-tray" "${PKG_DIR}/usr/share/slacky-update/lib/" 2>/dev/null || true

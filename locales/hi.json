@@ -174,7 +174,7 @@
   "PROMPT_INSTALL_NEW_KERNEL": "नया कर्नेल {version} डाउनलोड और इंस्टॉल करें? [Y/n] ",
   "PROMPT_INSTALL_NVIDIA_RUN": "Do you want to download and install NVIDIA .run driver? [Y/n] ",
   "PROMPT_INSTALL_R8125_MODULE": "Would you like to install the matching high-performance CachyOS r8125 driver for kernel {version}? [Y/n] ",
-  "PROMPT_REBOOT_NOW": "क्या आप अभी सिस्टम पुनरारंभ करना चाहते हैं? [Y/n] ",
+  "PROMPT_REBOOT_NOW": "क्या आप अभी सिस्टम पुनरारंभ करना चाहते हैं? [y/N] ",
   "PROMPT_REBUILD_INITRD_ACTIVE": "सक्रिय कर्नेल ({active}) के लिए initramfs और हस्ताक्षर पुनर्निर्माण करें? [y/N] ",
   "PROMPT_REMOVE_STOCK_DUAL": "आपके पास एक स्थिर LTS और तेज़ CachyOS कर्नेल है। क्या स्टॉक स्लैकवेयर कर्नेल हटाएं? [y/N] ",
   "PROMPT_REMOVE_STOCK_MULTIPLE": "कई CachyOS कर्नेल होने पर क्या स्टॉक कर्नेल को /boot से हटाएं? [y/N] ",

@@ -177,7 +177,7 @@
   "PROMPT_INSTALL_NEW_KERNEL": "Laste ned og installere kjerne {version}? [J/n] ",
   "PROMPT_INSTALL_NVIDIA_RUN": "Laste ned og installere NVIDIA .run-driver? [J/n] ",
   "PROMPT_INSTALL_R8125_MODULE": "Vil du installere matchende CachyOS r8125-driver for kjerne {version}? [Y/n] ",
-  "PROMPT_REBOOT_NOW": "Starte systemet på nytt nå? [J/n] ",
+  "PROMPT_REBOOT_NOW": "Starte systemet på nytt nå? [j/N] (Enter = nei) ",
   "PROMPT_REBUILD_INITRD_ACTIVE": "Bygge initramfs og signaturer for aktiv kjerne ({active}) på nytt? [j/N] ",
   "PROMPT_REMOVE_STOCK_DUAL": "Du har en stabil LTS-kjerne og en CachyOS-kjerne. Fjerne offisielle kjerner? (Reversibelt) [y/N] ",
   "PROMPT_REMOVE_STOCK_MULTIPLE": "Med flere CachyOS-kjerner installert, fjerne offisielle kjerner fra /boot? (Reversibelt) [y/N] ",
@@ -326,5 +326,6 @@
   "G13_MIRROR_FILE": "Filen med tjenerlisten ble ikke funnet eller er en lenke, så ingenting ble endret.",
   "G13_MIRROR_WRITE": "Tjenerlisten kunne ikke skrives, så den ble latt være som den var.",
   "G13_MIRROR_DONE": "Slackware-nedlastingstjeneren din er nå {url}; den gamle listen ble lagret ved siden av.",
-  "GNOMES_WRAPPER_PROTECTED": "En starter som heter {name} ligger der et systemprogram hører hjemme. Ingenting ble endret; sjekk den selv."
+  "GNOMES_WRAPPER_PROTECTED": "En starter som heter {name} ligger der et systemprogram hører hjemme. Ingenting ble endret; sjekk den selv.",
+  "GNOMES_PATCHELF_WARN": "{app}: noen programfiler kunne ikke justeres (patchelf), så appen kan laste feil biblioteker; den starter vanligvis likevel fordi starteren setter bibliotekstien."
 }

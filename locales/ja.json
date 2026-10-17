@@ -174,7 +174,7 @@
   "PROMPT_INSTALL_NEW_KERNEL": "新しいカーネル {version} をダウンロードしてインストールしますか？ [Y/n] ",
   "PROMPT_INSTALL_NVIDIA_RUN": "Do you want to download and install NVIDIA .run driver? [Y/n] ",
   "PROMPT_INSTALL_R8125_MODULE": "Would you like to install the matching high-performance CachyOS r8125 driver for kernel {version}? [Y/n] ",
-  "PROMPT_REBOOT_NOW": "今すぐシステムを再起動しますか？ [Y/n] ",
+  "PROMPT_REBOOT_NOW": "今すぐシステムを再起動しますか？ [y/N] ",
   "PROMPT_REBUILD_INITRD_ACTIVE": "アクティブなカーネル ({active}) の initramfs と署名を再構築しますか？ [y/N] ",
   "PROMPT_REMOVE_STOCK_DUAL": "安定した LTS カーネルと高速な CachyOS カーネルが揃っています。公式カーネルを削除しますか？ (いつでも復元可能) [y/N] ",
   "PROMPT_REMOVE_STOCK_MULTIPLE": "複数の CachyOS カーネルがある状態で、/boot 内の公式カーネルを削除しますか？ (いつでも復元可能) [y/N] ",

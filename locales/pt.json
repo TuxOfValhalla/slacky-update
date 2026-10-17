@@ -174,7 +174,7 @@
   "PROMPT_INSTALL_NEW_KERNEL": "Descarregar e instalar o kernel {version}? [S/n] ",
   "PROMPT_INSTALL_NVIDIA_RUN": "Do you want to download and install NVIDIA .run driver? [Y/n] ",
   "PROMPT_INSTALL_R8125_MODULE": "Would you like to install the matching high-performance CachyOS r8125 driver for kernel {version}? [Y/n] ",
-  "PROMPT_REBOOT_NOW": "Deseja reiniciar o sistema agora? [S/n] ",
+  "PROMPT_REBOOT_NOW": "Deseja reiniciar o sistema agora? [s/N] ",
   "PROMPT_REBUILD_INITRD_ACTIVE": "Reconstruir initramfs e assinaturas para o kernel ativo ({active})? [s/N] ",
   "PROMPT_REMOVE_STOCK_DUAL": "Olá amigo! Tens um kernel LTS estável e um kernel CachyOS rápido. Remover kernels oficiais? (100% reversível) [y/N] ",
   "PROMPT_REMOVE_STOCK_MULTIPLE": "Olá amigo! Com todos esses kernels CachyOS, precisas mesmo dos kernels padrão em /boot? (100% reversível) [y/N] ",

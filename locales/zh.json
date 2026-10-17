@@ -174,7 +174,7 @@
   "PROMPT_INSTALL_NEW_KERNEL": "下载并安装新内核 {version}？[Y/n] ",
   "PROMPT_INSTALL_NVIDIA_RUN": "Do you want to download and install NVIDIA .run driver? [Y/n] ",
   "PROMPT_INSTALL_R8125_MODULE": "Would you like to install the matching high-performance CachyOS r8125 driver for kernel {version}? [Y/n] ",
-  "PROMPT_REBOOT_NOW": "是否立即重启系统？[Y/n] ",
+  "PROMPT_REBOOT_NOW": "是否立即重启系统？[y/N] ",
   "PROMPT_REBUILD_INITRD_ACTIVE": "为活动内核 ({active}) 重建 initramfs 和签名？[y/N] ",
   "PROMPT_REMOVE_STOCK_DUAL": "嘿朋友！你已拥有稳定的 LTS 与高速 CachyOS 内核。是否移除原版 Slackware 内核？ (随时可恢复) [y/N] ",
   "PROMPT_REMOVE_STOCK_MULTIPLE": "嘿朋友！在拥有多个 CachyOS 内核的情况下，是否清理 /boot 中的原版内核？ (随时可恢复) [y/N] ",

@@ -373,7 +373,7 @@ prompt_reboot_or_close() {
         fi
         echo ""
         read_update_prompt "$(_ PROMPT_REBOOT_NOW)" "N" reply_reboot
-        if [[ "$reply_reboot" =~ ^[YyJjSsOo]$ ]]; then
+        if [[ "$reply_reboot" =~ ^([YyJjSsOo]|[Yy][Ee][Ss]|[Jj][Aa])$ ]]; then
             echo ""
             echo -e "${CYAN}${BOLD}$(_ REBOOTING_IN_5S)${RESET}"
             for i in 5 4 3 2 1; do
@@ -1608,6 +1608,7 @@ elif [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
     echo "      --check             Run non-modifying read-only status check"
     echo "      --doctor, --health  Run instant system health audit & hardware diagnostics (non-destructive)"
     echo "      --hardware          Show what SpiderSense knows about this machine (graphics, processor, boot setup)"
+    echo "      (also: the separate 'spidersense' command shows status, package check, hardware, snapshots and the flight recorder)"
     echo "  -H, --hash-check        Dynamically verify on-disk kernel & initramfs BLAKE2B hashes against Limine"
     echo "  -l, --limine            Open Limine Bootloader & Secure Boot Matrix"
     echo "  -c, --cmdline           Configure Kernel Boot Parameters (CMDLINE & Gaming Hub)"

@@ -174,7 +174,7 @@
   "PROMPT_INSTALL_NEW_KERNEL": "Viežžat ja ásahit ođđa váibmosa {version}? [J/e] ",
   "PROMPT_INSTALL_NVIDIA_RUN": "Hálidat go viežžat ja ásahit NVIDIA .run-vuoddit? [J/n] ",
   "PROMPT_INSTALL_R8125_MODULE": "Would you like to install the matching high-performance CachyOS r8125 driver for kernel {version}? [Y/n] ",
-  "PROMPT_REBOOT_NOW": "Hálidat go nuppástuhttit vuogádaga dál? [J/n] ",
+  "PROMPT_REBOOT_NOW": "Hálidat go nuppástuhttit vuogádaga dál? [j/N] ",
   "PROMPT_REBUILD_INITRD_ACTIVE": "Hukset initramfs ja vuolláičállosiid doaimmalaš váibmosii ({active})? [j/E] ",
   "PROMPT_REMOVE_STOCK_DUAL": "Bures ustip! Dus lea nanu LTS-váimmoš ja jođánis CachyOS-váimmoš. Sihkkutgo standárdaváimmožiid? (100% máhcaheapme) [y/N] ",
   "PROMPT_REMOVE_STOCK_MULTIPLE": "Bures ustip! Dárbbašatgo duođas standárdaváimmožiid /boot-katalogas? (100% máhcaheapme) [y/N] ",

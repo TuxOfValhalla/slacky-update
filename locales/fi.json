@@ -174,7 +174,7 @@
   "PROMPT_INSTALL_NEW_KERNEL": "Ladataanko ja asennetaanko ydin {version}? [K/e] ",
   "PROMPT_INSTALL_NVIDIA_RUN": "Do you want to download and install NVIDIA .run driver? [Y/n] ",
   "PROMPT_INSTALL_R8125_MODULE": "Would you like to install the matching high-performance CachyOS r8125 driver for kernel {version}? [Y/n] ",
-  "PROMPT_REBOOT_NOW": "Haluatko käynnistää järjestelmän uudelleen nyt? [J/n] ",
+  "PROMPT_REBOOT_NOW": "Haluatko käynnistää järjestelmän uudelleen nyt? [j/N] ",
   "PROMPT_REBUILD_INITRD_ACTIVE": "Rakennetaanko initramfs ja allekirjoitukset uudelleen aktiiviselle ytimelle ({active})? [k/E] ",
   "PROMPT_REMOVE_STOCK_DUAL": "Hei kaveri! Sinulla on vakaa LTS-ydin ja nopea CachyOS-ydin. Poistetaanko viralliset ytimet? (100% peruutettavissa) [y/N] ",
   "PROMPT_REMOVE_STOCK_MULTIPLE": "Hei kaveri! Tarvitsetko todella virallisia ytimiä /boot-kansiossa? (100% peruutettavissa) [y/N] ",

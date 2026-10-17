@@ -174,7 +174,7 @@
   "PROMPT_INSTALL_NEW_KERNEL": "Загрузить и установить ядро {version}? [Д/н] ",
   "PROMPT_INSTALL_NVIDIA_RUN": "Do you want to download and install NVIDIA .run driver? [Y/n] ",
   "PROMPT_INSTALL_R8125_MODULE": "Would you like to install the matching high-performance CachyOS r8125 driver for kernel {version}? [Y/n] ",
-  "PROMPT_REBOOT_NOW": "Перезагрузить систему сейчас? [Д/н] ",
+  "PROMPT_REBOOT_NOW": "Перезагрузить систему сейчас? [д/Н] ",
   "PROMPT_REBUILD_INITRD_ACTIVE": "Пересобрать initramfs и подписи для активного ядра ({active})? [д/Н] ",
   "PROMPT_REMOVE_STOCK_DUAL": "Привет, друг! У тебя есть ядро LTS и быстрое ядро CachyOS. Удалить стандартные ядра? (100% обратимо) [y/N] ",
   "PROMPT_REMOVE_STOCK_MULTIPLE": "Привет, друг! При наличии ядер CachyOS нужны ли стандартные ядра в /boot? (100% обратимо) [y/N] ",

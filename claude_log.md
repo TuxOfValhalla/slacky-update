@@ -1363,3 +1363,15 @@
 - Files touched: `lib/gnomes_pacman.py`, `locales/en.json`, `locales/nb.json`.
 - Verification: temp staging tree with two fake units: service conversion recorded both commands, the guard dropped both scripts, `etc/rc.d` ended empty. The inline keep/skip step in `transmute` was not exercised end to end (needs a full app build); `compile()` and JSON load clean.
 - Known limits: the guard message also appears at this earlier point; services the guard keeps (own daemons) are hooked as before.
+
+### 2026-10-17 Build 90_slacky (pending) - 6A-272 / 6A-273 - restart question defaults to no; one patchelf warning per app
+- User-visible: the restart question reads `[y/N] (Enter = no)` in all languages, so an accidental Enter never closes work. When patchelf is missing or fails, one plain line names the app and says it usually still starts (the launcher sets the library path); nothing is refused.
+- Files touched: `bin/slacky-update`, `lib/gnomes_pacman.py`, `locales/*.json`, `docs/log.md`, `docs/log_nb.md`.
+- Verification: bash -n, python -I compile, JSON load of all locales, fake-patchelf test (deleted). Not run in a full update.
+- Known limits: Rust mirror of 6A-272 pending Build 80; Rust refuses on patchelf failure (intended difference).
+
+### 2026-10-17 Build 90_slacky (pending) - 6A-274 - standalone `spidersense` command
+- User-visible: `spidersense` (status, heal-check, hardware, snapshots, prune-plan, log*) works on legacy code alone; it no longer execs the Rust binary. Mentioned in `slacky-update --help`; installed as `/usr/bin/spidersense` by the SlackBuild unless another package owns the path.
+- Files: `bin/spidersense` (untracked, new), `bin/slacky-update`, `slackbuild/slacky-update.SlackBuild`, `docs/log.md`, `docs/log_nb.md`, `claude_log.md`.
+- Verification: `bash -n`; each subcommand run with fake HOME/XDG_CACHE_HOME/SLACKY_SYSFS_ROOT/--root; grep shows no Rust path or name. Not verified: SlackBuild install branch (not built).
+- Limits: no live `--watch`; snapshot deletion stays with the hourly job. Rust mirror: none needed.

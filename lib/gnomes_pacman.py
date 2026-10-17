@@ -4071,8 +4071,11 @@ exec "${{TARGET_BIN}}" "$@"
         """Rewrite RUNPATH and sanitize absolute DT_NEEDED paths on all ELF binaries using patchelf in parallel."""
         has_patchelf = shutil.which("patchelf") is not None
         if not has_patchelf:
-            if verbose:
-                print("  Warning: patchelf binary not found in PATH; skipping RUNPATH relocation.")
+            # 6A-273: one plain line per app (printed even when not verbose); the app is not refused
+            print(":: " + localized_sentence("GNOMES_PATCHELF_WARN",
+                  "{app}: some program files could not be adjusted (patchelf), so the app may load the wrong libraries; "
+                  "it usually still starts because its launcher sets the library path.").replace(
+                  "{app}", os.path.basename(os.path.normpath(target_dir))))
             return 0
 
         # WP-3: no /opt/underpants/common (never existed) and no 32-bit /usr/lib/{pulseaudio,pipewire-0.3} (wrong ELF class)
@@ -4178,8 +4181,11 @@ exec "${{TARGET_BIN}}" "$@"
 
         failed = [os.path.relpath(f, target_dir) for f, r in zip(elf_files, results) if r is False]
         if failed:
-            shown = ", ".join(failed[:3]) + (" ..." if len(failed) > 3 else "")
-            print(f":: Library paths could not be set in {len(failed)} file(s): {shown}")
+            # 6A-273: ONE plain line per app with the count, no per-file list
+            print(":: " + localized_sentence("GNOMES_PATCHELF_WARN",
+                  "{app}: some program files could not be adjusted (patchelf), so the app may load the wrong libraries; "
+                  "it usually still starts because its launcher sets the library path.").replace(
+                  "{app}", os.path.basename(os.path.normpath(target_dir))) + f" ({len(failed)} file(s))")
         return sum(1 for r in results if r)
 
     @staticmethod

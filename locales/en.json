@@ -177,7 +177,7 @@
   "PROMPT_INSTALL_NEW_KERNEL": "Download and install kernel {version}? [Y/n] ",
   "PROMPT_INSTALL_NVIDIA_RUN": "Download and install NVIDIA .run driver? [Y/n] ",
   "PROMPT_INSTALL_R8125_MODULE": "Would you like to install the matching high-performance CachyOS r8125 driver for kernel {version}? [Y/n] ",
-  "PROMPT_REBOOT_NOW": "Reboot system now? [Y/n] ",
+  "PROMPT_REBOOT_NOW": "Reboot system now? [y/N] (Enter = no) ",
   "PROMPT_REBUILD_INITRD_ACTIVE": "Rebuild initramfs and signatures for active kernel ({active})? [y/N] ",
   "PROMPT_REMOVE_STOCK_DUAL": "You have an LTS and a performance CachyOS kernel. Remove stock Slackware kernels? (Reversible) [y/N] ",
   "PROMPT_REMOVE_STOCK_MULTIPLE": "With multiple CachyOS kernels installed, remove stock Slackware kernels from /boot? (Reversible) [y/N] ",
@@ -326,5 +326,6 @@
   "G13_MIRROR_FILE": "The server list file was not found or is a link, so nothing was changed.",
   "G13_MIRROR_WRITE": "The server list could not be written, so it was left as it was.",
   "G13_MIRROR_DONE": "Your Slackware download server is now {url}; the old list was saved next to it.",
-  "GNOMES_WRAPPER_PROTECTED": "A launcher named {name} sits where a system program belongs. Nothing was changed; check it by hand."
+  "GNOMES_WRAPPER_PROTECTED": "A launcher named {name} sits where a system program belongs. Nothing was changed; check it by hand.",
+  "GNOMES_PATCHELF_WARN": "{app}: some program files could not be adjusted (patchelf), so the app may load the wrong libraries; it usually still starts because its launcher sets the library path."
 }

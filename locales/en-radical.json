@@ -174,7 +174,7 @@
   "PROMPT_INSTALL_NEW_KERNEL": "Download and install new kernel {version}? [Y/n] ",
   "PROMPT_INSTALL_NVIDIA_RUN": "Download and install NVIDIA .run driver? [Y/n] ",
   "PROMPT_INSTALL_R8125_MODULE": "Wanna drop in the turbo-charged CachyOS r8125 driver for kernel {version}? [Y/n] ",
-  "PROMPT_REBOOT_NOW": "Ready to cycle the machine and activate the new mojo? [Y/n] ",
+  "PROMPT_REBOOT_NOW": "Ready to cycle the machine and activate the new mojo? [y/N] ",
   "PROMPT_REBUILD_INITRD_ACTIVE": "Rebuild initrd and signatures for active kernel ({active})? [y/N] ",
   "PROMPT_REMOVE_STOCK_DUAL": "Hey, dude! I see you now have both an ultra-stable LTS kernel and a high-performance CachyOS kernel in your stack. Wanna go full CachyOS and remove stock Slackware kernels? (100% reversible) [y/N] ",
   "PROMPT_REMOVE_STOCK_MULTIPLE": "Hey, dude! With all those CachyOS kernels (including rock-solid LTS), do you really need the stock Slackware kernels cluttering your /boot? (100% reversible) [y/N] ",

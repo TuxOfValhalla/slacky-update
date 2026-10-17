@@ -174,7 +174,7 @@
   "PROMPT_INSTALL_NEW_KERNEL": "Ladda ner och installera kärna {version}? [J/n] ",
   "PROMPT_INSTALL_NVIDIA_RUN": "Vill du ladda ner och installera NVIDIA .run-drivrutin? [J/n] ",
   "PROMPT_INSTALL_R8125_MODULE": "Would you like to install the matching high-performance CachyOS r8125 driver for kernel {version}? [Y/n] ",
-  "PROMPT_REBOOT_NOW": "Vill du starta om systemet nu? [J/n] ",
+  "PROMPT_REBOOT_NOW": "Vill du starta om systemet nu? [j/N] ",
   "PROMPT_REBUILD_INITRD_ACTIVE": "Bygg om initramfs och signaturer för aktiv kärna ({active})? [j/N] ",
   "PROMPT_REMOVE_STOCK_DUAL": "Tjena kompis! Du har både en stabil LTS-kärna och en snabb CachyOS-kärna. Ta bort standardkärnor? (100% reversibelt) [y/N] ",
   "PROMPT_REMOVE_STOCK_MULTIPLE": "Tjena kompis! Med alla CachyOS-kärnor installerade, behöver du verkligen standardkärnorna i /boot? (100% reversibelt) [y/N] ",

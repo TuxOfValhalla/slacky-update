@@ -174,7 +174,7 @@
   "PROMPT_INSTALL_NEW_KERNEL": "Hlaða niður og setja upp kjarna {version}? [J/n] ",
   "PROMPT_INSTALL_NVIDIA_RUN": "Do you want to download and install NVIDIA .run driver? [Y/n] ",
   "PROMPT_INSTALL_R8125_MODULE": "Would you like to install the matching high-performance CachyOS r8125 driver for kernel {version}? [Y/n] ",
-  "PROMPT_REBOOT_NOW": "Viltu endurræsa kerfið núna? [J/n] ",
+  "PROMPT_REBOOT_NOW": "Viltu endurræsa kerfið núna? [j/N] ",
   "PROMPT_REBUILD_INITRD_ACTIVE": "Endurbyggja initramfs og undirskriftir fyrir virkan kjarna ({active})? [j/N] ",
   "PROMPT_REMOVE_STOCK_DUAL": "Hæ vinur! Þú ert með LTS kjarna og öflugan CachyOS kjarna. Fjarlægja opinbera kjarna? (100% afturkræft) [y/N] ",
   "PROMPT_REMOVE_STOCK_MULTIPLE": "Hæ vinur! Með alla þessa CachyOS kjarna, þarftu virkilega opinberu kjarnana í /boot? (100% afturkræft) [y/N] ",

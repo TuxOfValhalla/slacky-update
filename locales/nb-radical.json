@@ -174,7 +174,7 @@
   "PROMPT_INSTALL_NEW_KERNEL": "Laste ned og fyre opp kjerne {version}? [J/n] ",
   "PROMPT_INSTALL_NVIDIA_RUN": "Laste ned og installere NVIDIA .run-driver? [J/n] ",
   "PROMPT_INSTALL_R8125_MODULE": "Vil du dytte inn den rå CachyOS r8125-turbodriveren for kjerne {version}? [Y/n] ",
-  "PROMPT_REBOOT_NOW": "Klar for å starte maskinen på nytt og lade opp kreftene? [J/n] ",
+  "PROMPT_REBOOT_NOW": "Klar for å starte maskinen på nytt og lade opp kreftene? [j/N] ",
   "PROMPT_REBUILD_INITRD_ACTIVE": "Bygge initrd og signaturer for aktiv kjerne ({active}) på nytt? [j/N] ",
   "PROMPT_REMOVE_STOCK_DUAL": "Heisann! Jeg ser du har både en dønn stabil LTS-kjerne og en råsprek CachyOS-kjerne. Vil du gå full CachyOS og fjerne standard Slackware-kjerner? (100 % reversibelt) [y/N] ",
   "PROMPT_REMOVE_STOCK_MULTIPLE": "Jøss! Med så mange rå CachyOS-kjerner (inkludert bunnsolid LTS), trenger du egentlig de gamle Slackware-kjernene i /boot? (100 % reversibelt) [y/N] ",

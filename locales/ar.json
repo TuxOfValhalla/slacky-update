@@ -174,7 +174,7 @@
   "PROMPT_INSTALL_NEW_KERNEL": "تنزيل وتثبيت النواة الجديدة {version}؟ [Y/n] ",
   "PROMPT_INSTALL_NVIDIA_RUN": "تنزيل وتثبيت برنامج تشغيل NVIDIA (.run)؟ [Y/n] ",
   "PROMPT_INSTALL_R8125_MODULE": "Would you like to install the matching high-performance CachyOS r8125 driver for kernel {version}? [Y/n] ",
-  "PROMPT_REBOOT_NOW": "هل ترغب في إعادة تشغيل النظام الآن لتطبيق التغييرات؟ [Y/n] ",
+  "PROMPT_REBOOT_NOW": "هل ترغب في إعادة تشغيل النظام الآن لتطبيق التغييرات؟ [y/N] ",
   "PROMPT_REBUILD_INITRD_ACTIVE": "إعادة بناء initrd وتوقيع الوحدات للنواة النشطة ({active})؟ [y/N] ",
   "PROMPT_REMOVE_STOCK_DUAL": "يتوفر لديك حالياً نواة LTS مستقرة ونواة CachyOS فائقة الأداء. هل ترغب في إزالة أنوية سلاكوير الرسمية القديمة؟ [y/N] ",
   "PROMPT_REMOVE_STOCK_MULTIPLE": "مع توفر أنوية CachyOS متعددة (بما فيها LTS)، هل ترغب في إزالة أنوية سلاكوير الرسمية لتوفير المساحة في /boot؟ [y/N] ",

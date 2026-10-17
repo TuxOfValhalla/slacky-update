@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "spec": "underpants-runtime-bricks/1",
+  "brick": "desktop-services",
+  "revision": 1,
+  "built": "2026-10-17T10:00:00Z",
+  "content_id": "2818fb6222bb1675d38251fca9fab9ecf659399bd6fbb2e0a2d72edcb85f93a7",
+  "update_set": "",
+  "requires": [
+    "core"
+  ],
+  "abi": {},
+  "built_against": {},
+  "packages": [
+    {
+      "name": "xdg-desktop-portal",
+      "version": "1.20.0-1",
+      "repo": "extra",
+      "archive_sha256": "",
+      "files": [
+        {
+          "path": "lib/libxdp-fake.so.1",
+          "type": "file",
+          "sha256": "2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881",
+          "size": 1,
+          "mode": "0755"
+        }
+      ]
+    },
+    {
+      "name": "bubblewrap",
+      "version": "0.11.0-1",
+      "repo": "extra",
+      "archive_sha256": "",
+      "files": [
+        {
+          "path": "bin/bwrap",
+          "type": "file",
+          "sha256": "ab02eedd0712a148636d87b46a0c4c741ad4634745d829717b84433d7c4940c2",
+          "size": 2,
+          "mode": "0755"
+        }
+      ]
+    }
+  ]
+}

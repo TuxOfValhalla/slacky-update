@@ -174,7 +174,7 @@
   "PROMPT_INSTALL_NEW_KERNEL": "Download og installer kerne {version}? [J/n] ",
   "PROMPT_INSTALL_NVIDIA_RUN": "Vil du hente og installere NVIDIA .run-driver? [J/n] ",
   "PROMPT_INSTALL_R8125_MODULE": "Would you like to install the matching high-performance CachyOS r8125 driver for kernel {version}? [Y/n] ",
-  "PROMPT_REBOOT_NOW": "Vil du genstarte systemet nu? [J/n] ",
+  "PROMPT_REBOOT_NOW": "Vil du genstarte systemet nu? [j/N] ",
   "PROMPT_REBUILD_INITRD_ACTIVE": "Genopbyg initramfs og signaturer for aktiv kerne ({active})? [j/N] ",
   "PROMPT_REMOVE_STOCK_DUAL": "Hej makker! Jeg kan se, du både har en ultra-stabil LTS-kerne og en hurtig CachyOS-kerne. Vil du fjerne standard Slackware-kerner? (100% reversibel) [y/N] ",
   "PROMPT_REMOVE_STOCK_MULTIPLE": "Hej makker! Med alle de CachyOS-kerner (inkl. LTS), behøver du virkelig standard Slackware-kernerne i /boot? (100% reversibel) [y/N] ",

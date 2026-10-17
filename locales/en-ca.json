@@ -174,7 +174,7 @@
   "PROMPT_INSTALL_NEW_KERNEL": "Download and install new kernel {version}, guy? [Y/n] ",
   "PROMPT_INSTALL_NVIDIA_RUN": "Download and install NVIDIA .run driver, guy? [Y/n] ",
   "PROMPT_INSTALL_R8125_MODULE": "Would you like to install the matching CachyOS r8125 driver for kernel {version}, please? [Y/n] ",
-  "PROMPT_REBOOT_NOW": "Wanna cycle the box and follow the only road in Canada? [Y/n] ",
+  "PROMPT_REBOOT_NOW": "Wanna cycle the box and follow the only road in Canada? [y/N] ",
   "PROMPT_REBUILD_INITRD_ACTIVE": "Rebuild initrd and signatures for active kernel ({active}), buddy? [y/N] ",
   "PROMPT_REMOVE_STOCK_DUAL": "Hey, buddy! You've got both rock-solid LTS and a hot CachyOS kernel. Wanna go full CachyOS and toss stock Slackware kernels in the snow? (100% reversible) [y/N] ",
   "PROMPT_REMOVE_STOCK_MULTIPLE": "Hey, friend! With all those CachyOS kernels, do you really need stock Slackware kernels cluttering your /boot? (100% reversible) [y/N] ",

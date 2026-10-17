@@ -1,0 +1,93 @@
+{
+  "schema": 1,
+  "spec": "underpants-runtime-bricks/1",
+  "brick": "core",
+  "revision": 1,
+  "built": "2026-10-17T10:00:00Z",
+  "content_id": "4833a854b0c677c6d365477c19d08c5f24ff80694e2546332f7c2ff08549fc4d",
+  "update_set": "",
+  "requires": [],
+  "abi": {},
+  "built_against": {},
+  "packages": [
+    {
+      "name": "foo",
+      "version": "1.0-1",
+      "repo": "extra",
+      "archive_sha256": "",
+      "files": [
+        {
+          "path": "lib/libfoo.so.1.0",
+          "type": "file",
+          "sha256": "f0cf5192fea895923577f932c87e7e841f977e6ab2e76488b4d67bd275971078",
+          "size": 7,
+          "mode": "0755"
+        }
+      ]
+    },
+    {
+      "name": "foo-devel",
+      "version": "1.0-1",
+      "repo": "extra",
+      "archive_sha256": "",
+      "files": [
+        {
+          "path": "include/foo.h",
+          "type": "file",
+          "sha256": "aaa9402664f1a41f40ebbc52c9993eb66aeb366602958fdfaa283b71e64db123",
+          "size": 1,
+          "mode": "0644"
+        },
+        {
+          "path": "lib/pkgconfig/foo.pc",
+          "type": "file",
+          "sha256": "d8463bd3ba4b10e5916f65fa7b0c1f9f91f67ca40cc25b48810fb2f5a3340488",
+          "size": 2,
+          "mode": "0644"
+        },
+        {
+          "path": "lib/cmake/Foo/FooConfig.cmake",
+          "type": "file",
+          "sha256": "b5039c325d7107d60895787cd759095631d3fe594913e6ff284434b254a46b4c",
+          "size": 2,
+          "mode": "0644"
+        },
+        {
+          "path": "share/pkgconfig/foo2.pc",
+          "type": "file",
+          "sha256": "ee372ae96b3645906dc81161842fffcd73f31247c25aae49622313155744cde8",
+          "size": 3,
+          "mode": "0644"
+        },
+        {
+          "path": "share/man/man1/foo.1.gz",
+          "type": "file",
+          "sha256": "48b676e2b107da679512b793d5fd4cc4329f0c7c17a97cf6e0e3d1005b600b03",
+          "size": 3,
+          "mode": "0644"
+        },
+        {
+          "path": "share/doc/foo/README",
+          "type": "file",
+          "sha256": "139d544b821b13ebea14f1b0fe18577222e415c2966e3a3511c4196055232202",
+          "size": 3,
+          "mode": "0644"
+        },
+        {
+          "path": "share/info/foo.info.gz",
+          "type": "file",
+          "sha256": "06271baf49532c879aa3c58b48671884bcc858f09197412d682750496c33e1e1",
+          "size": 4,
+          "mode": "0644"
+        },
+        {
+          "path": "share/gtk-doc/html/foo/index.html",
+          "type": "file",
+          "sha256": "690fb2d76f5bf94e9b2fd86dfb7b321fd7599aaa14add6aa6ebbf3b4250d5f85",
+          "size": 6,
+          "mode": "0644"
+        }
+      ]
+    }
+  ]
+}
