@@ -8,9 +8,45 @@ import subprocess
 import time
 import shutil
 import signal
-from PyQt5.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QAction, QActionGroup
-from PyQt5.QtGui import QIcon, QPixmap, QPainter, QDesktopServices, QCursor
-from PyQt5.QtCore import QFileSystemWatcher, QTimer, Qt, QUrl, QProcess
+
+# 6A-315 (F4): Qt 6 first, Qt 5 as the fallback. With neither installed the tray says so in ONE line on stderr and exits
+# with a plain status (no traceback, no notification, and the autostart does not loop on it).
+try:
+    from PyQt6.QtWidgets import QApplication, QSystemTrayIcon, QMenu
+    from PyQt6.QtGui import QIcon, QPixmap, QPainter, QDesktopServices, QCursor, QAction, QActionGroup
+    from PyQt6.QtCore import QFileSystemWatcher, QTimer, Qt, QUrl, QProcess
+    QT_MAJOR = 6
+except ImportError:
+    try:
+        from PyQt5.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QAction, QActionGroup
+        from PyQt5.QtGui import QIcon, QPixmap, QPainter, QDesktopServices, QCursor
+        from PyQt5.QtCore import QFileSystemWatcher, QTimer, Qt, QUrl, QProcess
+        QT_MAJOR = 5
+    except ImportError:
+        sys.stderr.write("slacky-update-tray: the tray needs PyQt6 or PyQt5, and neither is installed; the tray is off "
+                         "(slacky-update itself still works).\n")
+        sys.exit(0)
+
+
+def qt_enum(cls, scope, name):
+    """One name for a Qt enum value in both Qt generations (Qt 6 only has the scoped form)."""
+    try:
+        return getattr(cls, name)
+    except AttributeError:
+        return getattr(getattr(cls, scope), name)
+
+
+QT_KEEP_ASPECT = qt_enum(Qt, "AspectRatioMode", "KeepAspectRatio")
+QT_SMOOTH = qt_enum(Qt, "TransformationMode", "SmoothTransformation")
+QT_TRANSPARENT = qt_enum(Qt, "GlobalColor", "transparent")
+TRAY_TRIGGER = qt_enum(QSystemTrayIcon, "ActivationReason", "Trigger")
+TRAY_CONTEXT = qt_enum(QSystemTrayIcon, "ActivationReason", "Context")
+TRAY_MIDDLE = qt_enum(QSystemTrayIcon, "ActivationReason", "MiddleClick")
+PROC_NOT_RUNNING = qt_enum(QProcess, "ProcessState", "NotRunning")
+
+# 6A-316 (N0d): a wrapped desktop session must not make host tools load foreign libraries
+for _loader_var in ("LD_LIBRARY_PATH", "LD_PRELOAD", "LD_AUDIT", "LD_BIND_NOW"):
+    os.environ.pop(_loader_var, None)
 
 # --- [ SIGNAL HANDLING ] ---
 if hasattr(signal, 'SIGHUP'):
@@ -131,6 +167,46 @@ def get_time_since_last_check(data):
         return _("AGO_HOURS_MINS", hours=hours, mins=mins % 60)
     else:
         return _("AGO_MINS", mins=mins)
+
+# 6A-308: network wait at login and the single re-check after an incomplete check (pure functions, tested without Qt).
+RECHECK_MS = 180 * 1000
+CHECK_MAX_MS = 6 * 60 * 1000   # 6A-315 (N0c): longest a single check may run before the tray kills it
+NETWORK_WAIT_MAX_S = 60
+NETWORK_PROBE_STEP_S = 3
+
+def network_wait_decision(up, waited_s):
+    """'go' when the network answers or the wait budget is used up (the check then says by itself that it is offline),
+    otherwise 'wait' (probe again in NETWORK_PROBE_STEP_S)."""
+    if up or waited_s + NETWORK_PROBE_STEP_S > NETWORK_WAIT_MAX_S:
+        return "go"
+    return "wait"
+
+def next_check_after(unchecked, was_recheck):
+    """(milliseconds until the next automatic check, whether that one is the single re-check). An incomplete check gets
+    ONE re-check in 3 minutes; the re-check itself, even when incomplete again, returns to the hourly rhythm."""
+    if unchecked and not was_recheck:
+        return RECHECK_MS, True
+    return INTERVAL_1_HOUR_MS, False
+
+def status_is_incomplete(data):
+    """True when the stored check result says a part could not be checked or the machine was offline."""
+    if not isinstance(data, dict):
+        return False
+    return bool(data.get("check_failed")) or bool(data.get("check_offline"))
+
+def first_mirror_host(path="/etc/slackpkg/mirrors"):
+    """Host name of the first mirror line (for the silent DNS probe); 'slackware.nl' when none is readable."""
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith(("http://", "https://", "ftp://")):
+                    host = line.split("://", 1)[1].split("/", 1)[0].split(":", 1)[0]
+                    if host:
+                        return host
+    except OSError:
+        pass
+    return "slackware.nl"
 
 def get_next_check_in(timer):
     if timer is None or not hasattr(timer, "remainingTime"):
@@ -256,7 +332,12 @@ class SlackyUpdateTray(QSystemTrayIcon):
         self.watcher.directoryChanged.connect(self.on_cache_changed)
         self.watcher.fileChanged.connect(self.on_cache_changed)
 
-        QTimer.singleShot(15000, self.trigger_check)
+        # 6A-308: 15 s after start, wait silently (DNS lookup of the mirror host every 3 s, at most 60 s, never blocking the
+        # Qt event loop) until the network answers, then check. The check runs either way when the wait is over.
+        self.recheck_next = False
+        self.recheck_running = False
+        self.network_waited_s = 0
+        QTimer.singleShot(15000, self.network_wait_step)
 
         self.update_status()
 
@@ -280,9 +361,9 @@ class SlackyUpdateTray(QSystemTrayIcon):
             return QIcon(icon_path)
         scaled_w, scaled_h = max(1, int(w * scale_factor)), max(1, int(h * scale_factor))
         offset_x, offset_y = (w - scaled_w) // 2, (h - scaled_h) // 2
-        scaled_sub = base_pix.scaled(scaled_w, scaled_h, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        scaled_sub = base_pix.scaled(scaled_w, scaled_h, QT_KEEP_ASPECT, QT_SMOOTH)
         canvas = QPixmap(w, h)
-        canvas.fill(Qt.transparent)
+        canvas.fill(QT_TRANSPARENT)
         painter = QPainter(canvas)
         painter.drawPixmap(offset_x, offset_y, scaled_sub)
         painter.end()
@@ -315,9 +396,9 @@ class SlackyUpdateTray(QSystemTrayIcon):
             self.setIcon(self.icon_ok)
 
     def on_activated(self, reason):
-        if reason == QSystemTrayIcon.Trigger:
+        if reason == TRAY_TRIGGER:
             self.launch_upgrade()
-        elif reason in (QSystemTrayIcon.Context, QSystemTrayIcon.MiddleClick):
+        elif reason in (TRAY_CONTEXT, TRAY_MIDDLE):
             self.update_menu_content()
             self.menu.popup(QCursor.pos())
 
@@ -523,9 +604,29 @@ class SlackyUpdateTray(QSystemTrayIcon):
 
         self.quit_action.setText(_("QUIT"))
 
+    def network_wait_step(self):
+        try:
+            if QT_MAJOR == 6:
+                from PyQt6.QtNetwork import QHostInfo
+            else:
+                from PyQt5.QtNetwork import QHostInfo
+        except Exception:
+            self.trigger_check()
+            return
+        def done(info):
+            up = info.error() == qt_enum(QHostInfo, 'HostInfoError', 'NoError') and len(info.addresses()) > 0
+            if network_wait_decision(up, self.network_waited_s) == "go":
+                self.trigger_check()
+            else:
+                self.network_waited_s += NETWORK_PROBE_STEP_S
+                QTimer.singleShot(NETWORK_PROBE_STEP_S * 1000, self.network_wait_step)
+        QHostInfo.lookupHost(first_mirror_host(), done)
+
     def trigger_check(self):
         if self.is_checking:
             return
+        self.recheck_running = self.recheck_next
+        self.recheck_next = False
         self.is_checking = True
         self.stop_pulse()
         self.setIcon(self.icon_checking)
@@ -534,20 +635,60 @@ class SlackyUpdateTray(QSystemTrayIcon):
         self.check_timer.start(INTERVAL_1_HOUR_MS)
 
         if hasattr(self, "checker_proc") and self.checker_proc is not None:
-            if self.checker_proc.state() != QProcess.NotRunning:
+            if self.checker_proc.state() != PROC_NOT_RUNNING:
                 return
 
         if os.path.exists(CHECKER_BIN):
             self.checker_proc = QProcess(self)
             self.checker_proc.finished.connect(self.on_check_finished)
-            self.checker_proc.start(CHECKER_BIN)
+            self.check_timed_out = False
+            # 6A-315 (N0c): the check runs in its own process group (setsid), so a hung check can be killed with all of
+            # its children after CHECK_MAX_MS
+            setsid = shutil.which("setsid")
+            if setsid:
+                self.checker_proc.start(setsid, [CHECKER_BIN])
+            else:
+                self.checker_proc.start(CHECKER_BIN)
+            self.check_serial = getattr(self, "check_serial", 0) + 1
+            serial = self.check_serial
+            QTimer.singleShot(CHECK_MAX_MS, lambda: self.check_watchdog(serial))
         else:
             self.is_checking = False
             self.update_status()
 
+    def check_watchdog(self, serial=None):
+        """6A-315 (N0c): a check that runs longer than CHECK_MAX_MS is killed (with its children) and reported as 'could
+        not check'; the next automatic check starts clean."""
+        proc = getattr(self, "checker_proc", None)
+        if serial is not None and serial != getattr(self, "check_serial", 0):
+            return   # an older check's timer; the check it watched is long finished
+        if proc is None or proc.state() == PROC_NOT_RUNNING or not self.is_checking:
+            return
+        self.check_timed_out = True
+        try:
+            pid = int(proc.processId())
+            if pid > 1 and shutil.which("setsid"):
+                os.killpg(pid, signal.SIGKILL)
+        except (OSError, ValueError, TypeError):
+            pass
+        proc.kill()
+
     def on_check_finished(self, exit_code=0, exit_status=0):
         self.is_checking = False
+        timed_out = bool(getattr(self, "check_timed_out", False))
+        self.check_timed_out = False
+        # 6A-308: an incomplete check (a part failed or offline) gets ONE silent re-check in 3 minutes, then hourly again
+        try:
+            unchecked = status_is_incomplete(self.load_status()) or exit_code != 0 or timed_out
+            wait_ms, again = next_check_after(unchecked, self.recheck_running)
+            self.recheck_running = False
+            self.recheck_next = again
+            self.check_timer.start(wait_ms)
+        except Exception:
+            pass
         self.update_status()
+        if timed_out:
+            self.setToolTip(_("CHECK_COULD_NOT"))
 
     def _get_slacky_bin(self):
         return shutil.which("slacky-update") or "/usr/bin/slacky-update" or "/usr/local/bin/slacky-update"
@@ -623,4 +764,4 @@ if __name__ == "__main__":
 
     tray = SlackyUpdateTray(app)
     tray.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec() if QT_MAJOR == 6 else app.exec_())

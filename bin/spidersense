@@ -5,6 +5,8 @@
 # Never changes anything, never asks for sudo. Silent when everything is fine, except `status`, which always answers.
 # ==============================================================================
 set -euo pipefail
+# 6A-316 (N0d): a wrapped desktop session must not make host tools load foreign libraries
+unset LD_LIBRARY_PATH LD_PRELOAD LD_AUDIT LD_BIND_NOW
 
 SELF_DIR="$(dirname "$(readlink -f "$0")")"
 if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then

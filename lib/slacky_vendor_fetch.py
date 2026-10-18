@@ -170,6 +170,76 @@ def apt_record(package, version):
     return parse_apt_index(text, package, version)
 
 
+def parse_apt_latest(text, package):
+    """6A-310 (V6): newest plain release version of `package` (amd64) in a Packages index; None when there is none.
+
+    Only entries that parse_apt_index would accept count, so the version offered is always one that can be installed."""
+    best = None
+    for stanza in text.split("\n\n"):
+        fields = {}
+        for line in stanza.splitlines():
+            if ":" in line and not line.startswith((" ", "\t")):
+                k, v = line.split(":", 1)
+                fields[k] = v.strip()
+        ver = fields.get("Version", "")
+        if fields.get("Package") != package or fields.get("Architecture") != "amd64" or not plain_version(ver):
+            continue
+        try:
+            parse_apt_index(stanza, package, ver)
+        except VendorError:
+            continue
+        if best is None or _version_key(ver) > _version_key(best):
+            best = ver
+    return best
+
+
+def apt_latest_version(package):
+    """6A-310 (V6): the newest version in the vendor's own apt index (not a third party's recipe); None when it cannot be read."""
+    try:
+        return parse_apt_latest(_read_capped(APT_INDEX_URL, MAX_METADATA_BYTES).decode("utf-8"), package)
+    except Exception:
+        return None
+
+
+# ---- Antigravity: Google's own update service (6A-311, V5) ---------------------------------------------------------------
+#
+# Google has no checksum file, but the update service of the app itself answers with the download address and a SHA-256 of
+# that file. When the address it names is the one we are about to download, that value is the vendor's own and is used; when
+# it names another build (the service can lag behind), nothing is claimed and the caller keeps the third-party value.
+
+ANTIGRAVITY_UPDATE_API = "https://antigravity-auto-updater-974169037036.us-central1.run.app/api/update/linux-x64/stable/latest"
+ANTIGRAVITY_URL_PREFIX = "https://storage.googleapis.com/antigravity-public/antigravity-hub/"
+
+
+def parse_antigravity_update(body):
+    """Update-service answer -> (url, sha256_hex) or None on any doubt."""
+    import json
+    try:
+        rec = json.loads(body)
+    except ValueError:
+        return None
+    if not isinstance(rec, dict):
+        return None
+    url, sha = rec.get("url"), rec.get("sha256hash")
+    if (not isinstance(url, str) or not url.startswith(ANTIGRAVITY_URL_PREFIX) or not url.endswith("/linux-x64/Antigravity.tar.gz")
+            or any(c in url for c in " \t\r\n?#\\") or ".." in url):
+        return None
+    if not isinstance(sha, str) or _HEX64.match(sha) is None:
+        return None
+    return url, sha.lower()
+
+
+def antigravity_vendor_sha256(url):
+    """SHA-256 that Google publishes for exactly `url`; None when the service is unreachable or names another build."""
+    try:
+        rec = parse_antigravity_update(_read_capped(ANTIGRAVITY_UPDATE_API, MAX_METADATA_BYTES, timeout=15))
+    except Exception:
+        return None
+    if rec is None or rec[0] != url:
+        return None
+    return rec[1]
+
+
 # ---- download + check ---------------------------------------------------------------------------------------------------
 
 def file_digest(path, algo):

@@ -29,26 +29,22 @@ RANKED_JSON_SYS = os.path.join(CACHE_DIR_SYS, "ranked_mirrors.json")
 
 # --- [ CANDIDATE MIRROR REGISTRIES ] ---
 
+# 6A-318 (N5): acc.umu.se, heanet.ie, iij.ad.jp and lysator.liu.se answered 404 for ChangeLog.txt and tds.net and c3sl.ufpr.br did
+# not answer (measured 2026-10-18); they are removed. This list only feeds the ranking advice, never a background write.
 SLACKWARE_CANDIDATES = [
     # Europe
     ("Netherlands (slackware.nl)", "https://slackware.nl/slackware/"),
     ("Denmark (dotsrc.org)", "https://mirrors.dotsrc.org/slackware/"),
-    ("Sweden (lysator.liu.se)", "https://ftp.lysator.liu.se/pub/slackware/"),
-    ("Sweden (acc.umu.se)", "https://ftp.acc.umu.se/mirror/slackware/"),
     ("Germany (gwdg.de)", "https://ftp.gwdg.de/pub/linux/slackware/"),
     ("United Kingdom (slackware.uk)", "https://slackware.uk/slackware/"),
-    ("Ireland (heanet.ie)", "https://ftp.heanet.ie/mirrors/ftp.slackware.com/pub/slackware/"),
     # Americas
     ("USA (kernel.org)", "https://mirrors.kernel.org/slackware/"),
     ("USA (osuosl.org)", "https://ftp.osuosl.org/pub/slackware/"),
     ("USA (math.princeton.edu)", "https://mirror.math.princeton.edu/pub/slackware/"),
     ("USA (clarkson.edu)", "https://mirror.clarkson.edu/slackware/"),
-    ("USA (mirrors.tds.net)", "https://slackware.mirrors.tds.net/pub/slackware/"),
-    ("Brazil (c3sl.ufpr.br)", "https://slackware.c3sl.ufpr.br/"),
     ("Ecuador (cedia.org.ec)", "https://mirror.cedia.org.ec/slackware/"),
     # Asia & Pacific
     ("Japan (riken.jp)", "https://ftp.riken.jp/Linux/slackware/"),
-    ("Japan (iij.ad.jp)", "https://ftp.iij.ad.jp/pub/linux/slackware/"),
     ("China (tsinghua.edu.cn)", "https://mirrors.tuna.tsinghua.edu.cn/slackware/"),
     ("Australia (aarnet.edu.au)", "https://mirror.aarnet.edu.au/pub/slackware/")
 ]

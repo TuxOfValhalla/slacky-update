@@ -571,9 +571,9 @@ install_curated_slackbuild() {
                     sudo mkdir -p /var/cache/slacky-update/archives 2>/dev/null || true
                     if download_parallel_pacman "SBo: ${filename}" "${url}|${build_tmp}/${filename}"; then
                         sudo cp -f "${build_tmp}/${filename}" "/var/cache/slacky-update/archives/${filename}" 2>/dev/null || true
-                    elif wget -c "${url}" -O "${build_tmp}/${filename}"; then
+                    elif wget -c --timeout=30 --tries=3 "${url}" -O "${build_tmp}/${filename}"; then   # 6A-317 (N3): a stalled server cannot hang the build
                         sudo cp -f "${build_tmp}/${filename}" "/var/cache/slacky-update/archives/${filename}" 2>/dev/null || true
-                    elif curl -fLo "${build_tmp}/${filename}" "${url}"; then
+                    elif curl -fL --connect-timeout 15 -m 1800 --speed-limit 1000 --speed-time 45 -o "${build_tmp}/${filename}" "${url}"; then
                         sudo cp -f "${build_tmp}/${filename}" "/var/cache/slacky-update/archives/${filename}" 2>/dev/null || true
                     else
                         log_warn "Download failed for ${url}."

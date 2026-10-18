@@ -6,7 +6,7 @@ set -euo pipefail
 PRGNAM="slacky-update"
 VERSION="1.0_RC2"
 ARCH="noarch"
-BUILD="90_slacky"
+BUILD="91_slacky"
 
 SRC_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 OUTPUT_DIR="${OUTPUT_DIR:-${SRC_DIR}/../slacky-updates_releases}"
@@ -81,25 +81,50 @@ install -m 0755 "${SRC_DIR}/lib/slacky_tui.py" "${PKG_DIR}/usr/share/slacky-upda
 install -m 0755 "${SRC_DIR}/lib/slacky_doctor.py" "${PKG_DIR}/usr/share/slacky-update/lib/"
 install -m 0644 "${SRC_DIR}"/locales/*.json "${PKG_DIR}/usr/share/slacky-update/locales/"
 
-if [ -d "${SRC_DIR}/docs" ]; then
-    install -m 0644 "${SRC_DIR}"/docs/*.md "${PKG_DIR}/usr/share/slacky-update/docs/" 2>/dev/null || true
-fi
+# 6A-319 (LTS S9): documents come from an explicit list, so the package is reproducible and never carries the work logs
+# (log.md, log_nb.md), the repair notes or other development files. A listed file that is missing stops the build.
+SHIPPED_DOCS="
+SLACKY_UPDATE_FIELD_GUIDE.md
+LIMINE_SECUREBOOT_FIELD_GUIDE.md
+UNDERPANTS_GNOMES_FIELD_GUIDE.md
+TECHNICAL_COMPANION_GUIDE.md
+TROUBLESHOOTING_GUIDE.md
+THE_ULTIMATE_SLACKY_UPDATE_SURVIVAL_GUIDE.md
+OH_MY_HYPRLAND_GUIDE.md
+config_store_spec.md
+footprint_spec.md
+mirror_key_spec.md
+rclocal_spec.md
+reboot_rules.md
+"
+for doc in ${SHIPPED_DOCS}; do
+    if [ ! -f "${SRC_DIR}/docs/${doc}" ]; then
+        echo "ERROR: listed document docs/${doc} is missing." >&2
+        exit 1
+    fi
+    install -m 0644 "${SRC_DIR}/docs/${doc}" "${PKG_DIR}/usr/share/slacky-update/docs/"
+done
 
 install -m 0644 "${SRC_DIR}/desktop/slacky-update.desktop" "${PKG_DIR}/usr/share/applications/"
 install -m 0644 "${SRC_DIR}/desktop/slacky-update-tray.desktop" "${PKG_DIR}/usr/share/applications/"
-install -m 0644 "${SRC_DIR}/desktop/slacky-update-tray.desktop" "${PKG_DIR}/etc/xdg/autostart/"
+# 6A-319 (LTS S8): files an admin may switch off (tray autostart, cron jobs, profile.d, kernel hook) are shipped as .new in
+# mode 0644 (never run by cron or sourced by the shell while they are .new); doinst installs them only when absent, so an
+# upgrade never switches a disabled job back on (see config_job in doinst below)
+install -m 0644 "${SRC_DIR}/desktop/slacky-update-tray.desktop" "${PKG_DIR}/etc/xdg/autostart/slacky-update-tray.desktop.new"
 
-install -m 0755 "${SRC_DIR}/cron/slacky-snapper-limine-sync" "${PKG_DIR}/etc/cron.hourly/"
-install -m 0755 "${SRC_DIR}/cron/slacky-update-check" "${PKG_DIR}/etc/cron.weekly/"
+install -m 0644 "${SRC_DIR}/cron/slacky-snapper-limine-sync" "${PKG_DIR}/etc/cron.hourly/slacky-snapper-limine-sync.new"
+install -m 0644 "${SRC_DIR}/cron/slacky-update-check" "${PKG_DIR}/etc/cron.weekly/slacky-update-check.new"
 # 6A-28: base hardening, shipped as .new so a file the user changed (protect-links off) survives upgrades
 install -m 0644 "${SRC_DIR}/assets/sysctl.d/50-slacky-protect-links.conf" "${PKG_DIR}/etc/sysctl.d/50-slacky-protect-links.conf.new"
 
 if [ -d "${SRC_DIR}/assets/profile.d" ]; then
-    install -m 0755 "${SRC_DIR}"/assets/profile.d/* "${PKG_DIR}/etc/profile.d/" 2>/dev/null || true
+    for pf in "${SRC_DIR}"/assets/profile.d/*; do
+        [ -f "${pf}" ] && install -m 0644 "${pf}" "${PKG_DIR}/etc/profile.d/$(basename "${pf}").new"
+    done
 fi
 
 if [ -f "${SRC_DIR}/assets/hooks/slacky-limine-hook" ]; then
-    install -m 0755 "${SRC_DIR}/assets/hooks/slacky-limine-hook" "${PKG_DIR}/etc/kernel/postinst.d/"
+    install -m 0644 "${SRC_DIR}/assets/hooks/slacky-limine-hook" "${PKG_DIR}/etc/kernel/postinst.d/slacky-limine-hook.new"
 fi
 
 if [ -f "${SRC_DIR}/slackbuild/slack-desc" ]; then
@@ -172,6 +197,64 @@ config() {
   fi
 }
 config etc/sysctl.d/50-slacky-protect-links.conf.new
+
+# --- config_job begin ---
+# 6A-319 (LTS S8): admin-switchable files (cron jobs, profile.d, tray autostart, kernel hook) come as .new.
+#   - absent: installed with its mode (so a fresh install works at once);
+#   - same content: the .new is dropped;
+#   - an untouched older shipped version (md5 in the list): takes the new content and KEEPS its mode, so a job switched
+#     off with chmod -x stays off;
+#   - changed by the admin: kept as it is, the .new stays for the admin to compare.
+# Packages older than this one shipped these files as plain files; upgradepkg removes such a plain file after the new
+# doinst has run, so a small detached helper puts the kept file back for up to two minutes if that happens.
+# The md5 list holds every earlier shipped version; add the md5 of the replaced version when a file changes.
+config_job() {
+  NEW="$1"; MODE="$2"; shift 2
+  OLD="${NEW%.new}"
+  [ -f "$NEW" ] || return 0
+  if [ ! -e "$OLD" ]; then
+    mv "$NEW" "$OLD"
+    chmod "$MODE" "$OLD" 2>/dev/null || true
+    return 0
+  fi
+  SUM="$(md5sum < "$OLD" | cut -d' ' -f1)"
+  if [ "$SUM" = "$(md5sum < "$NEW" | cut -d' ' -f1)" ]; then
+    rm -f "$NEW"
+  else
+    for K in "$@"; do
+      if [ "$SUM" = "$K" ]; then
+        chmod --reference="$OLD" "$NEW" 2>/dev/null || true
+        mv -f "$NEW" "$OLD"
+        break
+      fi
+    done
+  fi
+  KEEP="$(mktemp "$OLD.slacky-keep.XXXXXX" 2>/dev/null)" || return 0
+  cp -p "$OLD" "$KEEP" 2>/dev/null || { rm -f "$KEEP"; return 0; }
+  ( i=0
+    while [ "$i" -lt "${SLACKY_KEEP_POLLS:-60}" ]; do
+      if [ ! -e "$OLD" ]; then mv "$KEEP" "$OLD" 2>/dev/null; break; fi
+      sleep "${SLACKY_KEEP_SLEEP:-2}"; i=$((i + 1))
+    done
+    rm -f "$KEEP" ) </dev/null >/dev/null 2>&1 &
+  return 0
+}
+# --- config_job end ---
+
+config_job etc/xdg/autostart/slacky-update-tray.desktop.new 0644 \
+    ab8e1cf6eb182b87370732217630486c 623a61a7e93003cd7310175d54781c4a
+config_job etc/cron.hourly/slacky-snapper-limine-sync.new 0755 \
+    34d573d215bc713a69018ed184d3d061 29f8cc91fffe082cb059ac7e610d8d14
+config_job etc/cron.weekly/slacky-update-check.new 0755 \
+    eadb8f692c115aae30ac02fdbe9e7fd4 e776637a77b91ea62bd79432333339fa 85e76b708e50e5ba6e7714f9c9bd344e \
+    85036216f601f021f7484f0133d7ec68 1ef09cc50bba7a6fa48e7dd1f16a3e18 043812f68129b13a85d463eddf8b3e48
+config_job etc/profile.d/slacky-hidpi.sh.new 0755 \
+    84c5dd687874f832be3efe54c169a2a8 1454a0e2e227caf5b6129a01241dd8aa
+config_job etc/profile.d/slacky-hidpi.csh.new 0755 \
+    331f5b8b4ffb323808fefc855bd72fa9
+config_job etc/kernel/postinst.d/slacky-limine-hook.new 0755 \
+    a6b89910b77cad1dc643c722dc5b0812 82fa6f765d43b8035f7fd0fb9f134eae 7d6080bf6f2f0b33aa31ee72ff3a93bb \
+    9f9ea84dc1e0ab7a317e8f50f49eafb7
 if [ -x /sbin/sysctl ] && [ -r etc/sysctl.d/50-slacky-protect-links.conf ]; then
     /sbin/sysctl -q -p etc/sysctl.d/50-slacky-protect-links.conf >/dev/null 2>&1 || true
 fi
@@ -187,8 +270,8 @@ if [ -x /usr/bin/limine-reset-enroll ] && [ ! -e /etc/boot/hooks/pre.d/10-limine
     ln -sf /usr/bin/limine-reset-enroll /etc/boot/hooks/pre.d/10-limine-reset-enroll 2>/dev/null || true
 fi
 
-# 6A-149 (L lifecycle 7): no chmod of the cron jobs and the kernel hook here; the archive carries their modes, and an
-# admin who switched a job off with chmod -x keeps it off across upgrades
+# 6A-319 (LTS S8, replaces 6A-149 lifecycle 7): the cron jobs, profile.d files, tray autostart and kernel hook are .new files
+# handled by config_job above, so an admin who switched one off (chmod -x, or edited) keeps it off across upgrades
 
 if [ -x /usr/bin/update-desktop-database ]; then
     /usr/bin/update-desktop-database -q /usr/share/applications >/dev/null 2>&1 || true

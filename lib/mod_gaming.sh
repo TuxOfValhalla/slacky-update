@@ -1345,13 +1345,11 @@ if pkg_id == "antigravity":
 if pkg_id == "claude-desktop":
     ver = None
     try:
-        aur_url = "https://aur.archlinux.org/rpc/v5/info?arg[]=claude-desktop"
-        req = urllib.request.Request(aur_url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64)"})
-        with urllib.request.urlopen(req, timeout=6) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-            results = data.get("results", [])
-            if results:
-                ver = (results[0].get("Version") or "").split("-")[0] or ver
+        # 6A-310 (V6): the newest version in Anthropic's own apt index (the file is checked against that index at build time)
+        if os.environ.get('SLACKY_LIB_DIR'):
+            sys.path.insert(0, os.environ['SLACKY_LIB_DIR'])
+        import slacky_vendor_fetch as _vf
+        ver = _vf.apt_latest_version("claude-desktop") or ver
     except Exception:
         pass
     print(f"{ver} DEB_CLAUDE_DESKTOP NONE NONE" if ver else "NONE NONE NONE NONE")
@@ -2705,13 +2703,9 @@ def resolve_single(pid):
     if pid == "claude-desktop":
         ver = None
         try:
-            aur_url = "https://aur.archlinux.org/rpc/v5/info?arg[]=claude-desktop"
-            raw = fetch_url_cached(aur_url, cache_dir, ttl=1800)
-            if raw:
-                data = json.loads(raw)
-                results = data.get("results", [])
-                if results:
-                    ver = (results[0].get("Version") or "").split("-")[0] or ver
+            # 6A-310 (V6): the newest version in Anthropic's own apt index (the file is checked against that index at build time)
+            import slacky_vendor_fetch as _vf
+            ver = _vf.apt_latest_version("claude-desktop") or ver
         except Exception:
             pass
         return (pid, ver, "DEB_CLAUDE_DESKTOP", "NONE", "NONE") if ver else (pid, "NONE", "NONE", "NONE", "NONE")
@@ -3745,6 +3739,39 @@ if vf.file_digest(path, "sha256") != dg[7:].lower():
 PYVERIFY_GH_ASSET
 }
 
+# 6A-313 (N4): free space before a curated build. Downloads, the unpacked tree and the finished package all live in the build
+# folder, and the install writes under /opt (and /). One plain sentence names the space needed and where; nothing is created.
+# Needs can be overridden for tests with SLACKY_BUILD_NEED_MB / SLACKY_OPT_NEED_MB; SLACKY_OPT_DIR picks the install folder.
+gaming_space_precheck() {
+    local build_dir="$1" opt_dir="${SLACKY_OPT_DIR:-/opt}"
+    local need_build="${SLACKY_BUILD_NEED_MB:-3072}" need_opt="${SLACKY_OPT_NEED_MB:-1536}"
+    local b_line o_line b_dev o_dev b_free o_free
+    while [ -n "${build_dir}" ] && [ ! -d "${build_dir}" ] && [ "${build_dir}" != "/" ]; do build_dir=$(dirname "${build_dir}"); done
+    [ -d "${opt_dir}" ] || opt_dir="/"
+    b_line=$(df -Pm "${build_dir:-/}" 2>/dev/null | awk 'NR==2{print $1" "$4}') || true
+    o_line=$(df -Pm "${opt_dir}" 2>/dev/null | awk 'NR==2{print $1" "$4}') || true
+    b_dev="${b_line%% *}"; b_free="${b_line##* }"
+    o_dev="${o_line%% *}"; o_free="${o_line##* }"
+    # a lookup that fails is not a reason to stop a build
+    [[ "${b_free}" =~ ^[0-9]+$ ]] || return 0
+    if [ "${b_dev}" = "${o_dev}" ] && [[ "${o_free}" =~ ^[0-9]+$ ]]; then
+        if [ "${b_free}" -lt $((need_build + need_opt)) ]; then
+            log_error "There is not enough free disk space to build this: about $((need_build + need_opt)) MB are needed but only ${b_free} MB are free on ${build_dir:-/}. Nothing was changed."
+            return 1
+        fi
+        return 0
+    fi
+    if [ "${b_free}" -lt "${need_build}" ]; then
+        log_error "There is not enough free disk space to build this: about ${need_build} MB are needed in ${build_dir:-/} but only ${b_free} MB are free. Nothing was changed."
+        return 1
+    fi
+    if [[ "${o_free}" =~ ^[0-9]+$ ]] && [ "${o_free}" -lt "${need_opt}" ]; then
+        log_error "There is not enough free disk space to install this: about ${need_opt} MB are needed in ${opt_dir} but only ${o_free} MB are free. Nothing was changed."
+        return 1
+    fi
+    return 0
+}
+
 gaming_build_failed() {
     log_error "${1}"
     if [ -n "${staging_base:-}" ] && [ -d "${staging_base}" ]; then
@@ -3908,6 +3935,7 @@ _transmute_and_deploy_gaming_pkg_impl() {
         return 1
     fi
 
+    gaming_space_precheck "$(get_user_staging_dir)" || return 1  # 6A-313 (N4)
     local staging_base
     staging_base=$(mktemp -d "$(get_user_staging_dir)/gnome-${pkg_id}-${ver}.XXXXXX" 2>/dev/null || mktemp -d /tmp/slacky-gnome.XXXXXX)
     local cache_dir="${staging_base}/downloads"
@@ -4103,20 +4131,29 @@ with tempfile.TemporaryDirectory() as tmpdir:
 PYBUILD_THEME
     elif [ "${main_url}" = "AUR_ANTIGRAVITY" ] || [ "${pkg_id}" = "antigravity" ]; then
         log_info "Transmuting and building ${pkg_id} (${ver}) from upstream Google Antigravity & AUR ecosystem..."
-        python3 - "${staging_root}" "${cache_dir}" "${ver}" << 'PYBUILD_ANTIGRAVITY' || { gaming_build_failed "${pkg_id} could not be built. Nothing was changed."; return 1; }  # 6A-125
+        python3 - "${staging_root}" "${cache_dir}" "${ver}" "$(_slacky_vendor_fetch_dir)" << 'PYBUILD_ANTIGRAVITY' || { gaming_build_failed "${pkg_id} could not be built. Nothing was changed."; return 1; }  # 6A-125
 import sys, os, tempfile, subprocess, shutil, re, urllib.request, tarfile, hashlib
 
 staging_root = sys.argv[1]
 cache_dir = sys.argv[2]
 ver = sys.argv[3]
+lib_dir = sys.argv[4] if len(sys.argv) > 4 else ""
+# 6A-311 (V5): the safe unpacker and Google's own checksum live in slacky_vendor_fetch.py; without it nothing is unpacked
+if not lib_dir or not os.path.isfile(os.path.join(lib_dir, "slacky_vendor_fetch.py")):
+    raise RuntimeError("slacky_vendor_fetch.py was not found, so the download cannot be verified")
+sys.path.insert(0, lib_dir)
+import slacky_vendor_fetch as vf
 
 env = os.environ.copy()
 env["GIT_TERMINAL_PROMPT"] = "0"
+# 6A-311 (V5): no endless wait on a dead network (give up below 1 KB/s for 30 s)
+env["GIT_HTTP_LOW_SPEED_LIMIT"] = "1024"
+env["GIT_HTTP_LOW_SPEED_TIME"] = "30"
 
 with tempfile.TemporaryDirectory() as tmpdir:
     aur_dir = os.path.join(tmpdir, "aur")
     try:
-        subprocess.run(["git", "clone", "--depth", "1", "https://aur.archlinux.org/antigravity.git", aur_dir], env=env, check=True, capture_output=True)
+        subprocess.run(["git", "clone", "--depth", "1", "https://aur.archlinux.org/antigravity.git", aur_dir], env=env, check=True, capture_output=True, timeout=90)
     except Exception as e:
         print(f"Warning: AUR git clone failed ({e}), using default tarball resolution.")
         os.makedirs(aur_dir, exist_ok=True)
@@ -4151,12 +4188,32 @@ with tempfile.TemporaryDirectory() as tmpdir:
                 h.update(chunk)
         return h.hexdigest()
 
-    if not expected_b2:
-        raise RuntimeError("Antigravity was not installed: its checksum could not be read from the AUR package recipe, "
-                           "so the download cannot be verified. Try again later.")
+    def sha256_of(path):
+        h = hashlib.sha256()
+        with open(path, "rb") as fh:
+            for chunk in iter(lambda: fh.read(1 << 20), b""):
+                h.update(chunk)
+        return h.hexdigest()
+
+    # 6A-311 (V5): Google's own update service names the SHA-256 of the build it offers; when that is the build we are
+    # about to download, it is the trust anchor. Otherwise the AUR maintainer's BLAKE2b is used and a mismatch is refused.
+    vendor_sha = vf.antigravity_vendor_sha256(tar_url)
+
+    def tar_ok(path):
+        if vendor_sha:
+            return sha256_of(path) == vendor_sha
+        return b2sum_of(path) == expected_b2
+
+    def refuse(msg):
+        print(msg, file=sys.stderr)
+        sys.exit(1)
+
+    if not vendor_sha and not expected_b2:
+        refuse("Antigravity was not installed: no checksum could be read from Google or from the AUR package recipe, "
+               "so the download cannot be verified. Try again later.")
 
     # 6A-6b: a cached archive must match too (before, any file over 1 MB was reused forever)
-    if os.path.exists(local_tar) and b2sum_of(local_tar) != expected_b2:
+    if os.path.exists(local_tar) and not tar_ok(local_tar):
         print("Cached Antigravity archive does not match its checksum; downloading it again.")
         os.remove(local_tar)
 
@@ -4164,7 +4221,8 @@ with tempfile.TemporaryDirectory() as tmpdir:
         print(f"Downloading upstream Antigravity {ver} from {tar_url}...")
         download_ok = False
         try:
-            subprocess.run(["curl", "-#", "-fSL", "-A", "Mozilla/5.0 (X11; Linux x86_64)", "-o", local_tar, tar_url], check=True)
+            subprocess.run(["curl", "-#", "-fSL", "--connect-timeout", "15", "--speed-limit", "1024", "--speed-time", "30", "-m", "1800",
+                            "-A", "Mozilla/5.0 (X11; Linux x86_64)", "-o", local_tar, tar_url], check=True, timeout=1900)  # 6A-311: timeouts
             if os.path.exists(local_tar) and os.path.getsize(local_tar) > 1000000:
                 download_ok = True
         except Exception:
@@ -4177,17 +4235,21 @@ with tempfile.TemporaryDirectory() as tmpdir:
 
     if not os.path.exists(local_tar) or os.path.getsize(local_tar) < 1000000:
         raise RuntimeError(f"Failed to download valid Antigravity archive from {tar_url}")
-    if b2sum_of(local_tar) != expected_b2:
+    if not tar_ok(local_tar):
         os.remove(local_tar)
-        raise RuntimeError("Antigravity was not installed: the download does not match its published checksum "
-                           "(damaged or tampered file). It was deleted; try again later.")
+        refuse("Antigravity was not installed: the download does not match its published checksum "
+               + ("(from Google)" if vendor_sha else "(from the AUR recipe, Google publishes none for this build)")
+               + ". The file was deleted; try again later.")
 
     print(f"Extracting {local_tar} into /opt/antigravity...")
     opt_dest = os.path.join(staging_root, "opt/antigravity")
     os.makedirs(opt_dest, exist_ok=True)
 
     with tarfile.open(local_tar, "r:gz") as tf:
-        tf.extractall(opt_dest)
+        try:
+            vf.extract_safe(tf, opt_dest)  # 6A-311/6A-314 (V5, F5): member check, never a bare extractall
+        except vf.VendorError as exc:
+            refuse(f"Antigravity was not installed: the archive has an unsafe entry ({exc}).")
 
     # Flatten if unpacked into a single top-level directory
     subdirs = [d for d in os.listdir(opt_dest) if os.path.isdir(os.path.join(opt_dest, d)) and d.lower().startswith("antigravity")]
@@ -8674,6 +8736,7 @@ deploy_gaming_packages_batch() {
         return 1
     fi
 
+    gaming_space_precheck "$(get_user_staging_dir)" || return 1  # 6A-313 (N4): before the batch downloads anything
     local staging_base
     staging_base=$(mktemp -d "$(get_user_staging_dir)/gnome-batch.XXXXXX" 2>/dev/null || mktemp -d /tmp/slacky-gnome-batch.XXXXXX)
     local batch_cache="${staging_base}/downloads"

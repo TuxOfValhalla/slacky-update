@@ -4,6 +4,8 @@
 set -euo pipefail
 # 6A-51: python3 -c / python3 - run as root must never import modules from the current directory
 export PYTHONSAFEPATH=1
+# 6A-316 (N0d): a wrapped desktop session (LD_LIBRARY_PATH from a runtime) must not make host tools load foreign libraries
+unset LD_LIBRARY_PATH LD_PRELOAD LD_AUDIT LD_BIND_NOW
 
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 for cand in "${SCRIPT_DIR}/common.sh" \
@@ -171,9 +173,26 @@ echo "${SLACKY_OFFLINE}" > "${TMP_DIR}/offline"
 # --- [ 1. SLACKWARE REPOSITORY INSPECTION (UNPRIVILEGED) ] ---
 (
     [ "${SLACKY_OFFLINE}" -eq 1 ] && exit 0
-    MIRROR_URL=""
+    # 6A-308: the mirrors to ask, in /etc/slackpkg/mirrors order: the first line, then (only when the first fetch fails) the
+    # other lines of the SAME branch (a ChangeLog of another branch must never answer). Duplicates dropped.
+    MIRRORS=()
     if [ -f "${SLACKY_SLACKPKG_MIRRORS}" ]; then
-        MIRROR_URL=$(grep -E '^[[:space:]]*(https?|ftp)://' "${SLACKY_SLACKPKG_MIRRORS}" 2>/dev/null | sed -e 's/^[[:space:]]*//' | head -n1 || true)
+        _branch_re='(slackware(64)?-(current|[0-9]+\.[0-9]+))/?$'
+        _first_branch=""
+        while IFS= read -r _m; do
+            [ -n "${_m}" ] || continue
+            _m="${_m%/}"
+            if [ "${#MIRRORS[@]}" -eq 0 ]; then
+                [[ "${_m}" =~ ${_branch_re} ]] && _first_branch="${BASH_REMATCH[1]}"
+                MIRRORS+=("${_m}")
+                continue
+            fi
+            [ -n "${_first_branch}" ] || continue
+            [[ "${_m}" =~ ${_branch_re} ]] && [ "${BASH_REMATCH[1]}" = "${_first_branch}" ] || continue
+            _dup=0
+            for _e in "${MIRRORS[@]}"; do [ "${_e}" = "${_m}" ] && _dup=1; done
+            [ "${_dup}" -eq 1 ] || MIRRORS+=("${_m}")
+        done < <(grep -E '^[[:space:]]*(https?|ftp)://' "${SLACKY_SLACKPKG_MIRRORS}" 2>/dev/null | sed -e 's/^[[:space:]]*//' || true)
     fi
 
     CHANGELOG_FETCHED=0
@@ -185,10 +204,41 @@ echo "${SLACKY_OFFLINE}" > "${TMP_DIR}/offline"
         grep -qiE '<(!doctype|html|head|body)' "$1" 2>/dev/null && return 1
         grep -qE "${CL_DATE_RE}" "$1" 2>/dev/null
     }
-    if [ -n "${MIRROR_URL}" ]; then
+    # 6A-308: one ChangeLog request with ONE delayed retry (3 s; the network may still be coming up right after login).
+    # No retry on an HTTP 4xx answer (the server said no). SLACKY_FAIL_REASON gets a short plain reason for the recorder.
+    SLACKY_RETRY_DELAY=3
+    [ "${SLACKY_SELFTEST:-0}" = "1" ] && SLACKY_RETRY_DELAY="${SLACKY_RETRY_DELAY_TEST:-3}"
+    SLACKY_FAIL_REASON=""
+    slacky_cl_curl() {   # usage: slacky_cl_curl <max-seconds> <url> <out> [curl range args...]
+        local mt="$1" url="$2" out="$3" attempt rc code
+        shift 3
+        for attempt in 1 2; do
+            rc=0
+            code=$(curl -fsSL -m "${mt}" "$@" -o "${out}" -w '%{http_code}' "${url}" 2>/dev/null) || rc=$?
+            if [ "${rc}" -eq 0 ]; then
+                if slacky_changelog_valid "${out}"; then return 0; fi
+                SLACKY_FAIL_REASON="not a ChangeLog"
+                return 1
+            fi
+            case "${rc}" in
+                6)  SLACKY_FAIL_REASON="DNS lookup failed" ;;
+                7)  SLACKY_FAIL_REASON="connection refused" ;;
+                28) SLACKY_FAIL_REASON="timed out" ;;
+                22) SLACKY_FAIL_REASON="HTTP ${code:-error}" ;;
+                35|51|58|59|60|77|83) SLACKY_FAIL_REASON="secure connection failed" ;;
+                *)  SLACKY_FAIL_REASON="download failed" ;;
+            esac
+            # a 4xx answer is final; so is the second attempt
+            case "${code}" in 4[0-9][0-9]) return 1 ;; esac
+            [ "${attempt}" -eq 1 ] && sleep "${SLACKY_RETRY_DELAY}"
+        done
+        return 1
+    }
+    slacky_try_mirror() {
+        local MIRROR_URL="$1" CHANGELOG_URL UPSTREAM_TOP_DATE LOCAL_TOP_DATE
         CHANGELOG_URL="${MIRROR_URL%/}/ChangeLog.txt"
         # Super-fast check: fetch top 16KB header from upstream
-        if curl -fsSL -m 8 -r 0-16384 "${CHANGELOG_URL}" -o "${TMP_DIR}/ChangeLog_head.txt" 2>/dev/null && slacky_changelog_valid "${TMP_DIR}/ChangeLog_head.txt"; then
+        if slacky_cl_curl 8 "${CHANGELOG_URL}" "${TMP_DIR}/ChangeLog_head.txt" -r 0-16384; then
             UPSTREAM_TOP_DATE=$(grep -E "${CL_DATE_RE}" "${TMP_DIR}/ChangeLog_head.txt" 2>/dev/null | head -n1 || true)
             LOCAL_TOP_DATE=""
             if [ -f "${SLACKY_LOCAL_CHANGELOG}" ]; then
@@ -197,19 +247,54 @@ echo "${SLACKY_OFFLINE}" > "${TMP_DIR}/offline"
 
             if [ -n "${UPSTREAM_TOP_DATE}" ] && [ "${UPSTREAM_TOP_DATE}" = "${LOCAL_TOP_DATE}" ] && [ -f "${SLACKY_LOCAL_CHANGELOG}" ]; then
                 cp -f "${SLACKY_LOCAL_CHANGELOG}" "${TMP_DIR}/ChangeLog.txt" 2>/dev/null || true
-                slacky_changelog_valid "${TMP_DIR}/ChangeLog.txt" && CHANGELOG_FETCHED=1
+                slacky_changelog_valid "${TMP_DIR}/ChangeLog.txt" && return 0
             else
                 if curl -fsSL -m 6 -r 0-262144 "${CHANGELOG_URL}" -o "${TMP_DIR}/ChangeLog.txt" 2>/dev/null && slacky_changelog_valid "${TMP_DIR}/ChangeLog.txt"; then
-                    CHANGELOG_FETCHED=1
+                    return 0
                 elif curl -fsSL -m 8 "${CHANGELOG_URL}" -o "${TMP_DIR}/ChangeLog.txt" 2>/dev/null && slacky_changelog_valid "${TMP_DIR}/ChangeLog.txt"; then
-                    CHANGELOG_FETCHED=1
+                    return 0
                 else
                     cp -f "${TMP_DIR}/ChangeLog_head.txt" "${TMP_DIR}/ChangeLog.txt" 2>/dev/null || true
-                    slacky_changelog_valid "${TMP_DIR}/ChangeLog.txt" && CHANGELOG_FETCHED=1
+                    slacky_changelog_valid "${TMP_DIR}/ChangeLog.txt" && return 0
                 fi
             fi
-        elif curl -fsSL -m 8 -r 0-262144 "${CHANGELOG_URL}" -o "${TMP_DIR}/ChangeLog.txt" 2>/dev/null && slacky_changelog_valid "${TMP_DIR}/ChangeLog.txt"; then
+            SLACKY_FAIL_REASON="download failed"
+            return 1
+        fi
+        # the head request failed (after its retry): one more try for the bigger piece, same retry rule
+        slacky_cl_curl 8 "${CHANGELOG_URL}" "${TMP_DIR}/ChangeLog.txt" -r 0-262144
+    }
+    rm -f "${TMP_DIR}/changelog_failures"
+    for _m in "${MIRRORS[@]}"; do
+        if slacky_try_mirror "${_m}"; then
             CHANGELOG_FETCHED=1
+            break
+        fi
+        _h="${_m#*://}"; _h="${_h%%/*}"
+        printf '%s\t%s\n' "${_h}" "${SLACKY_FAIL_REASON:-download failed}" >> "${TMP_DIR}/changelog_failures"
+    done
+    # 6A-308: when no mirror answered, ONE entry in the flight recorder (host and plain reason per mirror). Silent otherwise.
+    if [ "${CHANGELOG_FETCHED}" -eq 0 ] && [ -s "${TMP_DIR}/changelog_failures" ]; then
+        _trust=""
+        for cand in "${SCRIPT_DIR:-}/gnomes_trust.py" "${APP_DIR:-}/gnomes_trust.py" \
+                    "/usr/share/slacky-update/lib/gnomes_trust.py" "/usr/local/share/slacky-update/lib/gnomes_trust.py" \
+                    "/usr/local/lib/slacky-update/gnomes_trust.py"; do
+            if [ -f "${cand}" ]; then _trust="${cand}"; break; fi
+        done
+        if [ -n "${_trust}" ]; then
+            python3 -I - "${_trust}" "${TMP_DIR}/changelog_failures" << 'PYREC' 2>/dev/null || true
+import importlib.util, sys
+spec = importlib.util.spec_from_file_location("gnomes_trust_rec", sys.argv[1])
+m = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(m)
+rows = []
+for line in open(sys.argv[2], encoding="utf-8", errors="replace"):
+    h, _, r = line.rstrip("\n").partition("\t")
+    if h:
+        rows.append({"mirror": h[:100], "reason": r[:60]})
+msg = "The Slackware ChangeLog could not be fetched (" + "; ".join(x["mirror"] + ": " + x["reason"] for x in rows[:4]) + ")"
+m.flight_record("UPDATE", "WARN", "changelog.fetch_failed", msg[:300], {"mirrors": rows[:6]})
+PYREC
         fi
     fi
 
@@ -879,7 +964,21 @@ slacky_check_nvidia_gpu_class() {
             fi
         elif [ "${NVIDIA_GPU_CLASS}" = "modern" ]; then
             # 6A-141: the newest .run branch supports Turing and newer
-            LATEST_NVIDIA=$(curl -fsSL -m 8 "https://download.nvidia.com/XFree86/Linux-x86_64/latest.txt" 2>/dev/null | awk '{print $1}' || true)
+            # 6A-312 (V3): offer exactly what "production" would install (the installed driver's own branch), not latest.txt,
+            # which can name a newer major that the install would never take (an update offered forever)
+            if ! command -v nvidia_production_offer_version >/dev/null 2>&1; then
+                for mod_cand in "${APP_DIR:-}/mod_nvidia.sh" "${SCRIPT_DIR:-}/mod_nvidia.sh" "/usr/share/slacky-update/lib/mod_nvidia.sh"; do
+                    if [ -f "${mod_cand}" ]; then
+                        # shellcheck source=/dev/null
+                        source "${mod_cand}" 2>/dev/null || true
+                        break
+                    fi
+                done
+            fi
+            LATEST_NVIDIA=""
+            if command -v nvidia_production_offer_version >/dev/null 2>&1; then
+                LATEST_NVIDIA=$(NVIDIA_ACTIVE_VER="${NVIDIA_ACTIVE_VER}" nvidia_production_offer_version || true)
+            fi
             # 6A-298 (V4): an answer that is not a version number (error page, empty) is "unknown", not a version
             [[ "${LATEST_NVIDIA}" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]] || { LATEST_NVIDIA=""; NVIDIA_LOOKUP_FAILED=1; }
         else

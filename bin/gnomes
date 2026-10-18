@@ -9,6 +9,8 @@
 set -euo pipefail
 # 6A-51: python3 -c / python3 - run as root must never import modules from the current directory
 export PYTHONSAFEPATH=1
+# 6A-316 (N0d): a wrapped desktop session (LD_LIBRARY_PATH from a runtime) must not make host tools load foreign libraries
+unset LD_LIBRARY_PATH LD_PRELOAD LD_AUDIT LD_BIND_NOW
 
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 if [ -d "${SCRIPT_DIR}/../lib" ] && [ -f "${SCRIPT_DIR}/../lib/common.sh" ]; then

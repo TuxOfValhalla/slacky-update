@@ -2057,3 +2057,19 @@
 
 ### Build 90 - 6A-307: no emoji in program output; final line "All updates are completed" (bin/slacky-update, lib/*, locales/*.json)
 - Emoji and decorative pictographs removed from all output, TUI, doctor report and locale values (plain words, ASCII spinner frames, OK/WARN/FAIL, on/off). A successful full update ends with exactly `All updates are completed`; partial failure still prints no such line and exits 20 (6A-281). Text only; no logic or colour changes. The shared limine.conf marker and sbctl output matchers are untouched. Checked with `bash -n`, Python compile, JSON parse and a code point scan.
+
+### Build 90 - 6A-308: ChangeLog fetch retry, mirror fallback, failure reason; tray network wait and one re-check (lib/check_backend.sh, lib/slacky-update-tray)
+- A failed Slackware ChangeLog request is retried once after 3 s (not on an HTTP 4xx answer), then the other mirror lines of the same branch in `/etc/slackpkg/mirrors` are asked in order. When no mirror answers, ONE flight recorder entry (`UPDATE`/`WARN`/`changelog.fetch_failed`) names each mirror host and the plain reason (DNS lookup failed, connection refused, timed out, HTTP code). The 6A-298 `check_failed` flag is unchanged.
+- Tray: 15 s after start it waits silently for the network (non-blocking DNS lookup of the first mirror host every 3 s, at most 60 s) before the login check; a check that ends with `check_failed` or offline gets exactly ONE re-check after 3 minutes, then the hourly rhythm again. No extra notification, no sudo.
+- Mirror of Rust 7f0c7df. Tests (temp dirs, local HTTP server, deleted): 503 then OK, dead first mirror, other-branch mirror ignored, all dead (one entry), 404 (no retry); tray scheduling as pure functions. `bash -n`, Python compile. NOT verified: a real login with a late network.
+
+### Build 90 - 6A-309: ASCII TUI cursor, stale .orig removed, missing snapper config announced (lib/slacky_tui.py, lib/common.sh)
+- TUI cursor `>` and category marks `v`/`>` are the only form (no U+25B6/25BE/25B8). `lib/mod_limine.sh.orig` removed. `create_pre_update_snapshot`: Btrfs + snapper but no `/etc/snapper/configs/root` still returns 2 (no hold), but prints one sentence per run with `snapper -c root create-config /` and writes a SpiderSense WARN line to the log. Stub-tested, tests deleted.
+
+### Build 90 - 6A-310..6A-314: Antigravity vendor checksum and safe unpack, Claude Desktop version from apt, NVIDIA offer = install rule, disk space precheck (lib/slacky_vendor_fetch.py, lib/mod_gaming.sh, lib/mod_nvidia.sh, lib/check_backend.sh)
+- Antigravity: SHA-256 from Google's update service when it names the build, else the AUR BLAKE2b; mismatch or unsafe archive = one sentence, file deleted; `extract_safe`; timeouts on git and curl. Claude Desktop version from Anthropic's apt index. NVIDIA "production" follows the installed branch, the update check offers the same version; 390 refused plainly; dead 535 and 580xx fallbacks removed. `gaming_space_precheck` before curated builds. No bare `extractall` left. Stub-tested in temp dirs, tests deleted.
+
+## 2026-10-18 - 6A-315..320 LTS survivability (tray, cron, packaging, mirrors, Secure Boot CA)
+- Tray: PyQt6 first, PyQt5 fallback, one stderr line when neither exists; checks longer than 6 minutes are killed ("Could not check"). Loader variables cleared at all entry points. Time limits on the SBo fall-back downloads. Dead built-in mirrors removed (measured 2026-10-18).
+- Packaging: cron, profile.d, tray autostart and kernel hook shipped as `.new` with a `config_job` doinst helper (disabled stays disabled, transitional restore helper); docs from an explicit list. Weekly cron: root refreshes keys only, the check runs as the desktop user with a time limit.
+- Secure Boot: Microsoft UEFI CA 2023 certificate (fingerprint pinned) accepted next to the 2011 one; SBAT note in the Limine field guide. Stub and fake-root tests in temp dirs, deleted.

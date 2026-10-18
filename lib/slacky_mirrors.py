@@ -36,6 +36,9 @@ PROBE_LIMIT_S = 2.5
 EARLY_STOP = 3
 RETRY_AFTER_FAILURE_SECS = 600
 
+# 6A-318 (N5): dead built-in hosts removed (measured 2026-10-18: Chaotic de-1, nl-1, fr-1 and ca answered 404 for
+# chaotic-aur.db, mirror.f4st.host did not answer). These lists are only the floor; the signed, weekly refreshed mirror lists
+# (slacky_sentinel.py) stay the primary source.
 # (label, base url); a label is only used by the benchmark report
 ARCH_CANDIDATES = [
     ("Global Geo-DNS (pkgbuild.com)", "https://geo.mirror.pkgbuild.com"),
@@ -45,7 +48,6 @@ ARCH_CANDIDATES = [
     ("Germany (thaller.ws)", "https://archlinux.thaller.ws"),
     ("Denmark (dotsrc.org)", "https://mirrors.dotsrc.org/archlinux"),
     ("Netherlands (osbeck.com)", "https://mirror.osbeck.com/archlinux"),
-    ("Germany (f4st.host)", "https://mirror.f4st.host/archlinux"),
 ]
 
 # 6A-183: eu.cachyos.org and asia.cachyos.org do not resolve in DNS any more (checked 2026-10-15), cdn77 answers.
@@ -57,12 +59,8 @@ CACHYOS_CANDIDATES = [
 
 CHAOTIC_CANDIDATES = [
     ("Geo Mirror (geo-mirror.chaotic.cx)", "https://geo-mirror.chaotic.cx/chaotic-aur"),
-    ("Germany 1 (de-1-mirror.chaotic.cx)", "https://de-1-mirror.chaotic.cx/chaotic-aur"),
     ("Germany 2 (de-2-mirror.chaotic.cx)", "https://de-2-mirror.chaotic.cx/chaotic-aur"),
-    ("Netherlands (nl-1-mirror.chaotic.cx)", "https://nl-1-mirror.chaotic.cx/chaotic-aur"),
-    ("France (fr-1-mirror.chaotic.cx)", "https://fr-1-mirror.chaotic.cx/chaotic-aur"),
     ("Germany 4 (de-4-mirror.chaotic.cx)", "https://de-4-mirror.chaotic.cx/chaotic-aur"),
-    ("Canada (ca-mirror.chaotic.cx)", "https://ca-mirror.chaotic.cx/chaotic-aur"),
     ("USA Michigan (us-mi-mirror.chaotic.cx)", "https://us-mi-mirror.chaotic.cx/chaotic-aur"),
 ]
 # slow, used after the ranked ones, never probed

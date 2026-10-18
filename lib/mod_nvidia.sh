@@ -235,9 +235,46 @@ print(sorted_matches[0])
 " 2>/dev/null || echo "${default_ver}"
 }
 
+# 6A-312 (V3): major number (three digits) of the NVIDIA driver in use; empty when none is loaded.
+nvidia_installed_major() {
+    local v="${NVIDIA_ACTIVE_VER:-}" m=""
+    [ -n "${v}" ] || v=$(tr -d '[:space:]' < /sys/module/nvidia/version 2>/dev/null || true)
+    [ -n "${v}" ] || v=$(grep -m1 -o -E '[0-9]{3}\.[0-9]+(\.[0-9]+)?' /proc/driver/nvidia/version 2>/dev/null || true)
+    m="${v%%.*}"
+    [[ "${m}" =~ ^[0-9]{3}$ ]] && printf '%s' "${m}"
+    return 0
+}
+
+# 6A-312 (V3): the one rule behind "production": stay on the branch of the driver that is installed (it is only updated inside
+# its own branch); with no driver loaded, take the branch NVIDIA's latest.txt names; with neither, 595. The branch the user
+# picks in the menu (470, 535, 570, 595) is never changed by this.
+nvidia_production_branch() {
+    local m latest
+    m=$(nvidia_installed_major)
+    if [ -n "${m}" ] && [ "${m}" -ge 470 ]; then printf '%s' "${m}"; return 0; fi
+    latest=$(curl -fsSL --connect-timeout 5 -m 8 "https://download.nvidia.com/XFree86/Linux-x86_64/latest.txt" 2>/dev/null | awk '{print $1}' | head -n 1 || true)
+    if [[ "${latest}" =~ ^([0-9]{3})\.[0-9]+(\.[0-9]+)?$ ]]; then printf '%s' "${BASH_REMATCH[1]}"; return 0; fi
+    printf '595'
+}
+
+# 6A-312 (V3): the version number "production" would install, so an update is offered only when it can really be installed.
+# Empty when the lookup fails (then nothing is offered).
+nvidia_production_offer_version() {
+    local url
+    url=$(get_nvidia_download_url "production")
+    [ -n "${url}" ] || return 0
+    basename "${url}" | sed -E 's/^NVIDIA-Linux-x86_64-([0-9]+\.[0-9]+(\.[0-9]+)?)\.run$/\1/' | grep -E '^[0-9]+\.[0-9]+(\.[0-9]+)?$' || true
+}
+
 get_nvidia_download_url() {
     local branch="$1"
     local ver=""
+
+    case "${branch}" in
+        production|feature)
+            branch=$(nvidia_production_branch)
+            ;;
+    esac
 
     case "${branch}" in
         390)
@@ -249,14 +286,23 @@ get_nvidia_download_url() {
             echo "https://download.nvidia.com/XFree86/Linux-x86_64/${ver}/NVIDIA-Linux-x86_64-${ver}.run"
             ;;
         535)
-            ver=$(resolve_nvidia_branch_version "535" "535.241.11")
+            ver=$(resolve_nvidia_branch_version "535" "535.309.01")  # 6A-312: the old fallback 535.241.11 returns 404
             echo "https://download.nvidia.com/XFree86/Linux-x86_64/${ver}/NVIDIA-Linux-x86_64-${ver}.run"
             ;;
         570|legacy)
             ver=$(resolve_nvidia_branch_version "570" "570.124.04")
             echo "https://download.nvidia.com/XFree86/Linux-x86_64/${ver}/NVIDIA-Linux-x86_64-${ver}.run"
             ;;
-        595|production|feature|*)
+        595)
+            ver=$(resolve_nvidia_branch_version "595" "595.58.03")
+            echo "https://download.nvidia.com/XFree86/Linux-x86_64/${ver}/NVIDIA-Linux-x86_64-${ver}.run"
+            ;;
+        [0-9][0-9][0-9])
+            # 6A-312: a newer or other branch has no built-in fallback; if the index cannot be read nothing is returned
+            ver=$(resolve_nvidia_branch_version "${branch}" "")
+            [ -n "${ver}" ] && echo "https://download.nvidia.com/XFree86/Linux-x86_64/${ver}/NVIDIA-Linux-x86_64-${ver}.run"
+            ;;
+        *)
             ver=$(resolve_nvidia_branch_version "595" "595.58.03")
             echo "https://download.nvidia.com/XFree86/Linux-x86_64/${ver}/NVIDIA-Linux-x86_64-${ver}.run"
             ;;
@@ -405,6 +451,11 @@ nvidia_fetch_verified_run() {
 # --- [ DRIVER INSTALLATION ] ---
 install_nvidia_run_driver() {
     local branch="$1"
+    # 6A-312 (V3): NVIDIA publishes no checksum for branch 390, and the installer runs as root, so it is not supported
+    if [ "${branch}" = "390" ]; then
+        log_error "NVIDIA driver branch 390 is not supported here, because NVIDIA publishes no checksum to verify it. Nothing was changed."
+        return 1
+    fi
     # 6A-131 (B6/F1): pre-Turing, nouveau (unless chosen), unreadable model or opt-out: nothing is installed or replaced
     probe_gpu_hardware
     nvidia_generation_supported || return 0
@@ -417,6 +468,10 @@ install_nvidia_run_driver() {
         url=""
     else
         url=$(get_nvidia_download_url "${branch}")
+        if [ -z "${url}" ]; then
+            log_error "No NVIDIA installer for the ${branch} branch could be found right now. Nothing was changed."
+            return 1
+        fi
         filename=$(basename "${url}")
     fi
     local dest_dir="/var/cache/slacky-update/nvidia"
@@ -674,7 +729,7 @@ detect_cachyos_nvidia_upstream_version() {
     local ver=""
     if [ "${gpu_arch}" = "PASCAL" ]; then
         ver=$(curl -sSL -m 10 "${cachy_repo}" 2>/dev/null | grep -o -E 'nvidia-580xx-utils-[0-9]+\.[0-9]+(\.[0-9]+)?' | sed 's/nvidia-580xx-utils-//' | sort -V | tail -n 1 || echo "")
-        [ -z "${ver}" ] && ver="580.178.04"
+        # 6A-312 (V3): no stale made-up version when the lookup fails (it vanishes once CachyOS prunes it); empty = unknown
     else
         ver=$(curl -sSL -m 10 "${cachy_repo}" 2>/dev/null | grep -o -E 'nvidia-utils-[0-9]+\.[0-9]+(\.[0-9]+)?' | sed 's/nvidia-utils-//' | sort -V | tail -n 1 || echo "")
     fi
@@ -1435,6 +1490,10 @@ rollback_cachyos_to_slackware_nvidia() {
     # failed download leaves the current driver in place (it used to remove it first and then print success).
     local target_branch="595" url run_file
     url=$(get_nvidia_download_url "${target_branch}")
+    if [ -z "${url}" ]; then
+        log_error "The NVIDIA driver could not be looked up, so the current graphics driver was kept."
+        return 1
+    fi
     run_file="/var/cache/slacky-update/nvidia/$(basename "${url}")"
     if ! nvidia_fetch_verified_run "${url}" "${run_file}" "${target_branch}"; then
         log_error "The NVIDIA driver could not be downloaded and verified, so the current graphics driver was kept."

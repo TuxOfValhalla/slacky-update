@@ -420,6 +420,22 @@ If your Slackware system is formatted with Btrfs, `slacky-update` includes a bui
   ```
   *(Or manually restore from `~/.limine_backup/`)*.
 
+### The Shim/MOK path is frozen at pinned Fedora versions (read this before a firmware or Windows update)
+
+The Shim and GRUB that slacky-update can place on the EFI partition are pinned, by SHA-256, to Fedora `shim-x64-16.1-7` and
+`grub2-efi-x64-2.12-81.fc45`. They are fetched only when the files are missing; they do not move forward by themselves.
+
+- SBAT levels in the pinned files (read from their `.sbat` section, 2026-10-18): shim `sbat,1`, `shim,4`, `shim.rh,3`,
+  `shim.redhat,3`, `shim.fedora,3`; GRUB `grub,5`, `grub.rh,2`.
+- A Windows update or new firmware can raise the SBAT or dbx revocation level above these numbers. A shim or GRUB below the new
+  level then refuses to boot. If that ever happens, boot Limine through its own signed entry, or rescue with the Live-USB
+  steps in the troubleshooting guide, and replace the two files with a current Fedora shim and GRUB.
+- The Microsoft UEFI CA 2011 certificate expired on 2026-06-27. The checking tool (`sbverify`) ignores the expiry, so the old
+  signature still verifies on this machine, but new firmware may drop the 2011 CA. The pinned shim is also signed by the
+  Microsoft UEFI CA 2023, and slacky-update now accepts either CA (`certs/microsoft-uefi-ca-2023.crt`, pinned by its SHA-256
+  fingerprint F6:12:4E:34:12:5B:EE:3F:E6:D7:9A:57:4E:AA:7B:91:C0:E7:BD:9D:92:9C:1A:32:11:78:EF:D6:11:DA:D9:01).
+- No installed boot file is changed by this note or by the new certificate.
+
 For detailed symptom recovery scenarios and emergency Live-USB chroot procedures:  
 👉 **See [docs/TROUBLESHOOTING_GUIDE.md](TROUBLESHOOTING_GUIDE.md)**
 

@@ -1020,6 +1020,32 @@ resolve_microsoft_uefi_ca_cert() {
     echo ""
 }
 
+# 6A-320 (V2): the Microsoft UEFI CA 2011 certificate expired on 2026-06-27 (sbverify ignores the expiry, so old signatures
+# still verify), and newer shim builds are signed by the 2023 CA. Either CA is accepted. The 2023 certificate comes from
+# Microsoft (https://www.microsoft.com/pkiops/certs/microsoft%20uefi%20ca%202023.crt) and is pinned by its SHA-256
+# fingerprint; a file with another fingerprint is never used.
+MS_UEFI_CA_2023_SHA256="F6:12:4E:34:12:5B:EE:3F:E6:D7:9A:57:4E:AA:7B:91:C0:E7:BD:9D:92:9C:1A:32:11:78:EF:D6:11:DA:D9:01"
+
+# Prints the path of every usable Microsoft UEFI CA certificate (2011 first, then 2023), one per line.
+resolve_microsoft_uefi_ca_certs() {
+    local name dir c fp
+    for name in microsoft-uefi-ca-2011.crt microsoft-uefi-ca-2023.crt; do
+        for dir in "/usr/share/slacky-update/certs" "/usr/local/lib/slacky-update/certs" \
+                   "${SCRIPT_DIR:-.}/../certs" "${APP_DIR:-.}/../certs" \
+                   "$(dirname "$(readlink -f "$0" 2>/dev/null || echo ".")")/../certs"; do
+            c="${dir}/${name}"
+            [ -f "$c" ] && [ -s "$c" ] || continue
+            if [ "${name}" = "microsoft-uefi-ca-2023.crt" ]; then
+                command -v openssl >/dev/null 2>&1 || continue
+                fp=$(env -u LD_LIBRARY_PATH openssl x509 -in "$c" -noout -fingerprint -sha256 2>/dev/null | sed 's/^.*=//') || fp=""
+                [ "${fp}" = "${MS_UEFI_CA_2023_SHA256}" ] || continue
+            fi
+            echo "$c"
+            break
+        done
+    done
+}
+
 verify_microsoft_uefi_authenticode() {
     local efi_file="$1"
     [ -f "${efi_file}" ] || return 1
@@ -1031,20 +1057,22 @@ verify_microsoft_uefi_authenticode() {
         return 1
     fi
 
-    local ca_cert
-    ca_cert=$(resolve_microsoft_uefi_ca_cert)
-    if [ -z "${ca_cert}" ] || [ ! -f "${ca_cert}" ]; then
-        log_error "Security Error: Microsoft UEFI CA certificate (microsoft-uefi-ca-2011.crt) not located. Aborting Authenticode validation."
+    local ca_cert ca_list
+    ca_list=$(resolve_microsoft_uefi_ca_certs)
+    if [ -z "${ca_list}" ]; then
+        log_error "Security Error: Microsoft UEFI CA certificate (microsoft-uefi-ca-2011.crt or -2023.crt) not located. Aborting Authenticode validation."
         return 1
     fi
 
-    if "${sbverify_bin}" --cert "${ca_cert}" "${efi_file}" >/dev/null 2>&1; then
-        { echo "[$(date '+%Y-%m-%d %H:%M:%S')] [SUCCESS] Microsoft 3rd Party UEFI CA signature verified for $(basename "${efi_file}")" >> "${LOG_FILE}"; } 2>/dev/null || true
-        return 0
-    else
-        log_error "Microsoft UEFI CA Authenticode verification FAILED for $(basename "${efi_file}")!"
-        return 1
-    fi
+    while IFS= read -r ca_cert; do
+        [ -n "${ca_cert}" ] || continue
+        if "${sbverify_bin}" --cert "${ca_cert}" "${efi_file}" >/dev/null 2>&1; then
+            { echo "[$(date '+%Y-%m-%d %H:%M:%S')] [SUCCESS] Microsoft 3rd Party UEFI CA signature verified for $(basename "${efi_file}") ($(basename "${ca_cert}"))" >> "${LOG_FILE}"; } 2>/dev/null || true
+            return 0
+        fi
+    done <<< "${ca_list}"
+    log_error "Microsoft UEFI CA Authenticode verification FAILED for $(basename "${efi_file}")!"
+    return 1
 }
 
 log_info() {
@@ -1445,7 +1473,15 @@ create_pre_update_snapshot() {
     SLACKY_SNAP_PRE=""
     [ "$(findmnt -n -o FSTYPE / 2>/dev/null)" = "btrfs" ] || return 2
     command -v snapper >/dev/null 2>&1 || return 2
-    [ -f /etc/snapper/configs/root ] || return 2
+    if [ ! -f /etc/snapper/configs/root ]; then
+        # 6A-309: Btrfs root and snapper, but no snapper config for /: system changes are NOT held (unchanged), but say so once per run
+        if [ -z "${SLACKY_SNAP_NOCONF_SAID:-}" ]; then
+            export SLACKY_SNAP_NOCONF_SAID=1
+            log_warn "No safety snapshot can be made because snapper has no setup for this system; to set it up run: sudo snapper -c root create-config /"
+            { echo "[$(date '+%Y-%m-%d %H:%M:%S')] [WARN] SpiderSense: safety net missing, snapper has no config for / (fix: snapper -c root create-config /)" >> "${LOG_FILE}"; } 2>/dev/null || true
+        fi
+        return 2
+    fi
     local n
     # 6A-94: tagged as ours, no snapper cleanup algorithm (our 48-hour pruner removes it; the owner's numbered
     # snapshots no longer share snapper's NUMBER_LIMIT with ours)

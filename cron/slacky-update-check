@@ -2,53 +2,93 @@
 set -euo pipefail
 
 # ------------------------------------------------------------------------------
-# SLACKWARE BACKGROUND STATUS VERIFIER
+# SLACKWARE WEEKLY STATUS VERIFIER
+# 6A-319 (LTS S10): root does NOT run the network check any more. Root only refreshes the signed key and mirror
+# data (the sentinel's refresh-keys, which verifies everything before it installs a new key generation). The update check
+# itself runs as the logged-in desktop user, with a time limit, and never asks for a password.
 # ------------------------------------------------------------------------------
-CHECK_BIN=""
-for cand in "/usr/share/slacky-update/lib/check_backend.sh" \
-            "/usr/local/share/slacky-update/lib/check_backend.sh" \
-            "/usr/local/lib/slacky-update/check_backend.sh"; do
-    if [ -x "${cand}" ]; then
-        CHECK_BIN="${cand}"
+# a wrapped desktop session must not make host tools load foreign libraries (6A-316)
+unset LD_LIBRARY_PATH LD_PRELOAD LD_AUDIT LD_BIND_NOW
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export PYTHONSAFEPATH=1
+cd / || exit 0
+
+CHECK_MAX_SECS=360
+LIB_DIR=""
+for cand in "/usr/share/slacky-update/lib" "/usr/local/share/slacky-update/lib" "/usr/local/lib/slacky-update"; do
+    if [ -x "${cand}/check_backend.sh" ]; then
+        LIB_DIR="${cand}"
         break
     fi
 done
-STATUS_FILE="/var/cache/slacky-update/status.json"
+[ -n "${LIB_DIR}" ] || exit 0
 
-if [ -n "${CHECK_BIN}" ]; then
-    "${CHECK_BIN}" </dev/null >/dev/null 2>&1 || true
+# --- [ 1. ROOT PART: keys and mirror lists only ] ---
+if [ "$(id -u)" -eq 0 ] && [ -f "${LIB_DIR}/slacky_sentinel.py" ]; then
+    timeout 120 nice -n 19 ionice -c 3 python3 -I "${LIB_DIR}/slacky_sentinel.py" refresh-keys \
+        </dev/null >/dev/null 2>&1 || true
 fi
 
-if [ -f "${STATUS_FILE}" ] && command -v notify-send >/dev/null 2>&1; then
-    ACTIVE_USER=$(who | awk '{print $1}' | head -n1 || true)
-    if [ -n "${ACTIVE_USER}" ]; then
-        USER_ID=$(id -u "${ACTIVE_USER}" 2>/dev/null || echo "1000")
-        export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${USER_ID}/bus"
-
-        HAS_UPDATES=$(python3 -c "
-import json, os
-try:
-    with open('${STATUS_FILE}', 'r') as f:
-        d = json.load(f)
-    total = len(d.get('slackware_updates', [])) + len(d.get('slackpkgplus_updates', [])) + len(d.get('flatpak_updates', [])) + len(d.get('sbo_updates', [])) + len(d.get('cachyos_kernel_updates', [])) + len(d.get('cachyos_gaming_updates', [])) + len(d.get('gnomes_updates', [])) + len(d.get('nvidia_driver_updates', []))
-    print('true' if total > 0 else 'false')
-except Exception:
-    print('false')
-" 2>/dev/null || echo "false")
-
-        if [ "${HAS_UPDATES}" = "true" ]; then
-            icon_arg="--icon=slacky-update-pending"
-            for icand in "/usr/share/icons/hicolor/128x128/apps/slacky-update-pending.png" \
-                         "/usr/local/share/icons/hicolor/128x128/apps/slacky-update-pending.png"; do
-                if [ -f "${icand}" ]; then
-                    icon_arg="--icon=${icand}"
-                    break
-                fi
-            done
-            sudo -u "${ACTIVE_USER}" DBUS_SESSION_BUS_ADDRESS="${DBUS_SESSION_BUS_ADDRESS}" \
-                notify-send "Slacky Update" \
-                "Pending system updates are ready for installation." \
-                "${icon_arg}" 2>/dev/null || true
+# --- [ 2. USER PART: the desktop user runs the update check ] ---
+ACTIVE_USER=""
+if command -v loginctl >/dev/null 2>&1; then
+    # first session of a normal (non-system) user; columns: SESSION UID USER SEAT TTY
+    while read -r _sid uid user _rest; do
+        if [ -n "${uid:-}" ] && [ "${uid}" -ge 1000 ] 2>/dev/null && [ "${uid}" -lt 60000 ] 2>/dev/null; then
+            ACTIVE_USER="${user}"
+            break
         fi
+    done < <(loginctl list-sessions --no-legend 2>/dev/null || true)
+fi
+if [ -z "${ACTIVE_USER}" ]; then
+    ACTIVE_USER=$(who 2>/dev/null | awk '{print $1}' | head -n1 || true)
+fi
+[ -n "${ACTIVE_USER}" ] || exit 0
+USER_ID=$(id -u "${ACTIVE_USER}" 2>/dev/null || true)
+{ [ -n "${USER_ID}" ] && [ "${USER_ID}" -ge 1000 ] 2>/dev/null; } || exit 0
+USER_HOME=$(getent passwd "${ACTIVE_USER}" 2>/dev/null | cut -d: -f6 || true)
+{ [ -n "${USER_HOME}" ] && [ -d "${USER_HOME}" ]; } || exit 0
+
+# as the user (no password, no sudo): root drops to the user with runuser; the user's own cron runs as itself
+run_as_user() {
+    if [ "$(id -u)" -eq 0 ]; then
+        runuser -u "${ACTIVE_USER}" -- env -i HOME="${USER_HOME}" USER="${ACTIVE_USER}" LOGNAME="${ACTIVE_USER}" \
+            PATH="${PATH}" LANG="${LANG:-C}" XDG_RUNTIME_DIR="/run/user/${USER_ID}" \
+            DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${USER_ID}/bus" "$@"
+    elif [ "$(id -un)" = "${ACTIVE_USER}" ]; then
+        "$@"
+    else
+        return 1
+    fi
+}
+
+run_as_user timeout "${CHECK_MAX_SECS}" "${LIB_DIR}/check_backend.sh" </dev/null >/dev/null 2>&1 || true
+
+STATUS_FILE="${USER_HOME}/.cache/slacky-update/status.json"
+if [ -f "${STATUS_FILE}" ] && command -v notify-send >/dev/null 2>&1; then
+    HAS_UPDATES=$(python3 -I -c '
+import json, sys
+try:
+    with open(sys.argv[1], "r") as f:
+        d = json.load(f)
+    keys = ("slackware_updates", "slackpkgplus_updates", "flatpak_updates", "sbo_updates", "cachyos_kernel_updates",
+            "cachyos_gaming_updates", "gnomes_updates", "nvidia_driver_updates")
+    print("true" if sum(len(d.get(k, []) or []) for k in keys) > 0 else "false")
+except Exception:
+    print("false")
+' "${STATUS_FILE}" 2>/dev/null || echo "false")
+
+    if [ "${HAS_UPDATES}" = "true" ]; then
+        icon_arg="--icon=slacky-update-pending"
+        for icand in "/usr/share/icons/hicolor/128x128/apps/slacky-update-pending.png" \
+                     "/usr/local/share/icons/hicolor/128x128/apps/slacky-update-pending.png"; do
+            if [ -f "${icand}" ]; then
+                icon_arg="--icon=${icand}"
+                break
+            fi
+        done
+        run_as_user notify-send "Slacky Update" "Pending system updates are ready for installation." \
+            "${icon_arg}" 2>/dev/null || true
     fi
 fi
+exit 0

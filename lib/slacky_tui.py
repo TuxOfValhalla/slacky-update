@@ -796,7 +796,7 @@ class MainMenuTUI(SlackyTUI):
     """
     Main Menu TUI: 100% True to the Original Slacky-Update CLI.
     - Clean Slackware Dark Star branding.
-    - Interactive cursor navigation (▶ / bold cyan) and mouse selection.
+    - Interactive cursor navigation (> / bold cyan) and mouse selection.
     """
     def __init__(self, gpu="generic", items=None, ascii_only=False, enable_mouse=True):
         super().__init__(mode="main", ascii_only=ascii_only, enable_mouse=enable_mouse)
@@ -882,7 +882,7 @@ class MainMenuTUI(SlackyTUI):
             is_sel = (i == self.selected_idx)
             lbl = it["label"]
             if is_sel:
-                cur = ">" if self.ascii_only else "▶"
+                cur = ">"
                 lines.append(f"  {BOLD_CYAN}{cur}{RESET} {BOLD_CYAN}{lbl}{RESET}")
             else:
                 if "limine" in lbl.lower():
@@ -1271,7 +1271,7 @@ class SimpleSelectTUI(SlackyTUI):
             is_sel = (i == self.selected_idx)
             lbl = it.get("ascii_label") if (self.ascii_only and "ascii_label" in it) else it["label"]
             badge = self.get_badge(it)
-            cur = ">" if self.ascii_only else "▶"
+            cur = ">"
             if badge:
                 lbl_w = str_display_width(lbl)
                 badge_w = str_display_width(badge)
@@ -1558,7 +1558,7 @@ class CleanTUI(SimpleSelectTUI):
     """
     CleanTUI: System Maintenance & Storage Analysis TUI.
     - Features a live Storage Breakdown Card.
-    - Interactive cursor navigation (▶ / bold cyan) and mouse selection.
+    - Interactive cursor navigation (> / bold cyan) and mouse selection.
     - Strict per-row absolute positioning (\033[{row};1H\033[2K) - ZERO STAIRCASE.
     - Universal ESC exits cleanly to Main Menu.
     """
@@ -1656,7 +1656,7 @@ class CleanTUI(SimpleSelectTUI):
         for i, it in enumerate(self.items):
             is_sel = (i == self.selected_idx)
             lbl = it.get("ascii_label") if (self.ascii_only and "ascii_label" in it) else it["label"]
-            cur = ">" if self.ascii_only else "▶"
+            cur = ">"
             if is_sel:
                 lines.append(f"  {BOLD_CYAN}{cur}{RESET} {BOLD_CYAN}{lbl}{RESET}")
             else:
@@ -1878,7 +1878,7 @@ class GnomesTUI(SlackyTUI):
 
     def format_item_col(self, it, is_sel: bool, col_num: int, name_w: int) -> str:
         """Formats a single package column adhering strictly to original CLI badge style."""
-        arrow_sym = ">" if self.ascii_only else "▶"
+        arrow_sym = ">"
         check_sym = "*"
         is_checked = (it["idx"] in self.checked_indices)
 
@@ -2001,13 +2001,10 @@ class GnomesTUI(SlackyTUI):
             if entry["type"] == "cat":
                 cat = entry["cat"]
                 is_sel = (entry["cat_idx"] == self.sel_cat_idx and self.sel_item_id is None)
-                arrow_sym = ">" if self.ascii_only else "▶"
+                arrow_sym = ">"
                 cur_prefix = f" {BOLD_CYAN}{arrow_sym}{RESET} " if is_sel else "   "
 
-                if self.ascii_only:
-                    state_sym = "v" if cat["expanded"] else ">"
-                else:
-                    state_sym = "▾" if cat["expanded"] else "▸"
+                state_sym = "v" if cat["expanded"] else ">"
 
                 state_color = BOLD_YELLOW if cat["expanded"] else BOLD_CYAN
                 cat_title = cat["title"]
@@ -3069,7 +3066,7 @@ class ChecklistMenuTUI(SlackyTUI):
 
         for i, it in enumerate(self.items):
             is_cursor = (i == self.cursor_idx)
-            arrow_sym = ">" if self.ascii_only else "▶"
+            arrow_sym = ">"
             prefix = f" {BOLD_CYAN}{arrow_sym}{RESET} " if is_cursor else "   "
 
             if it.get("is_action"):
