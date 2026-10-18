@@ -2076,3 +2076,6 @@
 
 ## 2026-10-18 - 6A-321 --sync-boot rebuilds only changed kernels
 - `generate_kernel_initramfs "ALL"` skips kernels whose input record matches (strict: no record means rebuild); `--sync-boot --all` forces a full rebuild; records are written after the boot chain by `--sync-boot` and the NVIDIA menu. Files: `lib/mod_kernel.sh`, `lib/mod_armor.sh`, `bin/slacky-update`. Fake-root stub test, deleted.
+
+## 2026-10-18 - 6A-322..324 easyeffects / spotify / v4l2loopback update lookup, spacenav "could not check"
+- easyeffects row: `(?:2|1)` replaced by `[12]` (the `|` broke the row parser). Arch JSON lookup uses the Arch package name (spotify-launcher, v4l2loopback-dkms, arch `any` for DKMS) in the check and both resolvers. spacenav (not in any Arch/CachyOS list) is reported as "could not check" (exit 3). File: `lib/mod_gaming.sh`. Tested in a temp HOME against the live API and offline; temp files deleted.

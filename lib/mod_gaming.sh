@@ -52,7 +52,7 @@ broadcom-wl|Broadcom 802.11 Linux STA Wireless Driver (DKMS)|hardware|broadcom-w
 r8125|Realtek 2.5GbE Ethernet Network Driver (DKMS)|hardware|r8125-dkms-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|||chaotic-aur,cachyos-extra-v3,cachyos-extra,cachyos
 spacenav|3Dconnexion SpaceMouse Master Suite (spacenavd, libspnav & spnavcfg)|hardware|spacenavd-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst||libspnav-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,spnavcfg-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|arch-extra,cachyos,chaotic-aur
 volt-gui|Volt GUI (AMD Ryzen Undervolt & Curve Optimizer GUI)|hardware|volt-gui(?:-bin)?-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst||zenpower3-dkms-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,ryzenadj-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|chaotic-aur,chaotic-cdn,cachyos,arch-extra,aur,github|hidden
-easyeffects|EasyEffects Studio Audio DSP & JackHack96 Presets|audio|easyeffects-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||lsp-plugins-lv2-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,calf-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,mda\.lv2-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,zam-plugins-lv2-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,zita-convolver-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,rnnoise-[0-9a-zA-Z_\.:-]*\.pkg\.tar\.zst,libbs2b-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,soundtouch-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libebur128-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,webrtc-audio-processing-(?:2|1)-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,lilv-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,serd-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,sord-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,sratom-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,qt6-graphs-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,onetbb-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libmysofa-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,zix-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|arch-extra,cachyos
+easyeffects|EasyEffects Studio Audio DSP & JackHack96 Presets|audio|easyeffects-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||lsp-plugins-lv2-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,calf-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,mda\.lv2-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,zam-plugins-lv2-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,zita-convolver-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,rnnoise-[0-9a-zA-Z_\.:-]*\.pkg\.tar\.zst,libbs2b-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,soundtouch-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libebur128-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,webrtc-audio-processing-[12]-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,lilv-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,serd-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,sord-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,sratom-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,qt6-graphs-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,onetbb-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libmysofa-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,zix-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|arch-extra,cachyos
 pear-desktop|Pear Desktop (YouTube Music with Custom Plugins)|audio|pear-desktop-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||electron42-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libjpeg-turbo-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|chaotic-aur,chaotic-cdn,arch-extra
 audacity|Audacity (Digital Audio Editor & Recording Studio)|audio|audacity-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||suil-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,lilv-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,serd-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,sord-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,sratom-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,zix-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,portsmf-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,portaudio-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,portmidi-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libsbsms-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,vamp-plugin-sdk-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,soundtouch-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,twolame-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libid3tag-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libsoxr-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libmspack-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,wxwidgets-gtk3-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,wxwidgets-common-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libjpeg-turbo-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|arch-extra,cachyos-extra-v3,cachyos
 yabridge|Yabridge (+ yabridgectl VST2/VST3 Plugin Bridge)|audio|yabridge-(?:bin-)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||yabridgectl-(?:bin-)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos,arch-extra,chaotic-aur
@@ -893,6 +893,10 @@ def fetch_url_cached(url, cdir, ttl=1800):
                 pass
         return ""
 
+# 6A-322: the Arch package name differs from the catalog id for these (the JSON lookup answered 404 for the id)
+ARCH_API_NAMES = {"spotify": "spotify-launcher", "v4l2loopback": "v4l2loopback-dkms"}
+ARCH_API_ARCH = {"v4l2loopback": "any"}   # a DKMS source package is arch=any in the Arch API
+
 def clean_pkg_version(pid, raw_v):
     v = urllib.parse.unquote(str(raw_v))
     v = re.sub(r'\.pkg\.tar\.(?:zst|xz|gz)$', '', v)
@@ -1186,7 +1190,7 @@ def check_single_package(pid, cur_ver):
     if any(r in ("arch-extra", "arch-core", "arch-multilib") for r in r_list):
         for repo_cand in ("extra", "multilib", "core"):
             try:
-                api_url = f"https://archlinux.org/packages/{repo_cand}/x86_64/{pid}/json/"
+                api_url = f"https://archlinux.org/packages/{repo_cand}/{ARCH_API_ARCH.get(pid, 'x86_64')}/{ARCH_API_NAMES.get(pid, pid)}/json/"
                 raw_json = fetch_url_cached(api_url, cache_dir, ttl=1800)
                 if raw_json:
                     LOOKED.add(pid)
@@ -1224,6 +1228,11 @@ def check_single_package(pid, cur_ver):
         if len(_kept) != len(main_candidates):
             MAJOR_HELD.append(f"{pid}|{name}|{cur_ver}|{max(main_candidates, key=parse_version_key)}")
         main_candidates = _kept
+
+    # 6A-322: spacenavd is in no Arch / CachyOS / Chaotic list (the Rust app reads a signed Debian index for it, owner decision 2026-10-15);
+    # an empty answer here is "could not check", never "up to date" (6A-298 / 6A-306 exit code)
+    if pid == "spacenav" and not main_candidates:
+        LOOKED.discard(pid)
 
     if not main_candidates:
         return None
@@ -1772,6 +1781,10 @@ def fetch_url_cached(url, cdir, ttl=1800):
     except Exception:
         return ""
 
+# 6A-322: the Arch package name differs from the catalog id for these (the JSON lookup answered 404 for the id)
+ARCH_API_NAMES = {"spotify": "spotify-launcher", "v4l2loopback": "v4l2loopback-dkms"}
+ARCH_API_ARCH = {"v4l2loopback": "any"}   # a DKMS source package is arch=any in the Arch API
+
 def clean_pkg_version(pid, raw_v):
     v = urllib.parse.unquote(str(raw_v))
     v = re.sub(r'\.pkg\.tar\.(?:zst|xz|gz)$', '', v)
@@ -2060,7 +2073,7 @@ else:
     if not main_ver or not main_url:
         for repo_cand in ("multilib", "extra", "core"):
             try:
-                api_url = f"https://archlinux.org/packages/{repo_cand}/x86_64/{pkg_id}/json/"
+                api_url = f"https://archlinux.org/packages/{repo_cand}/{ARCH_API_ARCH.get(pkg_id, 'x86_64')}/{ARCH_API_NAMES.get(pkg_id, pkg_id)}/json/"
                 raw_json = fetch_url_cached(api_url, cache_dir, ttl=1800)
                 if raw_json:
                     data = json.loads(raw_json)
@@ -2495,6 +2508,10 @@ def fetch_url_cached(url, cdir, ttl=1800):
     except Exception:
         return ""
 
+# 6A-322: the Arch package name differs from the catalog id for these (the JSON lookup answered 404 for the id)
+ARCH_API_NAMES = {"spotify": "spotify-launcher", "v4l2loopback": "v4l2loopback-dkms"}
+ARCH_API_ARCH = {"v4l2loopback": "any"}   # a DKMS source package is arch=any in the Arch API
+
 def clean_pkg_version(pid, raw_v):
     v = urllib.parse.unquote(str(raw_v))
     v = re.sub(r'\.pkg\.tar\.(?:zst|xz|gz)$', '', v)
@@ -2893,7 +2910,7 @@ def resolve_single(pid):
         if not main_ver or not main_url:
             for repo_cand in ("multilib", "extra", "core"):
                 try:
-                    api_url = f"https://archlinux.org/packages/{repo_cand}/x86_64/{pid}/json/"
+                    api_url = f"https://archlinux.org/packages/{repo_cand}/{ARCH_API_ARCH.get(pid, 'x86_64')}/{ARCH_API_NAMES.get(pid, pid)}/json/"
                     raw_json = fetch_url_cached(api_url, cache_dir, ttl=1800)
                     if raw_json:
                         data = json.loads(raw_json)
