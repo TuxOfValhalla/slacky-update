@@ -2073,3 +2073,6 @@
 - Tray: PyQt6 first, PyQt5 fallback, one stderr line when neither exists; checks longer than 6 minutes are killed ("Could not check"). Loader variables cleared at all entry points. Time limits on the SBo fall-back downloads. Dead built-in mirrors removed (measured 2026-10-18).
 - Packaging: cron, profile.d, tray autostart and kernel hook shipped as `.new` with a `config_job` doinst helper (disabled stays disabled, transitional restore helper); docs from an explicit list. Weekly cron: root refreshes keys only, the check runs as the desktop user with a time limit.
 - Secure Boot: Microsoft UEFI CA 2023 certificate (fingerprint pinned) accepted next to the 2011 one; SBAT note in the Limine field guide. Stub and fake-root tests in temp dirs, deleted.
+
+## 2026-10-18 - 6A-321 --sync-boot rebuilds only changed kernels
+- `generate_kernel_initramfs "ALL"` skips kernels whose input record matches (strict: no record means rebuild); `--sync-boot --all` forces a full rebuild; records are written after the boot chain by `--sync-boot` and the NVIDIA menu. Files: `lib/mod_kernel.sh`, `lib/mod_armor.sh`, `bin/slacky-update`. Fake-root stub test, deleted.

@@ -2640,7 +2640,7 @@ initramfs_record_write() {
 # 0 = the image of this kernel must be rebuilt, 1 = it is current. Never skips a needed rebuild: no image, a SpiderSense
 # order, a changed record, or (only without any record) the old mtime rule.
 initramfs_is_stale() {
-    local k="$1" has_nv="${2:-false}" nv_mod="${3:-}" boot="${SS_FP_BOOT:-/boot}"
+    local k="$1" has_nv="${2:-false}" nv_mod="${3:-}" strict="${4:-}" boot="${SS_FP_BOOT:-/boot}"
     local img="${boot}/initramfs-${k}.img" fp_rc=0
     sudo test -f "${img}" || return 0
     # 6A-97: the NVIDIA sync ordered this image (an unpacked module keeps the package's old mtime)
@@ -2648,6 +2648,8 @@ initramfs_is_stale() {
     initramfs_record_check "${k}" || fp_rc=$?
     if [ "${fp_rc}" -eq 0 ]; then return 1; fi
     if [ "${fp_rc}" -eq 1 ]; then return 0; fi
+    # 6A-321: a full sync ("strict") treats a missing or unreadable record as "rebuild" (no guessing from file times)
+    if [ "${strict}" = "strict" ]; then return 0; fi
     # 6A-245: no usable record (first run after the upgrade): the old mtime rule
     if sudo test -f "${boot}/vmlinuz-${k}" && sudo test "${boot}/vmlinuz-${k}" -nt "${img}"; then return 0; fi
     if [ "${has_nv}" = "true" ] && [ -f "${nv_mod}" ] && sudo test "${nv_mod}" -nt "${img}"; then return 0; fi
@@ -2669,6 +2671,7 @@ record_initramfs_inputs_all() {
         case " ${SS_INITRD_FAILED:-} " in *" ${k} "*) continue ;; esac
         initramfs_record_write "${k}" || true
     done
+    unset SS_INITRD_FAILED   # 6A-321: the result belongs to one run only
     return 0
 }
 
@@ -2777,6 +2780,13 @@ generate_kernel_initramfs() {
                             continue
                         fi
                     fi
+                    # 6A-321: "ALL" rebuilds only kernels whose recorded inputs changed or have no record (a new kernel has
+                    # no image); SS_INITRD_FORCE_ALL=1 (--sync-boot --all) rebuilds every image.
+                    if [ "${kver}" = "ALL" ] && [ "${SS_INITRD_FORCE_ALL:-0}" != "1" ] && sudo test -f "${initrd_out}"; then
+                        if ! initramfs_is_stale "${single_kver}" "${has_k_nv}" "${k_nv_mod}" strict; then
+                            continue
+                        fi
+                    fi
 
                     local k_dracut_args=("${dracut_args[@]}")
                     if [ "${has_k_nv}" = "true" ]; then
@@ -2802,7 +2812,7 @@ generate_kernel_initramfs() {
             local pipeline_failed=()
 
             if [ "${total_builds}" -eq 0 ]; then
-                [ "${kver}" = "TARGETED_PIPELINE" ] && SS_INITRD_FAILED=""
+                { [ "${kver}" = "TARGETED_PIPELINE" ] || [ "${kver}" = "ALL" ]; } && SS_INITRD_FAILED=""
                 if [ "${kver}" = "TARGETED_PIPELINE" ]; then
                     printf "  \033[1;36m[3/5]\033[0m \033[1mDracut Initramfs Generation\033[0m  : \033[1;32mAll installed images are up to date\033[0m\n"
                 fi
@@ -2981,7 +2991,7 @@ generate_kernel_initramfs() {
             done < <(sudo find /boot -maxdepth 1 -name "initramfs-*.img" 2>/dev/null || true)
 
             sudo rm -rf "${dracut_tmpdir}" 2>/dev/null || true
-            [ "${kver}" = "TARGETED_PIPELINE" ] && SS_INITRD_FAILED=" ${pipeline_failed[*]:-} "
+            { [ "${kver}" = "TARGETED_PIPELINE" ] || [ "${kver}" = "ALL" ]; } && SS_INITRD_FAILED=" ${pipeline_failed[*]:-} "
             if [ "${kver}" = "TARGETED_PIPELINE" ]; then
                 # 6A-44: a failed image is shown as failed (was always green)
                 if [ "${#pipeline_failed[@]}" -gt 0 ]; then

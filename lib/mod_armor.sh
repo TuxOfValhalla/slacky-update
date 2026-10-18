@@ -870,7 +870,7 @@ fix_my_damn_secure_boot_wizard() {
 
     # Phase 3: Generate high-performance Dracut initramfs for all kernels and purge old 11MB initrd
     log_info "Phase 3: Generating Dracut initramfs images for all installed kernels..."
-    generate_kernel_initramfs "ALL"
+    SS_INITRD_FORCE_ALL=1 generate_kernel_initramfs "ALL"   # 6A-321: the repair wizard is an explicit full rebuild
 
     # Phase 4: Sign all kernels and modules
     log_info "Phase 4: Enforcing cryptographic MOK signatures on all kernels and modules..."

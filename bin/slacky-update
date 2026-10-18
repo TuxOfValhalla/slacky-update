@@ -1180,6 +1180,7 @@ manage_nvidia_interactive() {
                 generate_kernel_initramfs "ALL"
                 enforce_secure_boot_armor
                 sync_bootloader_configuration "$(uname -r)"
+                command -v record_initramfs_inputs_all >/dev/null 2>&1 && record_initramfs_inputs_all || true
                 register_flatpak_gl_sync
                 echo ""
                 read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
@@ -1573,6 +1574,8 @@ elif [ "${1:-}" = "--guide" ] || [ "${1:-}" = "--field-guide" ] || [ "${1:-}" = 
     fi
 elif [ "${1:-}" = "--sync-boot" ] || [ "${1:-}" = "--boot" ] || [ "${1:-}" = "-b" ] || [ "${1:-}" = "--limine-config" ]; then
     validate_privileges
+    # 6A-321: only kernels whose inputs changed (or that have no record) get a new image; --all rebuilds every image
+    if [ "${2:-}" = "--all" ] || [ "${2:-}" = "--force" ]; then SS_INITRD_FORCE_ALL=1; fi
     if command -v generate_kernel_initramfs >/dev/null 2>&1; then
         log_info "Synchronizing initramfs images for all installed kernels..."
         generate_kernel_initramfs "ALL"
@@ -1580,6 +1583,7 @@ elif [ "${1:-}" = "--sync-boot" ] || [ "${1:-}" = "--boot" ] || [ "${1:-}" = "-b
     if command -v sync_bootloader_configuration >/dev/null 2>&1; then
         sync_bootloader_configuration "$(uname -r)"
     fi
+    command -v record_initramfs_inputs_all >/dev/null 2>&1 && record_initramfs_inputs_all || true
 elif [ "${1:-}" = "--sync-snapper" ] || [ "${1:-}" = "--snapper-sync" ]; then
     validate_privileges
     if command -v generate_limine_configuration >/dev/null 2>&1; then
@@ -1660,7 +1664,8 @@ elif [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
     echo "  -H, --hash-check        Dynamically verify on-disk kernel & initramfs BLAKE2B hashes against Limine"
     echo "  -l, --limine            Open Limine Bootloader & Secure Boot Matrix"
     echo "  -c, --cmdline           Configure Kernel Boot Parameters (CMDLINE & Gaming Hub)"
-    echo "  -b, --sync-boot         Synchronize initramfs, Limine/GRUB bootloader, BLAKE2B hashes & Secure Boot"
+    echo "  -b, --sync-boot         Synchronize initramfs (only changed kernels), Limine/GRUB bootloader, BLAKE2B hashes & Secure Boot"
+    echo "      --sync-boot --all   Same, but rebuild the startup images of every kernel"
     echo "      --sync-snapper      Synchronize Btrfs Snapper snapshots into Limine menu and reseal"
     echo "      --sync-nvidia       Synchronize NVIDIA driver suite and compile/match kernel modules"
     echo "      --clean             Clean package caches, remove obsolete kernels and orphaned packages"
