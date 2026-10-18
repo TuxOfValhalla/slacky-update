@@ -647,11 +647,11 @@ except Exception:
             if [ -t 1 ]; then
                 local cur_loc
                 cur_loc=$(get_active_locale 2>/dev/null || echo "en")
-                local spinner_frames=('⏳' '⌛')
+                local spinner_frames=('-' '\' '|' '/')
                 if [[ "${cur_loc}" =~ (en-ca|ca) ]]; then
-                    spinner_frames=($'\033[2;31m🍁\033[0m' $'\033[1;31m🍁\033[0m' $'\033[1;37m🍁\033[0m' $'\033[1;31m🍁\033[0m')
+                    spinner_frames=($'\033[2;31m*\033[0m' $'\033[1;31m*\033[0m' $'\033[1;37m*\033[0m' $'\033[1;31m*\033[0m')
                 elif [[ "${cur_loc}" =~ radical ]]; then
-                    spinner_frames=($'\033[2;33m⚡\033[0m' $'\033[1;33m⚡\033[0m' $'\033[1;37m⚡\033[0m' $'\033[1;33m✨\033[0m')
+                    spinner_frames=($'\033[2;33m*\033[0m' $'\033[1;33m*\033[0m' $'\033[1;37m*\033[0m' $'\033[1;33m+\033[0m')
                 fi
 
                 "${chk_bin}" >/dev/null 2>&1 &
@@ -664,7 +664,7 @@ except Exception:
                     sleep 0.25
                 done
                 wait "${chk_pid}" 2>/dev/null || true
-                echo -e "\r\033[K\033[1;32m✓ $(_ PREFLIGHT_DONE)\033[0m"
+                echo -e "\r\033[K\033[1;32m$(_ PREFLIGHT_DONE)\033[0m"
             else
                 echo "$(_ PREFLIGHT_SCOUTING)"
                 "${chk_bin}" >/dev/null 2>&1 || true
@@ -868,45 +868,139 @@ resolve_cachyos_keyring() {
     echo ""
 }
 
+# 6A-276: which key family signs packages from this download address. Decided by the host only (never by a query string
+# or path): Arch (archlinux.org, pkgbuild.com), CachyOS (cachyos.org), Chaotic (chaotic.cx). Empty = not a signing repo.
+slacky_sig_family() {
+    local url="$1" host
+    host="${url#*://}"; host="${host%%/*}"; host="${host%%:*}"; host="${host,,}"
+    case "${host}" in
+        archlinux.org|*.archlinux.org|pkgbuild.com|*.pkgbuild.com) echo "archlinux" ;;
+        cachyos.org|*.cachyos.org) echo "cachyos" ;;
+        chaotic.cx|*.chaotic.cx) echo "chaotic" ;;
+        *) echo "" ;;
+    esac
+}
+
+# 6A-277: true for a package file from a repo that signs its packages. Such a package without a .sig is refused;
+# vendor downloads (other hosts, .deb, AppImage, zip) keep their own checksum or pin rules.
+slacky_signed_repo_url() {
+    local url="$1"
+    [ -n "$(slacky_sig_family "${url}")" ] && [[ "${url%%\?*}" =~ \.pkg\.tar\.(zst|xz)$ ]]
+}
+
+slacky_find_trust_helper() {
+    local cand
+    for cand in "$(dirname "${BASH_SOURCE[0]}")/gnomes_trust.py" "${SCRIPT_DIR:-.}/../lib/gnomes_trust.py" \
+                "${APP_DIR:-.}/gnomes_trust.py" "/usr/share/slacky-update/lib/gnomes_trust.py" \
+                "/usr/local/lib/slacky-update/gnomes_trust.py"; do
+        if [ -f "${cand}" ]; then
+            printf '%s\n' "${cand}"
+            return 0
+        fi
+    done
+    return 1
+}
+
+# 6A-276: one check of a package against the refreshed key store (gnomes_trust.py: gpgv status parsing, revoked lists,
+# keys bound to the family). Prints "<status>|<detail>" on stdout; returns 0 only for status good.
+_slacky_trust_check() {
+    local payload="$1" sig="$2" repo="$3" helper="$4" out status detail
+    local keys_root="/opt/underpants/keys"
+    [ "${SLACKY_SELFTEST:-0}" = "1" ] && [ -n "${SLACKY_KEYS_ROOT:-}" ] && keys_root="${SLACKY_KEYS_ROOT}"
+    out=$(python3 -I "${helper}" verify "${payload}" "${sig}" "${repo}" "${keys_root}" 2>/dev/null | head -n 1) || true
+    status=$(printf '%s' "${out}" | sed -n 's/.*"status": "\([a-z]*\)".*/\1/p')
+    detail=$(printf '%s' "${out}" | sed -n 's/.*"detail": "\([^"]*\)".*/\1/p')
+    printf '%s|%s\n' "${status:-error}" "${detail}"
+    [ "${status}" = "good" ]
+}
+
+# Usage: verify_cachyos_gpg_signature PAYLOAD SIG SOURCE_URL [SHA256_FROM_REPO_DB]
+# SOURCE_URL decides the key family (Arch, CachyOS, Chaotic); only that family's keys count. Revoked and expired keys
+# are refused. An unknown or expired key first triggers one signed key refresh, then one retry.
 verify_cachyos_gpg_signature() {
-    local payload="$1"
-    local sig="$2"
+    local payload="$1" sig="$2" source="${3:-}" want_sha="${4:-}"
+    local name
+    name=$(basename "${payload}")
 
     [ -f "${payload}" ] || return 1
-    [ -f "${sig}" ] || return 1
-
-    local keyring
-    keyring=$(resolve_cachyos_keyring)
-
-    if [ -z "${keyring}" ] || [ ! -f "${keyring}" ]; then
-        log_error "Security Error: Trusted GPG keyring (trusted-keyrings.gpg) not found! Refusing to verify unauthenticated package."
+    if [ ! -s "${sig}" ]; then
+        log_error "${name} came without its signature file, so it was not used."
         return 1
     fi
 
-    local gpg_bin
-    gpg_bin=$(command -v gpg 2>/dev/null || echo "/usr/bin/gpg")
-    if [ ! -x "${gpg_bin}" ]; then
-        log_error "Security Error: GPG utility not found. Cannot verify cryptographic signature for $(basename "${payload}")."
+    local family repo
+    family=$(slacky_sig_family "${source}")
+    case "${family}" in
+        archlinux) repo="extra" ;;
+        cachyos) repo="cachyos" ;;
+        chaotic) repo="chaotic" ;;
+        *)
+            log_error "${name} does not come from a package source whose signing keys are known, so it was not used."
+            return 1
+            ;;
+    esac
+
+    if [ -n "${want_sha}" ]; then
+        local have_sha
+        have_sha=$(sha256sum "${payload}" 2>/dev/null | cut -d' ' -f1)
+        if [ "${have_sha,,}" != "${want_sha,,}" ]; then
+            log_error "${name} does not match the checksum listed by its repository, so it was not used."
+            return 1
+        fi
+    fi
+
+    local helper
+    if ! helper=$(slacky_find_trust_helper) || ! command -v python3 >/dev/null 2>&1 || ! command -v gpgv >/dev/null 2>&1; then
+        log_error "The signature tools are missing (python3, gpgv or gnomes_trust.py), so ${name} could not be checked and was not used."
         return 1
     fi
 
-    local gpg_tmp
-    gpg_tmp=$(mktemp -d /tmp/slacky-gpg-XXXXXX 2>/dev/null || echo "/tmp")
-
-    local verify_res=0
-    if "${gpg_bin}" --homedir "${gpg_tmp}" --no-default-keyring --keyring "${keyring}" --verify "${sig}" "${payload}" >/dev/null 2>&1; then
-        verify_res=1
+    if [ ! -d "/opt/underpants/keys/${family}" ] && [ "${SLACKY_SELFTEST:-0}" != "1" ] && [ -z "${_SLACKY_SIG_NOSTORE_NOTE:-}" ]; then
+        _SLACKY_SIG_NOSTORE_NOTE=1
+        log_info "No refreshed key store yet; using the keys shipped with the program until the next full update."
     fi
 
-    [ "${gpg_tmp}" != "/tmp" ] && rm -rf "${gpg_tmp}" 2>/dev/null || true
+    local res status detail
+    res=$(_slacky_trust_check "${payload}" "${sig}" "${repo}" "${helper}") && status=good || true
+    status="${res%%|*}"; detail="${res#*|}"
 
-    if [ "${verify_res}" -eq 1 ]; then
-        { echo "[$(date '+%Y-%m-%d %H:%M:%S')] [SUCCESS] GPG cryptographic signature verified for $(basename "${payload}")" >> "${LOG_FILE}"; } 2>/dev/null || true
+    if [ "${status}" != "good" ]; then
+        # unknown or expired signing key: the key may simply be newer than our store; refresh once per run, then retry once
+        if { [ "${status}" = "nokey" ] && [[ "${detail}" != *"not one of the keys"* ]]; } || [[ "${detail}" == *"expired"* ]]; then
+            if [ -z "${_SLACKY_KEYS_REFRESH_TRIED:-}" ]; then
+                _SLACKY_KEYS_REFRESH_TRIED=1
+                if command -v slacky_keys_first >/dev/null 2>&1; then
+                    log_info "The signing key of ${name} is not known yet; fetching the newest security keys."
+                    slacky_keys_first >/dev/null 2>&1 || true
+                fi
+            fi
+            if [ -n "${_SLACKY_KEYS_REFRESH_TRIED:-}" ]; then
+                res=$(_slacky_trust_check "${payload}" "${sig}" "${repo}" "${helper}") && status=good || true
+                status="${res%%|*}"; detail="${res#*|}"
+            fi
+        fi
+    fi
+
+    if [ "${status}" = "good" ]; then
+        { echo "[$(date '+%Y-%m-%d %H:%M:%S')] [SUCCESS] GPG cryptographic signature verified for ${name} (${family})" >> "${LOG_FILE}"; } 2>/dev/null || true
         return 0
-    else
-        log_error "GPG signature verification FAILED for $(basename "${payload}")! Untrusted or corrupt package."
-        return 1
     fi
+
+    case "${status}|${detail}" in
+        nokey\|*"not one of the keys"*)
+            log_error "${name} was signed with a key that does not belong to its package source, so it was not used." ;;
+        *"expired"*|nokey\|*)
+            log_error "The signing key of ${name} is not known or has run out; the next key refresh fixes this: run a full update with 'slacky-update' and try again." ;;
+        bad\|*"revoked"*)
+            log_error "The signing key of ${name} has been withdrawn by its publisher, so the package was not used." ;;
+        bad\|*)
+            log_error "${name} does not match its signature, so it was not used; the download may be damaged, try again later." ;;
+        unsigned\|*)
+            log_error "${name} came without a usable signature, so it was not used." ;;
+        *)
+            log_error "The signature of ${name} could not be checked (${detail:-unknown reason}), so it was not used." ;;
+    esac
+    return 1
 }
 
 resolve_microsoft_uefi_ca_cert() {
@@ -961,19 +1055,19 @@ log_info() {
 
 log_success() {
     local msg="$1"
-    echo -e "${GREEN}✓${RESET} ${msg}"
+    echo -e "${GREEN}OK${RESET} ${msg}"
     { echo "[$(date '+%Y-%m-%d %H:%M:%S')] [SUCCESS] ${msg}" >> "${LOG_FILE}"; } 2>/dev/null || true
 }
 
 log_warn() {
     local msg="$1"
-    echo -e "${YELLOW}⚠️${RESET}  ${msg}"
+    echo -e "${YELLOW}WARN${RESET} ${msg}"
     { echo "[$(date '+%Y-%m-%d %H:%M:%S')] [WARN] ${msg}" >> "${LOG_FILE}"; } 2>/dev/null || true
 }
 
 log_error() {
     local msg="$1"
-    echo -e "${RED}✗${RESET} ${msg}"
+    echo -e "${RED}FAIL${RESET} ${msg}"
     { echo "[$(date '+%Y-%m-%d %H:%M:%S')] [ERROR] ${msg}" >> "${LOG_FILE}"; } 2>/dev/null || true
 }
 
@@ -1336,7 +1430,7 @@ ss_prune_our_snapshots() {
             if sudo grep -qE "(/\.snapshots|@snapshots)/${n}/snapshot" "${conf}" 2>/dev/null; then in_menu=1; fi
         done
     done
-    if sudo snapper -c root delete ${plan} >/dev/null 2>&1; then
+    if sudo timeout 300 snapper -c root delete ${plan} >/dev/null 2>&1; then
         { echo "[$(date '+%Y-%m-%d %H:%M:%S')] [INFO] SpiderSense: removed our snapshots older than 48 hours: ${plan}" >> "${LOG_FILE}"; } 2>/dev/null || true
         [ "${in_menu}" -eq 1 ] && ss_mark_if_limine
     fi
@@ -1356,7 +1450,7 @@ create_pre_update_snapshot() {
     # 6A-94: tagged as ours, no snapper cleanup algorithm (our 48-hour pruner removes it; the owner's numbered
     # snapshots no longer share snapper's NUMBER_LIMIT with ours)
     SLACKY_TX_ID="${SLACKY_TX_ID:-$(date +%Y%m%d%H%M%S)-$$}"
-    n=$(sudo snapper -c root create --type pre \
+    n=$(sudo timeout 180 snapper -c root create --type pre \
         --description "slacky-update: before full update" \
         --userdata "slacky=1,slacky-app=legacy,slacky-kind=pre,slacky-tx=${SLACKY_TX_ID}" --print-number 2>/dev/null) || return 1
     n=$(printf '%s' "${n}" | tr -cd '0-9')
@@ -1367,7 +1461,7 @@ create_pre_update_snapshot() {
 }
 create_post_update_snapshot() {
     [ -n "${SLACKY_SNAP_PRE}" ] || return 0
-    if sudo snapper -c root create --type post --pre-number "${SLACKY_SNAP_PRE}" \
+    if sudo timeout 180 snapper -c root create --type post --pre-number "${SLACKY_SNAP_PRE}" \
         --description "slacky-update: after full update" \
         --userdata "slacky=1,slacky-app=legacy,slacky-kind=post,slacky-tx=${SLACKY_TX_ID:-}" >/dev/null 2>&1; then
         { echo "[$(date '+%Y-%m-%d %H:%M:%S')] [INFO] SpiderSense: post-update snapshot paired with #${SLACKY_SNAP_PRE}" >> "${LOG_FILE}"; } 2>/dev/null || true
@@ -1414,19 +1508,39 @@ check_slacky_update_self_update() {
     local rel_json=""
     # 1. Query GitHub API (canonical release source)
     rel_json=$(curl -sSL -m 4 -H "User-Agent: slacky-update" "https://api.github.com/repos/TuxOfValhalla/slacky-update/releases/latest" 2>/dev/null || true)
+    # 6A-280 (R6): a failed check must never be reported as "up to date" (the helper below answers CHECK_FAILED|reason)
 
     local update_info
     update_info=$(echo "${rel_json}" | python3 -c "
 import json, sys, re, os
 
+_PRE = {'dev': 0, 'alpha': 1, 'a': 1, 'beta': 2, 'b': 2, 'pre': 3, 'rc': 4}
+
 def parse_v(v_str):
-    return [int(x) for x in re.findall(r'\d+', v_str)]
+    # 6A-280 (M1): (numbers without trailing zeros, final flag, pre-release rank, pre-release number); a pre-release
+    # (1.0_RC2) sorts BEFORE its final release (1.0); 1.0 equals 1.0.0; 1.0.1 and 1.1 are newer than 1.0
+    m = re.match(r'^v?(\d+(?:\.\d+)*)(?:[._-]?(dev|alpha|beta|pre|rc|a|b)\.?_?(\d*))?', v_str.strip(), re.I)
+    if not m:
+        return ((), 0, 0, 0)
+    nums = [int(x) for x in m.group(1).split('.')]
+    while nums and nums[-1] == 0:
+        nums.pop()
+    if m.group(2):
+        return (tuple(nums), 0, _PRE[m.group(2).lower()], int(m.group(3) or 0))
+    return (tuple(nums), 1, 0, 0)
 
 cur = '${current_ver}'.lstrip('v')
 try:
     content = sys.stdin.read().strip()
-    if content:
-        data = json.loads(content)
+    if not content:
+        print('CHECK_FAILED|offline')
+        sys.exit(0)
+    data = json.loads(content)
+    if not isinstance(data, dict) or not data.get('tag_name'):
+        msg = str(data.get('message', '')).lower() if isinstance(data, dict) else ''
+        print('CHECK_FAILED|' + ('limit' if 'rate limit' in msg else 'answer'))
+        sys.exit(0)
+    if True:
         tag = data.get('tag_name', '').lstrip('v')
         tag_newer = bool(tag and parse_v(tag) > parse_v(cur))
         
@@ -1461,9 +1575,10 @@ try:
             print(f'UPDATE|{asset_display_tag}|{dl_url}|{dl_digest}')
             sys.exit(0)
 except Exception:
-    pass
+    print('CHECK_FAILED|answer')
+    sys.exit(0)
 print(f'UP_TO_DATE|{cur}')
-" 2>/dev/null || echo "UP_TO_DATE|${current_ver}")
+" 2>/dev/null || echo "CHECK_FAILED|answer")
 
     local status_type rest
     IFS='|' read -r status_type rest <<< "${update_info}"
@@ -1473,7 +1588,7 @@ print(f'UP_TO_DATE|{cur}')
         IFS='|' read -r new_tag dl_url dl_digest <<< "${rest}"
 
         echo ""
-        echo -e "${YELLOW}${BOLD}⚡ New Slacky-Update Release Available: v${new_tag} (Current: v${current_ver})${RESET}"
+        echo -e "${YELLOW}${BOLD}New Slacky-Update release available: v${new_tag} (current: v${current_ver})${RESET}"
         read -r -p "$(_ PROMPT_SELF_UPDATE)" reply_update
         reply_update=${reply_update:-Y}
         if [[ "$reply_update" =~ ^[YyJjSsOo]$ ]]; then
@@ -1528,8 +1643,13 @@ print(f'UP_TO_DATE|{cur}')
                 rm -rf "${su_dir}"
             fi
         fi
+    elif [ "${status_type}" = "CHECK_FAILED" ]; then
+        local why_key="SELF_UPDATE_WHY_ANSWER"
+        [ "${rest}" = "offline" ] && why_key="SELF_UPDATE_WHY_OFFLINE"
+        [ "${rest}" = "limit" ] && why_key="SELF_UPDATE_WHY_LIMIT"
+        echo -e "  ${YELLOW}$(_ SELF_UPDATE_CHECK_FAILED why="$(_ "${why_key}")")${RESET}"
     else
-        echo -e "  ${GREEN}✓${RESET} ${BLUE}$(_ APP_UP_TO_DATE tag="v${current_ver}")${RESET}"
+        echo -e "  ${BLUE}$(_ APP_UP_TO_DATE tag="v${current_ver}")${RESET}"
     fi
 }
 
@@ -1785,7 +1905,7 @@ check_and_shield_mirror_freshness() {
     primary_mirror=$(grep -v '^#' /etc/slackpkg/mirrors 2>/dev/null | grep -E '^https?://' | head -n 1 || echo "")
     if [ -n "${primary_mirror}" ]; then
         if ! curl -sSLI -m 4 -f -o /dev/null "${primary_mirror}" 2>/dev/null; then
-            log_warn "Primary Slackware mirror (${primary_mirror}) timed out or is unreachable. Continuing with standard fallback..."
+            log_warn "Primary Slackware mirror (${primary_mirror}) timed out or is unreachable. The Slackware update may fail; the other update parts continue."
         fi
     fi
 
@@ -1936,15 +2056,15 @@ run_post_update_smoke_test() {
     fi
 
     echo ""
-    echo -e "${CYAN}${BOLD}=== 🎸 POST-UPDATE SUBSYSTEM HEALTH CHECK ===${RESET}"
+    echo -e "${CYAN}${BOLD}=== POST-UPDATE SUBSYSTEM HEALTH CHECK ===${RESET}"
     if [ "${1:-}" = "SKIPPED_MIRROR_ERROR" ] || [ "${SLACK_CORE_STATUS:-}" = "SKIPPED_MIRROR_ERROR" ]; then
-        echo -e "  ${YELLOW}[⚠]${RESET} 64-bit Slackware Core : ${YELLOW}Skipped (Repository mirror error on slackware.nl)${RESET}"
+        echo -e "  ${YELLOW}[WARN]${RESET} 64-bit Slackware Core : ${YELLOW}Skipped (the Slackware update server did not answer)${RESET}"
     else
-        echo -e "  ${GREEN}[✓]${RESET} 64-bit Slackware Core : ${GREEN}Up-to-date & healthy${RESET}"
+        echo -e "  ${GREEN}[ OK ]${RESET} 64-bit Slackware Core : ${GREEN}Up-to-date & healthy${RESET}"
     fi
-    echo -e "  ${GREEN}[✓]${RESET} Kernel & Video Driver : ${GREEN}${kver} / ${active_driver}${RESET}"
+    echo -e "  ${GREEN}[ OK ]${RESET} Kernel & Video Driver : ${GREEN}${kver} / ${active_driver}${RESET}"
     if [ "${multi_ok}" -eq 1 ]; then
-        echo -e "  ${GREEN}[✓]${RESET} 32-bit Multilib Armor : ${GREEN}${multi_status}${RESET}"
+        echo -e "  ${GREEN}[ OK ]${RESET} 32-bit Multilib Armor : ${GREEN}${multi_status}${RESET}"
     elif [ "${multi_status}" != "Not Configured" ]; then
         echo -e "  ${YELLOW}[!]${RESET} 32-bit Multilib Armor : ${YELLOW}${multi_status}${RESET}"
     else
@@ -2188,7 +2308,7 @@ max_allowed_slots = max(4, min(16, term_height - 6))
 max_display_slots = min(num_workers, total_items, max_allowed_slots)
 
 tot_sz_str = format_size(total_bytes_expected)
-print(f"\033[1;36m🚀 Turbo Parallel Pre-fetch: {label} [{total_items} files • ~{tot_sz_str}]\033[0m")
+print(f"\033[1;36mTurbo Parallel Pre-fetch: {label} [{total_items} files • ~{tot_sz_str}]\033[0m")
 sys.stdout.flush()
 
 state_lock = threading.Lock()
@@ -2494,10 +2614,10 @@ show_cursor()
 for _sentence in sorted(failed_sentences):
     print(_sentence)
 if fail_count > 0:
-    print(f"\033[1;33m⚠️ Turbo Parallel Pre-fetch finished: {success_count}/{total_items} files ({format_size(completed_bytes)}) cached in {int(total_elapsed)}s ({fail_count} failed).\033[0m\n")
+    print(f"\033[1;33mTurbo Parallel Pre-fetch finished: {success_count}/{total_items} files ({format_size(completed_bytes)}) cached in {int(total_elapsed)}s ({fail_count} failed).\033[0m\n")
     sys.exit(1)
 else:
-    print(f"\033[1;32m✓ Turbo Parallel Pre-fetch completed: {success_count} files ({format_size(completed_bytes)}) cached in {int(total_elapsed)}s (avg {avg_speed_mb:.1f} MB/s).\033[0m\n")
+    print(f"\033[1;32mTurbo Parallel Pre-fetch completed: {success_count} files ({format_size(completed_bytes)}) cached in {int(total_elapsed)}s (avg {avg_speed_mb:.1f} MB/s).\033[0m\n")
     sys.exit(0)
 PYPACMAN
 }

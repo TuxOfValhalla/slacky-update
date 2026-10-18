@@ -855,9 +855,9 @@ class MainMenuTUI(SlackyTUI):
         lines = []
 
         # 1. Header (Original Slacky-Update CLI)
-        lines.append(f"{BOLD_BLUE}Slacky-Update (v{CURRENT_VERSION} '{RELEASE_CODENAME}') [Pre-Release / Early Access]{RESET}")
+        lines.append(f"{BOLD_BLUE}Slacky-Update (v{CURRENT_VERSION} '{RELEASE_CODENAME}'){RESET}")
         lines.append(f"{BLUE}Slackware Core Update & High-Performance Modernization Engine{RESET}")
-        check_mark = "*" if self.ascii_only else "✓"
+        check_mark = "*"
         lines.append(f"  {GREEN}{check_mark} Slacky-Update is up to date (v{CURRENT_VERSION}){RESET}")
         lines.append("")
 
@@ -894,7 +894,7 @@ class MainMenuTUI(SlackyTUI):
 
         # 5. Prompt line & Navigation Hint
         lines.append("")
-        default_hint = "[*] Click or [1-{range}] to select | Hold Shift + Drag to copy text | (ESC) Exit" if self.ascii_only else "💡 Click or [1-{range}] to select  •  Hold Shift + Drag to copy text  •  (ESC) Exit"
+        default_hint = "[*] Click or [1-{range}] to select | Hold Shift + Drag to copy text | (ESC) Exit" if self.ascii_only else "Click or [1-{range}] to select  •  Hold Shift + Drag to copy text  •  (ESC) Exit"
         hint_text = _tr("TUI_NAV_HINT_COPY", default_hint).replace("{range}", str(len(self.items)))
         lines.append(f"  {DIM_WHITE}{hint_text}{RESET}")
         prompt_prefix = _tr("SELECT_OPERATION_RANGE", "Enter choice [{range}]: ").replace("{range}", f"1-{len(self.items)}")
@@ -1036,17 +1036,17 @@ class SimpleSelectTUI(SlackyTUI):
                 {"id": "2", "label": "2. Regenerate limine.conf & Re-enroll BLAKE2B Checksums"},
                 {
                     "id": "3",
-                    "label": "3. 🔍 Verify Kernel BLAKE2B Hashes vs Limine Registry",
+                    "label": "3. Verify Kernel BLAKE2B Hashes vs Limine Registry",
                     "ascii_label": "3. [*] Verify Kernel BLAKE2B Hashes vs Limine Registry",
                 },
                 {
                     "id": "4",
-                    "label": "4. ⚙️  Configure Kernel Boot Parameters (CMDLINE & Gaming Hub)",
+                    "label": "4. Configure Kernel Boot Parameters (CMDLINE & Gaming Hub)",
                     "ascii_label": "4. [*] Configure Kernel Boot Parameters (CMDLINE & Gaming Hub)",
                 },
                 {
                     "id": "5",
-                    "label": "5. 🌲 Snapper Btrfs Snapshot Rollback Engine",
+                    "label": "5. Snapper Btrfs Snapshot Rollback Engine",
                     "ascii_label": "5. [*] Snapper Btrfs Snapshot Rollback Engine",
                 },
                 {"id": "6", "label": "6. 1-Click Self-Heal: Restore Limine from Backup"},
@@ -1131,27 +1131,27 @@ class SimpleSelectTUI(SlackyTUI):
             return [
                 {
                     "id": "1",
-                    "label": "1. 🔍 Audit Secure Boot & Cryptographic Status",
+                    "label": "1. Audit Secure Boot & Cryptographic Status",
                     "ascii_label": "1. [*] Audit Secure Boot & Cryptographic Status",
                 },
                 {
                     "id": "2",
-                    "label": "2. 🪄 Run 1-Click sbctl Secure Boot Key Enrollment Wizard",
+                    "label": "2. Run 1-Click sbctl Secure Boot Key Enrollment Wizard",
                     "ascii_label": "2. [*] Run 1-Click sbctl Secure Boot Key Enrollment Wizard",
                 },
                 {
                     "id": "3",
-                    "label": "3. 🛡️  Sign All Bootloaders & Linux Kernels with sbctl",
+                    "label": "3. Sign All Bootloaders & Linux Kernels with sbctl",
                     "ascii_label": "3. [*] Sign All Bootloaders & Linux Kernels with sbctl",
                 },
                 {
                     "id": "4",
-                    "label": "4. 🔑 Manage Classic MOK (Kernel Module Signatures)",
+                    "label": "4. Manage Classic MOK (Kernel Module Signatures)",
                     "ascii_label": "4. [*] Manage Classic MOK (Kernel Module Signatures)",
                 },
                 {
                     "id": "5",
-                    "label": f"5. 🚪 {ret_sb}",
+                    "label": f"5. {ret_sb}",
                     "ascii_label": f"5. {ret_sb}",
                 },
             ]
@@ -1160,16 +1160,16 @@ class SimpleSelectTUI(SlackyTUI):
             self.subtitle = self.subtitle or _tr('DOCS_MENU_SUBTITLE', "System Health Audit, Manuals & Mobile Export")
             ret_docs = format_exit_label(_tr('SBO_BACK_OPTION', 'Return to Previous Menu'))
             return [
-                {"id": "1", "label": f"1. 🩺 {_tr('DOCS_OPT_DOCTOR_RUN', 'Run System Health & Diagnostic Audit (Terminal)')}", "ascii_label": f"1. {_tr('DOCS_OPT_DOCTOR_RUN', 'Run System Health & Diagnostic Audit (Terminal)')}"},
-                {"id": "2", "label": f"2. 📋 {_tr('DOCS_OPT_DOCTOR_EXPORT', 'Export System Health Report to Markdown (~/slacky-system-health.md)')}", "ascii_label": f"2. {_tr('DOCS_OPT_DOCTOR_EXPORT', 'Export System Health Report to Markdown (~/slacky-system-health.md)')}"},
-                {"id": "3", "label": f"3. 📖 {_tr('DOCS_OPT_SURVIVAL', 'Read Master Survival Guide in Terminal')}", "ascii_label": f"3. {_tr('DOCS_OPT_SURVIVAL', 'Read Master Survival Guide in Terminal')}"},
-                {"id": "4", "label": f"4. 🛠️  {_tr('DOCS_OPT_COMPANION', 'Read Technical Architecture & Companion Guide in Terminal')}", "ascii_label": f"4. {_tr('DOCS_OPT_COMPANION', 'Read Technical Architecture & Companion Guide in Terminal')}"},
-                {"id": "5", "label": f"5. 🚀 {_tr('DOCS_OPT_LIMINE', 'Read Limine & BIOS Playbook in Terminal')}", "ascii_label": f"5. {_tr('DOCS_OPT_LIMINE', 'Read Limine & BIOS Playbook in Terminal')}"},
-                {"id": "6", "label": f"6. 🚑 {_tr('DOCS_OPT_TROUBLESHOOT', 'Read Disaster Recovery & Troubleshooting Guide in Terminal')}", "ascii_label": f"6. {_tr('DOCS_OPT_TROUBLESHOOT', 'Read Disaster Recovery & Troubleshooting Guide in Terminal')}"},
-                {"id": "7", "label": f"7. 📄 {_tr('DOCS_OPT_PDF', 'Export All Guides to PDF (Save to ~/Documents)')}", "ascii_label": f"7. {_tr('DOCS_OPT_PDF', 'Export All Guides to PDF (Save to ~/Documents)')}"},
-                {"id": "8", "label": f"8. ✉️  {_tr('DOCS_OPT_EMAIL', 'Send Survival Guide via Email (Attach PDF in Mail Client)')}", "ascii_label": f"8. {_tr('DOCS_OPT_EMAIL', 'Send Survival Guide via Email (Attach PDF in Mail Client)')}"},
-                {"id": "9", "label": f"9. 📱 {_tr('DOCS_OPT_QR', 'Transfer to Phone via Wi-Fi QR Code (Access in BIOS)')}", "ascii_label": f"9. {_tr('DOCS_OPT_QR', 'Transfer to Phone via Wi-Fi QR Code (Access in BIOS)')}"},
-                {"id": "10", "label": f"10. 🚪 {ret_docs}", "ascii_label": f"10. {ret_docs}"},
+                {"id": "1", "label": f"1. {_tr('DOCS_OPT_DOCTOR_RUN', 'Run System Health & Diagnostic Audit (Terminal)')}", "ascii_label": f"1. {_tr('DOCS_OPT_DOCTOR_RUN', 'Run System Health & Diagnostic Audit (Terminal)')}"},
+                {"id": "2", "label": f"2. {_tr('DOCS_OPT_DOCTOR_EXPORT', 'Export System Health Report to Markdown (~/slacky-system-health.md)')}", "ascii_label": f"2. {_tr('DOCS_OPT_DOCTOR_EXPORT', 'Export System Health Report to Markdown (~/slacky-system-health.md)')}"},
+                {"id": "3", "label": f"3. {_tr('DOCS_OPT_SURVIVAL', 'Read Master Survival Guide in Terminal')}", "ascii_label": f"3. {_tr('DOCS_OPT_SURVIVAL', 'Read Master Survival Guide in Terminal')}"},
+                {"id": "4", "label": f"4. {_tr('DOCS_OPT_COMPANION', 'Read Technical Architecture & Companion Guide in Terminal')}", "ascii_label": f"4. {_tr('DOCS_OPT_COMPANION', 'Read Technical Architecture & Companion Guide in Terminal')}"},
+                {"id": "5", "label": f"5. {_tr('DOCS_OPT_LIMINE', 'Read Limine & BIOS Playbook in Terminal')}", "ascii_label": f"5. {_tr('DOCS_OPT_LIMINE', 'Read Limine & BIOS Playbook in Terminal')}"},
+                {"id": "6", "label": f"6. {_tr('DOCS_OPT_TROUBLESHOOT', 'Read Disaster Recovery & Troubleshooting Guide in Terminal')}", "ascii_label": f"6. {_tr('DOCS_OPT_TROUBLESHOOT', 'Read Disaster Recovery & Troubleshooting Guide in Terminal')}"},
+                {"id": "7", "label": f"7. {_tr('DOCS_OPT_PDF', 'Export All Guides to PDF (Save to ~/Documents)')}", "ascii_label": f"7. {_tr('DOCS_OPT_PDF', 'Export All Guides to PDF (Save to ~/Documents)')}"},
+                {"id": "8", "label": f"8. {_tr('DOCS_OPT_EMAIL', 'Send Survival Guide via Email (Attach PDF in Mail Client)')}", "ascii_label": f"8. {_tr('DOCS_OPT_EMAIL', 'Send Survival Guide via Email (Attach PDF in Mail Client)')}"},
+                {"id": "9", "label": f"9. {_tr('DOCS_OPT_QR', 'Transfer to Phone via Wi-Fi QR Code (Access in BIOS)')}", "ascii_label": f"9. {_tr('DOCS_OPT_QR', 'Transfer to Phone via Wi-Fi QR Code (Access in BIOS)')}"},
+                {"id": "10", "label": f"10. {ret_docs}", "ascii_label": f"10. {ret_docs}"},
             ]
         return []
 
@@ -1291,7 +1291,7 @@ class SimpleSelectTUI(SlackyTUI):
 
         # 4. Prompt line & Navigation Hint
         lines.append("")
-        default_hint = "[*] Click or [1-{range}] to select | Hold Shift + Drag to copy text | (ESC) Exit" if self.ascii_only else "💡 Click or [1-{range}] to select  •  Hold Shift + Drag to copy text  •  (ESC) Exit"
+        default_hint = "[*] Click or [1-{range}] to select | Hold Shift + Drag to copy text | (ESC) Exit" if self.ascii_only else "Click or [1-{range}] to select  •  Hold Shift + Drag to copy text  •  (ESC) Exit"
         hint_text = _tr("TUI_NAV_HINT_COPY", default_hint).replace("{range}", str(len(self.items)))
         lines.append(f"  {DIM_WHITE}{hint_text}{RESET}")
         prompt_prefix = _tr("SELECT_OPERATION_RANGE", "Enter choice [{range}]: ").replace("{range}", f"1-{len(self.items)}")
@@ -1579,11 +1579,11 @@ class CleanTUI(SimpleSelectTUI):
         k_cnt = self.scan_data["kernel_reclaim_count"]
         k_desc = f"{k_str} ({k_cnt} inactive)" if k_cnt > 0 else "0 B (Clean)"
 
-        opt1_lbl = _tr("CLEAN_OPT_SWEEP", "🚀 Full System Sweep (Recommended — Free {tot})").replace("{tot}", tot_str)
-        opt2_lbl = _tr("CLEAN_OPT_CACHES", "📦 Clean Package & Build Caches Only (Free {caches})").replace("{caches}", caches_str)
-        opt3_lbl = _tr("CLEAN_OPT_KERNELS", "🐧 Prune Obsolete Kernels (Safe Retention Guard: {k_info})").replace("{k_info}", k_desc)
-        opt4_lbl = _tr("CLEAN_OPT_FLATPAK", "📦 Prune Unused Flatpak Runtimes")
-        opt5_lbl = _tr("CLEAN_OPT_DEDUP", "🧙 Underpants Gnomes Storage Deduplication (gnomes dedup)")
+        opt1_lbl = _tr("CLEAN_OPT_SWEEP", "Full System Sweep (Recommended — Free {tot})").replace("{tot}", tot_str)
+        opt2_lbl = _tr("CLEAN_OPT_CACHES", "Clean Package & Build Caches Only (Free {caches})").replace("{caches}", caches_str)
+        opt3_lbl = _tr("CLEAN_OPT_KERNELS", "Prune Obsolete Kernels (Safe Retention Guard: {k_info})").replace("{k_info}", k_desc)
+        opt4_lbl = _tr("CLEAN_OPT_FLATPAK", "Prune Unused Flatpak Runtimes")
+        opt5_lbl = _tr("CLEAN_OPT_DEDUP", "Underpants Gnomes Storage Deduplication (gnomes dedup)")
         opt6_lbl = format_exit_label(_tr("MOK_OPTION_RETURN", "Return to Main Menu"))
 
         return [
@@ -1604,7 +1604,7 @@ class CleanTUI(SimpleSelectTUI):
         header_sub = "High-Performance System Hygenics & Disk Space Recovery"
         lines.append(f"{BOLD_BLUE}{header_top}{RESET}")
         lines.append(f"{BLUE}{header_sub}{RESET}")
-        check_sym = "*" if self.ascii_only else "✓"
+        check_sym = "*"
         dur = self.scan_data.get("duration", 0.05)
         lines.append(f"  {GREEN}{check_sym} Storage analysis completed in {dur:.2f}s{RESET}")
         lines.append("")
@@ -1635,14 +1635,14 @@ class CleanTUI(SimpleSelectTUI):
         c_log = self.scan_data["log_temp_str"]
         c_tot = self.scan_data["total_str"]
 
-        lines.append(make_card_row(f"├── 📦 {_tr('CLEAN_CARD_PKG_CACHES', 'Package Caches (Slackware .txz, SBo, Gnomes):')} {BOLD_WHITE}{c_pkg}{RESET}"))
-        lines.append(make_card_row(f"├── 🛠️  {_tr('CLEAN_CARD_BUILD_TEMPS', 'Ephemeral Build Artifacts (/tmp/slacky-build-*):')} {BOLD_WHITE}{c_bld}{RESET}"))
-        lines.append(make_card_row(f"├── 🐧 {_tr('CLEAN_CARD_KERNELS', 'Obsolete Kernel Artifacts:')} {BOLD_WHITE}{c_krn}{RESET}"))
-        lines.append(make_card_row(f"├── 📦 {_tr('CLEAN_CARD_FLATPAK', 'Unused Flatpak Runtimes & SDKs:')} {DIM_WHITE}(Scanned on Demand){RESET}"))
-        lines.append(make_card_row(f"└── 📄 {_tr('CLEAN_CARD_LOGS', 'Stale Logs & Check Dumps:')} {BOLD_WHITE}{c_log}{RESET}"))
+        lines.append(make_card_row(f"├── {_tr('CLEAN_CARD_PKG_CACHES', 'Package Caches (Slackware .txz, SBo, Gnomes):')} {BOLD_WHITE}{c_pkg}{RESET}"))
+        lines.append(make_card_row(f"├── {_tr('CLEAN_CARD_BUILD_TEMPS', 'Ephemeral Build Artifacts (/tmp/slacky-build-*):')} {BOLD_WHITE}{c_bld}{RESET}"))
+        lines.append(make_card_row(f"├── {_tr('CLEAN_CARD_KERNELS', 'Obsolete Kernel Artifacts:')} {BOLD_WHITE}{c_krn}{RESET}"))
+        lines.append(make_card_row(f"├── {_tr('CLEAN_CARD_FLATPAK', 'Unused Flatpak Runtimes & SDKs:')} {DIM_WHITE}(Scanned on Demand){RESET}"))
+        lines.append(make_card_row(f"└── {_tr('CLEAN_CARD_LOGS', 'Stale Logs & Check Dumps:')} {BOLD_WHITE}{c_log}{RESET}"))
         lines.append(mid_border)
-        lines.append(make_card_row(f"✨ {BOLD_YELLOW}{_tr('CLEAN_CARD_TOTAL', 'Total Recoverable Disk Space:')} {BOLD_GREEN}{c_tot}{RESET}"))
-        lines.append(make_card_row(f"🛡️  {DIM_WHITE}{_tr('CLEAN_CARD_SAFE_ZONE', 'Safe Zone Guarantee: /home and personal files are 100% immune.')}{RESET}"))
+        lines.append(make_card_row(f"{BOLD_YELLOW}{_tr('CLEAN_CARD_TOTAL', 'Total Recoverable Disk Space:')} {BOLD_GREEN}{c_tot}{RESET}"))
+        lines.append(make_card_row(f"{DIM_WHITE}{_tr('CLEAN_CARD_SAFE_ZONE', 'Safe Zone Guarantee: /home and personal files are 100% immune.')}{RESET}"))
         lines.append(bot_border)
         lines.append("")
 
@@ -1664,7 +1664,7 @@ class CleanTUI(SimpleSelectTUI):
 
         # 5. Prompt line & Navigation Hint
         lines.append("")
-        default_hint = "[*] Click or [1-{range}] to select | Hold Shift + Drag to copy text | (ESC) Exit" if self.ascii_only else "💡 Click or [1-{range}] to select  •  Hold Shift + Drag to copy text  •  (ESC) Exit"
+        default_hint = "[*] Click or [1-{range}] to select | Hold Shift + Drag to copy text | (ESC) Exit" if self.ascii_only else "Click or [1-{range}] to select  •  Hold Shift + Drag to copy text  •  (ESC) Exit"
         hint_text = _tr("TUI_NAV_HINT_COPY", default_hint).replace("{range}", str(len(self.items)))
         lines.append(f"  {DIM_WHITE}{hint_text}{RESET}")
         prompt_prefix = _tr("SELECT_OPERATION_RANGE", "Enter choice [{range}]: ").replace("{range}", f"1-{len(self.items)}")
@@ -1879,7 +1879,7 @@ class GnomesTUI(SlackyTUI):
     def format_item_col(self, it, is_sel: bool, col_num: int, name_w: int) -> str:
         """Formats a single package column adhering strictly to original CLI badge style."""
         arrow_sym = ">" if self.ascii_only else "▶"
-        check_sym = "*" if self.ascii_only else "✓"
+        check_sym = "*"
         is_checked = (it["idx"] in self.checked_indices)
 
         # Prefix indentation (col 1 and col 2: 3 cells with cursor arrow)
@@ -1950,7 +1950,7 @@ class GnomesTUI(SlackyTUI):
             f"  {BOLD_CYAN}D.{RESET}  Uninstall a Component",
             self.format_menu_dock_line(),
             f"Enter your choice here (manual mode) [1-{total_pkgs}, O, U, D]: {self.input_buffer}",
-            f"{BOLD_CYAN}[↑/↓]{RESET} Navigate   {BOLD_CYAN}[Enter]{RESET} Select   {BOLD_YELLOW}[Shift + Drag]{RESET} Copy Text   {BOLD_MAGENTA}[Super + Drag/Click]{RESET} Move/Resize   {BOLD_CYAN}[ESC / q]{RESET} Exit"
+            f"{BOLD_CYAN}[Up/Down]{RESET} Navigate   {BOLD_CYAN}[Enter]{RESET} Select   {BOLD_YELLOW}[Shift + Drag]{RESET} Copy Text   {BOLD_MAGENTA}[Super + Drag/Click]{RESET} Move/Resize   {BOLD_CYAN}[ESC / q]{RESET} Exit"
         ]
         footer_h = len(footer_blocks)
 
@@ -2634,21 +2634,21 @@ class ChecklistMenuTUI(SlackyTUI):
                 {
                     "id": "10",
                     "key": "apply_all",
-                    "name": "🚀 Apply All Recommended Tweaks in One-Click",
+                    "name": "Apply All Recommended Tweaks in One-Click",
                     "ascii_name": "Apply All Recommended Tweaks in One-Click",
                     "is_action": True,
                 },
                 {
                     "id": "11",
                     "key": "revert_all",
-                    "name": "🔄 Revert All Tweaks to Stock Slackware Defaults",
+                    "name": "Revert All Tweaks to Stock Slackware Defaults",
                     "ascii_name": "Revert All Tweaks to Stock Slackware Defaults",
                     "is_action": True,
                 },
                 {
                     "id": "12",
                     "key": "return",
-                    "name": "🚪 Return to Main Menu (ESC)",
+                    "name": "Return to Main Menu (ESC)",
                     "ascii_name": "Return to Main Menu (ESC)",
                     "is_action": True,
                 },
@@ -2738,35 +2738,35 @@ class ChecklistMenuTUI(SlackyTUI):
                 {
                     "id": "S",
                     "key": "save",
-                    "name": "💾 Save & Enroll (Rebuild limine.conf, BLAKE2B & Sign EFI)",
+                    "name": "Save & Enroll (Rebuild limine.conf, BLAKE2B & Sign EFI)",
                     "ascii_name": "Save & Enroll (Rebuild limine.conf, BLAKE2B & Sign EFI)",
                     "is_action": True,
                 },
                 {
                     "id": "E",
                     "key": "edit",
-                    "name": "✏️  Edit Raw CMDLINE (Inline readline terminal prompt)",
+                    "name": "Edit Raw CMDLINE (Inline readline terminal prompt)",
                     "ascii_name": "Edit Raw CMDLINE (Inline readline terminal prompt)",
                     "is_action": True,
                 },
                 {
                     "id": "N",
                     "key": "nano",
-                    "name": "📝 Open in Nano / Text Editor",
+                    "name": "Open in Nano / Text Editor",
                     "ascii_name": "Open in Nano / Text Editor",
                     "is_action": True,
                 },
                 {
                     "id": "R",
                     "key": "reset",
-                    "name": "🔄 Reset to Hardware & Sensible Defaults",
+                    "name": "Reset to Hardware & Sensible Defaults",
                     "ascii_name": "Reset to Hardware & Sensible Defaults",
                     "is_action": True,
                 },
                 {
                     "id": "Q",
                     "key": "return",
-                    "name": "🚪 Cancel / Return without saving (ESC)",
+                    "name": "Cancel / Return without saving (ESC)",
                     "ascii_name": "Cancel / Return without saving (ESC)",
                     "is_action": True,
                 },
@@ -2826,7 +2826,7 @@ class ChecklistMenuTUI(SlackyTUI):
                 {
                     "id": "8",
                     "key": "return",
-                    "name": "🚪 Return to Previous Menu (ESC)",
+                    "name": "Return to Previous Menu (ESC)",
                     "ascii_name": "Return to Previous Menu (ESC)",
                     "is_action": True,
                 },
@@ -2886,7 +2886,7 @@ class ChecklistMenuTUI(SlackyTUI):
                 return f"{BOLD_YELLOW}{badge_txt}{RESET}" if not self.ascii_only else badge_txt
             if k == "zswap":
                 if self.badges.get("zram") or self.badges.get("zram_active") or os.path.exists("/dev/zram0"):
-                    note = "[⛔ Disabled: ZRAM active]" if not self.ascii_only else "[Disabled: ZRAM active]"
+                    note = "[Disabled: ZRAM active]" if not self.ascii_only else "[Disabled: ZRAM active]"
                     return f" {YELLOW}{note}{RESET}" if not self.ascii_only else f" {note}"
             return ""
 
@@ -2966,16 +2966,16 @@ class ChecklistMenuTUI(SlackyTUI):
     def format_menu_dock_line(self) -> str:
         """Formats 'On the menu: <items>       [Action Button]' line."""
         if self.mode == "limine-cmdline":
-            btn_text = "[💾 Save & Enroll (Enter)]" if not self.ascii_only else "[Save & Enroll (Enter)]"
+            btn_text = "[Save & Enroll (Enter)]" if not self.ascii_only else "[Save & Enroll (Enter)]"
             dim_btn_text = btn_text
             empty_msg = "(no parameters selected)"
         elif self.mode == "tweaks":
-            btn_text = "[⚡ Apply Selected (Enter)]" if not self.ascii_only else "[Apply Selected (Enter)]"
-            dim_btn_text = "[⚡ Apply Selected]" if not self.ascii_only else "[Apply Selected]"
+            btn_text = "[Apply Selected (Enter)]" if not self.ascii_only else "[Apply Selected (Enter)]"
+            dim_btn_text = "[Apply Selected]" if not self.ascii_only else "[Apply Selected]"
             empty_msg = f"({_tr('TUI_NO_TWEAKS_SELECTED', 'no tweaks selected')})"
         else:
-            btn_text = "[🚀 Build & Install (Enter)]" if not self.ascii_only else "[Build & Install (Enter)]"
-            dim_btn_text = "[🚀 Build & Install]" if not self.ascii_only else "[Build & Install]"
+            btn_text = "[Build & Install (Enter)]" if not self.ascii_only else "[Build & Install (Enter)]"
+            dim_btn_text = "[Build & Install]" if not self.ascii_only else "[Build & Install]"
             empty_msg = f"({_tr('TUI_NO_PKGS_SELECTED', 'no packages selected')})"
 
         lbl_menu = _tr("TUI_ON_THE_MENU", "On the menu:")
@@ -3055,9 +3055,9 @@ class ChecklistMenuTUI(SlackyTUI):
         else:
             frame_rows.append(f"{BOLD_CYAN}{sep_eq}{RESET}")
             if self.mode == "tweaks":
-                title = " ⚡ OPTIONAL SYSTEM & GAMING TWEAKS ⚡ " if not self.ascii_only else " OPTIONAL SYSTEM & GAMING TWEAKS "
+                title = " OPTIONAL SYSTEM & GAMING TWEAKS " if not self.ascii_only else " OPTIONAL SYSTEM & GAMING TWEAKS "
             else:
-                title = " ⚡ SLACKY-SLACKBUILDS CURATED HUB ⚡ " if not self.ascii_only else " SLACKY-SLACKBUILDS CURATED HUB "
+                title = " SLACKY-SLACKBUILDS CURATED HUB " if not self.ascii_only else " SLACKY-SLACKBUILDS CURATED HUB "
             frame_rows.append(f"{BOLD_CYAN}{pad_ansi(title, sep_len, align='center')}{RESET}")
             frame_rows.append(f"{BOLD_CYAN}{sep_eq}{RESET}")
 

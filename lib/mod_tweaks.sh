@@ -684,7 +684,7 @@ apply_all_tweaks() {
     deploy_tweak_nvidia_shader_cache
     deploy_tweak_pipewire_latency
     echo ""
-    log_success "⚡ Most Triumphant! All system & gaming tweaks are 100% armed and active."
+    log_success "Most Triumphant! All system & gaming tweaks are 100% armed and active."
 }
 
 revert_all_tweaks() {
@@ -768,7 +768,7 @@ manage_tweaks_interactive() {
         else
             echo ""
             echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
-            echo -e "${BOLD}${CYAN}               ⚡ OPTIONAL SYSTEM & GAMING TWEAKS ⚡${RESET}"
+            echo -e "${BOLD}${CYAN}               OPTIONAL SYSTEM & GAMING TWEAKS${RESET}"
             echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
             echo -e "  \033[1;33m1.\033[0m File Descriptors & Process Limits (1M nofile, PipeWire rtprio) ${b_limits}"
             echo -e "  \033[1;33m2.\033[0m Kernel Memory & THP (madvise THP, dirty byte limits, swappiness=10) ${b_thp}"
@@ -779,8 +779,8 @@ manage_tweaks_interactive() {
             echo -e "  \033[1;33m7.\033[0m Storage & NVMe Direct I/O Scheduler (none for NVMe, mq-deadline for SATA) ${b_iosched}"
             echo -e "  \033[1;33m8.\033[0m NVIDIA 10GB Global Shader Disk Cache (Permanent Shader Retention) ${b_shadercache}"
             echo -e "  \033[1;33m9.\033[0m PipeWire Low-Latency Audio (256 samples / 5.3ms, zero xruns) ${b_pwlatency}"
-            echo -e "  \033[1;33m10.\033[0m 🚀 Apply All Recommended Tweaks in One-Click"
-            echo -e "  \033[1;33m11.\033[0m 🔄 Revert All Tweaks to Stock Slackware Defaults"
+            echo -e "  \033[1;33m10.\033[0m Apply All Recommended Tweaks in One-Click"
+            echo -e "  \033[1;33m11.\033[0m Revert All Tweaks to Stock Slackware Defaults"
             echo -e "  \033[1;33m12.\033[0m $(_ SBO_BACK_OPTION)"
             echo ""
             echo -n "$(_ SELECT_OPERATION_RANGE range="1-12") "

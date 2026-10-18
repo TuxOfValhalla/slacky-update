@@ -550,44 +550,44 @@ html_doc = f"""<!DOCTYPE html>
 <body>
   <div class="container">
     <div class="offline-banner">
-      <h2>📲 Slacky-Update Survival Center <span class="status-pill">Offline Ready</span></h2>
+      <h2>Slacky-Update Survival Center <span class="status-pill">Offline Ready</span></h2>
       <p>Last ned PDF-manualene til telefonen din nå, slik at du har full tilgang når PC-en startes på nytt inn i BIOS / UEFI!</p>
       
       <div class="download-grid">
         <a class="dl-btn dl-btn-green" href="/Slacky_Update_Field_Guide.pdf" download="Slacky_Update_Field_Guide.pdf">
-          <span>📥 Survival Guide (PDF)</span>
+          <span>Survival Guide (PDF)</span>
           <span class="sub">Master System Manual</span>
         </a>
         <a class="dl-btn dl-btn-blue" href="/Limine_SecureBoot_Guide.pdf" download="Limine_SecureBoot_Guide.pdf">
-          <span>📥 Limine & BIOS (PDF)</span>
+          <span>Limine & BIOS (PDF)</span>
           <span class="sub">Bootloader & Secure Boot Matrix</span>
         </a>
         <a class="dl-btn dl-btn-purple" href="/Technical_Companion_Guide.pdf" download="Technical_Companion_Guide.pdf">
-          <span>📥 Technical Guide (PDF)</span>
+          <span>Technical Guide (PDF)</span>
           <span class="sub">Deep Architecture & Modules</span>
         </a>
       </div>
 
       <div class="action-links">
-        <a class="action-link" href="/Slacky_Update_Field_Guide.pdf?inline=1" target="_blank">👁️ Åpne Survival PDF i fane</a>
-        <a class="action-link" href="/Limine_SecureBoot_Guide.pdf?inline=1" target="_blank">👁️ Åpne Limine PDF i fane</a>
-        <a class="action-link" href="/Technical_Companion_Guide.pdf?inline=1" target="_blank">👁️ Åpne Technical PDF i fane</a>
-        <button class="action-link" onclick="window.print()">🖨️ Skriv ut / Lagre hele siden som PDF</button>
+        <a class="action-link" href="/Slacky_Update_Field_Guide.pdf?inline=1" target="_blank">Åpne Survival PDF i fane</a>
+        <a class="action-link" href="/Limine_SecureBoot_Guide.pdf?inline=1" target="_blank">Åpne Limine PDF i fane</a>
+        <a class="action-link" href="/Technical_Companion_Guide.pdf?inline=1" target="_blank">Åpne Technical PDF i fane</a>
+        <button class="action-link" onclick="window.print()">Skriv ut / Lagre hele siden som PDF</button>
       </div>
 
       <div class="tips-box">
-        <strong>📱 Nedlastingstips:</strong><br/>
+        <strong>Nedlastingstips:</strong><br/>
         • <strong>Android / Chrome:</strong> Trykk på ønsket PDF for å lagre den direkte i *Nedlastinger*.<br/>
-        • <strong>iOS / Safari:</strong> Trykk på PDF. Hvis den åpnes i Safari, trykk på Del-knappen (firkant med pil) ➔ <strong>"Lagre i Filer"</strong>.<br/>
+        • <strong>iOS / Safari:</strong> Trykk på PDF. Hvis den åpnes i Safari, trykk på Del-knappen (firkant med pil) -> <strong>"Lagre i Filer"</strong>.<br/>
         • <strong>Offline-modus:</strong> Alle 3 guidene er lastet inn på denne siden under fanene nedenfor. Den forblir åpen og lesbar selv om PC-en er i BIOS!
       </div>
     </div>
 
     <!-- TABS -->
     <div class="tabs-bar">
-      <button class="tab-btn active" onclick="switchTab('tab-master', this)">📖 1. Survival Guide</button>
-      <button class="tab-btn" onclick="switchTab('tab-limine', this)">🛡️ 2. Limine & BIOS Playbook</button>
-      <button class="tab-btn" onclick="switchTab('tab-tech', this)">⚙️ 3. Technical Architecture</button>
+      <button class="tab-btn active" onclick="switchTab('tab-master', this)">1. Survival Guide</button>
+      <button class="tab-btn" onclick="switchTab('tab-limine', this)">2. Limine & BIOS Playbook</button>
+      <button class="tab-btn" onclick="switchTab('tab-tech', this)">3. Technical Architecture</button>
     </div>
 
     <div id="tab-master" class="tab-content active">
@@ -912,7 +912,7 @@ PYNET
 
     clear || true
     echo -e "${CYAN}${BOLD}============================================================${RESET}"
-    echo -e "${YELLOW}${BOLD}  📲 MOBILE TRANSFER: SLACKY-UPDATE MASTER FIELD GUIDE  ${RESET}"
+    echo -e "${YELLOW}${BOLD}  MOBILE TRANSFER: SLACKY-UPDATE MASTER FIELD GUIDE  ${RESET}"
     echo -e "${CYAN}${BOLD}============================================================${RESET}"
     echo -e "Scan this QR code with your phone camera on your local Wi-Fi network."
     echo -e "${RED}${BOLD}IMPORTANT:${RESET} Tap ${GREEN}${BOLD}[Download PDF]${RESET} on your phone to save the document"
@@ -972,8 +972,8 @@ manage_field_guide_interactive() {
             echo -e "  • ${BOLD}Language:${RESET}    English (Easy-to-Read Edition)"
             echo -e "  • ${BOLD}Format:${RESET}      Terminal / PDF / HTML / Mobile QR / Email / Markdown"
             echo ""
-            echo -e "  ${BOLD}1.${RESET} 🩺 Run System Health & Diagnostic Audit (Terminal)"
-            echo -e "  ${BOLD}2.${RESET} 📋 Export System Health Report to Markdown (~/slacky-system-health.md)"
+            echo -e "  ${BOLD}1.${RESET} Run System Health & Diagnostic Audit (Terminal)"
+            echo -e "  ${BOLD}2.${RESET} Export System Health Report to Markdown (~/slacky-system-health.md)"
             echo -e "  ${BOLD}3.${RESET} Read Master Survival Guide in Terminal"
             echo -e "  ${BOLD}4.${RESET} Read Technical Architecture & Companion Guide in Terminal"
             echo -e "  ${BOLD}5.${RESET} Read Limine & BIOS Playbook in Terminal"

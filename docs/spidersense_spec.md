@@ -335,14 +335,14 @@ Implemented today (Rust `src/core/exit_codes.rs` and `src/core/transaction.rs`; 
 |---|---|
 | 0 | completed (or nothing to do) |
 | 1 | an error stopped the run |
+| 20 | the run finished but a step failed or is still waiting (6A-281); the success line is not printed, the unfinished updates are tried again next time |
 | 30 | the boot chain was not committed, do not restart; also the interim refusal "kernel or driver updates on a Limine machine" before any change (O-1) |
 | 31 | refused before any change: no consent (EOF, "no", or no terminal without `-y`) |
 | 32 | refused before any change: another update is running (lock busy) |
 | 50 | `spidersense --verify` found a mismatch or an event that is not wired yet |
 | 130 | stopped by the user |
 
-Reserved for later (not emitted yet): 10 completed with holds (once HOLD removes only its scope), 20 completed with a
-warning that needs attention before restart. slackpkg's own codes (0/20/50) are mapped inside the app and never leaked.
+Reserved for later (not emitted yet): 10 completed with holds (once HOLD removes only its scope). slackpkg's own codes (0/20/50) are mapped inside the app and never leaked.
 Helper scripts print one line `PASS|WARN|HOLD|VETO <scope> <msg_key> [args]`.
 
 Self-check (`slacky-update-rs spidersense --verify`, `slacky-update --spidersense-verify`), plain text, one line per

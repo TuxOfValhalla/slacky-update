@@ -3,6 +3,63 @@
 
 set -euo pipefail
 
+# 6A-299 (F0): read the real Slackware release. Prints "<N.N> stable" for a release (15.0, 16.0), "<N.N> current" for a
+# -current tree (15.0+, 16.0+) and "unknown" when the file is missing or says something else. It never guesses 15.0.
+# SLACKY_SLACKWARE_VERSION_FILE lets the self-tests (SLACKY_SELFTEST=1 only) point at a fake file.
+slackware_release_info() {
+    local vf="/etc/slackware-version" line=""
+    [ "${SLACKY_SELFTEST:-0}" = "1" ] && vf="${SLACKY_SLACKWARE_VERSION_FILE:-${vf}}"
+    [ -r "${vf}" ] && line=$(head -n 1 "${vf}" 2>/dev/null | tr -d '\r' || true)
+    if [[ "${line}" =~ ^Slackware[[:space:]]+([0-9]+\.[0-9]+)(\+?)[[:space:]]*$ ]]; then
+        if [ -n "${BASH_REMATCH[2]}" ]; then
+            echo "${BASH_REMATCH[1]} current"
+        else
+            echo "${BASH_REMATCH[1]} stable"
+        fi
+    else
+        echo "unknown"
+    fi
+}
+
+# 6A-299 (F0): which AlienBOB multilib tree matches this system. Prints the tree name ("15.0", "16.0" or "current") and
+# returns 0; prints nothing and returns 1 when the release is unknown. A release only ever maps to ITS OWN tree: 16.0
+# never falls back to 15.0 (that would put an older glibc and gcc on the system).
+slackware_multilib_tree() {
+    local info ver chan
+    info=$(slackware_release_info)
+    [ "${info}" != "unknown" ] || return 1
+    ver="${info%% *}"; chan="${info##* }"
+    if [ "${chan}" = "current" ]; then
+        echo "current"
+    else
+        echo "${ver}"
+    fi
+}
+
+# 6A-299 (F0): never downgrade. DIR holds the verified multilib packages; any package whose version is OLDER than the
+# installed package of the same name stops the whole setup before upgradepkg runs. SLACKY_PKGLOG_DIR is for the self-tests (SLACKY_SELFTEST=1 only).
+multilib_refuse_downgrade() {
+    local dir="$1" logdir="/var/log/packages" f base name ver inst inst_ver
+    [ "${SLACKY_SELFTEST:-0}" = "1" ] && logdir="${SLACKY_PKGLOG_DIR:-${logdir}}"
+    while IFS= read -r f; do
+        [ -n "${f}" ] || continue
+        base=$(basename "${f}"); base="${base%.*}"
+        [[ "${base}" =~ ^(.+)-([^-]+)-([^-]+)-([^-]+)$ ]] || continue
+        name="${BASH_REMATCH[1]}"; ver="${BASH_REMATCH[2]}"
+        for inst in "${logdir}"/"${name}"-*; do
+            [ -e "${inst}" ] || continue
+            [[ "$(basename "${inst}")" =~ ^(.+)-([^-]+)-([^-]+)-([^-]+)$ ]] || continue
+            [ "${BASH_REMATCH[1]}" = "${name}" ] || continue
+            inst_ver="${BASH_REMATCH[2]}"
+            if [ "${inst_ver}" != "${ver}" ] && [ "$(printf '%s\n%s\n' "${inst_ver}" "${ver}" | sort -V | tail -n 1)" = "${inst_ver}" ]; then
+                log_error "The multilib packages are older than what is installed (${name} ${ver} instead of ${inst_ver}), so nothing was installed."
+                return 1
+            fi
+        done
+    done < <(find "${dir}" -name '*.t?z' 2>/dev/null)
+    return 0
+}
+
 is_sbotools_installed() {
     command -v sboinstall >/dev/null 2>&1 && command -v sbocheck >/dev/null 2>&1
 }
@@ -11,12 +68,17 @@ setup_sbotools_interactive() {
     echo -e "
 $(_ SBO_SETUP_HEADER)"
     
-    local slack_ver="15.0"
-    local is_current=false
-    if grep -q -E "(\+|current)" /etc/slackware-version 2>/dev/null; then
-        is_current=true
-        slack_ver="current"
-    fi
+    # 6A-299 (F0): the real release decides; only 15.0 and -current have a known SlackBuilds setup here
+    local slack_ver="" rel_info is_current=false
+    rel_info=$(slackware_release_info)
+    case "${rel_info}" in
+        *" current") is_current=true; slack_ver="current" ;;
+        "15.0 stable") slack_ver="15.0" ;;
+        *)
+            log_warn "SlackBuilds setup was not started: this Slackware version (${rel_info}) has no matching SlackBuilds setup here. Nothing was changed."
+            return 0
+            ;;
+    esac
 
     log_info "Detected Slackware version: ${slack_ver}"
 
@@ -181,6 +243,13 @@ check_steam_multilib_status() {
 setup_multilib_interactive() {
     echo -e "
 ${BOLD}${CYAN}$(_ MULTILIB_SETUP_HEADER)${RESET}"
+
+    # 6A-299 (F0): decide the multilib tree BEFORE asking anything. Unknown release: refuse, change nothing.
+    local slack_ver=""
+    if ! slack_ver=$(slackware_multilib_tree); then
+        log_error "Multilib was not set up: this Slackware version is not recognised, so no matching multilib packages are known. Nothing was changed."
+        return 1
+    fi
     log_warn "$(_ STEAM_MULTILIB_REQUIRED)"
     
     local reply_multi
@@ -189,11 +258,6 @@ ${BOLD}${CYAN}$(_ MULTILIB_SETUP_HEADER)${RESET}"
     if [[ ! "$reply_multi" =~ ^[YyJjSsOo]$ ]]; then
         log_warn "Multilib setup aborted by user."
         return 1
-    fi
-
-    local slack_ver="15.0"
-    if grep -q -E "(\+|current)" /etc/slackware-version 2>/dev/null; then
-        slack_ver="current"
     fi
 
     log_info "Fetching AlienBOB multilib packages for Slackware ${slack_ver}..."
@@ -207,6 +271,13 @@ ${BOLD}${CYAN}$(_ MULTILIB_SETUP_HEADER)${RESET}"
     if ! alien_fetch_verified "${multi_url}" "${multi_tmp}"; then
         rm -rf "${multi_tmp}"
         log_error "Multilib packages could not be verified, so nothing was installed."
+        return 1
+    fi
+
+    # 6A-299 (F0): a tree that does not exist (404 above) already stopped here; a tree that carries older glibc/gcc than
+    # the installed ones stops here too
+    if ! multilib_refuse_downgrade "${multi_tmp}/pkgs"; then
+        rm -rf "${multi_tmp}"
         return 1
     fi
 
@@ -278,7 +349,7 @@ manage_recommended_gaming_interactive() {
         else
             echo ""
             echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
-            echo -e "${BOLD}${CYAN}              ⚡ $(_ RECOMMENDED_GAMING_TITLE) ⚡${RESET}"
+            echo -e "${BOLD}${CYAN}              $(_ RECOMMENDED_GAMING_TITLE)${RESET}"
             echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
             echo -e "  \033[1;33m1.\033[0m OBS Studio (multimedia/obs-studio)"
             echo -e "  \033[1;33m2.\033[0m Steam Client (games/steam)"
@@ -336,7 +407,7 @@ search_sbo_interactive() {
         else
             echo ""
             echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
-            echo -e "${BOLD}${CYAN}              ⚡ $(_ SBO_SEARCH_PROMPT_TITLE) ⚡${RESET}"
+            echo -e "${BOLD}${CYAN}              $(_ SBO_SEARCH_PROMPT_TITLE)${RESET}"
             echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
             echo -e "  \033[1;33m1.\033[0m $(_ SBO_CUSTOM_SEARCH_OPTION)"
             echo -e "  \033[1;33m2.\033[0m $(_ SBO_RECOMMENDED_GAMING_OPTION)"
@@ -434,7 +505,7 @@ install_curated_slackbuild() {
         else
             echo ""
             echo -e "${YELLOW}${BOLD}$(_ DAVINCI_DOWNLOAD_REQUIRED)${RESET}"
-            echo -e "👉 Download link: ${CYAN}https://www.blackmagicdesign.com/products/davinciresolve/studio${RESET}"
+            echo -e "Download link: ${CYAN}https://www.blackmagicdesign.com/products/davinciresolve/studio${RESET}"
             echo -e "Place the DaVinci_Resolve_Studio_<VERSION>_Linux.zip file in ~/Downloads\n"
             read -r -p "$(_ PROMPT_CONTINUE_DAVINCI) " reply_dv
             if [[ ! "$reply_dv" =~ ^[YyJjSsOo]$ ]]; then
@@ -685,25 +756,25 @@ render_curated_category_menu() {
 
 menu_category_multimedia() {
     local suite_dir="$1"
-    render_curated_category_menu "🎬 Multimedia & Video 🎬" "${suite_dir}" \
+    render_curated_category_menu "Multimedia & Video" "${suite_dir}" \
         "davinci-resolve-studio" "multimedia/davinci-resolve-studio" "Hollywood Post-Production Suite"
 }
 
 menu_category_development() {
     local suite_dir="$1"
-    render_curated_category_menu "🛠️ Development & Engines 🛠️" "${suite_dir}" \
+    render_curated_category_menu "Development & Engines" "${suite_dir}" \
         "unreal-engine" "development/unreal-engine" "Next-Gen Real-Time 3D Game Engine"
 }
 
 menu_category_office() {
     local suite_dir="$1"
-    render_curated_category_menu "🏢 Office & Productivity 🏢" "${suite_dir}" \
+    render_curated_category_menu "Office & Productivity" "${suite_dir}" \
         "freeoffice2024" "office/freeoffice2024" "Microsoft Office Compatible Suite"
 }
 
 menu_category_system() {
     local suite_dir="$1"
-    render_curated_category_menu "⚙️ System, Wine & Storage ⚙️" "${suite_dir}" \
+    render_curated_category_menu "System, Wine & Storage" "${suite_dir}" \
         "wine-staging" "system/wine-staging" "Bleeding-Edge Windows Compatibility" \
         "winetricks" "system/winetricks" "Easy Wine Prefix Config & DLL Helper" \
         "grub-btrfs" "system/grub-btrfs" "Bootable Btrfs Snapshots in GRUB" \
@@ -754,7 +825,7 @@ manage_curated_suite_interactive() {
         else
             echo ""
             echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
-            echo -e "${BOLD}${CYAN}                  ⚡ SLACKY-SLACKBUILDS CURATED HUB ⚡${RESET}"
+            echo -e "${BOLD}${CYAN}                  SLACKY-SLACKBUILDS CURATED HUB${RESET}"
             echo -e "${BOLD}${CYAN}=============================================================================${RESET}"
             for ((idx=0; idx<${#curated_paths[@]}; idx++)); do
                 local b_badge
@@ -763,7 +834,7 @@ manage_curated_suite_interactive() {
             done
             echo -e "  \033[1;33m8.\033[0m $(_ SBO_BACK_OPTION)"
             echo ""
-            echo -e "  ${YELLOW}💡 Note: 3D apps (Blender, Bambu Studio, FreeCAD, Plasticity), browsers,${RESET}"
+            echo -e "  ${YELLOW}Note: 3D apps (Blender, Bambu Studio, FreeCAD, Plasticity), browsers,${RESET}"
             echo -e "  ${YELLOW}   and gaming engines are now in Underpants Gnomes for instant deployment!${RESET}"
             echo ""
             echo -n "$(_ SELECT_OPERATION_RANGE range="1-8") "

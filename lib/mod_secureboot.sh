@@ -9,7 +9,7 @@ audit_sbctl_status() {
 
     echo ""
     echo -e "${CYAN}============================================================${RESET}"
-    echo -e "${YELLOW}${BOLD}🔒 UEFI SECURE BOOT & SBCTL STATUS AUDIT 🔒${RESET}"
+    echo -e "${YELLOW}${BOLD}UEFI SECURE BOOT & SBCTL STATUS AUDIT${RESET}"
     echo -e "${CYAN}============================================================${RESET}"
 
     if [ ! -x "${sbctl_bin}" ]; then
@@ -76,7 +76,7 @@ else:
     echo ""
     echo -e "${BOLD}Signed Linux Kernel Binaries (/boot/vmlinuz-*):${RESET}"
     local kern_list=()
-    mapfile -t kern_list < <(sudo python3 -c "
+    mapfile -t kern_list < <(sudo python3 -I -c "
 import os
 if os.path.exists('/boot'):
     for f in sorted(os.listdir('/boot')):
@@ -121,7 +121,7 @@ setup_sbctl_keys_interactive() {
 
     echo ""
     echo -e "${CYAN}============================================================${RESET}"
-    echo -e "${YELLOW}${BOLD}🧙‍♂️ UEFI SECURE BOOT & SBCTL SETUP WIZARD 🧙‍♂️${RESET}"
+    echo -e "${YELLOW}${BOLD}UEFI SECURE BOOT & SBCTL SETUP WIZARD${RESET}"
     echo -e "${CYAN}============================================================${RESET}"
 
     local status_json
@@ -133,7 +133,7 @@ setup_sbctl_keys_interactive() {
     fi
 
     if [ "${in_setup_mode}" -eq 0 ]; then
-        echo -e "${YELLOW}${BOLD}⚠️ Firmware is NOT in Setup Mode!${RESET}"
+        echo -e "${YELLOW}${BOLD}Firmware is NOT in Setup Mode!${RESET}"
         echo -e "To enroll your custom Secure Boot keys, your UEFI motherboard must be in Setup Mode."
         echo ""
         echo -e "${CYAN}${BOLD}Instructions to enter Setup Mode in BIOS:${RESET}"
@@ -146,7 +146,7 @@ setup_sbctl_keys_interactive() {
         return 0
     fi
 
-    echo -e "${GREEN}${BOLD}✓ Firmware is in Setup Mode! Ready to enroll custom keys.${RESET}"
+    echo -e "${GREEN}${BOLD}Firmware is in Setup Mode! Ready to enroll custom keys.${RESET}"
     echo ""
     echo -e "${YELLOW}${BOLD}Would you like to create keys and enroll them with Microsoft OEM certificates (-m)?${RESET}"
     echo -e "${CYAN}(Note: -m includes Microsoft OEM certificates, essential for GPU Option ROMs and Windows 11 dual-boot)${RESET}"
@@ -227,7 +227,7 @@ manage_secureboot_interactive() {
         else
             echo ""
             echo -e "${CYAN}============================================================${RESET}"
-            echo -e "${YELLOW}${BOLD}🔒 UEFI SECURE BOOT CONTROL CENTER (SBCTL & MOK) 🔒${RESET}"
+            echo -e "${YELLOW}${BOLD}UEFI SECURE BOOT CONTROL CENTER (SBCTL & MOK)${RESET}"
             echo -e "${CYAN}============================================================${RESET}"
             echo -e "  \033[1;33m1.\033[0m Audit Secure Boot & Cryptographic Status"
             echo -e "  \033[1;33m2.\033[0m Run 1-Click sbctl Secure Boot Key Enrollment Wizard"

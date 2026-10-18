@@ -519,7 +519,7 @@ validate_or_migrate_boot_topology() {
             # SCENARIO A: Existing /boot/efi is large enough (>= 3.5 GB)
             echo ""
             echo -e "${CYAN}============================================================${RESET}"
-            echo -e "${YELLOW}${BOLD}⚡ $(_ TOPOLOGY_SCENARIO_A_TITLE) ⚡${RESET}"
+            echo -e "${YELLOW}${BOLD}$(_ TOPOLOGY_SCENARIO_A_TITLE)${RESET}"
             echo -e "${CYAN}============================================================${RESET}"
             echo -e "  • ${BOLD}Current State:${RESET} /boot is on system root (${boot_fs:-posix}), and /boot/efi is ${efi_size_mb} MB FAT32."
             echo -e "  • ${BOLD}Recommendation:${RESET} Migrate /boot/efi directly to /boot for optimal Limine & Snapper sync."
@@ -544,7 +544,7 @@ validate_or_migrate_boot_topology() {
     # SCENARIO C: ESP is missing or too small (< 3.5 GB). Offer partition adoption wizard.
     echo ""
     echo -e "${CYAN}============================================================${RESET}"
-    echo -e "${YELLOW}${BOLD}⚡ $(_ TOPOLOGY_SCENARIO_C_TITLE) ⚡${RESET}"
+    echo -e "${YELLOW}${BOLD}$(_ TOPOLOGY_SCENARIO_C_TITLE)${RESET}"
     echo -e "${CYAN}============================================================${RESET}"
     echo -e "${YELLOW}Limine multi-kernel staging with Snapper boot sync requires a dedicated FAT32 ESP of at least ${MIN_BOOT_PARTITION_MB} MB (4 GB) on /boot.${RESET}"
     echo -e "Your current ESP is either too small or /boot is on a non-FAT32 filesystem."
@@ -817,7 +817,7 @@ sync_host_kernel_cmdline_config() {
 
     # 2. Sync to /etc/default/limine (KERNEL_CMDLINE[default] and KERNEL_CMDLINE[fallback])
     if [ -f "/etc/default/limine" ]; then
-        sudo python3 -c "
+        sudo python3 -I -c "
 import re
 
 cfg_path = '/etc/default/limine'
@@ -843,7 +843,7 @@ with open(cfg_path, 'w', encoding='utf-8') as f:
 
     # 3. Sync to /etc/default/grub (GRUB_CMDLINE_LINUX_DEFAULT) if file exists
     if [ -f "/etc/default/grub" ]; then
-        sudo python3 -c "
+        sudo python3 -I -c "
 import re
 
 cfg_path = '/etc/default/grub'
@@ -875,6 +875,48 @@ compute_file_boot_hash() {
     fi
 }
 
+# 6A-160: true when kernel modules for <kver> exist INSIDE the snapshot root. Symlinks (an absolute /lib/modules link, for
+# example) are resolved against the snapshot root and never against the live system; a link that leaves the root is refused.
+limine_snapshot_has_modules() {
+    sudo python3 -I - "$1" "$2" << 'PYSNAPMOD'
+import os, sys
+root, kver = os.path.abspath(sys.argv[1]), sys.argv[2]
+if "/" in kver or kver in ("", ".", ".."):
+    sys.exit(1)
+
+def resolve(rel):
+    parts = [x for x in rel.split("/") if x]
+    cur = []
+    hops = 0
+    while parts:
+        name = parts.pop(0)
+        if name == ".":
+            continue
+        if name == "..":
+            if cur:
+                cur.pop()
+            continue
+        path = os.path.join(root, *cur, name)
+        if os.path.islink(path):
+            hops += 1
+            if hops > 40:
+                return None
+            tgt = os.readlink(path)
+            if tgt.startswith("/"):
+                cur = []
+            parts = [x for x in tgt.split("/") if x] + parts
+            continue
+        cur.append(name)
+    return os.path.join(root, *cur)
+
+for base in ("usr/lib/modules", "lib/modules"):
+    r = resolve(base + "/" + kver)
+    if r and os.path.isdir(r):
+        sys.exit(0)
+sys.exit(1)
+PYSNAPMOD
+}
+
 # 6A-121: callers run resolve_and_hash_boot_assets in $( ), so a failed ESP copy is recorded in a file the generator reads
 LIMINE_ESP_COPY_FAIL_FILE=""
 limine_esp_copy_failed() {
@@ -903,9 +945,35 @@ resolve_and_hash_boot_assets() {
     fi
 
     # Locate initramfs
-    for cand_initrd in "/boot/initramfs-${kver}.img" "/boot/initrd-${kver}.gz" "/boot/initrd-${kver}.img" "/boot/initrd.gz" "${esp_path}/initramfs-${kver}.img" "${esp_path}/initrd-${kver}.gz"; do
+    # 6A-282: only the kernel's own initramfs may be used. The generic /boot/initrd.gz belongs to the Slackware generic kernel
+    # (plain version number) and is never offered to a CachyOS/zen/other kernel, where a failed dracut would seal a mismatched
+    # initrd into the default entry (kernel panic).
+    local cand_initrd
+    local cand_list=("/boot/initramfs-${kver}.img" "/boot/initrd-${kver}.gz" "/boot/initrd-${kver}.img")
+    if [[ "${kver}" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
+        cand_list+=("/boot/initrd.gz")
+    fi
+    cand_list+=("${esp_path}/initramfs-${kver}.img" "${esp_path}/initrd-${kver}.gz")
+    for cand_initrd in "${cand_list[@]}"; do
         if sudo test -f "${cand_initrd}"; then
             initrd_src="${cand_initrd}"
+            # 6A-282: a kernel-specific initramfs older than its kernel or modules was built before the update (dracut failed)
+            if [[ "${cand_initrd}" == /boot/* && "${cand_initrd}" != "/boot/initrd.gz" ]]; then
+                local i_mt k_mt m_mt m_dir
+                i_mt=$(sudo stat -c %Y "${cand_initrd}" 2>/dev/null || echo 0)
+                k_mt=$(sudo stat -c %Y "/boot/vmlinuz-${kver}" 2>/dev/null || echo 0)
+                m_mt=0
+                for m_dir in "${LIMINE_MODULES_ROOT:-}/usr/lib/modules/${kver}" "${LIMINE_MODULES_ROOT:-}/lib/modules/${kver}"; do
+                    if [ -d "${m_dir}" ]; then
+                        m_mt=$(sudo stat -L -c %Y "${m_dir}" 2>/dev/null || echo 0)
+                        break
+                    fi
+                done
+                if [ "${i_mt}" -lt "${k_mt}" ] || [ "${i_mt}" -lt "${m_mt}" ]; then
+                    echo "The startup image for kernel ${kver} is older than the kernel, so that kernel was left out of the boot menu." >&2
+                    return 1
+                fi
+            fi
             if [ "${esp_path}" != "/boot" ] && [[ "${initrd_src}" == /boot/* ]]; then
                 local base_initrd
                 base_initrd=$(basename "${initrd_src}")
@@ -980,7 +1048,7 @@ get_or_build_limine_header() {
 
     local preserved_header=""
     if [ -n "${existing_cfg}" ]; then
-        preserved_header=$(sudo python3 -c "
+        preserved_header=$(sudo python3 -I -c "
 import os, re, sys, subprocess
 
 cfg_file = '${existing_cfg}'
@@ -1245,12 +1313,17 @@ generate_limine_configuration() {
         ss_menu_exclude=$(ss_purge_set | tr '\n' ' ')
     fi
     ss_menu_exclude="${ss_menu_exclude} ${ss_esp_orphans}"
+    # 6A-302 (F0b): a kernel whose NVIDIA module is still missing is left out of the menu (only while other kernels remain)
+    local ss_nv_hold=""
+    if command -v nvidia_hold_active >/dev/null 2>&1; then
+        ss_nv_hold=$(nvidia_hold_active 2>/dev/null | tr '\n' ' ' || true)
+    fi
     # 6A-121: ESP copies that fail are recorded here; any failure stops the menu update before the live files change
     LIMINE_ESP_COPY_FAIL_FILE=$(mktemp /tmp/slacky-esp-copy.XXXXXX)
 
     # Analyze all kernels using python3 classifier (Primary vs Fallback separation)
     local kernel_class_json
-    kernel_class_json=$(sudo python3 -c "
+    kernel_class_json=$(sudo python3 -I -c "
 import os, re, json, sys
 excl = set(sys.argv[1].split()) if len(sys.argv) > 1 else set()
 
@@ -1300,6 +1373,10 @@ for d in search_dirs:
         except Exception:
             pass
 found = {k for k in found if k not in excl and not any(k in ('generic-' + v, 'huge-' + v) for v in excl)}
+hold = set(sys.argv[2].split()) if len(sys.argv) > 2 else set()
+kept = {k for k in found if k not in hold}
+if kept:  # never leave the menu empty
+    found = kept
 
 sorted_kernels = sorted(list(found), key=rank, reverse=True)
 
@@ -1330,7 +1407,7 @@ print(json.dumps({
     'slackware': slackware_kver,
     'lts': lts_kver
 }))
-" "${ss_menu_exclude}" 2>/dev/null || echo '{"primary":[],"fallback":[],"top_primary":null,"slackware":null,"lts":null}')
+" "${ss_menu_exclude}" "${ss_nv_hold}" 2>/dev/null || echo '{"primary":[],"fallback":[],"top_primary":null,"slackware":null,"lts":null}')
 
     local primary_entries=""
     local top_kver="" top_label=""
@@ -1547,7 +1624,7 @@ print(json.dumps({
                     local s_added=0 c_kver c_info c_v c_kh c_i c_ih
                     for c_kver in "${ss_all_kvers[@]}"; do
                         [ "${s_added}" -lt 2 ] || break
-                        sudo test -d "${s_path}/snapshot/lib/modules/${c_kver}" || continue
+                        limine_snapshot_has_modules "${s_path}/snapshot" "${c_kver}" || continue
                         c_info="${ss_asset_cache[${c_kver}]:-}"
                         if [ -z "${c_info}" ]; then
                             c_info=$(resolve_and_hash_boot_assets "${c_kver}" "${esp_path}" || true)
@@ -1874,13 +1951,22 @@ is_sbctl_keys_configured() {
 }
 
 # 6A-8a/6A-8b: true when an EFI file carries a valid signature from the sbctl db key.
-# Without sbverify or the db certificate it trusts the sign exit status (returns 0).
+# 6A-303 (F0c): on a Secure Boot machine (sbctl keys set up) a missing verifier or certificate means "cannot verify", so
+# it fails (returns 1) and one sentence is printed. Without Secure Boot keys the old behaviour stays (returns 0).
 limine_efi_signature_ok() {
     local efi="$1" cert=""
     for c in "/var/lib/sbctl/keys/db/db.pem" "/usr/share/secureboot/keys/db/db.pem"; do
         if sudo test -f "${c}"; then cert="${c}"; break; fi
     done
     if [ -z "${cert}" ] || ! command -v sbverify >/dev/null 2>&1; then
+        local sb_var sb_state=""
+        for sb_var in "${SLACKY_SB_EFIVAR:-/sys/firmware/efi/efivars/SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c}"; do
+            [ -r "${sb_var}" ] && sb_state=$(od -An -t u1 -j4 -N1 "${sb_var}" 2>/dev/null | tr -d ' ')
+        done
+        if is_sbctl_keys_configured || [ "${sb_state}" = "1" ]; then
+            log_error "Secure Boot is on, but the signing certificate or sbverify is missing, so the boot file could not be checked. Nothing was written."
+            return 1
+        fi
         return 0
     fi
     sudo sbverify --cert "${cert}" "${efi}" >/dev/null 2>&1
@@ -1892,7 +1978,7 @@ verify_limine_seal() {
     local esp_path
     esp_path=$(detect_limine_esp_path 2>/dev/null || echo "/boot")
     local bad
-    bad=$(sudo python3 - "${esp_path}" << 'PYSEAL'
+    bad=$(sudo python3 -I - "${esp_path}" << 'PYSEAL'
 import hashlib, os, re, sys
 esp = sys.argv[1]
 cfg = os.path.join(esp, "limine.conf")
@@ -1928,6 +2014,32 @@ PYSEAL
     return 0
 }
 
+# 6A-161: removes sbctl database entries for kernel files that no longer exist (purged kernels), with `sbctl remove-file`.
+# Only files that are gone are touched; nothing is removed while /boot or the startup partition is not mounted.
+sbctl_forget_missing_files() {
+    local sbctl_bin="$1" gone
+    [ -x "${sbctl_bin}" ] || return 0
+    limine_boot_paths_ready "$(detect_limine_esp_path)" || return 0
+    gone=$(sudo "${sbctl_bin}" list-files --json 2>/dev/null | python3 -I -c "
+import json, os, sys
+try:
+    data = json.load(sys.stdin)
+except Exception:
+    sys.exit(0)
+for e in data if isinstance(data, list) else []:
+    f = e.get('file') if isinstance(e, dict) else None
+    if f and f.startswith('/') and not os.path.lexists(f):
+        print(f)
+" 2>/dev/null || true)
+    [ -n "${gone}" ] || return 0
+    local f
+    while IFS= read -r f; do
+        [ -n "${f}" ] || continue
+        sudo "${sbctl_bin}" remove-file "${f}" >/dev/null 2>&1 || log_warn "Could not remove the purged file $(basename "${f}") from the Secure Boot list."
+    done <<< "${gone}"
+    return 0
+}
+
 sign_kernel_binaries_sbctl() {
     validate_privileges
     local sbctl_bin
@@ -1937,11 +2049,13 @@ sign_kernel_binaries_sbctl() {
         return 0
     fi
 
+    sbctl_forget_missing_files "${sbctl_bin}"
+
     # 6A-123 (LTS boot-fs M5): prune only sbctl database entries whose file no longer exists. GRUB, shim, ELILO and UKI
     # entries stay registered (the old whitelist kept only /boot/vmlinuz-* and the Limine EFIs). Written atomically.
     # An unmounted /boot would make every kernel look gone, so nothing is pruned then.
     if sudo test -f "/var/lib/sbctl/files.json" && limine_boot_paths_ready "$(detect_limine_esp_path)"; then
-        sudo python3 -c "
+        sudo python3 -I -c "
 import json, os, tempfile
 
 fpath = '/var/lib/sbctl/files.json'
@@ -1965,7 +2079,7 @@ except Exception:
 
     local kern_files=()
     local sb_failed=()
-    mapfile -t kern_files < <(sudo python3 -c "
+    mapfile -t kern_files < <(sudo python3 -I -c "
 import os
 if os.path.exists('/boot'):
     for f in sorted(os.listdir('/boot')):
@@ -2026,6 +2140,31 @@ sign_limine_efi_sbctl() {
     return 0
 }
 
+# 6A-240: Limine or sbctl updated outside a full update. Safety snapshot first, then each boot-writing step is checked; on a
+# failure one sentence is shown and the old startup files stay (every step stages its files and swaps only when verified).
+limine_standalone_boot_sync() {
+    local what="${1:-boot loader}" rc=0
+    if [ "${DEFER_BOOT_SYNC:-0}" != "1" ] && [ -z "${SLACKY_SNAP_PRE:-}" ] && command -v create_pre_update_snapshot >/dev/null 2>&1; then
+        create_pre_update_snapshot || rc=$?
+        if [ "${rc}" -eq 1 ]; then
+            log_warn "A safety snapshot could not be made, so the ${what} boot files were not changed; run a full update to try again."
+            return 1
+        fi
+    fi
+    if [ "${2:-}" = "full" ]; then
+        backup_limine_self_heal || log_warn "The boot loader backup could not be refreshed."
+        if ! generate_limine_configuration; then
+            log_warn "The boot menu could not be rewritten, so the old boot files were kept."
+            return 1
+        fi
+    fi
+    if ! enroll_and_sign_limine; then
+        log_warn "The ${what} could not be sealed for startup, so the old boot files were kept."
+        return 1
+    fi
+    return 0
+}
+
 enroll_and_sign_limine() {
     # 6A-122: a Limine that slacky-update does not manage is left alone (no "do not reboot" for it)
     if [ "$(is_limine_installed 2>/dev/null || echo false)" != "true" ]; then
@@ -2065,31 +2204,41 @@ backup_limine_self_heal() {
     esp_path=$(detect_limine_esp_path)
     sudo test -d "${esp_path}/EFI/limine" || return 0
 
-    local current_user="${SUDO_USER:-${USER:-}}"
-    local user_home=""
-    if [ -n "${current_user}" ]; then
-        user_home=$(getent passwd "${current_user}" 2>/dev/null | cut -d: -f6 || true)
-        [ -n "${user_home}" ] || user_home=$(eval echo "~${current_user}" 2>/dev/null || true)
-    fi
-    local user_backup_dir=""
-    if [ -n "${user_home}" ] && [ -d "${user_home}" ]; then
-        user_backup_dir="${user_home}/.limine_backup"
-        mkdir -p "${user_backup_dir}" 2>/dev/null || true
-        sudo rsync -a --delete "${esp_path}/EFI/limine/" "${user_backup_dir}/" 2>/dev/null || true
-        sudo chown -R "${current_user}:" "${user_backup_dir}" 2>/dev/null || true
-        if sudo test -f "${esp_path}/limine.conf"; then
-            sudo cp -f "${esp_path}/limine.conf" "${user_backup_dir}/" 2>/dev/null || true
-            sudo chown "${current_user}:" "${user_backup_dir}/limine.conf" 2>/dev/null || true
-        fi
-    fi
-
+    # 6A-159 (LTS M5): the only backup lives in a root-owned folder. Root no longer runs rsync --delete or chown -R in the
+    # user's home, and the old ~/.limine_backup is never read or written again.
     validate_privileges
     local system_backup_dir="/var/cache/slacky-update/limine_backup"
-    sudo mkdir -p "${system_backup_dir}" 2>/dev/null || true
+    if ! sudo install -d -m 0755 -o root -g root /var/cache/slacky-update "${system_backup_dir}" 2>/dev/null; then
+        log_warn "The boot loader backup could not be updated, so the previous backup was kept."
+        return 0
+    fi
     sudo rsync -a --delete "${esp_path}/EFI/limine/" "${system_backup_dir}/" 2>/dev/null || true
     if sudo test -f "${esp_path}/limine.conf"; then
         sudo cp -f "${esp_path}/limine.conf" "${system_backup_dir}/" 2>/dev/null || true
     fi
+    sudo chown -R root:root "${system_backup_dir}" 2>/dev/null || true
+    sudo chmod -R go-w "${system_backup_dir}" 2>/dev/null || true
+}
+
+# 6A-159: true only when a restore source is root-owned, not writable by others, holds no symlinks, and its parent folder is root-owned too. Prints nothing; returns 1 otherwise.
+limine_backup_source_trusted() {
+    sudo python3 -I - "$1" "${2:-0}" << 'PYTRUST'
+import os, stat, sys
+src = os.path.abspath(sys.argv[1])
+want_uid = int(sys.argv[2])
+def ok(path):
+    st = os.lstat(path)
+    if stat.S_ISLNK(st.st_mode) or st.st_uid != want_uid or st.st_mode & 0o022:
+        return False
+    return True
+for p in (src, os.path.dirname(src)):
+    if not ok(p):
+        sys.exit(1)
+for name in os.listdir(src):
+    if not ok(os.path.join(src, name)):
+        sys.exit(1)
+sys.exit(0)
+PYTRUST
 }
 
 # 6A-251: checks a Limine pair (EFI file + limine.conf) against the kernel files on the startup partition.
@@ -2153,21 +2302,16 @@ restore_limine_self_heal() {
     validate_privileges
     local esp_path
     esp_path=$(detect_limine_esp_path)
-    local current_user="${SUDO_USER:-${USER:-}}"
-    local user_home=""
-    if [ -n "${current_user}" ]; then
-        user_home=$(getent passwd "${current_user}" 2>/dev/null | cut -d: -f6 || true)
-        [ -n "${user_home}" ] || user_home=$(eval echo "~${current_user}" 2>/dev/null || true)
-    fi
-    local user_backup_dir=""
-    [ -n "${user_home}" ] && [ -d "${user_home}" ] && user_backup_dir="${user_home}/.limine_backup"
     local system_backup_dir="/var/cache/slacky-update/limine_backup"
 
+    # 6A-159: restore data comes only from the root-owned backup; a user-writable copy is never used
     local src_dir=""
     if [ -d "${system_backup_dir}" ] && [ -f "${system_backup_dir}/limine_x64.efi" ]; then
+        if ! limine_backup_source_trusted "${system_backup_dir}"; then
+            log_error "The saved boot loader folder is not safely owned by root, so nothing was restored."
+            return 1
+        fi
         src_dir="${system_backup_dir}"
-    elif [ -n "${user_backup_dir}" ] && [ -d "${user_backup_dir}" ] && [ -f "${user_backup_dir}/limine_x64.efi" ]; then
-        src_dir="${user_backup_dir}"
     fi
 
     if [ -z "${src_dir}" ]; then
@@ -2482,7 +2626,7 @@ manage_kernel_cmdline_interactive() {
         else
             echo ""
             echo -e "${CYAN}================================================================================${RESET}"
-            echo -e "${YELLOW}${BOLD}⚙️  KERNEL BOOT PARAMETERS & GAMING HUB${RESET}"
+            echo -e "${YELLOW}${BOLD}KERNEL BOOT PARAMETERS & GAMING HUB${RESET}"
             echo -e "${CYAN}================================================================================${RESET}"
             echo -e "  • ${BOLD}Base Root (Auto):${RESET}   ${GREEN}${fixed_root}${RESET}"
             echo -e "  • ${BOLD}Active Custom:${RESET}     ${CYAN}${current_custom:-"(None - using bare root)"}${RESET}"
@@ -2538,7 +2682,7 @@ manage_kernel_cmdline_interactive() {
             fi
 
             if [ "${zram_active}" = "true" ]; then
-                echo -e "  \033[1;30m[ ]\033[0m \033[1;33m8.\033[0m ZSWAP Fast RAM Compression   [zswap.enabled=1 ...] ${YELLOW}(⛔ Disabled: ZRAM active)${RESET}"
+                echo -e "  \033[1;30m[ ]\033[0m \033[1;33m8.\033[0m ZSWAP Fast RAM Compression   [zswap.enabled=1 ...] ${YELLOW}(Disabled: ZRAM active)${RESET}"
             else
                 if [ "${has_zswap}" = "true" ]; then
                     echo -e "  \033[1;32m[x]\033[0m \033[1;33m8.\033[0m ZSWAP Fast RAM Compression   [zswap.enabled=1 zswap.compressor=zstd zswap.max_pool_percent=25]"
@@ -2561,11 +2705,11 @@ manage_kernel_cmdline_interactive() {
 
             echo ""
             echo -e "  ${BOLD}Actions:${RESET}"
-            echo -e "  \033[1;36m[E]\033[0m ✏️  Edit Raw CMDLINE (Inline readline terminal prompt)"
-            echo -e "  \033[1;36m[N]\033[0m 📝  Open in Nano / Text Editor"
-            echo -e "  \033[1;36m[R]\033[0m 🔄  Reset to Hardware & Sensible Defaults"
-            echo -e "  \033[1;32m[S]\033[0m 💾  Save & Enroll (Rebuild limine.conf, BLAKE2B & Sign EFI)"
-            echo -e "  \033[1;31m[Q]\033[0m ↩️  Cancel / Return without saving"
+            echo -e "  \033[1;36m[E]\033[0m  Edit Raw CMDLINE (Inline readline terminal prompt)"
+            echo -e "  \033[1;36m[N]\033[0m  Open in Nano / Text Editor"
+            echo -e "  \033[1;36m[R]\033[0m  Reset to Hardware & Sensible Defaults"
+            echo -e "  \033[1;32m[S]\033[0m  Save & Enroll (Rebuild limine.conf, BLAKE2B & Sign EFI)"
+            echo -e "  \033[1;31m[Q]\033[0m  Cancel / Return without saving"
             echo ""
             echo -n "Select option [1-10, E, N, R, S, Q]: "
             read -r act_choice || act_choice="Q"
@@ -2669,7 +2813,7 @@ print(' '.join(new_t))
                 ;;
             8)
                 if [ "${zram_active}" = "true" ]; then
-                    echo -e "\n${YELLOW}⚠️  ZRAM is active on this system (/dev/zram*). ZSWAP should remain disabled.${RESET}"
+                    echo -e "\n${YELLOW}ZRAM is active on this system (/dev/zram*). ZSWAP should remain disabled.${RESET}"
                     sleep 2
                 else
                     current_custom=$(python3 -c "
@@ -2735,7 +2879,7 @@ print(' '.join(new_t))
                 ;;
             R)
                 current_custom=$(get_default_sensible_cmdline)
-                echo -e "\n${GREEN}✓ Reset to Hardware & Sensible Defaults.${RESET}"
+                echo -e "\n${GREEN}Reset to Hardware & Sensible Defaults.${RESET}"
                 sleep 1
                 ;;
             S)
@@ -2797,7 +2941,7 @@ set_snapper_sync_config() {
     validate_privileges
     sudo mkdir -p /etc/default
     
-    sudo python3 - "${cfg_file}" "${key}" "${val}" << 'PYCFG'
+    sudo python3 -I - "${cfg_file}" "${key}" "${val}" << 'PYCFG'
 import sys, os
 
 cfg_file = sys.argv[1]
@@ -2847,7 +2991,7 @@ scan_snapper_boot_candidates() {
     local depth
     depth=$(get_snapper_sync_config "SNAPPER_BOOT_DEPTH" "5")
 
-    sudo python3 - "${snap_dir}" "${policy}" "${depth}" << 'PYSNAP'
+    sudo python3 -I - "${snap_dir}" "${policy}" "${depth}" << 'PYSNAP'
 import os, sys, glob
 import xml.etree.ElementTree as ET
 from datetime import datetime
@@ -2978,7 +3122,7 @@ manage_snapper_sync_interactive() {
 
         local auto_status="${RED}[DISABLED (Opt-In)]${RESET}"
         if [ "${auto_sync}" = "yes" ] || [ "${auto_sync}" = "true" ] || [ "${auto_sync}" = "1" ]; then
-            auto_status="${GREEN}[ACTIVE ✓ (Hourly)]${RESET}"
+            auto_status="${GREEN}[ACTIVE (Hourly)]${RESET}"
         fi
 
         local policy_label="${CYAN}Daily Spread (Past Week)${RESET}"
@@ -3003,7 +3147,7 @@ manage_snapper_sync_interactive() {
         fi
 
         echo -e "${CYAN}============================================================${RESET}"
-        echo -e "${YELLOW}${BOLD}🌲 $(_ SNAPPER_HUB_TITLE) 🌲${RESET}"
+        echo -e "${YELLOW}${BOLD}$(_ SNAPPER_HUB_TITLE)${RESET}"
         echo -e "${CYAN}============================================================${RESET}"
         echo -e "  • ${BOLD}$(_ SNAPPER_STATUS_AUTO_SYNC):${RESET}  ${auto_status}"
         echo -e "  • ${BOLD}$(_ SNAPPER_STATUS_POLICY):${RESET}  ${policy_label}"
@@ -3121,7 +3265,7 @@ check_kernel_boot_hashes() {
     local esp_path
     esp_path=$(detect_limine_esp_path 2>/dev/null || echo "/boot")
 
-    sudo python3 - "${esp_path}" << 'PYVERIFY'
+    sudo python3 -I - "${esp_path}" << 'PYVERIFY'
 import os, sys, re, subprocess, shutil
 
 CYAN = '\033[1;36m'
@@ -3162,7 +3306,7 @@ div = '-' * 100
 
 print()
 print(f'{BOLD}{CYAN}{bar}{RESET}')
-print(f'{BOLD}{CYAN}{"⚡ SLACKY-UPDATE DYNAMIC KERNEL & LIMINE HASH VERIFIER ⚡".center(100)}{RESET}')
+print(f'{BOLD}{CYAN}{"SLACKY-UPDATE DYNAMIC KERNEL & LIMINE HASH VERIFIER".center(100)}{RESET}')
 print(f'{BOLD}{CYAN}{bar}{RESET}')
 
 running_kver = os.uname().release
@@ -3190,7 +3334,7 @@ print(f' {BOLD}UEFI Secure Boot:{RESET} {sb_status}')
 print(f'{BOLD}{CYAN}{div}{RESET}')
 
 if not cfg_file:
-    print(f'{RED}✗ Error: Cannot verify hashes because limine.conf could not be found.{RESET}')
+    print(f'{RED}Error: Cannot verify hashes because limine.conf could not be found.{RESET}')
     print(f'Run {BOLD}sudo slacky-update --sync-boot{RESET} to generate and register Limine boot configuration.')
     print()
     sys.exit(1)
@@ -3199,7 +3343,7 @@ try:
     with open(cfg_file, 'r', encoding='utf-8', errors='ignore') as f:
         content = f.read()
 except Exception as e:
-    print(f'{RED}✗ Error reading {cfg_file}: {e}{RESET}')
+    print(f'{RED}Error reading {cfg_file}: {e}{RESET}')
     sys.exit(1)
 
 primary_kernels = []
@@ -3333,7 +3477,7 @@ for k_name, reg_hash in ordered_kernels:
     ftype = f'{"Kernel":<11}'
     reg_str = f'{short_h(reg_hash):<23}'
     act_str = f'{short_h(actual_hash):<23}'
-    status_str = f'{GREEN}✓ MATCH{RESET}' if is_match else f'{RED}✗ MISMATCH{RESET}'
+    status_str = f'{GREEN}MATCH{RESET}' if is_match else f'{RED}MISMATCH{RESET}'
     print(f' {disp_name} {ftype} {reg_str} {act_str} {status_str}')
 
 init_mismatches = []
@@ -3357,7 +3501,7 @@ if not init_mismatches and init_matches:
     val_str = "[BLAKE2B Validated]"
     reg_str = f'{val_str:<23}'
     act_str = f'{val_str:<23}'
-    status_str = f'{GREEN}✓ MATCH{RESET}'
+    status_str = f'{GREEN}MATCH{RESET}'
     print(f' {disp_name} {ftype} {reg_str} {act_str} {status_str}')
 elif init_mismatches:
     for i_name, reg_hash, actual_hash in init_mismatches:
@@ -3367,7 +3511,7 @@ elif init_mismatches:
         ftype = f'{"Initramfs":<11}'
         reg_str = f'{short_h(reg_hash):<23}'
         act_str = f'{short_h(actual_hash):<23}'
-        status_str = f'{RED}✗ MISMATCH{RESET}'
+        status_str = f'{RED}MISMATCH{RESET}'
         print(f' {disp_name} {ftype} {reg_str} {act_str} {status_str}')
     if init_matches:
         raw_name = f"Initramfs Suite ({len(init_matches)} images)"
@@ -3377,7 +3521,7 @@ elif init_mismatches:
         val_str = "[BLAKE2B Validated]"
         reg_str = f'{val_str:<23}'
         act_str = f'{val_str:<23}'
-        status_str = f'{GREEN}✓ MATCH{RESET}'
+        status_str = f'{GREEN}MATCH{RESET}'
         print(f' {disp_name} {ftype} {reg_str} {act_str} {status_str}')
 
 if splash_entry:
@@ -3395,24 +3539,24 @@ if splash_entry:
     ftype = f'{"Splash":<11}'
     reg_str = f'{short_h(reg_hash):<23}'
     act_str = f'{short_h(actual_hash):<23}'
-    status_str = f'{GREEN}✓ MATCH{RESET}' if is_match else f'{RED}✗ MISMATCH{RESET}'
+    status_str = f'{GREEN}MATCH{RESET}' if is_match else f'{RED}MISMATCH{RESET}'
     print(f' {disp_name} {ftype} {reg_str} {act_str} {status_str}')
 
 print(f'{BOLD}{CYAN}{bar}{RESET}')
 if all_ok and mismatches == 0 and total_checked > 0:
-    print(f' {GREEN}{BOLD}✓ PERFECT INTEGRITY:{RESET} All {total_checked} registered boot assets match their Limine BLAKE2B hashes 1:1.')
+    print(f' {GREEN}{BOLD}PERFECT INTEGRITY:{RESET} All {total_checked} registered boot assets match their Limine BLAKE2B hashes 1:1.')
     print(f' {DIM}Your bootloader security and kernel sealing are 100% synchronized and stable.{RESET}')
     print(f'{BOLD}{CYAN}{bar}{RESET}')
     print()
     sys.exit(0)
 elif mismatches > 0:
-    print(f' {RED}{BOLD}✗ INTEGRITY ALERT:{RESET} {mismatches} hash mismatch(es) detected between on-disk files and limine.conf!')
+    print(f' {RED}{BOLD}INTEGRITY ALERT:{RESET} {mismatches} hash mismatch(es) detected between on-disk files and limine.conf!')
     print(f' {YELLOW}Recommendation:{RESET} Run {BOLD}sudo slacky-update --sync-boot{RESET} to recalculate hashes and reseal.')
     print(f'{BOLD}{CYAN}{bar}{RESET}')
     print()
     sys.exit(1)
 else:
-    print(f' {YELLOW}{BOLD}⚠️ NOTICE:{RESET} Boot files found, but none are currently registered with hashes in limine.conf.')
+    print(f' {YELLOW}{BOLD}NOTICE:{RESET} Boot files found, but none are currently registered with hashes in limine.conf.')
     print(f' Run {BOLD}sudo slacky-update --sync-boot{RESET} to enable BLAKE2B boot sealing.')
     print(f'{BOLD}{CYAN}{bar}{RESET}')
     print()
@@ -3447,9 +3591,9 @@ manage_limine_interactive() {
             echo ""
             echo -e "  \033[1;33m1.\033[0m Install / Re-deploy Limine Bootloader (Coexistence Mode)"
             echo -e "  \033[1;33m2.\033[0m Regenerate limine.conf & Re-enroll BLAKE2B Checksums"
-            echo -e "  \033[1;33m3.\033[0m 🔍 Verify Kernel BLAKE2B Hashes vs Limine Registry"
-            echo -e "  \033[1;33m4.\033[0m ⚙️  Configure Kernel Boot Parameters (CMDLINE & Gaming Hub)"
-            echo -e "  \033[1;33m5.\033[0m 🌲 $(_ MENU_SNAPPER_HUB)"
+            echo -e "  \033[1;33m3.\033[0m Verify Kernel BLAKE2B Hashes vs Limine Registry"
+            echo -e "  \033[1;33m4.\033[0m Configure Kernel Boot Parameters (CMDLINE & Gaming Hub)"
+            echo -e "  \033[1;33m5.\033[0m $(_ MENU_SNAPPER_HUB)"
             echo -e "  \033[1;33m6.\033[0m 1-Click Self-Heal: Restore Limine from Backup"
             echo -e "  \033[1;33m7.\033[0m View / Export Field Guide (PDF / Email / Phone QR)"
             echo -e "  \033[1;33m8.\033[0m Return to Main Menu"
@@ -3492,7 +3636,7 @@ manage_limine_interactive() {
                 fi
                 echo ""
                 echo -e "${BOLD}${CYAN}========================================================================${RESET}"
-                echo -e "${BOLD}${GREEN}✓ LIMINE BOOT MATRIX & BLAKE2B INTEGRITY SEALED:${RESET}"
+                echo -e "${BOLD}${GREEN}LIMINE BOOT MATRIX & BLAKE2B INTEGRITY SEALED:${RESET}"
                 echo -e "  • ${BOLD}Registered Kernels :${RESET} ${k_count} kernels mapped (active + fallback entries)"
                 echo -e "  • ${BOLD}Initramfs Images   :${RESET} ${i_count} initramfs matched and hash-locked"
                 echo -e "  • ${BOLD}Bootloader Binary  :${RESET} Enrolled with BLAKE2B & signed with active MOK/sbctl"

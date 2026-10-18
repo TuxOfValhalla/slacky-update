@@ -11,7 +11,9 @@ What it provides:
   build_keyring(...)           bootstrap / refresh of a per-family keyring from its keyring package,
                                checked against PINNED trust anchors, swapped atomically
   check_db_monotonic(...)      refuse a repo DB whose newest BUILDDATE is older than the last accepted one
-  TrustResult.blocks(mode)     "log" (default, never blocks) vs "enforce"
+  TrustResult.blocks(mode)     "enforce" (default: an unverified package is refused) vs "log" (emergency override)
+  settle_stale(...)            6A-275: a package that fails only because the keys are too old gets ONE key refresh
+                               and ONE retry before it is refused
   `python3 gnomes_trust.py selftest`
 
 Trust model (documented simplification of pacman, see master plan s2.3):
@@ -46,9 +48,10 @@ from typing import Any, Dict, Iterator, List, Optional, Set, Tuple
 
 KEYS_ROOT = "/opt/underpants/keys"
 STATE_PATH_ROOT = "/var/cache/slacky-update/gnomes/trust_state.json"
-MODE_ENV = "SLACKY_GNOMES_TRUST"   # "log" (default) or "enforce"
+MODE_ENV = "SLACKY_GNOMES_TRUST"   # "enforce" (default, 6A-275) or "log" (emergency override: checks only logged)
 MODES = ("log", "enforce")
-STATUSES = ("good", "bad", "nokey", "unsigned", "error")
+DEFAULT_MODE = "enforce"
+STATUSES = ("good", "bad", "nokey", "unsigned", "error", "expired")
 MAX_SIG_BYTES = 16384              # a detached package signature is a few hundred bytes
 FUTURE_SKEW_SECONDS = 2 * 86400    # BUILDDATE further in the future than this is ignored (poisoning guard)
 GPG_TIMEOUT = 60
@@ -118,6 +121,9 @@ TRUST_PINS: Dict[str, Dict[str, Any]] = {
 MESSAGES = {
     "good": "The package {name} is signed by a trusted key.",
     "bad": "The package {name} failed its signature check and may have been changed by someone else.",
+    "expired": "The package {name} is signed with a security key that has run out, so it cannot be trusted until the keys are renewed; a full update (slacky-update) fetches the new keys.",
+    "nokey_refreshed": "The package {name} is signed with a key that is not in your security keys yet, even after a key refresh was tried; a full update (slacky-update) renews the keys, then try again.",
+    "sha_bad": "The downloaded file for {name} does not match the checksum in the package list, so it may be damaged or changed.",
     "nokey": "The package {name} is signed by a publisher we do not trust, so we cannot prove who made it.",
     "unsigned": "The package {name} has no signature, so we cannot prove who made it.",
     "error": "The signature check for {name} could not run, so its origin is unknown.",
@@ -125,12 +131,14 @@ MESSAGES = {
     "db_ok": "The package list from {name} is up to date.",
     "keyring_ok": "The {name} security keys were checked and updated.",
     "keyring_bad": "The {name} security keys did not match the keys we expect, so they were not updated.",
-    "keys_refused_chain": "The new security keys for {repo} could not be confirmed as genuine, so they were not used; packages from {repo} are held back until this is fixed.",
+    "keys_refused_chain": "The new security keys for {repo} could not be confirmed as genuine, so they were not used.",
     "keys_refused_older": "The security keys offered for {repo} are older than the ones you already have, so they were not used.",
     "keys_refused_checks": "The security keys for {repo} did not pass the safety checks, so nothing was changed; the details are in the Spider-Sense log.",
     "keys_no_tools": "The security keys for {repo} could not be checked because the checking program (gpg) is not installed, so nothing was changed.",
     "keys_expiring": "A security key for {repo} runs out on {date}; run a full update before then so the new keys can be installed.",
     "held_suffix": " It was held back.",
+    "held_family": " Packages from {repo} that need the new keys are held back until this is fixed.",
+    "log_override": "Signature checks are set to log only (SLACKY_GNOMES_TRUST=log), so packages that fail them are still installed.",
     "log_suffix": " This is only logged for now.",
 }
 
@@ -203,8 +211,12 @@ class TrustResult:
                 return Refusal(kind, self.detail).sentence(self.family or self.name)
             return _t("keyring_ok" if self.ok else "keyring_bad").format(name=self.name or "package")
         key = {"older": "db_older", "ok": "db_ok"}.get(self.status, self.status)
+        if self.status == "nokey" and self.extra.get("refreshed"):
+            key = "nokey_refreshed"
+        if self.extra.get("sha_mismatch"):
+            key = "sha_bad"
         text = _t(key if key in MESSAGES else "error").format(name=self.name or self.repo or "this package")
-        if not self.ok and key in ("bad", "nokey", "unsigned", "error"):
+        if not self.ok and key in ("bad", "nokey", "nokey_refreshed", "unsigned", "error", "expired", "sha_bad"):
             text += _t("held_suffix") if trust_mode(mode) == "enforce" else _t("log_suffix")
         return text
 
@@ -214,9 +226,10 @@ class TrustResult:
 
 
 def trust_mode(mode: Optional[str] = None) -> str:
-    """Effective mode: explicit argument, else $SLACKY_GNOMES_TRUST, else "log". Unknown values fall back to "log"."""
-    m = (mode or os.environ.get(MODE_ENV, "") or "log").strip().lower()
-    return m if m in MODES else "log"
+    """Effective mode: explicit argument, else $SLACKY_GNOMES_TRUST, else "enforce" (6A-275). Only the exact word
+    "log" switches the checks to logging (emergency override); anything unknown fails closed to "enforce"."""
+    m = (mode or os.environ.get(MODE_ENV, "") or DEFAULT_MODE).strip().lower()
+    return m if m in MODES else DEFAULT_MODE
 
 
 def repo_family(repo: str) -> Optional[str]:
@@ -539,8 +552,22 @@ def verify_detached(path: str, sig: bytes, keyring: str, revoked: Optional[Set[s
         return TrustResult("bad", key_fpr=issuer, detail="signature does not match the file", **base)
     if "REVKEYSIG" in st:
         return TrustResult("bad", key_fpr=issuer, detail="signing key is revoked", **base)
-    if "EXPKEYSIG" in st or "EXPSIG" in st:
-        return TrustResult("bad", key_fpr=issuer, detail="signing key or signature expired", **base)
+    if "EXPSIG" in st:
+        return TrustResult("bad", key_fpr=issuer, detail="the signature itself has expired", **base)
+    if "EXPKEYSIG" in st:
+        # 6A-275: the key has run out (a renewed keyring may extend it, so callers may refresh once). Whether it had
+        # already run out when the package was signed is recorded for the log; the verdict is the same either way.
+        ex: Dict[str, Any] = {}
+        try:
+            ex["key_expired_at"] = int(st["KEYEXPIRED"][0][0])
+            ex["sig_time"] = int(st["VALIDSIG"][0][2])
+            ex["expired_when_signed"] = ex["sig_time"] >= ex["key_expired_at"]
+        except (KeyError, IndexError, ValueError):
+            pass
+        vs = st.get("VALIDSIG", [])
+        if revoked and vs and ({vs[0][0].upper(), (vs[0][9] if len(vs[0]) > 9 else vs[0][0]).upper()} & revoked):
+            return TrustResult("bad", key_fpr=issuer, detail="signing key is on the revoked list", **base)
+        return TrustResult("expired", key_fpr=issuer, detail="signing key has expired", extra=ex, **base)
     if "ERRSIG" in st:
         rc = st["ERRSIG"][0][5] if len(st["ERRSIG"][0]) > 5 else ""
         if rc == "9" or "NO_PUBKEY" in st:
@@ -711,17 +738,20 @@ class Refusal(Exception):
         self.kind = kind
         self.detail = detail
 
-    def sentence(self, family: str) -> str:
-        """One plain sentence for the user (same text as the Rust app)."""
+    def sentence(self, family: str, mode: Optional[str] = None) -> str:
+        """One plain sentence for the user (6A-275: the "held back" part is only said in enforce mode, where it is true)."""
+        extra = ""
         if self.kind in (self.CHAIN_BROKEN, self.SIGNER_NOT_PINNED):
             key = "keys_refused_chain"
+            if trust_mode(mode) == "enforce":
+                extra = _t("held_family")
         elif self.kind == self.OLDER:
             key = "keys_refused_older"
         elif self.kind == self.NO_TOOLS:
             key = "keys_no_tools"
         else:
             key = "keys_refused_checks"
-        return _t(key).replace("{repo}", display_name(family))
+        return (_t(key) + extra).replace("{repo}", display_name(family))
 
     def status(self) -> str:
         return {self.NO_SIGNATURE: "unsigned", self.OLDER: "older", self.NO_TOOLS: "error",
@@ -919,7 +949,7 @@ def policy(family: str) -> Dict[str, Any]:
 
 # --- [ KEYRING STORE: SIGNATURE CHECKS AGAINST SEVERAL RINGS ] ---
 
-_SEVERITY = {"good": 4, "bad": 3, "nokey": 2, "unsigned": 1, "error": 1}
+_SEVERITY = {"good": 5, "bad": 4, "expired": 3, "nokey": 2, "unsigned": 1, "error": 1}
 
 
 def check_rings(rings: List[Dict[str, Any]], path: str, sig: bytes, name: str = "", repo: str = "",
@@ -1822,6 +1852,135 @@ def install_staged(stage_dir: str, owner_uid: int, families: Optional[List[str]]
         except Refusal as r:
             record_refusal(fam, r)
             out.append({"family": fam, "outcome": "refused", "kind": r.kind, "sentence": r.sentence(fam)})
+    return out
+
+
+# --- [ ENFORCE: CHECKSUM, KEY REFRESH AND ONE RETRY (6A-275) ] ---
+
+REFRESH_HOOK: Optional[Any] = None     # tests: callable(family) replaces the real key refresh
+_REFRESHED: Set[str] = set()           # families whose keys were already refreshed in this process (once is enough)
+REFRESHABLE = ("nokey", "expired")     # failures that a newer keyring can fix; bad, unsigned and error cannot be
+
+
+def check_sha256(path: str, expected: str, name: str = "", repo: str = "") -> Optional[TrustResult]:
+    """The repo database %SHA256SUM% against the file about to be unpacked. None when it matches or the entry has no
+    checksum (that case is only logged by the caller); a "bad" result when it does not (or the file cannot be read)."""
+    want = str(expected or "").strip().lower()
+    if not want:
+        return None
+    h = hashlib.sha256()
+    try:
+        with open(path, "rb") as f:
+            for chunk in iter(lambda: f.read(131072), b""):
+                h.update(chunk)
+    except OSError:
+        pass
+    else:
+        if h.hexdigest() == want:
+            return None
+    return TrustResult("bad", detail="the file does not match the checksum in the repository database",
+                       name=name or os.path.basename(path), repo=repo, family=repo_family(repo) or "",
+                       extra={"sha_mismatch": True})
+
+
+def default_stage_dir() -> Optional[str]:
+    """Where the key refresh stages a verified newer keyring (the sentinel's folder in the user's own cache); None for
+    root, which never reads a user cache."""
+    if os.geteuid() == 0:
+        return None
+    env = os.environ.get("SLACKY_MIRROR_CACHE_DIR")
+    base = os.path.join(env, "sentinel") if env else os.path.join(
+        os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache"), "slacky-update", "sentinel")
+    return os.path.join(base, "keyring_stage")
+
+
+def refresh_family_keys(family: str) -> bool:
+    """Ask the existing signed keyring refresh (slacky_sentinel.keys_check: downloads a listed newer keyring and stages
+    it after every rule passed) to run, at most once per family and process. True when it was run now."""
+    if family in _REFRESHED:
+        return False
+    _REFRESHED.add(family)
+    hook = REFRESH_HOOK
+    try:
+        if hook is not None:
+            hook(family)
+        else:
+            import importlib.util
+            mod = sys.modules.get("slacky_sentinel")
+            if mod is None:
+                path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "slacky_sentinel.py")
+                spec = importlib.util.spec_from_file_location("slacky_sentinel", path)
+                if not spec or not spec.loader:
+                    return False
+                mod = importlib.util.module_from_spec(spec)
+                sys.modules["slacky_sentinel"] = mod
+                spec.loader.exec_module(mod)
+            mod.keys_check()
+    except Exception as e:
+        flight_record("SUPPLY", "WARN", "trust.refresh_failed", f"{family} key refresh did not run", {"error": str(e)[:200]})
+        return True
+    flight_record("SUPPLY", "INFO", "trust.refresh", f"{family} keys refreshed before a retry", {"family": family})
+    return True
+
+
+def settle_stale(items: List[Tuple[TrustResult, Dict[str, Any]]], mode: Optional[str] = None,
+                 keys_root: str = KEYS_ROOT, shipped_dir: Optional[str] = None,
+                 stage_dir: Optional[str] = None) -> List[TrustResult]:
+    """Enforce mode only. Every result that failed because the keys are missing or too old ("nokey", "expired") gets ONE
+    key refresh per family and ONE retry, checked against the keyring staged by the refresh (all keyring rules re-run
+    on its raw bytes) as well as the keys in force. What still fails is marked extra["refreshed"] so the sentence says
+    so. Input: [(result, {"path", "sig", "repo", "name", "pgpsig"})]. Returns the final results in the same order."""
+    out = [r for r, _ in items]
+    if trust_mode(mode) != "enforce":
+        return out
+    stale = [i for i, (r, _) in enumerate(items) if r.status in REFRESHABLE and r.family and not r.ok]
+    if not stale:
+        return out
+    stage = stage_dir if stage_dir is not None else default_stage_dir()
+    for fam in sorted({items[i][0].family for i in stale}):
+        refresh_family_keys(fam)
+        idx = [i for i in stale if items[i][0].family == fam]
+        with tempfile.TemporaryDirectory(prefix="gnomes-retry-") as work:
+            os.chmod(work, 0o700)
+            extra_ring: Optional[Dict[str, Any]] = None
+            if stage:
+                try:
+                    pkg, sig = read_staged(stage, fam, os.geteuid())
+                    outcome, upd = verify_keyring_package(fam, pkg, sig, keys_root, None, shipped_dir)
+                    if outcome == "update" and upd is not None:
+                        rp = os.path.join(work, "staged.gpg")
+                        with open(rp, "wb") as f:
+                            f.write(upd.pubring)
+                        pol = policy(fam)
+                        extra_ring = {"path": rp, "revoked": set(upd.revoked),
+                                      "allowed": None if pol["min_certs"] > 0 else (set(pol["anchors"]) | set(upd.trusted))}
+                except (Refusal, OSError, ValueError):
+                    extra_ring = None
+            for i in idx:
+                old, inp = items[i]
+                rings, _why = reader_rings(fam, keys_root, shipped_dir)
+                if extra_ring is not None:
+                    rings = [extra_ring] + rings
+                sig_b = inp.get("sig")
+                if sig_b is None and inp.get("pgpsig"):
+                    sig_b = decode_pgpsig(inp["pgpsig"])
+                res = old
+                if sig_b and rings:
+                    try:
+                        res = check_rings(rings, inp["path"], sig_b, name=inp.get("name", ""), repo=inp.get("repo", ""),
+                                          family=fam)
+                    except Exception:
+                        res = old
+                if res.ok:
+                    _note_used_signer(fam, res)
+                    flight_record("SUPPLY", "INFO", "trust.retry_ok", f"{inp.get('name', '')} verified after a key refresh",
+                                  {"family": fam})
+                else:
+                    res.extra["refreshed"] = True
+                    flight_record("SUPPLY", "VETO", "trust.refused",
+                                  f"{inp.get('name', '')} refused: {res.status} after a key refresh",
+                                  {"family": fam, "status": res.status, "detail": res.detail})
+                out[i] = res
     return out
 
 

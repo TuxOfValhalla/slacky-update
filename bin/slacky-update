@@ -194,8 +194,36 @@ if sb.get("state") == "enabled":
     for w in sb.get("warnings", []):
         print(f"\033[1;31m• Secure Boot Warning: {w}\033[0m")
 
+# 6A-298 (N0/N1): "up to date" is only said when everything was really checked. A part that could not be checked is
+# named in one sentence; with no network at all there is one plain offline sentence instead.
+import time as _time
+_PART_NAMES = {"slackware": "Slackware", "slackpkgplus": "extra Slackware repositories", "flatpak": "Flatpak",
+               "sbo": "SlackBuilds", "cachyos_kernel": "CachyOS kernels", "cachyos_gaming": "gaming apps",
+               "gnomes": "Underpants apps", "nvidia": "NVIDIA driver"}
+_failed = [x for x in (data.get("check_failed") or []) if isinstance(x, str)]
+_offline = bool(data.get("check_offline", False))
+def _msg(key, default):
+    try:
+        v = _(key)
+    except Exception:
+        return default
+    return default if (not v or v == key) else v
+_last_ok = 0
+try:
+    _last_ok = int(data.get("last_ok_check_ts", 0) or 0)
+except Exception:
+    _last_ok = 0
+if _offline:
+    _txt = _msg("CHECK_OFFLINE", "No internet connection, so nothing was checked; the list shows the last known state")
+    if _last_ok > 0:
+        _txt += " (" + _time.strftime("%Y-%m-%d %H:%M", _time.localtime(_last_ok)) + ")"
+    print("\033[1;33m" + _txt + ".\033[0m")
+elif _failed:
+    _names = ", ".join(_PART_NAMES.get(x, x) for x in _failed)
+    print("\033[1;33m" + _msg("CHECK_COULD_NOT", "Could not check") + ": " + _names + ".\033[0m")
+
 total = len(data.get("slackware_updates", [])) + len(data.get("slackpkgplus_updates", [])) + len(data.get("slackware_new_packages", [])) + len(data.get("flatpak_updates", [])) + len(data.get("sbo_updates", [])) + len(data.get("cachyos_kernel_updates", [])) + len(data.get("cachyos_gaming_updates", [])) + len(data.get("gnomes_updates", [])) + len(data.get("nvidia_driver_updates", []))
-if total == 0 and not data.get("nvidia_gl_mismatch", False):
+if total == 0 and not data.get("nvidia_gl_mismatch", False) and not _failed and not _offline:
     print("\033[1;32m" + _("NO_PENDING_UPDATES") + "\033[0m")
 print("")
 PYSTATUS
@@ -328,6 +356,9 @@ prompt_reboot_or_close() {
 
     # 6A-267: ${force_flag} (boot chain ran) is accepted but no longer forces the advice; only a change of what runs now does
     local needs_reboot=0
+    # 6A-281: after a run where a step did not finish: no success line and exit code 20
+    local final_rc=0
+    [ "${SLACKY_RUN_PARTIAL:-0}" = "1" ] && final_rc=20
 
     local reboot_reasons=()
     if [ -f "${snap_before_file}" ] && [ -f "${snap_after_file}" ]; then
@@ -343,7 +374,7 @@ prompt_reboot_or_close() {
     if [ "${NON_INTERACTIVE:-0}" = "1" ] || [ ! -t 0 ]; then
         if [ "${needs_reboot}" -eq 1 ]; then
             echo ""
-            echo -e "${YELLOW}${BOLD}🔄 $(_ REBOOT_RECOMMENDED_TITLE)${RESET}"
+            echo -e "${YELLOW}${BOLD}$(_ REBOOT_RECOMMENDED_TITLE)${RESET}"
             if [ ${#reboot_reasons[@]} -gt 0 ]; then
                 echo -e "\033[1;36mDetected system components triggering this recommendation:\033[0m"
                 for r in "${reboot_reasons[@]}"; do
@@ -353,16 +384,20 @@ prompt_reboot_or_close() {
                 echo -e "$(_ REBOOT_RECOMMENDED_DESC)"
             fi
             log_info "Non-interactive mode: Reboot deferred. Please reboot when convenient."
-        else
+            # 6A-307: the final line is the last line of a successful run
+            if [ "${final_rc}" -eq 0 ]; then
+                echo -e "${GREEN}${BOLD}All updates are completed${RESET}"
+            fi
+        elif [ "${final_rc}" -eq 0 ]; then
             echo ""
-            echo -e "${GREEN}${BOLD}$(_ ALL_DONE_CLOSE_PROMPT)${RESET}"
+            echo -e "${GREEN}${BOLD}All updates are completed${RESET}"
         fi
-        exit 0
+        exit "${final_rc}"
     fi
 
     if [ "${needs_reboot}" -eq 1 ]; then
         echo ""
-        echo -e "${YELLOW}${BOLD}🔄 $(_ REBOOT_RECOMMENDED_TITLE)${RESET}"
+        echo -e "${YELLOW}${BOLD}$(_ REBOOT_RECOMMENDED_TITLE)${RESET}"
         if [ ${#reboot_reasons[@]} -gt 0 ]; then
             echo -e "\033[1;36mDetected system components triggering this recommendation:\033[0m"
             for r in "${reboot_reasons[@]}"; do
@@ -375,6 +410,7 @@ prompt_reboot_or_close() {
         read_update_prompt "$(_ PROMPT_REBOOT_NOW)" "N" reply_reboot
         if [[ "$reply_reboot" =~ ^([YyJjSsOo]|[Yy][Ee][Ss]|[Jj][Aa])$ ]]; then
             echo ""
+            [ "${final_rc}" -eq 0 ] && echo -e "${GREEN}${BOLD}All updates are completed${RESET}"
             echo -e "${CYAN}${BOLD}$(_ REBOOTING_IN_5S)${RESET}"
             for i in 5 4 3 2 1; do
                 echo -n -e "${YELLOW}${BOLD}${i}... ${RESET}"
@@ -383,14 +419,17 @@ prompt_reboot_or_close() {
             echo ""
             log_info "Initiating system reboot..."
             sudo "${REBOOT_CMD}"
-            exit 0
+            exit "${final_rc}"
         fi
+        [ "${final_rc}" -eq 0 ] && echo -e "${GREEN}${BOLD}All updates are completed${RESET}"
     else
-        echo ""
-        echo -e "${GREEN}${BOLD}$(_ ALL_DONE_CLOSE_PROMPT)${RESET}"
+        if [ "${final_rc}" -eq 0 ]; then
+            echo ""
+            echo -e "${GREEN}${BOLD}All updates are completed${RESET}"
+        fi
         read -r -p "$(_ PRESS_ENTER_TO_CLOSE)" || true
     fi
-    exit 0
+    exit "${final_rc}"
 }
 
 run_full_update() {
@@ -505,7 +544,7 @@ run_full_update() {
     local auto_approve_all=0
     if [ "${is_headless}" -eq 0 ] && [ "${active_suites}" -gt 1 ]; then
         echo ""
-        echo -e "${CYAN}${BOLD}⚡ Full System Upgrade Plan (${active_suites} suites with pending updates):${RESET}"
+        echo -e "${CYAN}${BOLD}Full System Update plan (${active_suites} suites with pending updates):${RESET}"
         [ "${total_slack_pkgs}" -gt 0 ] && echo -e "  • Slackware Core & Multilib : ${total_slack_pkgs} package(s)"
         [ "${cachy_count}" -gt 0 ] && echo -e "  • CachyOS Kernels           : ${cachy_count} flavor update(s)"
         { [ "${flatpak_count}" -gt 0 ] || [ "${nvidia_mismatch}" = "true" ]; } && echo -e "  • Flatpak Runtimes & Apps   : ${flatpak_count} update(s)"
@@ -518,7 +557,7 @@ run_full_update() {
         read_update_prompt "Apply all pending updates in a single automated pass? [Y/n/c(ustom)]: " "Y" reply_batch
         if [[ "${reply_batch}" =~ ^[YyJjSsOo]$ ]]; then
             auto_approve_all=1
-            echo -e "${GREEN}✓ Automated batch upgrade engaged.${RESET}\n"
+            echo -e "${GREEN}Automated batch upgrade engaged.${RESET}\n"
         else
             echo -e "${CYAN}:: Interactive step-by-step confirmation engaged.${RESET}\n"
         fi
@@ -537,7 +576,9 @@ run_full_update() {
         create_pre_update_snapshot || snap_rc=$?
         if [ "${snap_rc}" -eq 1 ]; then
             ss_hold_boot=1
-            log_warn "A safety snapshot could not be created, so kernel and graphics driver updates wait until next time; everything else updates now."
+            # 6A-300 (M7): the Slackware kernel packages wait as well (update_slackware_core reads this)
+            export SLACKY_HOLD_STOCK_KERNEL=1
+            log_warn "A safety snapshot could not be created, so kernel (including the Slackware kernel) and graphics driver updates wait until next time; everything else updates now."
         fi
     fi
     # 6A-88: a separate /boot that is not mounted read-write -> kernel, driver and boot menu wait (they would land in the
@@ -575,6 +616,10 @@ run_full_update() {
                 slack_done=1
             elif [ "${sc_ret}" -eq 2 ]; then
                 slack_done=2
+                ss_failed+=" slackware"      # 6A-281: waiting (mirror, space, /boot); not finished, so no success line
+            else
+                # 6A-281: return codes 1 and 3 (slackpkg missing, errors during the upgrade) are failures too
+                ss_failed+=" slackware"
             fi
         fi
     else
@@ -754,7 +799,7 @@ run_full_update() {
         export SS_KEEP_SET_MENU=1
 
         echo ""
-        log_info "⚡ Post-Upgrade Hardening & Bootloader Matrix:"
+        log_info "Post-Upgrade Hardening & Bootloader Matrix:"
 
         # 6A-100: a curated DKMS module that was only registered during the run is built once here, before the images
         if [ "${ss_dkms_pending}" -eq 1 ] && command -v build_dkms_modules_for_all_kernels >/dev/null 2>&1; then
@@ -967,7 +1012,7 @@ else:
             local clean_prompt
             clean_prompt="$(_ PROMPT_CLEAR_GNOMES_CACHE)"
             clean_prompt="${clean_prompt//\{0\}/${gnomes_cache_human}}"
-            read_update_prompt "🩲 ${clean_prompt} " "n" reply_clean
+            read_update_prompt "${clean_prompt} " "n" reply_clean
             if [[ "$reply_clean" =~ ^[YyJjSsOo]$ ]]; then
                 python3 "${APP_DIR}/gnomes_pacman.py" clean-cache --all
             fi
@@ -985,8 +1030,9 @@ else:
     if [ -n "${ss_failed}" ]; then
         # 6A-146: honest end; the unfinished parts stay listed and are offered again next time
         log_warn "Not everything was updated (${ss_failed# }); those updates stay listed and are tried again next time."
+        SLACKY_RUN_PARTIAL=1     # 6A-281: no success line, exit code 20
     else
-        echo -e "\n${GREEN}${BOLD}$(_ UPGRADE_COMPLETE_SYSTEM)${RESET}"
+        : # 6A-307: success is reported by the final line "All updates are completed" printed last (prompt_reboot_or_close)
     fi
 
     prompt_reboot_or_close "${snap_before_file}" "${snap_after_file}" "${kernel_or_driver_changed}"
@@ -1182,7 +1228,7 @@ interactive_menu() {
         if [ "${HAS_NVIDIA}" = "true" ]; then
             if [ "${use_tui}" = "false" ]; then
                 echo ""
-                echo -e "${BLUE}${BOLD}Slacky-Update (v${CURRENT_VERSION} '${RELEASE_CODENAME}') [Pre-Release / Early Access]${RESET}"
+                echo -e "${BLUE}${BOLD}Slacky-Update (v${CURRENT_VERSION} '${RELEASE_CODENAME}')${RESET}"
                 echo -e "${BLUE}Slackware Core Update & High-Performance Modernization Engine${RESET}"
                 check_slacky_update_self_update "${CURRENT_VERSION}"
                 echo ""
@@ -1554,7 +1600,7 @@ elif [ "${1:-}" = "--hash-check" ] || [ "${1:-}" = "--check-hashes" ] || [ "${1:
         check_kernel_boot_hashes
         exit $?
     else
-        echo -e "${RED}✗ Error:${RESET} Limine hash verification module not found."
+        echo -e "${RED}Error:${RESET} Limine hash verification module not found."
         exit 1
     fi
 elif [ "${1:-}" = "--clean" ] || [ "${1:-}" = "--purge-kernels" ]; then
@@ -1600,7 +1646,7 @@ elif [ "${1:-}" = "--version" ] || [ "${1:-}" = "-v" ]; then
     exit 0
 elif [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
     echo -e "${BLUE}${BOLD}Slacky-Update v${CURRENT_VERSION} '${RELEASE_CODENAME}'${RESET}"
-    echo -e "${YELLOW}Notice: Pre-Release software. All system changes and kernel/bootloader modifications are at your own risk.${RESET}"
+    echo -e "${YELLOW}Notice: This program changes system files, kernels and the boot menu. Make sure you have a backup.${RESET}"
     echo "Usage: slacky-update [OPTIONS]"
     echo ""
     echo "Options:"
@@ -1632,6 +1678,8 @@ elif [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
     echo "  -v, --version           Display version and release codename"
     echo "  -h, --help              Display this help menu"
     echo ""
+    echo "Exit codes: 0 done, 1 error, 20 finished but some updates are still waiting (they are tried again next time),"
+    echo "            30 startup menu not updated safely (do not restart), 31 no consent, 32 another update is running, 130 stopped by you"
     exit 0
 else
     interactive_menu

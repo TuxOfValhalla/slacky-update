@@ -35,7 +35,7 @@ try:
     usage = shutil.disk_usage(cache_path)
     free_mb = usage.free // (1024 * 1024)
     if free_mb < 500:
-        print(f"\033[1;33m⚠️ Low disk space warning: Only {free_mb} MB free on {cache_path}. Skipping pre-fetch to avoid filling disk.\033[0m", file=sys.stderr)
+        print(f"\033[1;33mLow disk space warning: Only {free_mb} MB free on {cache_path}. Skipping pre-fetch to avoid filling disk.\033[0m", file=sys.stderr)
         sys.exit(0)
 except Exception:
     pass
@@ -267,7 +267,7 @@ check_and_recommend_slackpkg_cacheupdate() {
 
     if [ -t 0 ] && [ "${NON_INTERACTIVE:-0}" != "1" ]; then
         echo ""
-        echo -e "\033[1;36m⚡ Performance Optimization Tip (slackpkg+):\033[0m"
+        echo -e "\033[1;36mPerformance Optimization Tip (slackpkg+):\033[0m"
         echo -e "   Enabling \033[1mCACHEUPDATE=on\033[0m in slackpkgplus.conf accelerates 'slackpkg update'"
         echo -e "   by using conditional HTTP caching (wget -N) so unchanged metadata isn't re-downloaded."
         local reply_cache="Y"
@@ -379,6 +379,63 @@ PYPRE
     return 0
 }
 
+# 6A-306 (M7 revised): when the safety snapshot failed, the Slackware kernel packages wait too (a stock kernel upgraded in
+# place without a way back is the riskiest step). slackpkg's own config is NOT edited: instead of upgrade-all/install-new
+# the run names the pending packages itself, minus kernel-generic/huge/modules/source. The names come from the lists the
+# check already stored in status.json. Test-only hooks (SLACKY_SLACKPKG_BLACKLIST, SLACKY_PRIV_CMD, SLACKY_PKG_LISTS) are
+# honoured only when SLACKY_SELFTEST=1.
+SLACKY_HOLD_BEGIN_MARK="# SLACKY-SNAPSHOT-HOLD-BEGIN"
+SLACKY_HOLD_END_MARK="# SLACKY-SNAPSHOT-HOLD-END"
+
+# One-time cleanup: 6A-300 wrote a marked block into /etc/slackpkg/blacklist for the length of a run. A cut-off run could
+# leave it there. Only that exact marked block (BEGIN line .. END line) is removed; nothing else in the file is touched.
+slacky_remove_old_kernel_hold_block() {
+    local bl="/etc/slackpkg/blacklist" priv="sudo"
+    if [ "${SLACKY_SELFTEST:-0}" = "1" ]; then
+        bl="${SLACKY_SLACKPKG_BLACKLIST:-${bl}}"; priv="${SLACKY_PRIV_CMD:-${priv}}"
+    fi
+    [ -f "${bl}" ] || return 0
+    grep -q "^${SLACKY_HOLD_BEGIN_MARK}" "${bl}" 2>/dev/null || return 0
+    if ! awk -v b="^${SLACKY_HOLD_BEGIN_MARK}" -v e="^${SLACKY_HOLD_END_MARK}" '$0 ~ b {sb=NR} $0 ~ e && sb {f=1} END {exit f?0:1}' "${bl}" 2>/dev/null; then
+        return 1
+    fi
+    ${priv} sed -i "/^${SLACKY_HOLD_BEGIN_MARK}/,/^${SLACKY_HOLD_END_MARK}/d" "${bl}" 2>/dev/null
+}
+
+# Prints package names (one per line) from a stored list kind ("slackware_updates" or "slackware_new_packages"), without
+# the kernel packages that must wait. Returns 1 when the stored lists cannot be read.
+slacky_pending_names_without_stock_kernel() {
+    local kind="$1" sf
+    sf=$(get_status_json_path 2>/dev/null || true)
+    [ "${SLACKY_SELFTEST:-0}" = "1" ] && [ -n "${SLACKY_STATUS_JSON:-}" ] && sf="${SLACKY_STATUS_JSON}"
+    [ -n "${sf}" ] && [ -r "${sf}" ] || return 1
+    python3 -I - "${sf}" "${kind}" <<'PYNAMES' 2>/dev/null
+import json, os, re, sys
+try:
+    d = json.load(open(sys.argv[1]))
+    items = d[sys.argv[2]]
+    assert isinstance(items, list)
+except Exception:
+    sys.exit(1)
+seen = set()
+for it in items:
+    if not isinstance(it, str):
+        continue
+    base = re.sub(r'\.(t[xgb]z|tlz)$', '', os.path.basename(it.strip()))
+    parts = base.split('-')
+    if len(parts) < 4:
+        continue
+    name = '-'.join(parts[:-3])
+    if not re.fullmatch(r'[A-Za-z0-9_+.\-]+', name):
+        continue
+    if name.startswith(('kernel-generic', 'kernel-huge', 'kernel-modules', 'kernel-source')):
+        continue
+    if name not in seen:
+        seen.add(name)
+        print(name)
+PYNAMES
+}
+
 update_slackware_core() {
     validate_privileges
 
@@ -397,6 +454,9 @@ update_slackware_core() {
     if command -v check_and_shield_mirror_freshness >/dev/null 2>&1; then
         check_and_shield_mirror_freshness
     fi
+
+    # 6A-306: remove the marked hold block an earlier build (6A-300) may have left in slackpkg's blacklist
+    slacky_remove_old_kernel_hold_block || log_warn "An old kernel hold in /etc/slackpkg/blacklist could not be removed; it keeps the Slackware kernel from changing until you remove the SLACKY-SNAPSHOT-HOLD lines."
 
     log_info "Synchronizing Slackware repository indexes..."
     if ! run_slackpkg -batch=on -default_answer=y update; then
@@ -434,8 +494,35 @@ update_slackware_core() {
     local sp_failed=0
     local sp_rc=0
 
+    # 6A-306 (M7): snapshot failed -> the Slackware kernel packages wait. No upgrade-all/install-new then: slackpkg gets
+    # the pending names explicitly, minus the kernel packages. Lists unreadable -> the Slackware step waits (fail closed).
+    local kernel_hold=0 hold_up="" hold_new=""
+    if [ "${SLACKY_HOLD_STOCK_KERNEL:-0}" = "1" ]; then
+        if hold_up=$(slacky_pending_names_without_stock_kernel slackware_updates) \
+           && hold_new=$(slacky_pending_names_without_stock_kernel slackware_new_packages); then
+            kernel_hold=1
+            log_warn "The Slackware kernel waits until next time because no safety snapshot could be made; the other Slackware packages update now."
+        else
+            log_warn "The Slackware update waits until next time because the list of pending packages could not be read; the other updates continue."
+            [ -n "${cfg_before}" ] && rm -f "${cfg_before}" 2>/dev/null || true
+            return 2
+        fi
+    fi
+
+    local -a hold_up_args=() hold_new_args=()
+    if [ "${kernel_hold}" -eq 1 ]; then
+        [ -n "${hold_up}" ] && mapfile -t hold_up_args <<< "${hold_up}"
+        [ -n "${hold_new}" ] && mapfile -t hold_new_args <<< "${hold_new}"
+    fi
+
     log_info "Installing newly added distribution packages (install-new)..."
-    run_slackpkg -batch=on -default_answer=y -postinst=off install-new || sp_rc=$?
+    if [ "${kernel_hold}" -eq 1 ]; then
+        if [ "${#hold_new_args[@]}" -gt 0 ]; then
+            run_slackpkg -batch=on -default_answer=y -postinst=off install "${hold_new_args[@]}" || sp_rc=$?
+        fi
+    else
+        run_slackpkg -batch=on -default_answer=y -postinst=off install-new || sp_rc=$?
+    fi
     case "${sp_rc}" in
         0|20|50) ;;
         *) log_warn "slackpkg install-new failed (exit ${sp_rc})."; sp_failed=1 ;;
@@ -451,7 +538,13 @@ update_slackware_core() {
         tools_before=$(get_slackpkg_tools_snapshot)
 
         sp_rc=0
-        run_slackpkg -batch=on -default_answer=y -postinst=off upgrade-all || sp_rc=$?
+        if [ "${kernel_hold}" -eq 1 ]; then
+            if [ "${#hold_up_args[@]}" -gt 0 ]; then
+                run_slackpkg -batch=on -default_answer=y -postinst=off upgrade "${hold_up_args[@]}" || sp_rc=$?
+            fi
+        else
+            run_slackpkg -batch=on -default_answer=y -postinst=off upgrade-all || sp_rc=$?
+        fi
         case "${sp_rc}" in
             0|20|50) ;;
             *) log_warn "slackpkg upgrade-all failed in pass ${current_pass} (exit ${sp_rc})."; sp_failed=1 ;;
@@ -475,7 +568,11 @@ update_slackware_core() {
                 run_slackpkg -batch=on -default_answer=y update || true
                 # 3. Re-check for any newly added distribution packages
                 log_info "Checking for newly added packages (install-new)..."
-                run_slackpkg -batch=on -default_answer=y -postinst=off install-new || true
+                if [ "${kernel_hold}" -eq 1 ]; then
+                    [ "${#hold_new_args[@]}" -gt 0 ] && { run_slackpkg -batch=on -default_answer=y -postinst=off install "${hold_new_args[@]}" || true; }
+                else
+                    run_slackpkg -batch=on -default_answer=y -postinst=off install-new || true
+                fi
                 # 4. Pre-fetch remaining packages for the next pass
                 parallel_prefetch_packages
                 continue
@@ -706,9 +803,14 @@ slacky_keys_first() {
     local sentinel trust stage out
     sentinel=$(slacky_find_helper slacky_sentinel.py) || return 0
     trust=$(slacky_find_helper gnomes_trust.py) || return 0
-    if [ "$(id -u)" -ne 0 ]; then
-        # user phase: stage a newer keyring when the synced database lists one (cheap when nothing is new)
-        python3 -I "${sentinel}" keys-check >/dev/null 2>&1 || true
+    # 6A-278: refresh in every mode. A user stages a verified newer keyring; root (sudo slacky-update) installs it at once as
+    # a new key generation. Works without gnomes, at most once a day, never asks for sudo (we are already running).
+    timeout 40 python3 -I "${sentinel}" refresh-keys >/dev/null 2>&1 || true
+    if [ "$(id -u)" -eq 0 ]; then
+        # the mirror list is refreshed weekly in the background
+        if python3 -I "${sentinel}" due >/dev/null 2>&1; then
+            nohup nice -n 19 ionice -c 3 python3 -I "${sentinel}" weekly </dev/null >/dev/null 2>&1 &
+        fi
     fi
     stage="${XDG_CACHE_HOME:-${HOME:-/nonexistent}/.cache}/slacky-update/sentinel/keyring_stage"
     if [ "$(id -u)" -eq 0 ] && [ -n "${SUDO_USER:-}" ]; then
@@ -732,7 +834,6 @@ slacky_keys_first() {
 # condition is shown at most once per 7 days. Silent when nothing is wrong; never asks for sudo.
 slacky_sentinel_alerts() {
     local sentinel line
-    [ "$(id -u)" -ne 0 ] || return 0
     sentinel=$(slacky_find_helper slacky_sentinel.py) || return 0
     while IFS= read -r line; do
         [ -n "${line}" ] && log_warn "${line}"
@@ -788,7 +889,7 @@ update_flatpaks() {
 
 rank_slackware_mirrors_interactive() {
     validate_privileges
-    log_info "⚡ Probing and benchmarking official worldwide Slackware & Ecosystem mirrors..."
+    log_info "Probing and benchmarking official worldwide Slackware & Ecosystem mirrors..."
 
     local rank_py=""
     for cand in "${SCRIPT_DIR:-}/rank_mirrors.py" \

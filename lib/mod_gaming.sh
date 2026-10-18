@@ -998,8 +998,8 @@ GITHUB_OBS_SCAN = {
     "obs-source-record": ("exeldro/obs-source-record", r"source-record-([0-9\.]+)-ubuntu.*\.tar\.gz"),
     "obs-advanced-scene-switcher": ("WarmUpTill/SceneSwitcher", r"advanced-scene-switcher-([0-9\.]+)-x86_64-ubuntu.*-linux-gnu\.deb"),
     "obs-multi-rtmp": ("sorayuki/obs-multi-rtmp", r"obs-multi-rtmp-([0-9\.]+)-x86_64-linux-gnu-ubuntu.*\.deb"),
-    "obs-composite-blur": ("FiniteSingularity/obs-composite-blur", r"obs-composite-blur-([0-9\.]+)-ubuntu.*\.zip"),
-    "obs-teleport": ("fzwoch/obs-teleport", r"obs-teleport\.zip"),
+    "obs-composite-blur": ("FiniteSingularity/obs-composite-blur", r"obs-composite-blur-([0-9\.]+)-(?:x86_64-linux-gnu\.deb|ubuntu.*\.zip)"),
+    "obs-teleport": ("fzwoch/obs-teleport", r"Teleport-([0-9\.]+)-Linux-x86_64\.zip"),
 }
 GH_SCAN_CAP = 4 << 20
 
@@ -1062,6 +1062,40 @@ def github_obs_version(pid):
                 return ver if re.fullmatch(r"[0-9]+(?:\.[0-9]+)*", ver or "") else None
     return None
 
+# 6A-296 (F3): the boot loader (limine) and sbctl are held at the installed MAJOR version: an update inside the same major is offered,
+# a higher major is never installed automatically (a new Limine may change its config or command line and leave a menu that does
+# not boot). Nothing is held when the package is not installed yet.
+MAJOR_HOLD_PIDS = ("limine", "sbctl")
+def version_major(v):
+    m = re.match(r'[0-9]+', clean_pkg_version('', str(v)))
+    return int(m.group(0)) if m else None
+
+def installed_major(pid):
+    best = None
+    try:
+        for e in os.listdir("/var/log/packages"):
+            m = re.match(re.escape(pid) + r'-([0-9][^-]*)-(?:x86_64|noarch|i[3-6]86)-[^-]+$', e)
+            if m:
+                mj = version_major(m.group(1))
+                if mj is not None and (best is None or mj > best):
+                    best = mj
+    except OSError:
+        pass
+    return best
+
+def major_held(pid, ver, inst_major=None):
+    if pid not in MAJOR_HOLD_PIDS:
+        return False
+    im = inst_major if inst_major is not None else installed_major(pid)
+    if im is None:
+        return False
+    vm = version_major(ver)
+    return vm is None or vm > im
+
+MAJOR_HELD = []
+# 6A-306 (V4): ids for which no upstream source answered at all (offline, mirror down): these are "could not check", never "up to date"
+LOOKED = set()
+
 def check_single_package(pid, cur_ver):
     if pid not in catalog:
         return None
@@ -1073,11 +1107,14 @@ def check_single_package(pid, cur_ver):
     # 6A-65: hyprmod is built from a locked, checksummed source set (HYPRMOD_LOCK in the build recipe); only a new lock in a
     # new slacky-update build offers an update, never a moving AUR/GitHub version
     if pid == "hyprmod":
+        LOOKED.add(pid)
         main_candidates.append("0.4.0")
     # 6A-192: the official Bambu Lab release (newest non-prerelease with the Ubuntu 24.04 AppImage); the AUR source package is not it
     elif pid == "bambu-studio":
         try:
             raw_json = fetch_url_cached("https://api.github.com/repos/bambulab/BambuStudio/releases", cache_dir, ttl=1800)
+            if raw_json:
+                LOOKED.add(pid)
             for rel in (json.loads(raw_json) if raw_json else []):
                 if rel.get("prerelease") or rel.get("draft"):
                     continue
@@ -1091,14 +1128,34 @@ def check_single_package(pid, cur_ver):
     # 6A-242: the six GitHub-deployed OBS plugins are checked against GitHub releases, not the Arch/CachyOS repos
     elif pid in GITHUB_OBS_SCAN:
         gv = github_obs_version(pid)
+        if gv or gh_releases_cached(GITHUB_OBS_SCAN[pid][0], cache_dir):
+            LOOKED.add(pid)
         if gv:
             cv = clean_pkg_version(pid, gv)
             if cv:
                 main_candidates.append(cv)
     # 6A-193: the four themes are built from pinned commit archives (same pins as the Rust engine); no moving AUR version
     elif pid in ("mactahoe-icons", "mactahoe-cursors", "whitesur-icons", "whitesur-cursors"):
+        LOOKED.add(pid)
         main_candidates.append({"mactahoe-icons": "2026.09.10.r0.839848b9", "mactahoe-cursors": "2026.09.10.r0.839848b9",
                                 "whitesur-icons": "2026.09.10", "whitesur-cursors": "2025.04.05.r0.e190baf6"}[pid])
+    # 6A-306 (V4): the same live sources the resolver uses (npm registry, GitHub release); no fixed version number anywhere
+    elif pid in ("claude-code", "gemini-cli", "dvcp-aac"):
+        try:
+            if pid == "dvcp-aac":
+                raw_json = fetch_url_cached("https://api.github.com/repos/GloriousEggroll/dvcp-aac/releases/latest", cache_dir, ttl=1800)
+                live_v = (json.loads(raw_json).get("tag_name") or "").lstrip("v") if raw_json else ""
+            else:
+                npm_name = "@anthropic-ai/claude-code-linux-x64" if pid == "claude-code" else "@google/gemini-cli"
+                raw_json = fetch_url_cached(f"https://registry.npmjs.org/{npm_name}/latest", cache_dir, ttl=1800)
+                live_v = (json.loads(raw_json).get("version") or "") if raw_json else ""
+            if live_v:
+                LOOKED.add(pid)
+                cv = clean_pkg_version(pid, live_v)
+                if cv:
+                    main_candidates.append(cv)
+        except Exception:
+            pass
     # Fast AUR RPC API check for AUR / GitHub packages
     elif any(r in ("aur", "aur-rpc", "github") for r in r_list):
         try:
@@ -1113,6 +1170,7 @@ def check_single_package(pid, cur_ver):
             aur_url = f"https://aur.archlinux.org/rpc/v5/info?arg[]={aur_id}"
             raw_json = fetch_url_cached(aur_url, cache_dir, ttl=1800)
             if raw_json:
+                LOOKED.add(pid)
                 data = json.loads(raw_json)
                 results = data.get("results", [])
                 if results:
@@ -1131,6 +1189,7 @@ def check_single_package(pid, cur_ver):
                 api_url = f"https://archlinux.org/packages/{repo_cand}/x86_64/{pid}/json/"
                 raw_json = fetch_url_cached(api_url, cache_dir, ttl=1800)
                 if raw_json:
+                    LOOKED.add(pid)
                     data = json.loads(raw_json)
                     v = data.get("pkgver")
                     if v:
@@ -1147,6 +1206,7 @@ def check_single_package(pid, cur_ver):
             html = repo_contents.get(base_u, "")
             if not html:
                 continue
+            LOOKED.add(pid)
             try:
                 matches = re.findall(pat, html)
             except Exception:
@@ -1157,6 +1217,13 @@ def check_single_package(pid, cur_ver):
                     cv = clean_pkg_version(pid, raw_pkg)
                     if cv:
                         main_candidates.append(cv)
+
+    if pid in MAJOR_HOLD_PIDS and main_candidates:
+        _im = version_major(cur_ver)
+        _kept = [c for c in main_candidates if not major_held(pid, c, _im)]
+        if len(_kept) != len(main_candidates):
+            MAJOR_HELD.append(f"{pid}|{name}|{cur_ver}|{max(main_candidates, key=parse_version_key)}")
+        main_candidates = _kept
 
     if not main_candidates:
         return None
@@ -1222,6 +1289,25 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=8) as ex:
 
 for u in sorted(updates):
     print(u)
+
+# 6A-296 (F3): versions held back for a new major are written for the update step, which tells the user in one sentence
+for _d in ("/var/cache/slacky-update", os.path.expanduser("~/.cache/slacky-update")):
+    _hp = os.path.join(_d, "major_hold.txt")
+    try:
+        if MAJOR_HELD and _d == cache_dir:
+            with open(_hp + ".tmp", "w") as _f:
+                _f.write("\n".join(sorted(set(MAJOR_HELD))) + "\n")
+            os.replace(_hp + ".tmp", _hp)
+        elif os.path.exists(_hp):
+            os.remove(_hp)
+    except Exception:
+        pass
+
+# 6A-306 (V4): the list above is complete for everything that could be checked. Exit 3 = some installed items could not be
+# checked (the caller keeps the list and records "could not check"); exit 1 = none of them could be checked.
+_unchecked = [x for x in detected_installed if x in catalog and x != "steam-devices" and x not in LOOKED]
+if _unchecked:
+    sys.exit(1 if len(_unchecked) == len([x for x in detected_installed if x in catalog and x != "steam-devices"]) else 3)
 PYFASTCHECK
 }
 
@@ -1242,7 +1328,7 @@ if pkg_id == "hyprmod":
     print("0.4.0 GITHUB_WHEELS NONE NONE")
     sys.exit(0)
 if pkg_id == "antigravity":
-    ver = "2.19.1"
+    ver = None   # 6A-306 (V4): no made-up fallback version; a failed lookup is "could not check"
     try:
         aur_url = "https://aur.archlinux.org/rpc/v5/info?arg[]=antigravity"
         req = urllib.request.Request(aur_url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64)"})
@@ -1250,14 +1336,14 @@ if pkg_id == "antigravity":
             data = json.loads(resp.read().decode("utf-8"))
             results = data.get("results", [])
             if results:
-                ver = results[0].get("Version", ver).split("-")[0]
+                ver = (results[0].get("Version") or "").split("-")[0] or ver
     except Exception:
         pass
-    print(f"{ver} AUR_ANTIGRAVITY NONE NONE")
+    print(f"{ver} AUR_ANTIGRAVITY NONE NONE" if ver else "NONE NONE NONE NONE")
     sys.exit(0)
 
 if pkg_id == "claude-desktop":
-    ver = "2.9939.4"
+    ver = None
     try:
         aur_url = "https://aur.archlinux.org/rpc/v5/info?arg[]=claude-desktop"
         req = urllib.request.Request(aur_url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64)"})
@@ -1265,49 +1351,49 @@ if pkg_id == "claude-desktop":
             data = json.loads(resp.read().decode("utf-8"))
             results = data.get("results", [])
             if results:
-                ver = results[0].get("Version", ver).split("-")[0]
+                ver = (results[0].get("Version") or "").split("-")[0] or ver
     except Exception:
         pass
-    print(f"{ver} DEB_CLAUDE_DESKTOP NONE NONE")
+    print(f"{ver} DEB_CLAUDE_DESKTOP NONE NONE" if ver else "NONE NONE NONE NONE")
     sys.exit(0)
 
 if pkg_id == "claude-code":
-    ver = "2.1.287"
+    ver = None
     try:
         npm_url = "https://registry.npmjs.org/@anthropic-ai/claude-code-linux-x64/latest"
         req = urllib.request.Request(npm_url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64)"})
         with urllib.request.urlopen(req, timeout=6) as resp:
             data = json.loads(resp.read().decode("utf-8"))
-            ver = data.get("version", ver)
+            ver = data.get("version") or ver
     except Exception:
         pass
-    print(f"{ver} NPM_CLAUDE_CODE NONE NONE")
+    print(f"{ver} NPM_CLAUDE_CODE NONE NONE" if ver else "NONE NONE NONE NONE")
     sys.exit(0)
 
 if pkg_id == "gemini-cli":
-    ver = "0.62.0"
+    ver = None
     try:
         npm_url = "https://registry.npmjs.org/@google/gemini-cli/latest"
         req = urllib.request.Request(npm_url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64)"})
         with urllib.request.urlopen(req, timeout=6) as resp:
             data = json.loads(resp.read().decode("utf-8"))
-            ver = data.get("version", ver)
+            ver = data.get("version") or ver
     except Exception:
         pass
-    print(f"{ver} NPM_GEMINI_CLI NONE NONE")
+    print(f"{ver} NPM_GEMINI_CLI NONE NONE" if ver else "NONE NONE NONE NONE")
     sys.exit(0)
 
 if pkg_id == "dvcp-aac":
-    ver = "1.0.0"
+    ver = None
     try:
         gh_url = "https://api.github.com/repos/GloriousEggroll/dvcp-aac/releases/latest"
         req = urllib.request.Request(gh_url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64)"})
         with urllib.request.urlopen(req, timeout=6) as resp:
             data = json.loads(resp.read().decode("utf-8"))
-            ver = data.get("tag_name", ver).lstrip("v")
+            ver = (data.get("tag_name") or "").lstrip("v") or ver
     except Exception:
         pass
-    print(f"{ver} GITHUB_DVCP_AAC NONE NONE")
+    print(f"{ver} GITHUB_DVCP_AAC NONE NONE" if ver else "NONE NONE NONE NONE")
     sys.exit(0)
 
 if pkg_id in ("mactahoe-icons", "mactahoe-cursors", "whitesur-icons", "whitesur-cursors"):
@@ -1713,6 +1799,36 @@ def parse_version_key(v_str):
             res.append((1, int(num) if num else 0, p))
     return res
 
+# 6A-296 (F3): the boot loader (limine) and sbctl are held at the installed MAJOR version: an update inside the same major is offered,
+# a higher major is never installed automatically (a new Limine may change its config or command line and leave a menu that does
+# not boot). Nothing is held when the package is not installed yet.
+MAJOR_HOLD_PIDS = ("limine", "sbctl")
+def version_major(v):
+    m = re.match(r'[0-9]+', clean_pkg_version('', str(v)))
+    return int(m.group(0)) if m else None
+
+def installed_major(pid):
+    best = None
+    try:
+        for e in os.listdir("/var/log/packages"):
+            m = re.match(re.escape(pid) + r'-([0-9][^-]*)-(?:x86_64|noarch|i[3-6]86)-[^-]+$', e)
+            if m:
+                mj = version_major(m.group(1))
+                if mj is not None and (best is None or mj > best):
+                    best = mj
+    except OSError:
+        pass
+    return best
+
+def major_held(pid, ver, inst_major=None):
+    if pid not in MAJOR_HOLD_PIDS:
+        return False
+    im = inst_major if inst_major is not None else installed_major(pid)
+    if im is None:
+        return False
+    vm = version_major(ver)
+    return vm is None or vm > im
+
 def fetch_match(pat, r_list, pid=''):
     if not pat:
         return None, None
@@ -1738,6 +1854,9 @@ def fetch_match(pat, r_list, pid=''):
             clean_v = clean_pkg_version(pid, ver)
             url = base_url.rstrip("/") + "/" + fn
             candidates.append((clean_v, url, ver))
+    if pid in MAJOR_HOLD_PIDS:
+        _im = installed_major(pid)
+        candidates = [c for c in candidates if not major_held(pid, c[0], _im)]
     if candidates:
         candidates.sort(key=lambda c: parse_version_key(c[0]))
         best = candidates[-1]
@@ -1818,13 +1937,13 @@ github_and_direct_pkgs = {
     "obs-composite-blur": {
         "type": "github_release",
         "repo": "FiniteSingularity/obs-composite-blur",
-        "asset_pattern": r"obs-composite-blur-([0-9\.]+)-ubuntu.*\.zip",
+        "asset_pattern": r"obs-composite-blur-([0-9\.]+)-(?:x86_64-linux-gnu\.deb|ubuntu.*\.zip)",
         "skip_prerelease": True
     },
     "obs-teleport": {
         "type": "github_release",
         "repo": "fzwoch/obs-teleport",
-        "asset_pattern": r"obs-teleport\.zip",
+        "asset_pattern": r"Teleport-([0-9\.]+)-Linux-x86_64\.zip",
         "skip_prerelease": True
     },
     "openghub": {
@@ -1956,6 +2075,8 @@ else:
             except Exception:
                 pass
 
+if main_ver and main_url and major_held(pkg_id, main_ver):
+    main_ver = main_url = None   # 6A-296 (F3): also the Arch fall-back must not bring a new major
 if not main_ver or not main_url:
     print("NONE NONE NONE NONE")
     sys.exit(0)
@@ -2401,6 +2522,36 @@ def parse_version_key(v_str):
             res.append((1, int(num) if num else 0, p))
     return res
 
+# 6A-296 (F3): the boot loader (limine) and sbctl are held at the installed MAJOR version: an update inside the same major is offered,
+# a higher major is never installed automatically (a new Limine may change its config or command line and leave a menu that does
+# not boot). Nothing is held when the package is not installed yet.
+MAJOR_HOLD_PIDS = ("limine", "sbctl")
+def version_major(v):
+    m = re.match(r'[0-9]+', clean_pkg_version('', str(v)))
+    return int(m.group(0)) if m else None
+
+def installed_major(pid):
+    best = None
+    try:
+        for e in os.listdir("/var/log/packages"):
+            m = re.match(re.escape(pid) + r'-([0-9][^-]*)-(?:x86_64|noarch|i[3-6]86)-[^-]+$', e)
+            if m:
+                mj = version_major(m.group(1))
+                if mj is not None and (best is None or mj > best):
+                    best = mj
+    except OSError:
+        pass
+    return best
+
+def major_held(pid, ver, inst_major=None):
+    if pid not in MAJOR_HOLD_PIDS:
+        return False
+    im = inst_major if inst_major is not None else installed_major(pid)
+    if im is None:
+        return False
+    vm = version_major(ver)
+    return vm is None or vm > im
+
 def fetch_match(pat, r_list, pid=''):
     if not pat:
         return None, None
@@ -2426,6 +2577,9 @@ def fetch_match(pat, r_list, pid=''):
             clean_v = clean_pkg_version(pid, ver)
             url = base_url.rstrip("/") + "/" + fn
             candidates.append((clean_v, url, ver))
+    if pid in MAJOR_HOLD_PIDS:
+        _im = installed_major(pid)
+        candidates = [c for c in candidates if not major_held(pid, c[0], _im)]
     if candidates:
         candidates.sort(key=lambda c: parse_version_key(c[0]))
         best = candidates[-1]
@@ -2506,13 +2660,13 @@ github_and_direct_pkgs = {
     "obs-composite-blur": {
         "type": "github_release",
         "repo": "FiniteSingularity/obs-composite-blur",
-        "asset_pattern": r"obs-composite-blur-([0-9\.]+)-ubuntu.*\.zip",
+        "asset_pattern": r"obs-composite-blur-([0-9\.]+)-(?:x86_64-linux-gnu\.deb|ubuntu.*\.zip)",
         "skip_prerelease": True
     },
     "obs-teleport": {
         "type": "github_release",
         "repo": "fzwoch/obs-teleport",
-        "asset_pattern": r"obs-teleport\.zip",
+        "asset_pattern": r"Teleport-([0-9\.]+)-Linux-x86_64\.zip",
         "skip_prerelease": True
     },
     "openghub": {
@@ -2536,7 +2690,7 @@ def resolve_single(pid):
     if pid == "steam-devices":
         return pid, "1.0.0.61", "BUNDLED", "NONE", "NONE"
     if pid == "antigravity":
-        ver = "2.19.1"
+        ver = None   # 6A-306 (V4): no made-up fallback version; a failed lookup is "could not check"
         try:
             aur_url = "https://aur.archlinux.org/rpc/v5/info?arg[]=antigravity"
             raw = fetch_url_cached(aur_url, cache_dir, ttl=1800)
@@ -2544,12 +2698,12 @@ def resolve_single(pid):
                 data = json.loads(raw)
                 results = data.get("results", [])
                 if results:
-                    ver = results[0].get("Version", ver).split("-")[0]
+                    ver = (results[0].get("Version") or "").split("-")[0] or ver
         except Exception:
             pass
-        return pid, ver, "AUR_ANTIGRAVITY", "NONE", "NONE"
+        return (pid, ver, "AUR_ANTIGRAVITY", "NONE", "NONE") if ver else (pid, "NONE", "NONE", "NONE", "NONE")
     if pid == "claude-desktop":
-        ver = "2.9939.4"
+        ver = None
         try:
             aur_url = "https://aur.archlinux.org/rpc/v5/info?arg[]=claude-desktop"
             raw = fetch_url_cached(aur_url, cache_dir, ttl=1800)
@@ -2557,47 +2711,47 @@ def resolve_single(pid):
                 data = json.loads(raw)
                 results = data.get("results", [])
                 if results:
-                    ver = results[0].get("Version", ver).split("-")[0]
+                    ver = (results[0].get("Version") or "").split("-")[0] or ver
         except Exception:
             pass
-        return pid, ver, "DEB_CLAUDE_DESKTOP", "NONE", "NONE"
+        return (pid, ver, "DEB_CLAUDE_DESKTOP", "NONE", "NONE") if ver else (pid, "NONE", "NONE", "NONE", "NONE")
     if pid == "claude-code":
-        ver = "2.1.287"
+        ver = None
         try:
             npm_url = "https://registry.npmjs.org/@anthropic-ai/claude-code-linux-x64/latest"
             raw = fetch_url_cached(npm_url, cache_dir, ttl=1800)
             if raw:
                 data = json.loads(raw)
-                ver = data.get("version", ver)
+                ver = data.get("version") or ver
         except Exception:
             pass
-        return pid, ver, "NPM_CLAUDE_CODE", "NONE", "NONE"
+        return (pid, ver, "NPM_CLAUDE_CODE", "NONE", "NONE") if ver else (pid, "NONE", "NONE", "NONE", "NONE")
     if pid == "gemini-cli":
-        ver = "0.62.0"
+        ver = None
         try:
             npm_url = "https://registry.npmjs.org/@google/gemini-cli/latest"
             raw = fetch_url_cached(npm_url, cache_dir, ttl=1800)
             if raw:
                 data = json.loads(raw)
-                ver = data.get("version", ver)
+                ver = data.get("version") or ver
         except Exception:
             pass
-        return pid, ver, "NPM_GEMINI_CLI", "NONE", "NONE"
+        return (pid, ver, "NPM_GEMINI_CLI", "NONE", "NONE") if ver else (pid, "NONE", "NONE", "NONE", "NONE")
     if pid == "dvcp-aac":
-        ver = "1.0.0"
+        ver = None
         try:
             gh_url = "https://api.github.com/repos/GloriousEggroll/dvcp-aac/releases/latest"
             raw = fetch_url_cached(gh_url, cache_dir, ttl=1800)
             if raw:
                 data = json.loads(raw)
-                ver = data.get("tag_name", ver).lstrip("v")
+                ver = (data.get("tag_name") or "").lstrip("v") or ver
         except Exception:
             pass
-        return pid, ver, "GITHUB_DVCP_AAC", "NONE", "NONE"
+        return (pid, ver, "GITHUB_DVCP_AAC", "NONE", "NONE") if ver else (pid, "NONE", "NONE", "NONE", "NONE")
     if pid == "spacenav":
         pat = r'href=[\'\"]?(?:\./)?(spacenavd-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
         ver, url = fetch_match(pat, ["arch-extra", "cachyos", "chaotic-aur"], pid)
-        ver = ver or "1.3"
+        ver = ver or "NONE"
         extra1 = ""
         e_ver1, e_url1 = fetch_match(r'href=[\'\"]?(?:\./)?(libspnav-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["arch-extra", "cachyos", "chaotic-aur"], "libspnav")
         if e_url1:
@@ -2610,7 +2764,7 @@ def resolve_single(pid):
     if pid == "gnome-disk-utility":
         pat = r'href=[\'\"]?(?:\./)?(gnome-disk-utility-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
         ver, url = fetch_match(pat, ["cachyos-extra-v4", "cachyos-extra-v3", "arch-extra", "cachyos"], pid)
-        ver = ver or "46.1"
+        ver = ver or "NONE"
         extra1 = ""
         e_ver1, e_url1 = fetch_match(r'href=[\'\"]?(?:\./)?(libhandy-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', ["cachyos-extra-v4", "cachyos-extra-v3", "arch-extra", "cachyos"], "libhandy")
         if e_url1:
@@ -2631,11 +2785,11 @@ def resolve_single(pid):
                     data = json.loads(raw)
                     results = data.get("results", [])
                     if results:
-                        ver = results[0].get("Version", "1.0.0")
+                        ver = results[0].get("Version") or "NONE"
                         url = f"{chaotic_fastest.rstrip('/')}/volt-gui-bin-{ver}-x86_64.pkg.tar.zst"
             except Exception:
                 pass
-        ver = ver or "1.0.0"
+        ver = ver or "NONE"
         return pid, ver, url or "NONE", "NONE", "NONE"
     if pid in ("mactahoe-icons", "mactahoe-cursors", "whitesur-icons", "whitesur-cursors"):
         # 6A-193: pinned versions (see THEME_PINS in the build recipe)
@@ -2758,6 +2912,8 @@ def resolve_single(pid):
                 except Exception:
                     pass
 
+    if main_ver and main_url and major_held(pid, main_ver):
+        main_ver = main_url = None   # 6A-296 (F3): also the Arch fall-back must not bring a new major
     if not main_ver or not main_url:
         return pid, "NONE", "NONE", "NONE", "NONE"
 
@@ -3547,6 +3703,48 @@ LSS_WRAPPER_EOF
 
 # 6A-125: one plain error and the build's staging is removed. Uses the caller's local staging_base (bash dynamic scope);
 # the caller returns 1 itself.
+# 6A-295 (V1): a file downloaded from a GitHub release must equal the SHA-256 ("digest") and size that the GitHub release API names for
+# that exact asset. Any doubt (no digest, other size, API unreachable, rate limit) refuses the file with one plain sentence.
+# $1 = downloaded file, $2 = the https://github.com/<owner>/<repo>/releases/download/<tag>/<name> address it came from.
+gaming_verify_github_asset() {
+    python3 -I - "$1" "$2" "$(_slacky_vendor_fetch_dir)" << 'PYVERIFY_GH_ASSET'
+import sys, os, re, json, urllib.parse, urllib.error
+path, url, lib_dir = sys.argv[1], sys.argv[2], sys.argv[3]
+if not lib_dir or not os.path.isfile(os.path.join(lib_dir, "slacky_vendor_fetch.py")):
+    raise SystemExit("slacky_vendor_fetch.py was not found, so the download cannot be verified")
+sys.path.insert(0, lib_dir)
+import slacky_vendor_fetch as vf
+m = re.fullmatch(r"https://github\.com/([A-Za-z0-9._-]{1,100}/[A-Za-z0-9._-]{1,100})/releases/download/([^/?#]+)/([^/?#]+)", url)
+if not m:
+    raise SystemExit("the download address is not a GitHub release address")
+repo, tag, name = m.group(1), urllib.parse.unquote(m.group(2)), urllib.parse.unquote(m.group(3))
+try:
+    body = vf._read_capped("https://api.github.com/repos/%s/releases/tags/%s" % (repo, urllib.parse.quote(tag, safe="")), 4 << 20, 20)
+    rel = json.loads(body)
+except urllib.error.HTTPError as exc:
+    if exc.code in (403, 429):
+        raise SystemExit("GitHub is limiting requests right now, please try again in an hour")
+    raise SystemExit("GitHub does not know this release")
+except Exception:
+    raise SystemExit("GitHub could not be asked for the checksum")
+want = None
+for a in (rel.get("assets") or []) if isinstance(rel, dict) else []:
+    if isinstance(a, dict) and a.get("name") == name and a.get("state") == "uploaded":
+        if urllib.parse.unquote(str(a.get("browser_download_url"))) == urllib.parse.unquote(url):
+            want = a
+        break
+if want is None:
+    raise SystemExit("GitHub does not list this file")
+dg, size = want.get("digest"), want.get("size")
+if not isinstance(dg, str) or not re.fullmatch(r"sha256:[0-9a-fA-F]{64}", dg):
+    raise SystemExit("GitHub publishes no checksum for this file")
+if not isinstance(size, int) or isinstance(size, bool) or os.path.getsize(path) != size:
+    raise SystemExit("the file has the wrong size")
+if vf.file_digest(path, "sha256") != dg[7:].lower():
+    raise SystemExit("the checksum does not match")
+PYVERIFY_GH_ASSET
+}
+
 gaming_build_failed() {
     log_error "${1}"
     if [ -n "${staging_base:-}" ] && [ -d "${staging_base}" ]; then
@@ -4226,33 +4424,46 @@ if not os.path.exists(gemini_symlink):
 PYBUILD_GEMINI_CLI
     elif [ "${main_url}" = "GITHUB_DVCP_AAC" ] || [ "${pkg_id}" = "dvcp-aac" ]; then
         log_info "Transmuting and building ${pkg_id} (${ver}) from GloriousEggroll dvcp-aac release..."
-        python3 - "${staging_root}" "${cache_dir}" "${ver}" << 'PYBUILD_DVCP_AAC' || { gaming_build_failed "${pkg_id} could not be built. Nothing was changed."; return 1; }  # 6A-125
-import sys, os, tempfile, subprocess, shutil, urllib.request, tarfile
+        python3 -I - "${staging_root}" "${cache_dir}" "${ver}" "$(_slacky_vendor_fetch_dir)" << 'PYBUILD_DVCP_AAC' || { gaming_build_failed "${pkg_id} could not be built. Nothing was changed."; return 1; }  # 6A-125
+import sys, os, tempfile, shutil, tarfile, re, json, urllib.parse, urllib.error
 
 staging_root = sys.argv[1]
 cache_dir = sys.argv[2]
 ver = sys.argv[3]
 
-tar_url = f"https://github.com/GloriousEggroll/dvcp-aac/releases/download/{ver}/aac-plugin-release.tar.gz"
+# 6A-295 (V1): the archive is accepted only when it equals the SHA-256 that the GitHub release API names for this exact asset
+# (slacky_vendor_fetch.download_verified keeps no unchecked file); it is unpacked with the safe extractor, never a bare extractall
+lib_dir = sys.argv[4] if len(sys.argv) > 4 else ""
+if not lib_dir or not os.path.isfile(os.path.join(lib_dir, "slacky_vendor_fetch.py")):
+    raise SystemExit("slacky_vendor_fetch.py was not found, so the download cannot be verified")
+sys.path.insert(0, lib_dir)
+import slacky_vendor_fetch as vf
+
+if not re.fullmatch(r"[0-9A-Za-z._-]{1,40}", ver):
+    raise SystemExit("the dvcp-aac version is not acceptable")
+asset = "aac-plugin-release.tar.gz"
+tar_url = f"https://github.com/GloriousEggroll/dvcp-aac/releases/download/{ver}/{asset}"
 local_tar = os.path.join(cache_dir, f"dvcp-aac-{ver}.tar.gz")
 
-if not os.path.exists(local_tar) or os.path.getsize(local_tar) < 100000:
-    print(f"Downloading GloriousEggroll dvcp-aac {ver} from {tar_url}...")
-    download_ok = False
-    try:
-        subprocess.run(["curl", "-#", "-fSL", "-A", "Mozilla/5.0 (X11; Linux x86_64)", "-o", local_tar, tar_url], check=True)
-        if os.path.exists(local_tar) and os.path.getsize(local_tar) > 100000:
-            download_ok = True
-    except Exception:
-        pass
-
-    if not download_ok:
-        req = urllib.request.Request(tar_url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"})
-        with urllib.request.urlopen(req, timeout=120) as resp, open(local_tar, "wb") as f:
-            shutil.copyfileobj(resp, f)
-
-if not os.path.exists(local_tar) or os.path.getsize(local_tar) < 100000:
-    raise RuntimeError(f"Failed to download valid dvcp-aac archive from {tar_url}")
+try:
+    rel = json.loads(vf._read_capped("https://api.github.com/repos/GloriousEggroll/dvcp-aac/releases/tags/" + urllib.parse.quote(ver, safe=""), 4 << 20, 20))
+except urllib.error.HTTPError as exc:
+    raise SystemExit("GitHub is limiting requests right now, please try again in an hour" if exc.code in (403, 429) else "GitHub does not know this release")
+except Exception:
+    raise SystemExit("GitHub could not be asked for the checksum")
+want = None
+for a in (rel.get("assets") or []) if isinstance(rel, dict) else []:
+    if isinstance(a, dict) and a.get("name") == asset and a.get("state") == "uploaded" and a.get("browser_download_url") == tar_url:
+        want = a
+        break
+dg = want.get("digest") if want else None
+if not isinstance(dg, str) or not re.fullmatch(r"sha256:[0-9a-fA-F]{64}", dg):
+    raise SystemExit("GitHub publishes no checksum for the dvcp-aac archive")
+print(f"Downloading GloriousEggroll dvcp-aac {ver} from {tar_url}...")
+try:
+    vf.download_verified(tar_url, local_tar, "sha256", dg[7:], 64 << 20)
+except vf.VendorError as exc:
+    raise SystemExit("The dvcp-aac download could not be verified (%s)" % exc)
 
 print(f"Extracting {local_tar} into DaVinci Resolve IOPlugins directory...")
 plugins_dest = os.path.join(staging_root, "opt/resolve/IOPlugins")
@@ -4260,7 +4471,10 @@ os.makedirs(plugins_dest, exist_ok=True)
 
 with tempfile.TemporaryDirectory() as tmpdir:
     with tarfile.open(local_tar, "r:gz") as tf:
-        tf.extractall(tmpdir)
+        try:
+            vf.extract_safe(tf, tmpdir)
+        except vf.VendorError as exc:
+            raise SystemExit("The dvcp-aac archive is not safe (%s)" % exc)
     
     # Locate .bundle directories
     for root, dirs, files in os.walk(tmpdir):
@@ -4284,7 +4498,7 @@ PYBUILD_DVCP_AAC
         local main_file="${cache_dir}/$(basename "${main_url}")"
         local dl_items=()
         if [ ! -f "${main_file}" ] || [ ! -s "${main_file}" ]; then
-            if [[ "${main_url}" =~ (cachyos\.org|pkgbuild\.com|archlinux\.org|chaotic\.cx) ]] && [[ "${main_url}" =~ \.pkg\.tar\.zst$ ]]; then
+            if slacky_signed_repo_url "${main_url}"; then
                 dl_items+=("${main_url}|${main_file}|${main_url}.sig|${main_file}.sig")
             else
                 dl_items+=("${main_url}|${main_file}")
@@ -4294,7 +4508,7 @@ PYBUILD_DVCP_AAC
         if [ "${lib32_url}" != "NONE" ] && [ -n "${lib32_url}" ]; then
             local lib32_file="${cache_dir}/$(basename "${lib32_url}")"
             if [ ! -f "${lib32_file}" ] || [ ! -s "${lib32_file}" ]; then
-                if [[ "${lib32_url}" =~ (cachyos\.org|pkgbuild\.com|archlinux\.org|chaotic\.cx) ]] && [[ "${lib32_url}" =~ \.pkg\.tar\.zst$ ]]; then
+                if slacky_signed_repo_url "${lib32_url}"; then
                     dl_items+=("${lib32_url}|${lib32_file}|${lib32_url}.sig|${lib32_file}.sig")
                 else
                     dl_items+=("${lib32_url}|${lib32_file}")
@@ -4308,7 +4522,7 @@ PYBUILD_DVCP_AAC
                 [ -n "${single_extra_url}" ] || continue
                 local extra_file="${cache_dir}/$(basename "${single_extra_url}")"
                 if [ ! -f "${extra_file}" ] || [ ! -s "${extra_file}" ]; then
-                    if [[ "${single_extra_url}" =~ (cachyos\.org|pkgbuild\.com|archlinux\.org|chaotic\.cx) ]] && [[ "${single_extra_url}" =~ \.pkg\.tar\.zst$ ]]; then
+                    if slacky_signed_repo_url "${single_extra_url}"; then
                         dl_items+=("${single_extra_url}|${extra_file}|${single_extra_url}.sig|${extra_file}.sig")
                     else
                         dl_items+=("${single_extra_url}|${extra_file}")
@@ -4339,15 +4553,22 @@ try:
 except vf.VendorError as exc:
     raise SystemExit("The Bambu Studio download could not be verified (%s)" % exc)
 PYVERIFY_BAMBU
+        elif [[ "${main_url}" =~ ^https://github\.com/[^/]+/[^/]+/releases/download/ ]]; then
+            # 6A-295 (V1): OBS plugins and OpenGHub come from GitHub releases; the file must match the checksum the release API names
+            if ! gaming_verify_github_asset "${main_file}" "${main_url}"; then
+                rm -f "${main_file}" 2>/dev/null || true
+                gaming_build_failed "The download for ${pkg_id} could not be verified. Nothing was changed."
+                return 1
+            fi
         fi
 
         if [ -f "${main_file}.sig" ]; then
-            if ! verify_cachyos_gpg_signature "${main_file}" "${main_file}.sig"; then
+            if ! verify_cachyos_gpg_signature "${main_file}" "${main_file}.sig" "${main_url}"; then
                 log_error "GPG signature verification failed for ${pkg_id}! Aborting transmutation to protect system integrity."
                 rm -rf "${staging_base}"
                 return 1
             fi
-        elif [[ "${main_url}" =~ (cachyos\.org|pkgbuild\.com|archlinux\.org|chaotic\.cx) ]] && [[ "${main_url}" =~ \.pkg\.tar\.zst$ ]]; then
+        elif slacky_signed_repo_url "${main_url}"; then
             log_error "Missing required GPG signature for official upstream package ${pkg_id}!"
             rm -rf "${staging_base}"
             return 1
@@ -4387,7 +4608,8 @@ except vf.VendorError as exc:
     raise SystemExit("The AppImage could not be unpacked (%s)" % exc)
 PYUNPACK_APPIMAGE
         elif [[ "${main_file}" =~ \.zip$ ]] || [[ "${main_url}" =~ download\?file= ]]; then
-            if unzip -q -o "${main_file}" -d "${tmp_extract}/main" 2>/dev/null; then
+            # 6A-295 (V1): a zip with an absolute or ".." member name is refused before anything is unpacked
+            if ! { unzip -Z1 "${main_file}" 2>/dev/null | grep -qE '^/|(^|/)\.\.(/|$)'; } && unzip -q -o "${main_file}" -d "${tmp_extract}/main" 2>/dev/null; then
                 find "${tmp_extract}/main" -type f \( -name "*.tar.gz" -o -name "*.tar.xz" -o -name "*.tgz" \) | while read -r inner_tar; do
                     tar -xf "${inner_tar}" -C "${tmp_extract}/main" 2>/dev/null || exit 1
                     rm -f "${inner_tar}" 2>/dev/null || true
@@ -4408,7 +4630,7 @@ PYUNPACK_APPIMAGE
     if [ "${lib32_url}" != "NONE" ] && [ -n "${lib32_url}" ]; then
         local lib32_file="${cache_dir}/$(basename "${lib32_url}")"
         if [ -f "${lib32_file}" ]; then
-            if ! verify_cachyos_gpg_signature "${lib32_file}" "${lib32_file}.sig"; then
+            if ! verify_cachyos_gpg_signature "${lib32_file}" "${lib32_file}.sig" "${lib32_url}"; then
                 log_error "GPG signature verification failed for 32-bit ${pkg_id}! Aborting."
                 rm -rf "${staging_base}"
                 return 1
@@ -4432,11 +4654,11 @@ PYUNPACK_APPIMAGE
                 # 6A-125: a part that fails its signature check (or lacks one from a signed repo) stops the build;
                 # skipping it used to install an incomplete app and report success
                 if [ -f "${extra_file}.sig" ]; then
-                    if ! verify_cachyos_gpg_signature "${extra_file}" "${extra_file}.sig"; then
+                    if ! verify_cachyos_gpg_signature "${extra_file}" "${extra_file}.sig" "${single_extra_url}"; then
                         gaming_build_failed "A part of ${pkg_id} failed its signature check. Nothing was changed."
                         return 1
                     fi
-                elif [[ "${single_extra_url}" =~ (cachyos\.org|pkgbuild\.com|archlinux\.org|chaotic\.cx) ]] && [[ "${single_extra_url}" =~ \.pkg\.tar\.zst$ ]]; then
+                elif slacky_signed_repo_url "${single_extra_url}"; then
                     gaming_build_failed "A part of ${pkg_id} has no signature to check. Nothing was changed."
                     return 1
                 fi
@@ -7565,6 +7787,19 @@ DKMS_DOUNINST_EOF
             old_foreign_pkg=$(ls -1d /var/log/packages/antigravity-[0-9]* 2>/dev/null | grep -v 'underpants-' | head -n1 || true)
         fi
 
+        # 6A-240: the boot loader and sbctl rewrite startup files; the safety snapshot is taken BEFORE the package is replaced, and
+        # without it the package stays as it is (inside a full update the snapshot already exists)
+        if { [ "${pkg_id}" = "limine" ] || [ "${pkg_id}" = "sbctl" ]; } && [ "${DEFER_BOOT_SYNC:-0}" != "1" ] \
+            && [ -z "${SLACKY_SNAP_PRE:-}" ] && command -v create_pre_update_snapshot >/dev/null 2>&1 \
+            && command -v is_limine_installed >/dev/null 2>&1 && [ "$(is_limine_installed)" = "true" ]; then
+            local _pre_snap_rc=0
+            create_pre_update_snapshot || _pre_snap_rc=$?
+            if [ "${_pre_snap_rc}" -eq 1 ]; then
+                gaming_build_failed "A safety snapshot could not be made, so ${pkg_name} was not updated. Nothing was changed."
+                return 1
+            fi
+        fi
+
         if [ -n "${old_foreign_pkg}" ]; then
             local old_bname
             old_bname=$(basename "${old_foreign_pkg}")
@@ -7930,9 +8165,7 @@ for uhome in target_homes:
                     ss_order_menu
                 else
                     log_info "[*] Limine bootloader package updated: syncing EFI payload, configuration & BLAKE2B enrollment..."
-                    backup_limine_self_heal 2>/dev/null || true
-                    generate_limine_configuration 2>/dev/null || true
-                    enroll_and_sign_limine 2>/dev/null || true
+                    limine_standalone_boot_sync "boot loader" full || true   # 6A-240
                 fi
             fi
         elif [ "${pkg_id}" = "sbctl" ]; then
@@ -7943,7 +8176,7 @@ for uhome in target_homes:
                 else
                     # 6A-101: sign a staged copy and swap it in (was an in-place re-sign of the live boot loader)
                     log_info "[*] sbctl updated: re-signing Limine EFI payload..."
-                    enroll_and_sign_limine 2>/dev/null || true
+                    limine_standalone_boot_sync "Secure Boot signature" || true   # 6A-240
                 fi
             fi
         elif [ "${pkg_id}" = "hyprland-noctalia" ] || [ "${pkg_id}" = "hyprland-core" ]; then
@@ -8470,7 +8703,7 @@ deploy_gaming_packages_batch() {
 
         if [[ "${main_url}" =~ ^https?:// ]]; then
             local mf="${batch_cache}/$(basename "${main_url}")"
-            if [[ "${main_url}" =~ (cachyos\.org|pkgbuild\.com|archlinux\.org|chaotic\.cx) ]] && [[ "${main_url}" =~ \.pkg\.tar\.zst$ ]]; then
+            if slacky_signed_repo_url "${main_url}"; then
                 dl_items+=("${main_url}|${mf}|${main_url}.sig|${mf}.sig")
             else
                 dl_items+=("${main_url}|${mf}")
@@ -8479,7 +8712,7 @@ deploy_gaming_packages_batch() {
 
         if [ "${lib32_url}" != "NONE" ] && [ -n "${lib32_url}" ] && [[ "${lib32_url}" =~ ^https?:// ]]; then
             local lf="${batch_cache}/$(basename "${lib32_url}")"
-            if [[ "${lib32_url}" =~ (cachyos\.org|pkgbuild\.com|archlinux\.org|chaotic\.cx) ]] && [[ "${lib32_url}" =~ \.pkg\.tar\.zst$ ]]; then
+            if slacky_signed_repo_url "${lib32_url}"; then
                 dl_items+=("${lib32_url}|${lf}|${lib32_url}.sig|${lf}.sig")
             else
                 dl_items+=("${lib32_url}|${lf}")
@@ -8492,7 +8725,7 @@ deploy_gaming_packages_batch() {
                 [ -n "${single_extra_url}" ] || continue
                 if [[ "${single_extra_url}" =~ ^https?:// ]]; then
                     local ef="${batch_cache}/$(basename "${single_extra_url}")"
-                    if [[ "${single_extra_url}" =~ (cachyos\.org|pkgbuild\.com|archlinux\.org|chaotic\.cx) ]] && [[ "${single_extra_url}" =~ \.pkg\.tar\.zst$ ]]; then
+                    if slacky_signed_repo_url "${single_extra_url}"; then
                         dl_items+=("${single_extra_url}|${ef}|${single_extra_url}.sig|${ef}.sig")
                     else
                         dl_items+=("${single_extra_url}|${ef}")
@@ -8594,25 +8827,8 @@ uninstall_cachyos_gaming_pkg() {
             pkill -x sunshine 2>/dev/null || true
         fi
 
-        # Safely remove multi-line rc.local / rc.local_shutdown persistence blocks without leaving orphaned 'fi' tokens
-        for rc_file in /etc/rc.d/rc.local /etc/rc.d/rc.local_shutdown; do
-            [ -f "${rc_file}" ] || continue
-            python3 -c "
-import sys, re
-path = sys.argv[1]
-target = sys.argv[2]
-try:
-    with open(path, 'r', encoding='utf-8') as f:
-        c = f.read()
-    # Regex removes comment + if ... fi block atomically
-    c = re.sub(rf'(?m)^#[^\n]*\nif\s+\[\s+-[xf]\s+/etc/rc\.d/{re.escape(target)}\s+\];\s+then\n\s+/etc/rc\.d/{re.escape(target)}\s+(?:start|stop)[^\n]*\nfi\n?', '', c)
-    with open(path, 'w', encoding='utf-8') as f:
-        f.write(c)
-except Exception:
-    pass
-" "${rc_file}" "rc.${pkg_id}" 2>/dev/null || true
-        done
-
+        # 6A-289 (M10): rc.local and rc.local_shutdown are not edited from here. removepkg runs the package's douninst.sh,
+        # which removes exactly this package's own marked block (su_rc_remove) and leaves every other block alone.
         sudo "${PKG_REMOVE_CMD}" "${bname}"
         found=1
     done
@@ -8715,6 +8931,18 @@ for line in (best or {}).get('cachyos_gaming_updates_raw', []):
             outdated_pids+=("${pid}")
         done <<< "${fast_results}"
     fi
+
+    # 6A-296 (F3): a new major version of the boot loader or sbctl is never installed on its own; say so in one sentence
+    local _hold_f _hold_pid _hold_name
+    for _hold_f in /var/cache/slacky-update/major_hold.txt "${HOME:-/nonexistent}/.cache/slacky-update/major_hold.txt"; do
+        [ -f "${_hold_f}" ] || continue
+        while IFS='|' read -r _hold_pid _hold_name _; do
+            case "${_hold_pid}" in
+                limine) log_info "Boot loader: waiting: a new major version of the boot loader needs a manual check." ;;
+                sbctl) log_info "Secure Boot tool: waiting: a new major version of the Secure Boot tool needs a manual check." ;;
+            esac
+        done < "${_hold_f}"
+    done
 
     if [ ${#outdated_pids[@]} -gt 0 ]; then
         log_info "Deploying unified batch upgrade for ${#outdated_pids[@]} packages..."

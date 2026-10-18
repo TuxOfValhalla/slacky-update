@@ -85,8 +85,49 @@ touch "${TMP_DIR}/flatpak_status"
 touch "${TMP_DIR}/sbo_status"
 touch "${TMP_DIR}/cachy_status"
 touch "${TMP_DIR}/gnomes_status"
+touch "${TMP_DIR}/nvidia_status"
+# 6A-298 (N0/F1): suites whose answer is only partly known ("cachyos_kernel", "cachyos_gaming") are listed here, one id
+# per line; a suite whose status file is not SUCCESS/NA is "could not check" as well (see the status writer below).
+touch "${TMP_DIR}/check_failed_parts"
+
+# Paths below are only overridden by the self-tests (6A-306: honoured only with SLACKY_SELFTEST=1; in normal use the
+# environment cannot change them).
+if [ "${SLACKY_SELFTEST:-0}" = "1" ]; then
+    SLACKY_SLACKPKG_MIRRORS="${SLACKY_SLACKPKG_MIRRORS:-/etc/slackpkg/mirrors}"
+    SLACKY_LOCAL_CHANGELOG="${SLACKY_LOCAL_CHANGELOG:-/var/lib/slackpkg/ChangeLog.txt}"
+else
+    SLACKY_SLACKPKG_MIRRORS="/etc/slackpkg/mirrors"
+    SLACKY_LOCAL_CHANGELOG="/var/lib/slackpkg/ChangeLog.txt"
+    unset SLACKY_PROBE_URLS SLACKY_CHECK_SKIP_BACKGROUND
+fi
+
+# 6A-298 (N1): one reachability probe up front. Any HTTP answer counts as "online" (even a 404); only "cannot resolve",
+# "cannot connect" and "timed out" count as offline. Offline: no network phase runs and the old lists are kept.
+slacky_probe_network() {
+    local urls=() u rc
+    if [ -f "${SLACKY_SLACKPKG_MIRRORS}" ]; then
+        while IFS= read -r u; do [ -n "${u}" ] && urls+=("${u}"); done < <(grep -E '^[[:space:]]*(https?)://' "${SLACKY_SLACKPKG_MIRRORS}" 2>/dev/null | sed -e 's/^[[:space:]]*//' | head -n 2 || true)
+    fi
+    urls+=("https://github.com")
+    [ -n "${SLACKY_PROBE_URLS:-}" ] && read -r -a urls <<< "${SLACKY_PROBE_URLS}"   # self-tests only
+    for u in "${urls[@]}"; do
+        rc=0
+        curl -s -I -m 5 -o /dev/null "${u}" 2>/dev/null || rc=$?
+        case "${rc}" in
+            5|6|7|28) ;;
+            *) return 0 ;;
+        esac
+    done
+    return 1
+}
+SLACKY_OFFLINE=0
+if ! slacky_probe_network; then
+    SLACKY_OFFLINE=1
+fi
+echo "${SLACKY_OFFLINE}" > "${TMP_DIR}/offline"
 # --- [ 0. OPPORTUNISTIC LOW-PRIORITY WEEKLY MAINTENANCE (6d 22h) ] ---
 (
+    [ "${SLACKY_CHECK_SKIP_BACKGROUND:-0}" = "1" ] && exit 0   # self-tests only
     RANK_SCRIPT=""
     for cand in "${SCRIPT_DIR:-}/rank_mirrors.py" \
                 "${APP_DIR:-}/rank_mirrors.py" \
@@ -107,7 +148,8 @@ touch "${TMP_DIR}/gnomes_status"
     fi
 
     # 6A-201 (spec section 0): the weekly sentinel run (signed mirror lists, Arch status hints, one short probe round,
-    # lag). It runs as this user, never asks for sudo, and is silent; it writes only the user's own sentinel cache.
+    # lag). It runs as the current user (the root cron job too, 6A-278), never asks for sudo, and is silent; it writes only
+    # that user's own sentinel cache (root: /var/cache/slacky-update/sentinel).
     SENTINEL_SCRIPT=""
     for cand in "${SCRIPT_DIR:-}/slacky_sentinel.py" \
                 "${APP_DIR:-}/slacky_sentinel.py" \
@@ -119,7 +161,7 @@ touch "${TMP_DIR}/gnomes_status"
             break
         fi
     done
-    if [ -n "${SENTINEL_SCRIPT}" ] && [ "${EUID:-$(id -u)}" -ne 0 ]; then
+    if [ -n "${SENTINEL_SCRIPT}" ]; then
         if python3 -I "${SENTINEL_SCRIPT}" due 2>/dev/null; then
             nohup nice -n 19 ionice -c 3 python3 -I "${SENTINEL_SCRIPT}" weekly </dev/null >/dev/null 2>&1 &
         fi
@@ -128,36 +170,45 @@ touch "${TMP_DIR}/gnomes_status"
 
 # --- [ 1. SLACKWARE REPOSITORY INSPECTION (UNPRIVILEGED) ] ---
 (
+    [ "${SLACKY_OFFLINE}" -eq 1 ] && exit 0
     MIRROR_URL=""
-    if [ -f "/etc/slackpkg/mirrors" ]; then
-        MIRROR_URL=$(grep -E '^[[:space:]]*(https?|ftp)://' /etc/slackpkg/mirrors 2>/dev/null | sed -e 's/^[[:space:]]*//' | head -n1 || true)
+    if [ -f "${SLACKY_SLACKPKG_MIRRORS}" ]; then
+        MIRROR_URL=$(grep -E '^[[:space:]]*(https?|ftp)://' "${SLACKY_SLACKPKG_MIRRORS}" 2>/dev/null | sed -e 's/^[[:space:]]*//' | head -n1 || true)
     fi
 
     CHANGELOG_FETCHED=0
+    # 6A-298 (N0): curl -f, and a downloaded page only counts when it really is a Slackware ChangeLog (a dated entry
+    # header and no HTML). A 404 page or a captive-portal page used to parse as "no updates".
+    CL_DATE_RE='^[A-Za-z]{3}[[:space:]]+[A-Za-z]{3}[[:space:]]+[0-9[:space:]]{2}[[:space:]]+[0-9:]+[[:space:]]+[A-Z]+[[:space:]]+[0-9]{4}'
+    slacky_changelog_valid() {
+        [ -s "$1" ] || return 1
+        grep -qiE '<(!doctype|html|head|body)' "$1" 2>/dev/null && return 1
+        grep -qE "${CL_DATE_RE}" "$1" 2>/dev/null
+    }
     if [ -n "${MIRROR_URL}" ]; then
         CHANGELOG_URL="${MIRROR_URL%/}/ChangeLog.txt"
         # Super-fast check: fetch top 16KB header from upstream
-        if curl -sSL -m 8 -r 0-16384 "${CHANGELOG_URL}" -o "${TMP_DIR}/ChangeLog_head.txt" 2>/dev/null && [ -s "${TMP_DIR}/ChangeLog_head.txt" ]; then
-            UPSTREAM_TOP_DATE=$(grep -E '^[A-Za-z]{3}[[:space:]]+[A-Za-z]{3}[[:space:]]+[0-9[:space:]]{2}[[:space:]]+[0-9:]+[[:space:]]+[A-Z]+[[:space:]]+[0-9]{4}' "${TMP_DIR}/ChangeLog_head.txt" 2>/dev/null | head -n1 || true)
+        if curl -fsSL -m 8 -r 0-16384 "${CHANGELOG_URL}" -o "${TMP_DIR}/ChangeLog_head.txt" 2>/dev/null && slacky_changelog_valid "${TMP_DIR}/ChangeLog_head.txt"; then
+            UPSTREAM_TOP_DATE=$(grep -E "${CL_DATE_RE}" "${TMP_DIR}/ChangeLog_head.txt" 2>/dev/null | head -n1 || true)
             LOCAL_TOP_DATE=""
-            if [ -f "/var/lib/slackpkg/ChangeLog.txt" ]; then
-                LOCAL_TOP_DATE=$(grep -E '^[A-Za-z]{3}[[:space:]]+[A-Za-z]{3}[[:space:]]+[0-9[:space:]]{2}[[:space:]]+[0-9:]+[[:space:]]+[A-Z]+[[:space:]]+[0-9]{4}' "/var/lib/slackpkg/ChangeLog.txt" 2>/dev/null | head -n1 || true)
+            if [ -f "${SLACKY_LOCAL_CHANGELOG}" ]; then
+                LOCAL_TOP_DATE=$(grep -E "${CL_DATE_RE}" "${SLACKY_LOCAL_CHANGELOG}" 2>/dev/null | head -n1 || true)
             fi
 
-            if [ -n "${UPSTREAM_TOP_DATE}" ] && [ "${UPSTREAM_TOP_DATE}" = "${LOCAL_TOP_DATE}" ] && [ -f "/var/lib/slackpkg/ChangeLog.txt" ]; then
-                cp -f "/var/lib/slackpkg/ChangeLog.txt" "${TMP_DIR}/ChangeLog.txt" 2>/dev/null || true
-                [ -s "${TMP_DIR}/ChangeLog.txt" ] && CHANGELOG_FETCHED=1
+            if [ -n "${UPSTREAM_TOP_DATE}" ] && [ "${UPSTREAM_TOP_DATE}" = "${LOCAL_TOP_DATE}" ] && [ -f "${SLACKY_LOCAL_CHANGELOG}" ]; then
+                cp -f "${SLACKY_LOCAL_CHANGELOG}" "${TMP_DIR}/ChangeLog.txt" 2>/dev/null || true
+                slacky_changelog_valid "${TMP_DIR}/ChangeLog.txt" && CHANGELOG_FETCHED=1
             else
-                if curl -sSL -m 6 -r 0-262144 "${CHANGELOG_URL}" -o "${TMP_DIR}/ChangeLog.txt" 2>/dev/null && [ -s "${TMP_DIR}/ChangeLog.txt" ]; then
+                if curl -fsSL -m 6 -r 0-262144 "${CHANGELOG_URL}" -o "${TMP_DIR}/ChangeLog.txt" 2>/dev/null && slacky_changelog_valid "${TMP_DIR}/ChangeLog.txt"; then
                     CHANGELOG_FETCHED=1
-                elif curl -sSL -m 8 "${CHANGELOG_URL}" -o "${TMP_DIR}/ChangeLog.txt" 2>/dev/null && [ -s "${TMP_DIR}/ChangeLog.txt" ]; then
+                elif curl -fsSL -m 8 "${CHANGELOG_URL}" -o "${TMP_DIR}/ChangeLog.txt" 2>/dev/null && slacky_changelog_valid "${TMP_DIR}/ChangeLog.txt"; then
                     CHANGELOG_FETCHED=1
                 else
                     cp -f "${TMP_DIR}/ChangeLog_head.txt" "${TMP_DIR}/ChangeLog.txt" 2>/dev/null || true
-                    [ -s "${TMP_DIR}/ChangeLog.txt" ] && CHANGELOG_FETCHED=1
+                    slacky_changelog_valid "${TMP_DIR}/ChangeLog.txt" && CHANGELOG_FETCHED=1
                 fi
             fi
-        elif curl -sSL -m 8 -r 0-262144 "${CHANGELOG_URL}" -o "${TMP_DIR}/ChangeLog.txt" 2>/dev/null && [ -s "${TMP_DIR}/ChangeLog.txt" ]; then
+        elif curl -fsSL -m 8 -r 0-262144 "${CHANGELOG_URL}" -o "${TMP_DIR}/ChangeLog.txt" 2>/dev/null && slacky_changelog_valid "${TMP_DIR}/ChangeLog.txt"; then
             CHANGELOG_FETCHED=1
         fi
     fi
@@ -274,6 +325,7 @@ PYSLACK
 # 6A-243: the repo lists (CHECKSUMS.md5, signature checked against the keys slackpkg already trusts) are fetched here, as
 # the user, into the app's own cache; /var/lib/slackpkg/pkglist is no longer read (it is stale until a root `slackpkg update`).
 (
+    [ "${SLACKY_OFFLINE}" -eq 1 ] && exit 0
     if [ -n "${SLACKPKG_CHECK_SCRIPT}" ] \
         && python3 -I "${SLACKPKG_CHECK_SCRIPT}" plus --cache "${USER_CACHE_DIR}" > "${TMP_DIR}/slackpkgplus.json" 2>/dev/null \
         && python3 -I - "${TMP_DIR}" << 'PYPLUS'
@@ -296,7 +348,10 @@ PYPLUS
 
 # --- [ 2. FLATPAK REPOSITORY INSPECTION ] ---
 (
-    if command -v flatpak >/dev/null 2>&1; then
+    [ "${SLACKY_OFFLINE}" -eq 1 ] && exit 0
+    if ! command -v flatpak >/dev/null 2>&1; then
+        echo "NA" > "${TMP_DIR}/flatpak_status"
+    else
         if raw_fp=$(timeout 6s flatpak remote-ls --updates --columns=name,branch,ref 2>/dev/null); then
             echo "${raw_fp}" | awk -F'\t' '{if ($1 != "") print $1 " [" $2 "]"; else if ($3 != "") print $3}' > "${TMP_DIR}/flatpak_updates"
             echo "SUCCESS" > "${TMP_DIR}/flatpak_status"
@@ -308,6 +363,7 @@ PYPLUS
 
 # --- [ 2.5. SBOTOOLS & SLACKBUILDS REPOSITORY INSPECTION ] ---
 (
+    [ "${SLACKY_OFFLINE}" -eq 1 ] && exit 0
     python3 - "${TMP_DIR}" << 'PYSBOCHECK'
 import os, sys, re, glob, time, urllib.request, subprocess, shutil
 
@@ -354,8 +410,12 @@ elif os.path.exists("/etc/slackware-version"):
     try:
         with open("/etc/slackware-version", "r", encoding="utf-8") as f:
             content = f.read().lower()
-            if "15.0" in content:
+            # 6A-299 (F0): "Slackware 15.0+" is -current; a plain "15.0" is the stable tree; anything else is not guessed
+            mver = re.match(r'^\s*slackware\s+(\d+\.\d+)(\+?)\s*$', content.splitlines()[0] if content.strip() else "")
+            if mver and not mver.group(2) and mver.group(1) == "15.0":
                 branch = "15.0"
+            elif mver and not mver.group(2):
+                branch = mver.group(1)
     except Exception:
         pass
 
@@ -377,6 +437,16 @@ changelog_urls = [
     "https://raw.githubusercontent.com/pfeiffer/slackbuilds/15.0/ChangeLog.txt"
 ]
 
+def looks_like_sbo_changelog(data):
+    # 6A-298 (N0): a 200 page that is not a SlackBuilds ChangeLog (captive portal, error page) must not replace the cache
+    try:
+        text = data.decode("utf-8", errors="ignore")
+    except Exception:
+        return False
+    if re.search(r'<(!doctype|html|head|body)', text[:4096], re.I):
+        return False
+    return re.search(r'^[a-zA-Z0-9_+.-]+/[a-zA-Z0-9_+.-]+:\s+(?:Updated|Added)\b', text, re.M) is not None
+
 fetched = False
 for cl_url in changelog_urls:
     try:
@@ -386,13 +456,16 @@ for cl_url in changelog_urls:
             req.add_header("If-Modified-Since", time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime(mtime)))
         with urllib.request.urlopen(req, timeout=4) as resp:
             content = resp.read()
-            if content:
-                with open(cl_file, "wb") as f:
-                    f.write(content)
+            if not looks_like_sbo_changelog(content):
+                continue
+            tmp_cl = cl_file + ".part"
+            with open(tmp_cl, "wb") as f:
+                f.write(content)
+            os.replace(tmp_cl, cl_file)
         fetched = True
         break
     except urllib.error.HTTPError as e:
-        if e.code == 304: # Not modified, cache is fresh
+        if e.code == 304 and os.path.exists(cl_file) and os.path.getsize(cl_file) > 0: # Not modified, cache is fresh
             fetched = True
             break
     except Exception:
@@ -449,14 +522,17 @@ with open(out_file, "w", encoding="utf-8") as f:
     for u in sorted(updates_dict.values()):
         f.write(f"{u}\n")
 
+# 6A-298 (N0): "SUCCESS" only after a real answer (or a 304 on a cache that holds a real ChangeLog)
 with open(status_file, "w", encoding="utf-8") as f:
-    f.write("SUCCESS\n")
+    f.write("SUCCESS\n" if fetched else "FAILED\n")
 PYSBOCHECK
 ) & PID_SBO=$!
 
 # --- [ 3. CACHYOS KERNEL UPSTREAM CHECK ] ---
 check_cachyos_background() {
+    [ "${SLACKY_OFFLINE}" -eq 1 ] && return 0
     CACHY_UPDATES=()
+    local cachy_partial=0
     ACTIVE_KVER=$(uname -r)
     
     LIB_DIR="$(dirname "$(readlink -f "$0")")"
@@ -491,8 +567,15 @@ check_cachyos_background() {
             fi
 
             if [ -n "${raw_batch}" ]; then
+                local answered_flavors=" "
                 while IFS='|' read -r flv latest_flv_ver k_url h_url nv_url r8125_url; do
-                    [ -n "${flv}" ] && [ "${latest_flv_ver}" != "NONE" ] || continue
+                    [ -n "${flv}" ] || continue
+                    # 6A-298 (F1): NONE means the lookup failed or found nothing; that is "could not check", not "no update"
+                    if [ "${latest_flv_ver}" = "NONE" ] || [ -z "${latest_flv_ver}" ]; then
+                        cachy_partial=1
+                        continue
+                    fi
+                    answered_flavors+="${flv} "
                     local cur_flv_ver
                     cur_flv_ver=$(get_installed_cachyos_flavor_version "${flv}" 2>/dev/null || echo "NONE")
                     if [ "${cur_flv_ver}" != "NONE" ] && [ -n "${cur_flv_ver}" ]; then
@@ -529,11 +612,18 @@ check_cachyos_background() {
                         fi
                     fi
                 done <<< "${raw_batch}"
+                local want_flv
+                for want_flv in ${installed_flavors}; do
+                    case "${answered_flavors}" in *" ${want_flv} "*) ;; *) cachy_partial=1 ;; esac
+                done
             else
                 for flv in ${installed_flavors}; do
                     local cur_flv_ver latest_flv_ver k_url h_url nv_url r8125_url
                     cur_flv_ver=$(get_installed_cachyos_flavor_version "${flv}" 2>/dev/null || echo "NONE")
                     read -r latest_flv_ver k_url h_url nv_url r8125_url <<< "$(check_cachyos_upstream_flavor "${flv}" || echo "NONE NONE NONE NONE NONE")"
+                    if [ "${latest_flv_ver}" = "NONE" ] || [ -z "${latest_flv_ver}" ]; then
+                        cachy_partial=1
+                    fi
 
                     if [ "${latest_flv_ver}" != "NONE" ] && [ -n "${latest_flv_ver}" ] && [ "${cur_flv_ver}" != "NONE" ]; then
                         local is_flv_newer
@@ -572,13 +662,20 @@ check_cachyos_background() {
             fi
             printf "%s\n" "${CACHY_UPDATES[@]:-}" > "${TMP_DIR}/cachy_updates"
             echo "SUCCESS" > "${TMP_DIR}/cachy_status"
+            [ "${cachy_partial}" -eq 0 ] || echo "cachyos_kernel" >> "${TMP_DIR}/check_failed_parts"
+        else
+            echo "NA" > "${TMP_DIR}/cachy_status"
         fi
+    else
+        # mod_kernel.sh could not be loaded: nothing was looked at
+        echo "FAILED" > "${TMP_DIR}/cachy_status"
     fi
 }
 check_cachyos_background & PID_CACHY=$!
 
 # --- [ 3.5. CACHYOS GAMING SUITE UPDATE CHECK ] ---
 check_cachyos_gaming_background() {
+    [ "${SLACKY_OFFLINE}" -eq 1 ] && return 0
     local GAMING_UPDATES=()
     local LIB_DIR
     LIB_DIR="$(dirname "$(readlink -f "$0")")"
@@ -589,8 +686,16 @@ check_cachyos_gaming_background() {
     fi
 
     if command -v check_all_installed_gaming_updates_fast >/dev/null 2>&1; then
-        local raw_g_updates
-        raw_g_updates=$(check_all_installed_gaming_updates_fast 2>/dev/null || echo "")
+        local raw_g_updates g_rc=0
+        # 6A-298 (F1): a lookup that crashed is "could not check", not "no gaming updates"
+        raw_g_updates=$(check_all_installed_gaming_updates_fast 2>/dev/null) || g_rc=$?
+        # 6A-306 (V4): exit 3 = some items could not be checked (the rest of the answer is valid); any other failure = nothing
+        if [ "${g_rc}" -eq 3 ]; then
+            echo "cachyos_gaming" >> "${TMP_DIR}/check_failed_parts"
+        elif [ "${g_rc}" -ne 0 ]; then
+            echo "FAILED" > "${TMP_DIR}/gaming_status"
+            return 0
+        fi
         if [ -n "${raw_g_updates}" ]; then
             while IFS='|' read -r pid name cur_ver latest_ver; do
                 [ -n "${pid}" ] || continue
@@ -601,6 +706,7 @@ check_cachyos_gaming_background() {
         echo "${raw_g_updates}" > "${TMP_DIR}/gaming_updates_raw"
         echo "SUCCESS" > "${TMP_DIR}/gaming_status"
     elif command -v get_gaming_catalog >/dev/null 2>&1; then
+        local gaming_partial=0
         while IFS='|' read -r pkg_id name cat main_pat l32_pat ext_pat repos; do
             [ -n "${pkg_id}" ] || continue
             local cur_ver
@@ -609,6 +715,9 @@ check_cachyos_gaming_background() {
 
             local latest_ver main_u l32_u ext_u
             read -r latest_ver main_u l32_u ext_u <<< "$(resolve_cachyos_gaming_upstream_metadata "${pkg_id}" 2>/dev/null || echo "NONE NONE NONE NONE")"
+            if [ "${latest_ver}" = "NONE" ] || [ -z "${latest_ver}" ]; then
+                gaming_partial=1
+            fi
             if [ "${latest_ver}" != "NONE" ] && [ -n "${latest_ver}" ]; then
                 local is_newer
                 is_newer=$(compare_versions_strictly_greater "${latest_ver}" "${cur_ver}" 2>/dev/null || echo "false")
@@ -619,6 +728,7 @@ check_cachyos_gaming_background() {
         done <<< "$(get_gaming_catalog 2>/dev/null || echo "")"
         printf "%s\n" "${GAMING_UPDATES[@]:-}" > "${TMP_DIR}/gaming_updates"
         echo "SUCCESS" > "${TMP_DIR}/gaming_status"
+        [ "${gaming_partial}" -eq 0 ] || echo "cachyos_gaming" >> "${TMP_DIR}/check_failed_parts"
     else
         echo "SUCCESS" > "${TMP_DIR}/gaming_status"
     fi
@@ -627,6 +737,7 @@ check_cachyos_gaming_background & PID_GAMING=$!
 
 # --- [ 3.5. UNDERPANTS GNOMES PACMAN ENGINE INSPECTION ] ---
 check_underpants_gnomes_background() {
+    [ "${SLACKY_OFFLINE}" -eq 1 ] && return 0
     local gnomes_py=""
     for gcand in "${SCRIPT_DIR:-}/gnomes_pacman.py" \
                  "${APP_DIR:-}/gnomes_pacman.py" \
@@ -676,8 +787,9 @@ try:
         with open(os.path.join(tmp_d, "gnomes_status"), "w", encoding="utf-8") as f:
             f.write("SUCCESS\n")
     else:
+        # 6A-298 (N0): a helper that failed or answered nothing is "could not check" (a clean answer is a JSON list)
         with open(os.path.join(tmp_d, "gnomes_status"), "w", encoding="utf-8") as f:
-            f.write("SUCCESS\n")
+            f.write("FAILED\n")
 except Exception:
     with open(os.path.join(tmp_d, "gnomes_status"), "w", encoding="utf-8") as f:
         f.write("FAILED\n")
@@ -713,9 +825,11 @@ slacky_check_nvidia_gpu_class() {
 
 # --- [ 4. NVIDIA HARDWARE & DRIVER CHECK ] ---
 (
+    [ "${SLACKY_OFFLINE}" -eq 1 ] && exit 0
     NVIDIA_UPDATES=()
     NVIDIA_ACTIVE_VER=""
     NVIDIA_MISMATCH="false"
+    NVIDIA_LOOKUP_FAILED=0
 
     if [ -f "/sys/module/nvidia/version" ]; then
         NVIDIA_ACTIVE_VER=$(cat /sys/module/nvidia/version 2>/dev/null | tr -d '[:space:]' || true)
@@ -745,7 +859,8 @@ slacky_check_nvidia_gpu_class() {
             if command -v get_cachyos_nvidia_repo_url >/dev/null 2>&1; then
                 cachy_nv_repo=$(get_cachyos_nvidia_repo_url)
             fi
-            cachy_nv_html=$(curl -sSL -m 10 "${cachy_nv_repo}" 2>/dev/null || echo "")
+            cachy_nv_html=$(curl -fsSL -m 10 "${cachy_nv_repo}" 2>/dev/null || echo "")
+            [ -n "${cachy_nv_html}" ] || NVIDIA_LOOKUP_FAILED=1
             LATEST_NVIDIA=$(echo "${cachy_nv_html}" | grep -o -E 'nvidia-utils-[0-9]+\.[0-9]+(\.[0-9]+)?' | sed 's/nvidia-utils-//' | sort -V | tail -n 1 || true)
             # Atomic Triad Preflight Gate ("Spider-Sense"):
             # Ensure target LATEST_NVIDIA exists simultaneously across userspace, DKMS, and precompiled modules
@@ -764,13 +879,17 @@ slacky_check_nvidia_gpu_class() {
             fi
         elif [ "${NVIDIA_GPU_CLASS}" = "modern" ]; then
             # 6A-141: the newest .run branch supports Turing and newer
-            LATEST_NVIDIA=$(curl -sSL -m 8 "https://download.nvidia.com/XFree86/Linux-x86_64/latest.txt" 2>/dev/null | awk '{print $1}' || true)
+            LATEST_NVIDIA=$(curl -fsSL -m 8 "https://download.nvidia.com/XFree86/Linux-x86_64/latest.txt" 2>/dev/null | awk '{print $1}' || true)
+            # 6A-298 (V4): an answer that is not a version number (error page, empty) is "unknown", not a version
+            [[ "${LATEST_NVIDIA}" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]] || { LATEST_NVIDIA=""; NVIDIA_LOOKUP_FAILED=1; }
         else
             # 6A-141: GPU generation unknown: only offer a newer release inside the installed major branch
             nv_major="${NVIDIA_ACTIVE_VER%%.*}"
             LATEST_NVIDIA=""
             if [[ "${nv_major}" =~ ^[0-9]+$ ]]; then
-                LATEST_NVIDIA=$(curl -sSL -m 8 "https://download.nvidia.com/XFree86/Linux-x86_64/" 2>/dev/null \
+                nv_index=$(curl -fsSL -m 8 "https://download.nvidia.com/XFree86/Linux-x86_64/" 2>/dev/null || true)
+                [ -n "${nv_index}" ] || NVIDIA_LOOKUP_FAILED=1
+                LATEST_NVIDIA=$(echo "${nv_index}" \
                     | grep -o -E "href=['\"]${nv_major}\.[0-9]+(\.[0-9]+)?/" | grep -o -E "${nv_major}\.[0-9]+(\.[0-9]+)?" \
                     | sort -V | tail -n 1 || true)
             fi
@@ -829,11 +948,43 @@ sys.exit(1)
     fi
 
     printf "%s\n" "${NVIDIA_UPDATES[@]:-}" > "${TMP_DIR}/nvidia_updates"
+    # 6A-298 (F1): no NVIDIA module loaded = nothing to check (NA); a failed version lookup = could not check
+    if [ -z "${NVIDIA_ACTIVE_VER}" ]; then
+        echo "NA" > "${TMP_DIR}/nvidia_status"
+    elif [ "${NVIDIA_LOOKUP_FAILED}" -eq 1 ]; then
+        echo "FAILED" > "${TMP_DIR}/nvidia_status"
+    else
+        echo "SUCCESS" > "${TMP_DIR}/nvidia_status"
+    fi
     echo "${NVIDIA_MISMATCH}" > "${TMP_DIR}/nvidia_mismatch"
     echo "${NVIDIA_ACTIVE_VER}" > "${TMP_DIR}/nvidia_active_ver"
 ) & PID_NVIDIA=$!
 
+# 6A-298 (N0c): a time limit on the whole network phase, so one hung mirror can never hold the check (and with it the
+# tray and every later check, which wait for the lock) for ever. When it fires, the parts still running are stopped and
+# count as "could not check" (their status file stays empty); everything that already answered is kept.
+slacky_descendants() {
+    local c
+    for c in $(pgrep -P "$1" 2>/dev/null || true); do
+        slacky_descendants "${c}"
+        echo "${c}"
+    done
+}
+SLACKY_CHECK_TIMEOUT="${SLACKY_CHECK_TIMEOUT:-240}"
+(
+    sleep "${SLACKY_CHECK_TIMEOUT}"
+    echo 1 > "${TMP_DIR}/timed_out"
+    for jp in ${PID_SLACK:-} ${PID_PLUS:-} ${PID_FLATPAK:-} ${PID_SBO:-} ${PID_CACHY:-} ${PID_GAMING:-} ${PID_GNOMES:-} ${PID_NVIDIA:-}; do
+        for d in $(slacky_descendants "${jp}"); do kill -TERM "${d}" 2>/dev/null || true; done
+        kill -TERM "${jp}" 2>/dev/null || true
+    done
+) >/dev/null 2>&1 &
+PID_WATCHDOG=$!
+
 wait "${PID_SLACK:-}" "${PID_PLUS:-}" "${PID_FLATPAK:-}" "${PID_SBO:-}" "${PID_CACHY:-}" "${PID_GAMING:-}" "${PID_GNOMES:-}" "${PID_NVIDIA:-}" 2>/dev/null || true
+pkill -TERM -P "${PID_WATCHDOG}" 2>/dev/null || true
+kill -TERM "${PID_WATCHDOG}" 2>/dev/null || true
+wait "${PID_WATCHDOG}" 2>/dev/null || true
 
 # --- [ 5. SECURE BOOT STATUS ] ---
 SB_STATE="disabled"
@@ -908,7 +1059,8 @@ def get_status(status_name):
     return "FAILED"
 
 def get_persisted_list(filename, status_name, json_key):
-    if get_status(status_name) == "SUCCESS":
+    # "NA" = this suite does not apply here (no Flatpak, no CachyOS kernel, no NVIDIA module): its list is simply empty
+    if get_status(status_name) in ("SUCCESS", "NA"):
         return read_file_lines(filename)
     return existing_data.get(json_key, [])
 
@@ -1039,9 +1191,31 @@ gaming_updates_raw = [r for r in gaming_updates_raw if r.split("|")[0].strip().l
 gaming_updates = [g for g in gaming_updates if g.strip() and g.split()[0].lower() not in gnome_names
                   and not any(n and g.startswith(n + " ") for n in dup_display)]
 
-nvidia_updates = read_file_lines("nvidia_updates")
-nvidia_mismatch = read_file_content("nvidia_mismatch", "false").lower() == "true"
-nvidia_active_ver = read_file_content("nvidia_active_ver", "")
+# 6A-298 (F1): the NVIDIA part keeps its last answer when it could not look (offline, timeout, lookup failed)
+if get_status("nvidia_status") in ("SUCCESS", "NA"):
+    nvidia_updates = read_file_lines("nvidia_updates")
+else:
+    nvidia_updates = existing_data.get("nvidia_driver_updates", [])
+if get_status("nvidia_status"):
+    nvidia_mismatch = read_file_content("nvidia_mismatch", "false").lower() == "true"
+    nvidia_active_ver = read_file_content("nvidia_active_ver", "")
+else:
+    nvidia_mismatch = bool(existing_data.get("nvidia_gl_mismatch", False))
+    nvidia_active_ver = existing_data.get("nvidia_driver_version", "")
+
+# 6A-298 (N0/F1/N1): which parts could NOT be checked this time. A part counts as checked only when its worker wrote
+# SUCCESS (or NA = not applicable); an empty or FAILED status, or a part that found only some of its answers, is listed.
+check_offline = read_file_content("offline", "0") == "1"
+check_timed_out = read_file_content("timed_out", "0") == "1"
+check_failed = []
+for _name, _st in (("slackware", "slackware_status"), ("slackpkgplus", "slackpkgplus_status"),
+                   ("flatpak", "flatpak_status"), ("sbo", "sbo_status"), ("cachyos_kernel", "cachy_status"),
+                   ("cachyos_gaming", "gaming_status"), ("gnomes", "gnomes_status"), ("nvidia", "nvidia_status")):
+    if get_status(_st) not in ("SUCCESS", "NA"):
+        check_failed.append(_name)
+for _part in read_file_lines("check_failed_parts"):
+    if _part not in check_failed:
+        check_failed.append(_part)
 
 now_dt = datetime.now(timezone.utc)
 
@@ -1065,6 +1239,14 @@ data = {
         "state": sb_state,
         "warnings": []
     },
+    # 6A-298: optional keys (the tray and the Rust reader ignore what they do not know). check_failed lists the parts
+    # that could not be checked this time (ids: slackware, slackpkgplus, flatpak, sbo, cachyos_kernel, cachyos_gaming,
+    # gnomes, nvidia); check_offline is true when no server could be reached at all; last_ok_check_ts is the last run
+    # that checked everything.
+    "check_failed": check_failed,
+    "check_offline": check_offline,
+    "check_timed_out": check_timed_out,
+    "last_ok_check_ts": int(time.time()) if not check_failed else int(existing_data.get("last_ok_check_ts", 0) or 0),
     "last_check": now_dt.strftime("%Y-%m-%dT%H:%M:%SZ"),
     "last_check_ts": int(time.time())
 }
@@ -1138,16 +1320,18 @@ done
 # 6A-202 (spec section 0): key freshness on EVERY check, after the repository databases were synced above. Read only against
 # the key store; a keyring package is downloaded only when the database lists a newer one than the keys in force, and a
 # package that passes every rule is only STAGED in the user's own cache (it is installed as the first root step of an
-# explicit full update). Never sudo, silent, detached so it never delays the check.
-if [ "${EUID:-$(id -u)}" -ne 0 ]; then
+# explicit full update; root, e.g. the cron job, installs it at once as a new key generation, 6A-278). Rate limited to once
+# a day, works without gnomes. Never sudo, silent, detached so it never delays the check.
+{
     for cand in "${SCRIPT_DIR:-}/slacky_sentinel.py" \
                 "${APP_DIR:-}/slacky_sentinel.py" \
                 "/usr/share/slacky-update/lib/slacky_sentinel.py" \
                 "/usr/local/share/slacky-update/lib/slacky_sentinel.py" \
                 "/usr/local/lib/slacky-update/slacky_sentinel.py"; do
+        [ "${SLACKY_CHECK_SKIP_BACKGROUND:-0}" = "1" ] && break   # self-tests only
         if [ -f "${cand}" ]; then
-            nohup nice -n 19 ionice -c 3 python3 -I "${cand}" keys-check </dev/null >/dev/null 2>&1 &
+            nohup nice -n 19 ionice -c 3 python3 -I "${cand}" refresh-keys </dev/null >/dev/null 2>&1 &
             break
         fi
     done
-fi
+}

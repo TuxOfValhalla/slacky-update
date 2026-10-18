@@ -3792,9 +3792,11 @@ exec "${{TARGET_BIN}}" "$@"
                 print(f"   {os.path.basename(path)}: {first} / {kept}")
 
     def trust_gate(self, downloaded: List[Tuple[Dict[str, Any], str]], verbose: bool = True) -> bool:
-        """WP-7: check every downloaded package's signature (%PGPSIG% from the repo DB) against the pinned keyrings.
-        Log mode (default): results go to the trust log only, nothing is held. Enforce mode: any package that is not
-        verified holds the whole build (False) with one plain sentence."""
+        """WP-7 / 6A-275: check every downloaded package against the repo database checksum and its signature
+        (%PGPSIG% or the detached .sig) with the keys of its own family only (Arch keys for Arch repos, CachyOS keys for
+        CachyOS repos, Chaotic keys for Chaotic repos). Enforce mode (default): a package that is not verified holds the
+        whole build (False) with one plain sentence; a failure caused only by missing or too old keys first gets one key
+        refresh and one retry. Log mode (SLACKY_GNOMES_TRUST=log, emergency override): results go to the trust log only."""
         # 6A-139: a DB entry without SHA256 is only checked by size and header; logged for now (owner decision WP-7)
         trust_log([{"check": "sha256", "status": "missing", "name": pd.get("NAME", ""), "repo": pd.get("_REPO", "")}
                    for pd, _ in downloaded if not str(pd.get("SHA256SUM", "") or "").strip()])
@@ -3802,41 +3804,55 @@ exec "${{TARGET_BIN}}" "$@"
         if trust is None or not downloaded:
             return True
         mode = trust.trust_mode()
+        if mode != "enforce" and verbose:
+            print(f":: {trust._t('log_override')}")
+
+        def fetch_sig(pdata: Dict[str, Any], path: str) -> Optional[bytes]:
+            # Chaotic-AUR's database carries no %PGPSIG%: use the detached .sig next to the package (cached)
+            sig_path = path + ".sig"
+            sig: Optional[bytes] = None
+            try:
+                if os.path.isfile(sig_path):
+                    with open(sig_path, "rb") as fh:
+                        return fh.read(16384)
+                # 6A-244: the signature is the same file on every host of the family; try the first hosts in
+                # order so one unreachable host does not make a signed package look unsigned. 6A-275: one more
+                # round after a short pause, because a refused package stops the whole build.
+                urls = [u for u in self.engine.get_download_urls_candidates(pdata)[:4] if u.startswith("https://")]
+                for attempt in range(2):
+                    for url in urls:
+                        sig = trust.fetch_signature(trust.sig_url(url))
+                        if sig:
+                            with open(sig_path, "wb") as fh:
+                                fh.write(sig)
+                            return sig
+                    if attempt == 0 and urls:
+                        time.sleep(1.5)
+            except OSError:
+                pass
+            return sig
 
         def one(item: Tuple[Dict[str, Any], str]) -> Any:
             pdata, path = item
+            name, repo = pdata.get("NAME", ""), pdata.get("_REPO", "")
             pgpsig = str(pdata.get("PGPSIG", "") or "")
-            sig: Optional[bytes] = None
-            if not pgpsig:
-                # Chaotic-AUR's database carries no %PGPSIG%: use the detached .sig next to the package (cached)
-                sig_path = path + ".sig"
-                try:
-                    if os.path.isfile(sig_path):
-                        with open(sig_path, "rb") as fh:
-                            sig = fh.read(16384)
-                    else:
-                        # 6A-244: the signature is the same file on every host of the family; try the first hosts in
-                        # order so one unreachable host does not make a signed package look unsigned
-                        for url in self.engine.get_download_urls_candidates(pdata)[:4]:
-                            if not url.startswith("https://"):
-                                continue
-                            sig = trust.fetch_signature(trust.sig_url(url))
-                            if sig:
-                                with open(sig_path, "wb") as fh:
-                                    fh.write(sig)
-                                break
-                except OSError:
-                    pass
-            return trust.verify_package(path, sig, pdata.get("_REPO", ""), name=pdata.get("NAME", ""),
-                                        pgpsig_b64=pgpsig)
+            inp: Dict[str, Any] = {"path": path, "sig": None, "repo": repo, "name": name, "pgpsig": pgpsig}
+            bad_sum = trust.check_sha256(path, str(pdata.get("SHA256SUM", "") or ""), name=name, repo=repo)
+            if bad_sum is not None:
+                return bad_sum, inp
+            sig = fetch_sig(pdata, path) if not pgpsig else None
+            inp["sig"] = sig
+            return trust.verify_package(path, sig, repo, name=name, pgpsig_b64=pgpsig), inp
         with concurrent.futures.ThreadPoolExecutor(max_workers=8) as ex:
-            results = list(ex.map(one, downloaded))
+            items = list(ex.map(one, downloaded))
+        results = trust.settle_stale(items, mode)
         trust_log([dict(r.as_dict(), check="package", mode=mode) for r in results])
         blocked = [r for r in results if r.blocks(mode)]
         if blocked:
             print(f":: {blocked[0].message(mode)}")
             if len(blocked) > 1:
                 print(f"   {len(blocked) - 1} more package(s) could not be verified either.")
+            print("   Nothing was built or installed.")
             return False
         return True
 
@@ -5018,39 +5034,7 @@ fi
 """
             # Append cleanly-demarcated boot & shutdown hooks for all transmuted services
             for svc in created_services:
-                doinst_content += f"""
-# --- [ Boot & Shutdown Service Integration: {svc} ] ---
-if [ -f /etc/rc.d/rc.local ]; then
-  if ! grep -q "# --- [ gnomes-service: {svc} ] ---" /etc/rc.d/rc.local 2>/dev/null; then
-    cat << 'EOF_RCLOCAL_{svc}' >> /etc/rc.d/rc.local
-
-# --- [ gnomes-service: {svc} ] ---
-if [ -x /etc/rc.d/rc.{svc} ]; then
-  /etc/rc.d/rc.{svc} start
-fi
-# --- [ /gnomes-service: {svc} ] ---
-EOF_RCLOCAL_{svc}
-  fi
-fi
-
-if [ ! -f /etc/rc.d/rc.local_shutdown ]; then
-  touch /etc/rc.d/rc.local_shutdown 2>/dev/null || true
-  chmod 755 /etc/rc.d/rc.local_shutdown 2>/dev/null || true
-fi
-
-if [ -f /etc/rc.d/rc.local_shutdown ]; then
-  if ! grep -q "# --- [ gnomes-service: {svc} ] ---" /etc/rc.d/rc.local_shutdown 2>/dev/null; then
-    cat << 'EOF_RCSHUTDOWN_{svc}' >> /etc/rc.d/rc.local_shutdown
-
-# --- [ gnomes-service: {svc} ] ---
-if [ -x /etc/rc.d/rc.{svc} ]; then
-  /etc/rc.d/rc.{svc} stop
-fi
-# --- [ /gnomes-service: {svc} ] ---
-EOF_RCSHUTDOWN_{svc}
-  fi
-fi
-"""
+                doinst_content += gnomes_rc_hook_snippet(svc)
             with open(doinst_path, "w", encoding="utf-8") as dif:
                 dif.write(doinst_content)
             os.chmod(doinst_path, 0o755)
@@ -5960,6 +5944,60 @@ FOOTPRINT_OWN_DAEMONS = {
 _FOOTPRINT_LINK_RE = re.compile(r"\(\s*cd\s+(\S+)\s*;\s*ln\s+-sf\s+(\S+)\s+(\S+)\s*\)")
 
 
+def gnomes_rc_hook_snippet(svc: str) -> str:
+    """Shell text for a package doinst.sh: add the start/stop block of service `svc` to rc.local and rc.local_shutdown.
+    6A-291 (M12): the marker is matched as an exact fixed line (grep -qxF), so running it twice leaves ONE block; blocks
+    an older version piled up (same marker, several times) are collapsed to the first one."""
+    begin = f"# --- [ gnomes-service: {svc} ] ---"
+    end = f"# --- [ /gnomes-service: {svc} ] ---"
+    dedupe = f"""  if [ "$(grep -cxF -- '{begin}' "$GNOMES_RCF" 2>/dev/null)" -gt 1 ]; then
+    GNOMES_RCT="$(mktemp "$GNOMES_RCF.XXXXXX" 2>/dev/null)" && \\
+    awk -v b='{begin}' -v e='{end}' '
+      $0 == b {{ if (seen) {{ skip = 1; pend = ""; next }} seen = 1 }}
+      skip {{ if ($0 == e) skip = 0; next }}
+      $0 == "" {{ pend = pend "\\n"; next }}
+      {{ if (pend != "") {{ printf "%s", pend; pend = "" }} print }}
+    ' "$GNOMES_RCF" > "$GNOMES_RCT" && cat "$GNOMES_RCT" > "$GNOMES_RCF"
+    rm -f "$GNOMES_RCT" 2>/dev/null
+  fi
+"""
+    return f"""
+# --- [ Boot & Shutdown Service Integration: {svc} ] ---
+if [ -f /etc/rc.d/rc.local ]; then
+  GNOMES_RCF=/etc/rc.d/rc.local
+  if ! grep -qxF -- '{begin}' /etc/rc.d/rc.local 2>/dev/null; then
+    cat << 'EOF_RCLOCAL_{svc}' >> /etc/rc.d/rc.local
+
+{begin}
+if [ -x /etc/rc.d/rc.{svc} ]; then
+  /etc/rc.d/rc.{svc} start
+fi
+{end}
+EOF_RCLOCAL_{svc}
+  fi
+{dedupe}fi
+
+if [ ! -f /etc/rc.d/rc.local_shutdown ]; then
+  touch /etc/rc.d/rc.local_shutdown 2>/dev/null || true
+  chmod 755 /etc/rc.d/rc.local_shutdown 2>/dev/null || true
+fi
+
+if [ -f /etc/rc.d/rc.local_shutdown ]; then
+  GNOMES_RCF=/etc/rc.d/rc.local_shutdown
+  if ! grep -qxF -- '{begin}' /etc/rc.d/rc.local_shutdown 2>/dev/null; then
+    cat << 'EOF_RCSHUTDOWN_{svc}' >> /etc/rc.d/rc.local_shutdown
+
+{begin}
+if [ -x /etc/rc.d/rc.{svc} ]; then
+  /etc/rc.d/rc.{svc} stop
+fi
+{end}
+EOF_RCSHUTDOWN_{svc}
+  fi
+{dedupe}fi
+"""
+
+
 def footprint_is_own_package(name: str) -> bool:
     return name.startswith(FOOTPRINT_OWN_PREFIXES) or name.endswith("_slacky") or name.endswith("_gnomes")
 
@@ -6303,7 +6341,7 @@ def rollback_candidates(base: str, snapdir: str = SNAPSHOT_DIR, pkgdb: str = FOO
     return current, found
 
 
-def build_from_snapshot(cand: Dict[str, Any], out_dir: str) -> str:
+def build_from_snapshot(cand: Dict[str, Any], out_dir: str, owners: Optional[Dict[str, str]] = None) -> str:
     """Rebuild the package cand["pkgid"] exactly as the snapshot has it installed: its FILE LIST, its doinst/douninst
     scripts and description; everything root:root. Raises ValueError with one plain sentence when that is not possible."""
     pid, root = cand["pkgid"], cand["root"]
@@ -6321,6 +6359,18 @@ def build_from_snapshot(cand: Dict[str, Any], out_dir: str) -> str:
     # var/lib/pkgtools/... entries (the registered douninst.sh) are recreated by installpkg itself, never shipped
     entries = [e for e in lines[fl + 1:] if e and e != "./" and not e.startswith("install/") and e != "install"
                and not e.startswith("var/lib/pkgtools/")]
+    # 6A-292 (M11): the same footprint guard as for a fresh build: a file that now belongs to a Slackware package, or that
+    # changes the whole system (linker path, login environment, root cron job, foreign service script), is not put back.
+    # The snapshot itself is only read, never changed. Report mode (SLACKY_FOOTPRINT_MODE=report) keeps every file.
+    if owners is None:
+        owners = footprint_load_owners()  # raises when the package database is missing: the rollback then stops
+    if os.environ.get("SLACKY_FOOTPRINT_MODE", "enforce").strip().lower() != "report":
+        dropped = [e for e in entries if not e.endswith("/") and footprint_judge(e, owners)]
+        if dropped:
+            gone = set(dropped)
+            entries = [e for e in entries if e not in gone]
+            print(f":: Footprint check: {len(dropped)} file(s) of {pid} were not put back because they belong to "
+                  f"Slackware or change the whole system (for example /{dropped[0]}).", file=sys.stderr)
     missing = [e for e in entries if not e.endswith("/") and not os.path.lexists(os.path.join(root, e))]
     if missing:
         raise ValueError(f"The snapshot does not hold all files of {pid} ({len(missing)} missing, for example /{missing[0]}).")

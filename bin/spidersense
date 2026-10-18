@@ -1,0 +1,184 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# spidersense - read-only window into SpiderSense, the quiet sentinel of slacky-update (6A-274)
+# Standalone: uses only the slacky-update helper modules (slacky_sentinel, slacky_heal, spidersense_hw, spidersense_snap).
+# Never changes anything, never asks for sudo. Silent when everything is fine, except `status`, which always answers.
+# ==============================================================================
+set -euo pipefail
+
+SELF_DIR="$(dirname "$(readlink -f "$0")")"
+if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
+    BOLD=$'\033[1m'; RED=$'\033[1;31m'; GREEN=$'\033[1;32m'; YELLOW=$'\033[1;33m'; RESET=$'\033[0m'
+else
+    BOLD=""; RED=""; GREEN=""; YELLOW=""; RESET=""
+fi
+
+find_helper() {
+    local name="$1" cand
+    for cand in "${SELF_DIR}/../lib/${name}" "${SELF_DIR}/../share/slacky-update/lib/${name}" \
+                "/usr/share/slacky-update/lib/${name}"; do
+        if [ -f "${cand}" ]; then printf '%s\n' "${cand}"; return 0; fi
+    done
+    return 1
+}
+
+# run_helper NAME ARGS... : runs a helper module, or says in one sentence that it is missing
+run_helper() {
+    local name="$1" h
+    shift
+    if ! h="$(find_helper "${name}")"; then
+        echo "${YELLOW}This part of SpiderSense is not installed on this system.${RESET}" >&2
+        return 3
+    fi
+    PYTHONSAFEPATH=1 python3 -I "${h}" "$@"
+}
+
+usage() {
+    cat <<USAGE
+Usage: spidersense [COMMAND]
+
+  status              A short summary of what SpiderSense sees (default)
+  heal-check          Look for damaged installed packages (read only)
+  hardware            What SpiderSense knows about this machine
+  snapshots           List the Btrfs snapshots (read only)
+  prune-plan          Show which of our snapshots are older than 48 hours (nothing is deleted)
+  log [--json]        Show the SpiderSense flight recorder (also: log-boot, log-gpu, log-kernel,
+                      log-initramfs, log-cpu, log-update, log-snapshot, log-system, log-supply)
+  -h, --help          This help
+
+Everything here only reads. Repairs and updates are done by slacky-update.
+USAGE
+}
+
+recorder_file() {
+    local base="${XDG_CACHE_HOME:-${HOME:-/root}/.cache}" f
+    for f in /var/log/slacky-update/spidersense.log "${base}/slacky-update/spidersense.log"; do
+        if [ -r "${f}" ]; then printf '%s\n' "${f}"; return 0; fi
+    done
+    return 1
+}
+
+cmd_log() {
+    local cat="${1:-}" json=0 f
+    shift || true
+    [ "${1:-}" = "--json" ] && json=1
+    if ! f="$(recorder_file)"; then
+        echo "The flight recorder is empty: nothing has been recorded yet."
+        return 0
+    fi
+    # 48 hours is the recorder's retention; show the newest 200 lines of the chosen category
+    local lines
+    if [ -n "${cat}" ]; then
+        lines="$(grep -E "\"cat\": ?\"${cat}\"" "${f}" | tail -n 200 || true)"
+    else
+        lines="$(tail -n 200 "${f}" || true)"
+    fi
+    if [ -z "${lines}" ]; then
+        echo "Nothing recorded for this category."
+        return 0
+    fi
+    if [ "${json}" = 1 ]; then
+        printf '%s\n' "${lines}"
+    else
+        printf '%s\n' "${lines}" | python3 -I -c '
+import json, sys
+for raw in sys.stdin:
+    try:
+        r = json.loads(raw)
+        print("%s  %-6s %-8s %s" % (r.get("ts", ""), r.get("lvl", ""), r.get("cat", ""), r.get("msg", "")))
+    except ValueError:
+        pass
+'
+    fi
+}
+
+cmd_snapshots() {
+    if ! command -v snapper >/dev/null 2>&1; then
+        echo "Snapshots are not available here: snapper is not installed."
+        return 0
+    fi
+    if ! snapper -c root list 2>/dev/null; then
+        echo "The snapshot list could not be read; run this as the administrator or check that snapper is set up for the root volume."
+    fi
+}
+
+cmd_status() {
+    local rc=0 out
+    echo "${BOLD}SpiderSense${RESET}"
+    # damaged packages
+    if h="$(find_helper slacky_heal.py)"; then
+        out="$(python3 -I "${h}" check 2>/dev/null)" || rc=$?
+        if [ "${rc}" = 0 ]; then
+            echo "  Packages:  ${GREEN}no damage found${RESET}"
+        else
+            echo "  Packages:  ${RED}damage found${RESET}; run 'spidersense heal-check' for details"
+        fi
+    else
+        echo "  Packages:  not checked (the package check is not installed)"
+    fi
+    # mirror sentinel
+    if h="$(find_helper slacky_sentinel.py)"; then
+        python3 -I "${h}" status 2>/dev/null | python3 -I -c '
+import json, sys, time
+try:
+    d = json.load(sys.stdin)
+except ValueError:
+    print("  Mirrors:   no sentinel data yet")
+    sys.exit(0)
+lr = d.get("last_run", 0)
+if not lr:
+    print("  Mirrors:   not checked yet")
+else:
+    days = max(0, int((time.time() - lr) // 86400))
+    bad = sum(f.get("retired", 0) + f.get("demoted", 0) for f in d.get("families", {}).values())
+    print("  Mirrors:   last checked %d day(s) ago, %d download server(s) set aside" % (days, bad))
+' || echo "  Mirrors:   no sentinel data yet"
+    else
+        echo "  Mirrors:   not checked (the sentinel is not installed)"
+    fi
+    # hardware changes
+    if h="$(find_helper spidersense_hw.py)"; then
+        local hw rc2=0
+        hw="$(python3 -I "${h}" check 2>/dev/null)" || rc2=$?
+        if [ "${rc2}" = 0 ]; then
+            echo "  Hardware:  unchanged since the last boot"
+        else
+            echo "  Hardware:  ${YELLOW}changed${RESET}; run 'spidersense hardware'"
+        fi
+    else
+        echo "  Hardware:  not checked (the hardware probe is not installed)"
+    fi
+}
+
+case "${1:-status}" in
+    status|--status) cmd_status ;;
+    heal-check|--heal|--heal-check) shift || true; run_helper slacky_heal.py check "$@" ;;
+    hardware|--hardware) run_helper spidersense_hw.py show ;;
+    snapshots|--list-snapshots) cmd_snapshots ;;
+    prune-plan)
+        plan="$(run_helper spidersense_snap.py plan 2>/dev/null)" || plan="ERROR"
+        case "${plan}" in
+            ERROR*) echo "The snapshot list could not be read, so no plan can be made." ;;
+            HOLD*)  echo "Nothing would be deleted: ${plan#HOLD }" ;;
+            "")     echo "No snapshot of ours is older than 48 hours." ;;
+            *)      echo "These snapshot numbers are older than 48 hours and would be deleted by the hourly job: ${plan}" ;;
+        esac ;;
+    --prune-snapshots)
+        echo "Deleting snapshots is done by the hourly job of slacky-update, not from here; 'spidersense prune-plan' shows what would go." ;;
+    --snapshot)
+        echo "Snapshots are made by slacky-update right before it changes the system." ;;
+    --watch)
+        echo "Live watching is not available; slacky-update checks the boot files at every update and every hour." ;;
+    log|--log) shift || true; cmd_log "" "$@" ;;
+    log-boot|--log-boot) shift || true; cmd_log BOOT "$@" ;;
+    log-gpu|--log-gpu) shift || true; cmd_log GPU "$@" ;;
+    log-kernel|--log-kernel) shift || true; cmd_log KERNEL "$@" ;;
+    log-initramfs|--log-initramfs) shift || true; cmd_log INITRAMFS "$@" ;;
+    log-cpu|--log-cpu) shift || true; cmd_log CPU "$@" ;;
+    log-update|--log-update) shift || true; cmd_log UPDATE "$@" ;;
+    log-snapshot|--log-snapshot) shift || true; cmd_log SNAPSHOT "$@" ;;
+    log-system|--log-system) shift || true; cmd_log SYSTEM "$@" ;;
+    log-supply|--log-supply) shift || true; cmd_log SUPPLY "$@" ;;
+    -h|--help|help) usage ;;
+    *) echo "Unknown command: $1" >&2; usage >&2; exit 2 ;;
+esac

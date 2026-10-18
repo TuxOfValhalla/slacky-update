@@ -173,7 +173,7 @@ if __name__ == "__main__":
                 sys.exit(1)
             i18n.save_language_override(target_lang)
             lang_name = langs.get(target_lang, target_lang) if target_lang != "system" else "System Default"
-            print(f"\033[1;32m✓\033[0m Language successfully set to: \033[1m{lang_name}\033[0m ({target_lang})")
+            print(f"Language successfully set to: \033[1m{lang_name}\033[0m ({target_lang})")
             sys.exit(0)
 
         key = sys.argv[1]

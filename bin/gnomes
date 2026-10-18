@@ -28,6 +28,20 @@ fi
 # shellcheck source=/dev/null
 [ -f "${APP_DIR}/mod_gnomes_engine.sh" ] && source "${APP_DIR}/mod_gnomes_engine.sh"
 
+# 6A-293 (M4): every pkgtools step (upgradepkg/removepkg) runs under the shared run lock of a full update. When gnomes is
+# called from inside an update that already holds it, SLACKY_RUN_LOCK_HELD=1 is inherited and nothing is locked again.
+# If another update holds it: wait up to 15 seconds, then refuse with one sentence (return 1).
+gnomes_pkgtools_lock() {
+    [ "${SLACKY_RUN_LOCK_HELD:-0}" = "1" ] && return 0
+    declare -F acquire_run_lock >/dev/null 2>&1 || return 0
+    local i
+    for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+        slacky_update_is_running || break
+        sleep 1
+    done
+    acquire_run_lock
+}
+
 GNOMES_PY=""
 if [ -f "${APP_DIR}/gnomes_pacman.py" ]; then
     GNOMES_PY="${APP_DIR}/gnomes_pacman.py"
@@ -98,6 +112,9 @@ print_help() {
     echo -e "  gnomes list\n"
     # 6A-135: exit codes for scripts
     echo -e "${BOLD}EXIT CODES:${RESET} 0 done, 1 error, 3 refused by the footprint guard (-S), 4 not confirmed (no terminal, no --yes)\n"
+    # 6A-275: signature checks refuse unverified packages; the emergency override is documented here
+    echo -e "${BOLD}SIGNATURES:${RESET} downloaded packages must carry a valid signature from their own repository's keys, otherwise nothing is built."
+    echo -e "  Emergency override (installs packages that fail the check, only logs it): SLACKY_GNOMES_TRUST=log gnomes -S <package>\n"
 }
 
 # 6A-41: exact package lookup by base name (name-version-arch-build stripped), never a prefix glob
@@ -356,6 +373,7 @@ case "${OP}" in
                             failed=1
                             continue
                         fi
+                        gnomes_pkgtools_lock || { failed=1; continue; }  # 6A-293
                         echo -e "\n${BOLD}${CYAN}:: Deploying ${PKG_NAME_BASE} to Slackware host via upgradepkg (requires sudo)...${RESET}"
                         if ! sudo upgradepkg --install-new --reinstall "${TXZ_PATH}"; then
                             echo -e "${RED}:: ${PKG_NAME_BASE} could not be installed.${RESET}"
@@ -510,13 +528,18 @@ case "${OP}" in
         fi
         # B8-style safety net: a snapshot of the current state first (fail closed when snapper exists but fails)
         # 6A-95: the 48-hour pruner leaves every snapshot alone while a rollback reads them
+        # 6A-293 (M4): the shared run lock first, so no full update runs between the snapshot and the reinstall
+        gnomes_pkgtools_lock || exit 1
         if command -v flock >/dev/null 2>&1; then
             sudo install -m 0644 -o root -g root /dev/null /run/lock/slacky-rollback.lock 2>/dev/null || true
-            exec 7</run/lock/slacky-rollback.lock 2>/dev/null && flock -n 7 2>/dev/null || true
+            # 6A-294 (S3): braces keep the 2>/dev/null on the open only; a bare exec would silence stderr for the rest
+            if { exec 7</run/lock/slacky-rollback.lock; } 2>/dev/null; then
+                flock -n 7 || { echo -e "${RED}:: Another rollback is running. Nothing was changed.${RESET}"; exit 1; }
+            fi
         fi
         if command -v snapper >/dev/null 2>&1; then
             # 6A-94: tagged as ours, no snapper cleanup algorithm (removed by the 48-hour pruner)
-            sudo snapper -c root create --type single \
+            sudo timeout 180 snapper -c root create --type single \
                 --description "gnomes: before rollback of ${rb_base}" \
                 --userdata "slacky=1,slacky-app=gnomes,slacky-kind=single" >/dev/null \
                 || { echo -e "${RED}:: Could not take a snapshot first. Nothing was changed.${RESET}"; exit 1; }
@@ -624,6 +647,7 @@ case "${OP}" in
             for pair in "${FOUND_PAIRS[@]}"; do
                 c_target="${pair%%:::*}"
                 p_id="${pair#*:::}"
+                gnomes_pkgtools_lock || exit 1  # 6A-293
 
                 # Pre-removal: Detect and cleanly stop any associated background services
                 PKG_SERVICES=()
@@ -749,6 +773,7 @@ case "${OP}" in
                             rm -rf "${GNOMES_OUT}"
                             exit 1
                         fi
+                        gnomes_pkgtools_lock || { rm -rf "${GNOMES_OUT}"; exit 1; }  # 6A-293
                         echo -e "\n${BOLD}${CYAN}:: Deploying ${PKG_NAME_BASE} to Slackware host via upgradepkg (requires sudo)...${RESET}"
                         sudo upgradepkg --install-new --reinstall "${TXZ_PATH}"
                         echo -e "\n${BOLD}${GREEN}PROFIT! Underpants Shared Runtime [${prof}] is now active in /opt/underpants/runtime/${RESET}\n"
@@ -799,6 +824,7 @@ case "${OP}" in
                         exit 0
                     fi
                 fi
+                gnomes_pkgtools_lock || exit 1  # 6A-293
                 for PKG_ID in "${FOUND_IDS[@]}"; do
                     echo -e "\n${BOLD}${CYAN}:: Removing ${PKG_ID} with removepkg...${RESET}"
                     if [ "$(id -u)" -eq 0 ]; then

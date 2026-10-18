@@ -204,7 +204,7 @@ sign_modules_for_kernel() {
                 decomp_ok=1
             else
                 # Self-healing: Strip trailing signature bytes appended to raw zstd stream
-                if sudo python3 -c "
+                if sudo python3 -I -c "
 import sys, subprocess
 try:
     with open('${mod}', 'rb') as fp:
@@ -321,7 +321,7 @@ sign_kernel_images() {
     fi
 
     local kern_list=()
-    mapfile -t kern_list < <(sudo python3 -c "
+    mapfile -t kern_list < <(sudo python3 -I -c "
 import os
 if os.path.exists('/boot'):
     for f in sorted(os.listdir('/boot')):
@@ -470,7 +470,7 @@ verify_secure_boot_status_interactive() {
 
     echo -e "\n${BOLD}Kernel Signature Audit (/boot):${RESET}"
     local k_files=()
-    mapfile -t k_files < <(sudo python3 -c "
+    mapfile -t k_files < <(sudo python3 -I -c "
 import os
 if os.path.exists('/boot'):
     for f in sorted(os.listdir('/boot')):

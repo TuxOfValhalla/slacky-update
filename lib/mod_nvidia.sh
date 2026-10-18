@@ -681,7 +681,24 @@ detect_cachyos_nvidia_upstream_version() {
     echo "${ver}"
 }
 
+# 6A-287 (M8): older NVIDIA driver packages (SBo or other) that own the same files. We never move or edit their package
+# database records; the user removes them with removepkg and runs the update again. Read-only; PKGDB_DIR is for tests.
+nvidia_legacy_pkg_check() {
+    local ppath pbname found=()
+    for ppath in "${PKGDB_DIR:-/var/log/packages}"/{nvidia-driver,nvidia-kernel,nvidia-utils,x11-nvidia-driver}-[0-9]*; do
+        [ -f "${ppath}" ] || continue
+        pbname=$(basename "${ppath}")
+        case "${pbname%-*-*-*}" in
+            nvidia-driver|nvidia-kernel|nvidia-utils|x11-nvidia-driver) found+=("${pbname}") ;;
+        esac
+    done
+    [ "${#found[@]}" -eq 0 ] && return 0
+    log_error "An older NVIDIA driver package is installed (${found[*]}). Remove it with: sudo removepkg ${found[*]} and run the update again. Nothing was installed."
+    return 1
+}
+
 build_and_deploy_cachyos_nvidia_userspace() {
+    nvidia_legacy_pkg_check || return 1
     local target_ver="$1"
     local gpu_arch="MODERN"
     if command -v detect_nvidia_gpu >/dev/null 2>&1; then
@@ -792,7 +809,7 @@ build_and_deploy_cachyos_nvidia_userspace() {
     fi
 
     for pkg_item in "${download_list[@]}"; do
-        if ! verify_cachyos_gpg_signature "${cache_dir}/${pkg_item}" "${cache_dir}/${pkg_item}.sig"; then
+        if ! verify_cachyos_gpg_signature "${cache_dir}/${pkg_item}" "${cache_dir}/${pkg_item}.sig" "${cachy_repo}/${pkg_item}"; then
             log_error "GPG verification failed for ${pkg_item}! Aborting user-space staging build."
             rm -rf "${staging_base}"
             trap - INT TERM
@@ -801,7 +818,7 @@ build_and_deploy_cachyos_nvidia_userspace() {
     done
 
     if [ -n "${pkg_libva}" ] && [ -n "${libva_url}" ]; then
-        if ! verify_cachyos_gpg_signature "${cache_dir}/${pkg_libva}" "${cache_dir}/${pkg_libva}.sig"; then
+        if ! verify_cachyos_gpg_signature "${cache_dir}/${pkg_libva}" "${cache_dir}/${pkg_libva}.sig" "${libva_url}"; then
             log_error "GPG verification failed for ${pkg_libva}! Aborting."
             rm -rf "${staging_base}"
             trap - INT TERM
@@ -810,7 +827,7 @@ build_and_deploy_cachyos_nvidia_userspace() {
     fi
 
     if [ -n "${pkg_egl_gbm}" ] && [ -n "${egl_gbm_url}" ]; then
-        if ! verify_cachyos_gpg_signature "${cache_dir}/${pkg_egl_gbm}" "${cache_dir}/${pkg_egl_gbm}.sig"; then
+        if ! verify_cachyos_gpg_signature "${cache_dir}/${pkg_egl_gbm}" "${cache_dir}/${pkg_egl_gbm}.sig" "${egl_gbm_url}"; then
             log_error "GPG verification failed for ${pkg_egl_gbm}! Aborting."
             rm -rf "${staging_base}"
             trap - INT TERM
@@ -1037,6 +1054,24 @@ DOINST_EOF
     # Enforce standard permissions before packaging
     chmod -R u=rwX,go=rX "${staging_root}"
 
+    # 6A-288 (S4): Footprint Guard on the final staging tree, as in the other packagers (enforce unless
+    # SLACKY_FOOTPRINT_MODE=report). The NVIDIA files that must reach the host (profile.d VA-API) are on the guard's vetted list.
+    if [ -n "${GNOMES_PY:-}" ] && [ -f "${GNOMES_PY}" ]; then
+        if ! python3 "${GNOMES_PY}" footprint-guard "${staging_root}" --label "cachyos-nvidia-utils-${target_ver}"; then
+            if [ "${SLACKY_FOOTPRINT_MODE:-enforce}" != "report" ]; then
+                log_error "Footprint check failed for the NVIDIA userspace package. Package not built."
+                rm -rf "${staging_base}"
+                trap - INT TERM
+                return 1
+            fi
+        fi
+    elif [ "${SLACKY_FOOTPRINT_MODE:-enforce}" != "report" ]; then
+        log_error "Footprint check unavailable (gnomes_pacman.py not found). Package not built."
+        rm -rf "${staging_base}"
+        trap - INT TERM
+        return 1
+    fi
+
     log_info "Assembling Slackware txz package: cachyos-nvidia-utils-${target_ver}..."
     local txz_out="${staging_base}/cachyos-nvidia-utils-${target_ver}-x86_64-1_slacky.txz"
     rm -f "${txz_out}"
@@ -1052,6 +1087,18 @@ DOINST_EOF
         pack_ok=0
     fi
 
+    # 6A-288 (S4): the finished archive must be root-owned and must not overwrite files of another package
+    if [ "${pack_ok}" -eq 1 ] && [ "${SLACKY_FOOTPRINT_MODE:-enforce}" != "report" ]; then
+        if [ -z "${GNOMES_PY:-}" ] || [ ! -f "${GNOMES_PY}" ] \
+            || ! python3 "${GNOMES_PY}" footprint-guard --verify-archive "${txz_out}" \
+            || ! python3 "${GNOMES_PY}" footprint-guard --verify-host-paths "${txz_out}" --mode curated; then
+            log_error "The NVIDIA userspace package failed the footprint check, so nothing was installed."
+            rm -rf "${staging_base}" 2>/dev/null || true
+            trap - INT TERM
+            return 1
+        fi
+    fi
+
     local deploy_rc=0
     if [ "${pack_ok}" -eq 1 ]; then
         chmod 644 "${txz_out}"
@@ -1059,22 +1106,13 @@ DOINST_EOF
         # Root stage: Validate privileges and install
         validate_privileges
 
-        # Scan and retire legacy conflicting NVIDIA packages from /var/log/packages to avoid multiple owners
-        local legacy_pkgs=("nvidia-driver" "nvidia-kernel" "nvidia-utils" "x11-nvidia-driver")
-        for lpkg in "${legacy_pkgs[@]}"; do
-            for ppath in /var/log/packages/${lpkg}-[0-9]*; do
-                [ -f "${ppath}" ] || continue
-                local pbname
-                pbname=$(basename "${ppath}")
-                log_info "Retiring legacy package database entry: ${pbname}..."
-                sudo mkdir -p /var/log/packages/retired_by_slacky
-                sudo mv -f "${ppath}" /var/log/packages/retired_by_slacky/ 2>/dev/null || true
-                if [ -f "/var/log/scripts/${pbname}" ]; then
-                    sudo mkdir -p /var/log/scripts/retired_by_slacky
-                    sudo mv -f "/var/log/scripts/${pbname}" /var/log/scripts/retired_by_slacky/ 2>/dev/null || true
-                fi
-            done
-        done
+        # 6A-287 (M8): the package database is never edited. An older NVIDIA package (for example from SBo) is re-checked
+        # right before the install; it must be removed by the user with removepkg.
+        if ! nvidia_legacy_pkg_check; then
+            rm -rf "${staging_base}" 2>/dev/null || true
+            trap - INT TERM
+            return 1
+        fi
 
         log_info "Installing cachyos-nvidia-utils package to system..."
         if sudo "${PKG_UPGRADE_CMD}" --install-new --reinstall "${txz_out}"; then
@@ -1193,6 +1231,48 @@ register_precompiled_nvidia_in_dkms() {
     return 0
 }
 
+# 6A-302 (F0b): true only when kernel <kver> has an nvidia module file AND modinfo reports exactly <expected> for it.
+# depmod is refreshed first so "modinfo -k" sees the new files. Prints nothing.
+nvidia_module_landed() {
+    local kver="${1:-}" expected="${2:-}" mod got
+    [ -n "${kver}" ] && [ -n "${expected}" ] || return 1
+    mod=$(find -L "${NVIDIA_MODROOT:-/lib/modules}/${kver}" -name "nvidia.ko*" 2>/dev/null | head -n 1 || true)
+    [ -n "${mod}" ] || return 1
+    sudo "${DEPMOD_CMD:-depmod}" -a "${kver}" >/dev/null 2>&1 || true
+    got=$(modinfo -k "${kver}" -F version nvidia 2>/dev/null | head -n 1 || true)
+    [ -n "${got}" ] || got=$(get_nvidia_module_version "${mod}")
+    [ "${got}" = "${expected}" ]
+}
+
+# 6A-302 (F0b): kernels whose NVIDIA module failed to arrive are listed here; the boot menu leaves them out while the
+# module is still missing (see nvidia_hold_active), so they cannot become the default. A later good run clears the entry.
+NVIDIA_HOLD_FILE="${NVIDIA_HOLD_FILE:-/var/lib/slacky-boot/nvidia-hold}"
+nvidia_hold_set() {
+    local kver="${1:-}"
+    [ -n "${kver}" ] || return 0
+    grep -qxF "${kver}" "${NVIDIA_HOLD_FILE}" 2>/dev/null && return 0
+    sudo mkdir -p "$(dirname "${NVIDIA_HOLD_FILE}")" 2>/dev/null || true
+    echo "${kver}" | sudo tee -a "${NVIDIA_HOLD_FILE}" >/dev/null 2>&1 || true
+}
+nvidia_hold_clear() {
+    local kver="${1:-}"
+    [ -n "${kver}" ] && [ -f "${NVIDIA_HOLD_FILE}" ] || return 0
+    grep -qxF "${kver}" "${NVIDIA_HOLD_FILE}" 2>/dev/null || return 0
+    local keep
+    keep=$(grep -vxF "${kver}" "${NVIDIA_HOLD_FILE}" 2>/dev/null || true)
+    printf '%s\n' "${keep}" | sudo tee "${NVIDIA_HOLD_FILE}" >/dev/null 2>&1 || true
+}
+# Held kernels that STILL have no nvidia module, one per line (a repaired kernel is released automatically).
+nvidia_hold_active() {
+    local k
+    [ -f "${NVIDIA_HOLD_FILE}" ] || return 0
+    while IFS= read -r k; do
+        [ -n "${k}" ] || continue
+        [ -n "$(find -L "${NVIDIA_MODROOT:-/lib/modules}/${k}" -name 'nvidia.ko*' 2>/dev/null | head -n 1)" ] && continue
+        echo "${k}"
+    done < "${NVIDIA_HOLD_FILE}"
+}
+
 prune_stale_nvidia_modules_for_kernel() {
     local target_kver="$1"
     local target_ver="$2"
@@ -1299,7 +1379,7 @@ sync_stock_kernel_nvidia_module() {
             return 1
         fi
 
-        if ! verify_cachyos_gpg_signature "${dkms_archive}" "${dkms_archive}.sig"; then
+        if ! verify_cachyos_gpg_signature "${dkms_archive}" "${dkms_archive}.sig" "${cachy_repo}/${dkms_pkg}"; then
             log_error "GPG signature verification failed for ${dkms_pkg}! Aborting."
             rm -rf "${staging_dir}"
             return 1
@@ -1318,7 +1398,7 @@ sync_stock_kernel_nvidia_module() {
             local dkms_bin
             dkms_bin=$(command -v dkms 2>/dev/null || echo "/usr/sbin/dkms")
             if [ -x "${dkms_bin}" ]; then
-                log_info "⚡ Compiling NVIDIA DKMS module for kernel ${stock_kver}..."
+                log_info "Compiling NVIDIA DKMS module for kernel ${stock_kver}..."
                 if ! sudo "${dkms_bin}" build -m "${dkms_name}" -v "${dkms_ver}" -k "${stock_kver}" 2>&1; then
                     log_error "DKMS build failed for kernel: ${stock_kver}"
                     return 1
@@ -1437,7 +1517,7 @@ ensure_cachyos_nvidia_dkms_source_unpacked() {
         local dkms_archive="${staging_dir}/${dkms_pkg}"
         local dkms_items=("${cachy_repo}/${dkms_pkg}|${dkms_archive}|${cachy_repo}/${dkms_pkg}.sig|${dkms_archive}.sig")
         if download_parallel_pacman "CachyOS NVIDIA DKMS (${dkms_pkg})" "${dkms_items[@]}" 2>/dev/null; then
-            if verify_cachyos_gpg_signature "${dkms_archive}" "${dkms_archive}.sig" 2>/dev/null; then
+            if verify_cachyos_gpg_signature "${dkms_archive}" "${dkms_archive}.sig" "${cachy_repo}/${dkms_pkg}" 2>/dev/null; then
                 validate_privileges
                 sudo tar --zstd --exclude=.PKGINFO --exclude=.BUILDINFO --exclude=.MTREE --exclude=.INSTALL --exclude=.CHANGELOG -xf "${dkms_archive}" -C / 2>/dev/null || true
                 if command -v dkms_purge_orphaned_ghosts >/dev/null 2>&1; then
@@ -1534,11 +1614,12 @@ sync_all_cachyos_kernels_nvidia() {
                             local k_rc p_rc
                             k_rc=$(echo "${kver}" | grep -o -E 'rc[0-9]+' || echo "")
                             p_rc=$(echo "${c_pkg}" | grep -o -E 'rc[0-9]+' || echo "")
-                            if [ -n "${k_rc}" ] && [ "${k_rc}" = "${p_rc}" ] && echo "${c_pkg}" | grep -q "${kver_clean}"; then
+                            # 6A-302 (F0b): exact release, anchored on both sides; 7.2.1 must never match a 7.2.10 module
+                            if [ -n "${k_rc}" ] && [ "${k_rc}" = "${p_rc}" ] && [[ "${c_pkg}" == "${pref}-nvidia-open-${kver_clean}-"* ]]; then
                                 matched_pkg="${c_pkg}"
                                 break
                             fi
-                        elif echo "${c_pkg}" | grep -q "${kver_clean}"; then
+                        elif [[ "${c_pkg}" == "${pref}-nvidia-open-${kver_clean}-"* ]]; then
                             matched_pkg="${c_pkg}"
                             break
                         fi
@@ -1551,19 +1632,26 @@ sync_all_cachyos_kernels_nvidia() {
                         mkdir -p "${staging_dir}"
                         local nv_file="${staging_dir}/${matched_pkg}"
                         local nv_items=("${cachy_repo}/${matched_pkg}|${nv_file}|${cachy_repo}/${matched_pkg}.sig|${nv_file}.sig")
-                        if download_parallel_pacman "CachyOS NVIDIA Module (${kver})" "${nv_items[@]}" && verify_cachyos_gpg_signature "${nv_file}" "${nv_file}.sig"; then
+                        if download_parallel_pacman "CachyOS NVIDIA Module (${kver})" "${nv_items[@]}" && verify_cachyos_gpg_signature "${nv_file}" "${nv_file}.sig" "${cachy_repo}/${matched_pkg}"; then
                             validate_privileges
                             log_info "Deploying precompiled NVIDIA open driver to kernel ${kver}..."
                             sudo tar --zstd --exclude=.PKGINFO --exclude=.BUILDINFO --exclude=.MTREE --exclude=.INSTALL --exclude=.CHANGELOG -xf "${nv_file}" -C /
                             prune_stale_nvidia_modules_for_kernel "${kver}" "${cachy_nv_ver}"
                             register_precompiled_nvidia_in_dkms "${kver}" "${cachy_nv_ver}"
-                            # 6A-97: deferred run -> one image build per kernel in the boot-chain step
-                            if [ "${DEFER_BOOT_SYNC:-0}" = "1" ]; then
-                                ss_order_initrd "${kver}"
-                            elif command -v generate_kernel_initramfs >/dev/null 2>&1; then
-                                generate_kernel_initramfs "${kver}"
+                            # 6A-302 (F0b): success only when the module really landed for this kernel with the expected version
+                            if nvidia_module_landed "${kver}" "${cachy_nv_ver}"; then
+                                nvidia_hold_clear "${kver}"
+                                # 6A-97: deferred run -> one image build per kernel in the boot-chain step
+                                if [ "${DEFER_BOOT_SYNC:-0}" = "1" ]; then
+                                    ss_order_initrd "${kver}"
+                                elif command -v generate_kernel_initramfs >/dev/null 2>&1; then
+                                    generate_kernel_initramfs "${kver}"
+                                fi
+                                deployed_precompiled=1
+                            else
+                                nvidia_hold_set "${kver}"
+                                log_error "The NVIDIA driver did not arrive for kernel ${kver}, so that kernel will not become the default until it is fixed."
                             fi
-                            deployed_precompiled=1
                         fi
                     fi
 
@@ -1579,11 +1667,18 @@ sync_all_cachyos_kernels_nvidia() {
                             if sudo dkms build -m nvidia -v "${cachy_nv_ver}" -k "${kver}" 2>/dev/null; then
                                 sudo dkms install -m nvidia -v "${cachy_nv_ver}" -k "${kver}" 2>/dev/null || log_warn "DKMS install warning for ${kver}"
                                 prune_stale_nvidia_modules_for_kernel "${kver}" "${cachy_nv_ver}"
-                                # 6A-97: deferred run -> one image build per kernel in the boot-chain step
-                                if [ "${DEFER_BOOT_SYNC:-0}" = "1" ]; then
-                                    ss_order_initrd "${kver}"
-                                elif command -v generate_kernel_initramfs >/dev/null 2>&1; then
-                                    generate_kernel_initramfs "${kver}"
+                                # 6A-302 (F0b): the same proof as for the precompiled module
+                                if nvidia_module_landed "${kver}" "${cachy_nv_ver}"; then
+                                    nvidia_hold_clear "${kver}"
+                                    # 6A-97: deferred run -> one image build per kernel in the boot-chain step
+                                    if [ "${DEFER_BOOT_SYNC:-0}" = "1" ]; then
+                                        ss_order_initrd "${kver}"
+                                    elif command -v generate_kernel_initramfs >/dev/null 2>&1; then
+                                        generate_kernel_initramfs "${kver}"
+                                    fi
+                                else
+                                    nvidia_hold_set "${kver}"
+                                    log_error "The NVIDIA driver did not arrive for kernel ${kver}, so that kernel will not become the default until it is fixed."
                                 fi
                             else
                                 log_warn "DKMS build was unsuccessful for kernel: ${kver} (skipping install)"

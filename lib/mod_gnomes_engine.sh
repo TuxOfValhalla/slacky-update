@@ -66,10 +66,10 @@ gnomes_sync_db() {
 
     echo -e "${BOLD}${CYAN}:: [Underpants Gnomes] Synchronizing Pacman Repositories...${RESET}"
     if python3 "${GNOMES_PY}" sync ${force_flag}; then
-        echo -e "${GREEN}✓ Pacman sync databases updated successfully.${RESET}"
+        echo -e "${GREEN}Pacman sync databases updated successfully.${RESET}"
         return 0
     else
-        echo -e "${RED}✗ Failed to synchronize one or more Pacman databases.${RESET}"
+        echo -e "${RED}Failed to synchronize one or more Pacman databases.${RESET}"
         return 1
     fi
 }
@@ -121,18 +121,18 @@ gnomes_interactive_station() {
     while true; do
         echo ""
         echo -e "${BLUE}${BOLD}================================================================================${RESET}"
-        echo -e " ${BOLD}${MAGENTA}🧙 UNDERPANTS GNOMES PACMAN FACTORY & TRANSMUTATION MATRIX (SLACKWARE)${RESET}"
+        echo -e " ${BOLD}${MAGENTA}UNDERPANTS GNOMES PACMAN FACTORY & TRANSMUTATION MATRIX (SLACKWARE)${RESET}"
         echo -e "${BLUE}================================================================================${RESET}"
-        echo -e "  ${CYAN}Step 1: Steal Underpants  ➔  Step 2: Relocate ELF & DAG  ➔  ${GREEN}${BOLD}Step 3: 💰 PROFIT!${RESET}"
+        echo -e "  ${CYAN}Step 1: Steal Underpants  ->  Step 2: Relocate ELF & DAG  ->  ${GREEN}${BOLD}Step 3: PROFIT!${RESET}"
         echo ""
-        echo -e "  ${BOLD}1.${RESET} 🔍 Search Upstream Repositories (CachyOS / Arch / Multilib)"
-        echo -e "  ${BOLD}2.${RESET} 📦 Inspect Package Details & Upstream Metadata (-Si)"
-        echo -e "  ${BOLD}3.${RESET} 🧬 Resolve Dependency Graph & Host Sovereignty Shield (-Sd)"
-        echo -e "  ${BOLD}4.${RESET} ⚡ Transmute & Install Upstream Package (-S)"
-        echo -e "  ${BOLD}5.${RESET} 🔄 Synchronize Pacman Sync Databases (-Sy)"
-        echo -e "  ${BOLD}6.${RESET} 📋 List Transmuted Packages in /var/log/packages/ (-Q)"
-        echo -e "  ${BOLD}7.${RESET} 🛡️ Verify Host System Sovereignty & glibc Compatibility"
-        echo -e "  ${BOLD}Q.${RESET} 🚪 Catch You on the Flip Side (Return)"
+        echo -e "  ${BOLD}1.${RESET} Search Upstream Repositories (CachyOS / Arch / Multilib)"
+        echo -e "  ${BOLD}2.${RESET} Inspect Package Details & Upstream Metadata (-Si)"
+        echo -e "  ${BOLD}3.${RESET} Resolve Dependency Graph & Host Sovereignty Shield (-Sd)"
+        echo -e "  ${BOLD}4.${RESET} Transmute & Install Upstream Package (-S)"
+        echo -e "  ${BOLD}5.${RESET} Synchronize Pacman Sync Databases (-Sy)"
+        echo -e "  ${BOLD}6.${RESET} List Transmuted Packages in /var/log/packages/ (-Q)"
+        echo -e "  ${BOLD}7.${RESET} Verify Host System Sovereignty & glibc Compatibility"
+        echo -e "  ${BOLD}Q.${RESET} Catch You on the Flip Side (Return)"
         echo ""
         read -r -p "Enter choice [1-7, Q]: " g_choice
         g_choice=$(echo "${g_choice}" | tr '[:lower:]' '[:upper:]' | xargs)

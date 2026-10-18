@@ -71,6 +71,7 @@ install_cachyos_rocm_suite() {
     mkdir -p "${dl_dir}"
 
     local rocm_dl_items=()
+    local -A rocm_url_of=()
     local resolved_pkgs=()
 
     log_info "Resolving upstream package URLs for AMD ROCm..."
@@ -99,6 +100,7 @@ install_cachyos_rocm_suite() {
         if [ -n "${pkg_file}" ]; then
             # 6A-143: signature downloaded next to each package (url|dest|sig_url|sig_dest)
             rocm_dl_items+=("${base_url}/${pkg_file}|${dl_dir}/${pkg_file}|${base_url}/${pkg_file}.sig|${dl_dir}/${pkg_file}.sig")
+            rocm_url_of["${dl_dir}/${pkg_file}"]="${base_url}/${pkg_file}"
             resolved_pkgs+=("${dl_dir}/${pkg_file}")
         else
             log_warn "Package ${rpkg} not found in primary mirrors; continuing..."
@@ -130,7 +132,8 @@ install_cachyos_rocm_suite() {
             rm -rf "${work_dir}"
             return 1
         fi
-        if [ -f "${r_pkg_file}.sig" ] && ! verify_cachyos_gpg_signature "${r_pkg_file}" "${r_pkg_file}.sig"; then
+        # 6A-277: every ROCm part comes from a signing repo (CachyOS or Arch), so a missing .sig refuses as well
+        if ! verify_cachyos_gpg_signature "${r_pkg_file}" "${r_pkg_file}.sig" "${rocm_url_of[${r_pkg_file}]:-}"; then
             log_error "The ROCm part $(basename "${r_pkg_file}") failed its signature check, so nothing was installed."
             rm -rf "${work_dir}"
             return 1
@@ -281,7 +284,7 @@ DOINST_EOF
 # --- [ VERIFY AMD COMPUTE & OPENCL STATUS ] ---
 verify_amd_compute_status() {
     echo ""
-    echo -e "${BOLD}${CYAN}=== 🏎️ AMD ROCm / HIP & OpenCL Status ===${RESET}"
+    echo -e "${BOLD}${CYAN}=== AMD ROCm / HIP & OpenCL Status ===${RESET}"
 
     echo -n "• OpenCL ICD Descriptors: "
     if ls /etc/OpenCL/vendors/*.icd >/dev/null 2>&1; then

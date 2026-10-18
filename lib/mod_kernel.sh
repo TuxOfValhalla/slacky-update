@@ -95,7 +95,7 @@ is_r8125_wanted() {
     # First-time interactive prompt
     if [ -t 0 ] || [ -n "${PS1:-}" ] || [ "${INTERACTIVE:-0}" = "1" ]; then
         echo ""
-        log_info "$(_ HARDWARE_REALTEK_2_5GBE_DETECTED 2>/dev/null || echo "⚡ Realtek 2.5GbE Ethernet NIC detected (RTL8125).")"
+        log_info "$(_ HARDWARE_REALTEK_2_5GBE_DETECTED 2>/dev/null || echo "Realtek 2.5GbE Ethernet NIC detected (RTL8125).")"
         echo -n "$(_ PROMPT_INSTALL_R8125_MODULE version="${kver:-latest}" 2>/dev/null || echo "Would you like to auto-install the high-performance CachyOS r8125 module? [Y/n]: ")"
         local reply_r8125
         read -r reply_r8125 || reply_r8125="Y"
@@ -749,7 +749,7 @@ update_cachyos_kernels() {
 
     if [ ${#dl_items[@]} -gt 0 ]; then
         echo ""
-        log_info "⚡ Starting Unified Parallel Batch Download (${#flavors_to_update[@]} kernel flavors • ${#dl_items[@]} files)..."
+        log_info "Starting Unified Parallel Batch Download (${#flavors_to_update[@]} kernel flavors • ${#dl_items[@]} files)..."
         download_parallel_pacman "CachyOS Kernel Suite (${#flavors_to_update[@]} flavors)" "${dl_items[@]}" || true
     fi
 
@@ -759,7 +759,7 @@ update_cachyos_kernels() {
         deploy_cachyos_kernel_flavor "${flv}"
     done
 
-    log_info "⚡ Running Single-Pass Post-Installation Pipeline (DKMS, Dracut, MOK & Limine)..."
+    log_info "Running Single-Pass Post-Installation Pipeline (DKMS, Dracut, MOK & Limine)..."
     if command -v dkms >/dev/null 2>&1; then
         build_dkms_modules_for_all_kernels
     fi
@@ -855,7 +855,7 @@ remove_stock_slackware_kernels() {
     # HARD BOOT-VALIDATION GUARDRAIL:
     # Ensure at least one verified, bootable CachyOS vmlinuz (>5MB) and matching initramfs/initrd (>5MB) exist before removing stock kernels
     local validation_res
-    validation_res=$(sudo python3 -c "
+    validation_res=$(sudo python3 -I -c "
 import os
 
 found_kernel = ''
@@ -1026,7 +1026,7 @@ manage_kernel_removal_interactive() {
 
     while true; do
         local kernels_raw
-        kernels_raw=$(sudo python3 -c "
+        kernels_raw=$(sudo python3 -I -c "
 import os
 
 def get_dir_size(path):
@@ -1572,95 +1572,15 @@ detect_root_filesystem_details() {
     echo "${root_dev}|${root_fs}|${root_uuid}|${root_flags}"
 }
 
+# 6A-304 (GRUB): this used to rewrite /etc/grub.d/10_linux, a file of the Slackware grub package. That is not allowed any
+# more: the file is left alone. The first-entry choice now lives in our own drop-in (see set_grub_smart_default_priority).
 ensure_grub_smart_kernel_sorting() {
-    local grub_script="/etc/grub.d/10_linux"
-    [ -f "${grub_script}" ] || return 0
-
-    if grep -q "Smart CachyOS Prioritized Sort" "${grub_script}" 2>/dev/null; then
-        return 0
-    fi
-
-    sudo python3 - << 'PYGRUB_SORT'
-import os, sys
-
-script = '/etc/grub.d/10_linux'
-if not os.path.exists(script):
-    sys.exit(0)
-
-try:
-    with open(script, 'r', encoding='utf-8') as f:
-        lines = f.readlines()
-
-    new_lines = []
-    modified = False
-    for line in lines:
-        if 'reverse_sorted_list=' in line and 'version_sort -r' in line:
-            modified = True
-            snippet = """# Smart CachyOS Prioritized Sort (slacky-update)
-if command -v python3 >/dev/null 2>&1; then
-  reverse_sorted_list=$(echo "$list" | tr ' ' '\\n' | python3 -c "
-import sys, os, re
-
-def rank(k):
-    b = os.path.basename(k)
-    tier = -50
-    if '-cachyos-bore-lto' in b or '-cachyos-lto' in b:
-        tier = 50
-    elif '-cachyos-rt-bore' in b or '-cachyos-rt' in b:
-        tier = 45
-    elif '-cachyos-bore' in b:
-        tier = 40
-    elif '-cachyos-eevdf' in b:
-        tier = 38
-    elif '-cachyos-bmq' in b:
-        tier = 36
-    elif '-zen' in b or b.endswith('-zen') or b == 'vmlinuz-linux-zen':
-        tier = 35
-    elif '-cachyos-deckify' in b:
-        tier = 34
-    elif '-cachyos' in b and '-rc' not in b and '-lts' not in b and '-bore' not in b and '-rt' not in b and '-eevdf' not in b and '-bmq' not in b and '-deckify' not in b:
-        tier = 30
-    elif '-arch' in b or b == 'vmlinuz-linux':
-        tier = 28
-    elif '-cachyos-lts' in b:
-        tier = 20
-    elif '-cachyos-rc' in b:
-        tier = 10
-    elif 'vmlinuz-generic' in b or 'generic' in b:
-        tier = -40
-    elif 'vmlinuz-huge' in b or 'huge' in b:
-        tier = -60
-    nums = [int(x) for x in re.findall(r'\\d+', b)]
-    return (tier, nums)
-
-lines = [l.strip() for l in sys.stdin if l.strip()]
-ranked = sorted(lines, key=rank, reverse=True)
-print(' '.join(ranked))
-" 2>/dev/null || true)
-fi
-if [ -z "${reverse_sorted_list}" ]; then
-""" + line + "fi\n"
-            new_lines.append(snippet)
-        else:
-            new_lines.append(line)
-
-    if modified:
-        if not os.path.exists(script + '.orig'):
-            try:
-                with open(script + '.orig', 'w', encoding='utf-8') as f_orig:
-                    f_orig.writelines(lines)
-            except Exception:
-                pass
-        with open(script, 'w', encoding='utf-8') as f_out:
-            f_out.writelines(new_lines)
-except Exception:
-    pass
-PYGRUB_SORT
+    return 0
 }
 
 set_grub_smart_default_priority() {
     local top_dog
-    top_dog=$(sudo python3 -c "
+    top_dog=$(sudo python3 -I -c "
 import os, re
 
 def rank_kernel(k):
@@ -1703,15 +1623,19 @@ except Exception:
     pass
 " 2>/dev/null || echo "")
 
-    if [ -n "${top_dog}" ]; then
-        local grub_default_file="/etc/default/grub"
-        if [ -f "${grub_default_file}" ]; then
-            if grep -q "^GRUB_TOP_LEVEL=" "${grub_default_file}"; then
-                sudo sed -i "s|^GRUB_TOP_LEVEL=.*|GRUB_TOP_LEVEL=\"${top_dog}\"|" "${grub_default_file}"
-            else
-                echo "GRUB_TOP_LEVEL=\"${top_dog}\"" | sudo tee -a "${grub_default_file}" >/dev/null
-            fi
-        fi
+    # 6A-304 (GRUB): GRUB_TOP_LEVEL goes into OUR OWN drop-in, never into /etc/default/grub or any Slackware file. The
+    # drop-in is only written when the installed grub-mkconfig reads /etc/default/grub.d/*.cfg; otherwise nothing is written.
+    local dropin_dir="${GRUB_DROPIN_DIR:-/etc/default/grub.d}" mkconfig_script="${GRUB_MKCONFIG_SCRIPT:-/usr/sbin/grub-mkconfig}"
+    if [ -n "${top_dog}" ] && [ -d "${dropin_dir}" ] && grep -q 'default/grub\.d/\*\.cfg' "${mkconfig_script}" 2>/dev/null; then
+        case "${top_dog}" in
+            /boot/vmlinuz-*) ;;
+            *) return 0 ;;
+        esac
+        local tmp_dropin
+        tmp_dropin=$(mktemp /tmp/slacky-grub-dropin.XXXXXX) || return 0
+        printf '# Written by slacky-update. Safe to delete; it only chooses the first GRUB entry.\nGRUB_TOP_LEVEL="%s"\n' "${top_dog}" > "${tmp_dropin}"
+        sudo install -m 644 -o root -g root "${tmp_dropin}" "${dropin_dir}/09-slacky.cfg" 2>/dev/null || true
+        rm -f "${tmp_dropin}"
     fi
 }
 
@@ -2024,7 +1948,7 @@ build_dkms_modules_for_all_kernels() {
         return 0
     fi
 
-    log_info "⚡ DKMS Multi-Kernel Engine: Auditing modules across ${#target_kernels[@]} kernel trees..."
+    log_info "DKMS Multi-Kernel Engine: Auditing modules across ${#target_kernels[@]} kernel trees..."
 
     for kver in "${target_kernels[@]}"; do
         case "${ss_dying}" in *" ${kver} "*) continue ;; esac
@@ -2160,12 +2084,12 @@ deploy_cachyos_kernel_packages() {
         return 1
     fi
 
-    if ! verify_cachyos_gpg_signature "${k_file}" "${k_sig_file}"; then
+    if ! verify_cachyos_gpg_signature "${k_file}" "${k_sig_file}" "${k_url}"; then
         log_error "Kernel package GPG signature check failed! Aborting."
         rm -f "${k_file}" "${h_file}" "${k_sig_file}" "${h_sig_file}" 2>/dev/null || true
         return 1
     fi
-    if ! verify_cachyos_gpg_signature "${h_file}" "${h_sig_file}"; then
+    if ! verify_cachyos_gpg_signature "${h_file}" "${h_sig_file}" "${h_url}"; then
         log_error "Kernel headers package GPG signature check failed! Aborting."
         rm -f "${k_file}" "${h_file}" "${k_sig_file}" "${h_sig_file}" 2>/dev/null || true
         return 1
@@ -2175,7 +2099,9 @@ deploy_cachyos_kernel_packages() {
     local extra_pkg
     for extra_pkg in "${nv_file}" "${r8125_file}"; do
         [ -n "${extra_pkg}" ] && [ -f "${extra_pkg}" ] || continue
-        if ! verify_cachyos_gpg_signature "${extra_pkg}" "${extra_pkg}.sig"; then
+        local extra_src="${nv_url}"
+        [ "${extra_pkg}" = "${r8125_file}" ] && extra_src="${r8125_url}"
+        if ! verify_cachyos_gpg_signature "${extra_pkg}" "${extra_pkg}.sig" "${extra_src}"; then
             log_error "GPG signature check failed for $(basename "${extra_pkg}")! Aborting kernel deployment."
             rm -f "${k_file}" "${h_file}" "${k_sig_file}" "${h_sig_file}" "${nv_file}" "${nv_file}.sig" "${r8125_file}" "${r8125_file}.sig" 2>/dev/null || true
             return 1
@@ -2354,11 +2280,17 @@ deploy_cachyos_kernel_packages() {
                 local dkms_file="${staging_dir}/${dkms_pkg}"
                 log_info "Downloading ${dkms_pkg}..."
                 sudo curl -sSL --connect-timeout 10 --speed-limit 1024 --speed-time 25 -o "${dkms_file}" "${cachy_base}/${dkms_pkg}"
-                if ! verify_cachyos_package_integrity "${dkms_file}"; then
+                # 6A-277 (M9): the signature is fetched and checked before anything is extracted as root
+                curl -fsSL --connect-timeout 10 -o "${dkms_file}.sig" "${cachy_base}/${dkms_pkg}.sig" 2>/dev/null || rm -f "${dkms_file}.sig" 2>/dev/null || true
+                if ! verify_cachyos_gpg_signature "${dkms_file}" "${dkms_file}.sig" "${cachy_base}/${dkms_pkg}"; then
+                    log_error "The NVIDIA DKMS package could not be verified, so it was not installed."
+                    sudo rm -f "${dkms_file}" "${dkms_file}.sig" 2>/dev/null || true
+                elif ! verify_cachyos_package_integrity "${dkms_file}"; then
                     log_error "DKMS package integrity verification failed! Skipping extraction."
                     sudo rm -f "${dkms_file}" 2>/dev/null || true
+                elif ! sudo tar --zstd --exclude=.PKGINFO --exclude=.BUILDINFO --exclude=.MTREE --exclude=.INSTALL --exclude=.CHANGELOG -xf "${dkms_file}" -C /; then
+                    log_error "The NVIDIA DKMS package could not be unpacked completely, so the driver was not built."
                 else
-                    sudo tar --zstd --exclude=.PKGINFO --exclude=.BUILDINFO --exclude=.MTREE --exclude=.INSTALL --exclude=.CHANGELOG -xf "${dkms_file}" -C /
                     if command -v dkms >/dev/null 2>&1; then
                         local dkms_ver
                         dkms_ver=$(dkms status 2>/dev/null | grep -E '^nvidia/' | awk -F'[,/]' '{print $2}' | tr -d ' ' | head -n 1 || echo "580.178.04")
@@ -2383,7 +2315,7 @@ deploy_cachyos_kernel_packages() {
                 if [ -f "${nv_file}" ] && [ ! -f "${nv_file}.sig" ]; then
                     curl -sSL --connect-timeout 10 -o "${nv_file}.sig" "${nv_url}.sig" 2>/dev/null || sudo curl -sSL --connect-timeout 10 -o "${nv_file}.sig" "${nv_url}.sig" 2>/dev/null || true
                 fi
-                if ! verify_cachyos_gpg_signature "${nv_file}" "${nv_file}.sig"; then
+                if ! verify_cachyos_gpg_signature "${nv_file}" "${nv_file}.sig" "${nv_url}"; then
                     log_error "NVIDIA driver package GPG signature check failed! Skipping extraction."
                     sudo rm -f "${nv_file}" "${nv_file}.sig" 2>/dev/null || true
                 elif ! verify_cachyos_package_integrity "${nv_file}"; then
@@ -2882,11 +2814,11 @@ generate_kernel_initramfs() {
             cur_loc=$(get_active_locale 2>/dev/null || echo "en")
             local spinner_frames=()
             if [[ "${cur_loc}" =~ (en-ca|ca) ]]; then
-                spinner_frames=($'\033[2;31m🍁\033[0m' $'\033[1;31m🍁\033[0m' $'\033[1;37m🍁\033[0m' $'\033[1;31m🍁\033[0m')
+                spinner_frames=($'\033[2;31m*\033[0m' $'\033[1;31m*\033[0m' $'\033[1;37m*\033[0m' $'\033[1;31m*\033[0m')
             elif [[ "${cur_loc}" =~ radical ]]; then
-                spinner_frames=($'\033[2;33m⚡\033[0m' $'\033[1;33m⚡\033[0m' $'\033[1;37m⚡\033[0m' $'\033[1;33m✨\033[0m')
+                spinner_frames=($'\033[2;33m*\033[0m' $'\033[1;33m*\033[0m' $'\033[1;37m*\033[0m' $'\033[1;33m+\033[0m')
             else
-                spinner_frames=('⏳' '⌛')
+                spinner_frames=('-' '\' '|' '/')
             fi
 
             if can_run_parallel_dracut && [ "${total_builds}" -gt 1 ]; then
@@ -3073,11 +3005,11 @@ generate_kernel_initramfs() {
             cur_loc=$(get_active_locale 2>/dev/null || echo "en")
             local spinner_frames=()
             if [[ "${cur_loc}" =~ (en-ca|ca) ]]; then
-                spinner_frames=($'\033[2;31m🍁\033[0m' $'\033[1;31m🍁\033[0m' $'\033[1;37m🍁\033[0m' $'\033[1;31m🍁\033[0m')
+                spinner_frames=($'\033[2;31m*\033[0m' $'\033[1;31m*\033[0m' $'\033[1;37m*\033[0m' $'\033[1;31m*\033[0m')
             elif [[ "${cur_loc}" =~ radical ]]; then
-                spinner_frames=($'\033[2;33m⚡\033[0m' $'\033[1;33m⚡\033[0m' $'\033[1;37m⚡\033[0m' $'\033[1;33m✨\033[0m')
+                spinner_frames=($'\033[2;33m*\033[0m' $'\033[1;33m*\033[0m' $'\033[1;37m*\033[0m' $'\033[1;33m+\033[0m')
             else
-                spinner_frames=('⏳' '⌛')
+                spinner_frames=('-' '\' '|' '/')
             fi
 
             local k_dracut_args=("${dracut_args[@]}")

@@ -750,7 +750,7 @@ def audit_system_health() -> dict:
         "name": "System & Gaming Performance Matrix",
         "status": "PASS" if active_tweaks_count >= 5 else "INFO",
         "value": f"{active_tweaks_count}/{total_tweaks_count} Active Optimizations",
-        "detail": f"NTSYNC: {'✓' if ntsync_active else '✗'} | BBR: {'✓' if bbr_active else '✗'} | 1M Limits: {'✓' if limits_active else '✗'} | FastBoot: {'✓' if fastboot_active else '✗'}"
+        "detail": f"NTSYNC: {'on' if ntsync_active else 'off'} | BBR: {'on' if bbr_active else 'off'} | 1M Limits: {'on' if limits_active else 'off'} | FastBoot: {'on' if fastboot_active else 'off'}"
     })
 
     # 7. The Sacred Slackware Base & System Integrity
@@ -833,7 +833,7 @@ def render_terminal_report(data: dict, ascii_only: bool = False) -> str:
     verdict = data["verdict"]
     score = data["score"]
     v_color = BOLD_GREEN if "EXCELLENT" in verdict else (BOLD_YELLOW if "GOOD" in verdict else BOLD_RED)
-    star_sym = "*" if ascii_only else "★"
+    star_sym = "*"
     lines.append(f"{CYAN}{tl}{hz * (w - 2)}{tr}{RESET}")
     lines.append(f"{CYAN}{vt}{RESET}  {v_color}OVERALL HEALTH SCORE: {score}/100 — {verdict}{RESET}")
     lines.append(f"{CYAN}{vt}{RESET}  {WHITE}{data['eli5_summary']}{RESET}")
@@ -843,13 +843,13 @@ def render_terminal_report(data: dict, ascii_only: bool = False) -> str:
     # Domain Groupings
     categories = ["Platform", "Kernel", "Bootloader", "Graphics", "Storage", "Performance", "Integrity"]
     cat_icons = {
-        "Platform": "💻",
-        "Kernel": "🐧",
-        "Bootloader": "🛡️ ",
-        "Graphics": "🎮",
-        "Storage": "💾",
-        "Performance": "⚡",
-        "Integrity": "🏛️ "
+        "Platform": "[*]",
+        "Kernel": "[*]",
+        "Bootloader": "[*]",
+        "Graphics": "[*]",
+        "Storage": "[*]",
+        "Performance": "[*]",
+        "Integrity": "[*]"
     }
 
     for cat in categories:
@@ -879,19 +879,19 @@ def render_terminal_report(data: dict, ascii_only: bool = False) -> str:
             if c.get("detail"):
                 lines.append(f"         {DIM_WHITE}└─ {c['detail']}{RESET}")
             if c.get("recommendation"):
-                lines.append(f"         {YELLOW}👉 Action: {c['recommendation']}{RESET}")
+                lines.append(f"         {YELLOW}Action: {c['recommendation']}{RESET}")
         lines.append("")
 
     # Actionable Recommendations Section
     all_recs = [c["recommendation"] for c in data["checks"] if c.get("recommendation")]
     if all_recs:
-        lines.append(f"{BOLD_YELLOW}📋 ACTIONABLE RECOMMENDATIONS:{RESET}")
+        lines.append(f"{BOLD_YELLOW}ACTIONABLE RECOMMENDATIONS:{RESET}")
         for i, rec in enumerate(all_recs, 1):
             lines.append(f"  {YELLOW}{i}. {rec}{RESET}")
         lines.append("")
 
     # Footer Pro-Tip
-    copy_hint = "[*] Hold Shift + Drag to copy text | Press ENTER or Q to exit" if ascii_only else "💡 Hold Shift + Drag to copy text  •  Press ENTER or Q to exit"
+    copy_hint = "[*] Hold Shift + Drag to copy text | Press ENTER or Q to exit" if ascii_only else "Hold Shift + Drag to copy text  •  Press ENTER or Q to exit"
     lines.append(f"  {DIM_WHITE}{copy_hint}{RESET}")
 
     return "\n".join(lines)
@@ -899,9 +899,9 @@ def render_terminal_report(data: dict, ascii_only: bool = False) -> str:
 # --- [ MARKDOWN EXPORT RENDERER ] ---
 def render_markdown_report(data: dict) -> str:
     md = []
-    md.append(f"# 🩺 Slacky-Update System Health & Diagnostic Audit")
+    md.append(f"# Slacky-Update System Health & Diagnostic Audit")
     md.append(f"**Date:** {data['timestamp']} | **Host:** `{data['hostname']}` | **Execution Time:** {data.get('duration', 0.05)}s\n")
-    md.append(f"## 🏆 Health Verdict: {data['verdict']} ({data['score']}/100)")
+    md.append(f"## Health Verdict: {data['verdict']} ({data['score']}/100)")
     md.append(f"> {data['eli5_summary']}\n")
 
     md.append(f"| Category | Check | Status | Value | Details |")
@@ -909,13 +909,13 @@ def render_markdown_report(data: dict) -> str:
 
     for c in data["checks"]:
         st = c["status"]
-        badge = "🟢 `PASS`" if st == "PASS" else ("🟡 `WARN`" if st == "WARN" else ("🔴 `FAIL`" if st == "FAIL" else "ℹ️ `INFO`"))
+        badge = "`PASS`" if st == "PASS" else ("`WARN`" if st == "WARN" else ("`FAIL`" if st == "FAIL" else "`INFO`"))
         detail = c.get("detail", "").replace("|", "/")
         md.append(f"| **{c['category']}** | {c['name']} | {badge} | `{c['value']}` | {detail} |")
 
     all_recs = [c["recommendation"] for c in data["checks"] if c.get("recommendation")]
     if all_recs:
-        md.append(f"\n## 📋 Recommended Actions")
+        md.append(f"\n## Recommended Actions")
         for i, rec in enumerate(all_recs, 1):
             md.append(f"{i}. {rec}")
 
@@ -955,10 +955,10 @@ def main():
         try:
             with open(target_path, "w", encoding="utf-8") as f:
                 f.write(md_content + "\n")
-            print(f"{BOLD_GREEN}✓ System health report exported to:{RESET} {target_path}")
+            print(f"{BOLD_GREEN}System health report exported to:{RESET} {target_path}")
             return 0
         except Exception as e:
-            print(f"{BOLD_RED}✗ Failed to export report to {target_path}:{RESET} {e}", file=sys.stderr)
+            print(f"{BOLD_RED}Failed to export report to {target_path}:{RESET} {e}", file=sys.stderr)
             return 1
 
     terminal_output = render_terminal_report(data, ascii_only=args.ascii)

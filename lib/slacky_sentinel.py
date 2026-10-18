@@ -17,7 +17,8 @@ What it does, quietly, as the normal user (never sudo, never a prompt, silent wh
 
 Cache (own user cache only, 0700/0600, own uid, no links, size caps, atomic rename):
   ~/.cache/slacky-update/sentinel/{lists.json,health.json,state.json,arch_status.json,used_signers.json,keyring_stage/}
-When the process is root nothing here reads or writes the user cache (root never trusts ~/.cache). A user-writable
+When the process is root nothing here reads or writes the user cache (root never trusts ~/.cache); root uses
+/var/cache/slacky-update/sentinel (root:root 0700) instead. A user-writable
 cache cannot raise trust: it only chooses which host is asked first; every byte from a host is still checked by its
 caller (signature, checksum).
 """
@@ -66,6 +67,7 @@ MAX_EXTRAS = 24
 LIST_STALE_SECS = 30 * 86400
 ALERT_REPEAT = 7 * 86400
 KEY_EXPIRY_WARN = 60 * 86400
+USED_EXPIRY_WARN = 30 * 86400          # 6A-279: a key that really signed packages
 
 ARCH_STATUS_URL = "https://archlinux.org/mirrors/status/json/"
 
@@ -99,11 +101,19 @@ _HOST_OK = re.compile(r"^[A-Za-z0-9.-]+$")
 # cache directory and safe file access
 # ---------------------------------------------------------------------------------------------------
 
+SYSTEM_SENTINEL_DIR = "/var/cache/slacky-update/sentinel"
+
+
+def _is_root() -> bool:
+    return os.geteuid() == 0
+
+
 def sentinel_dir() -> Optional[str]:
-    """The sentinel folder in the user's own cache, or None as root (root never uses a user cache). The environment
-    variable SLACKY_MIRROR_CACHE_DIR (tests) is honoured for a normal user only."""
-    if os.geteuid() == 0:
-        return None
+    """The sentinel folder: the user's own cache for a normal user, the root-owned system cache for root (6A-278: the
+    root cron check and `sudo slacky-update` refresh keys and lists too; root never uses a user cache, and every file it
+    reads must be its own). The environment variable SLACKY_MIRROR_CACHE_DIR (tests) is honoured for a normal user only."""
+    if _is_root():
+        return SYSTEM_SENTINEL_DIR
     env = os.environ.get("SLACKY_MIRROR_CACHE_DIR")
     if env:
         return os.path.join(env, "sentinel")
@@ -1164,7 +1174,7 @@ def weekly_run(now: Optional[int] = None, force: bool = False, lists: bool = Tru
                probe: bool = True, bases: Optional[Dict[str, List[str]]] = None, keys_root: Optional[str] = None,
                shipped_dir: Optional[str] = None, arch_status_url: str = ARCH_STATUS_URL) -> Dict[str, Any]:
     """Signed lists, Arch status hints, one probe round with lag. Silent; returns a small summary for tests and `status`.
-    Does nothing for root, or when the weekly schedule says it is not due (unless force)."""
+    Does nothing when the weekly schedule says it is not due (unless force). Root writes the system sentinel folder."""
     d = sentinel_dir()
     summary: Dict[str, Any] = {"ran": False}
     if not d:
@@ -1535,10 +1545,92 @@ def expiry_radar(d: str, family: str, now: int, keys_root: Optional[str] = None,
     return soon
 
 
+def used_signer_expiry(d: str, family: str, now: int, keys_root: Optional[str] = None,
+                       shipped_dir: Optional[str] = None) -> int:
+    """6A-279: earliest expiry (unix seconds) within 30 days among the keys that really signed packages for `family`
+    in the last 90 days (used_signers.json, written by gnomes_trust), judged against the key generation in force (a
+    refreshed generation that extends the key silences it), or 0."""
+    t = _trust()
+    if t is None:
+        return 0
+    used = read_json(os.path.join(d, "used_signers.json")).get(family)
+    if not isinstance(used, dict) or not used:
+        return 0
+    gen, why = t.locate_generation(family, keys_root or t.KEYS_ROOT)
+    if why:
+        return 0
+    if gen is not None:
+        ring = gen.pubring
+    else:
+        shipped = shipped_dir if shipped_dir is not None else t.default_shipped_dir()
+        ring = os.path.join(shipped, t.policy(family)["floor_file"])
+        if t._file_safety(ring):
+            return 0
+    exp = key_expiries(ring)
+    soon = 0
+    for prim, v in used.items():
+        if not isinstance(v, dict):
+            continue
+        try:
+            if now - int(v.get("ts", 0)) >= USED_KEEP:
+                continue
+        except (TypeError, ValueError):
+            continue
+        for fpr in (prim, v.get("signer", "")):
+            e = exp.get(str(fpr).upper(), 0)
+            if now < e <= now + USED_EXPIRY_WARN:
+                soon = e if soon == 0 else min(soon, e)
+    return soon
+
+
+DAY = 86400
+NET_RETRY_AFTER_FAIL = 6 * 3600
+
+
+def _net_allowed(ks: Dict[str, Any], now: int, force: bool) -> bool:
+    """6A-278 rate limit: network contact for keys at most once per day per family, again after 6 hours when the last
+    try failed. A clock set back counts as allowed."""
+    if force:
+        return True
+    last = int(ks.get("net_ts", 0) or 0)
+    if last > now + 3600:
+        return True
+    return now - last >= (DAY if ks.get("net_ok", True) else NET_RETRY_AFTER_FAIL)
+
+
+def fetch_db_listing(family: str, tmpdir: str, timeout: float = 8.0) -> bool:
+    """Without a gnomes database: download the (small) repository database of the family into `tmpdir` so that
+    listed_keyring can read which keyring file is newest. It is only a hint where to look: the package it names is
+    verified by the whole keyring chain, a lying database can at most point at an older file, which is refused."""
+    repo, _pkg, folder, _alias = KEYRINGS[family]
+    if not repo or not folder:
+        return False
+    url = folder.rstrip("/") + "/" + repo + ".db"
+    mm = _mm()
+    for u in (mm.alternatives(url) if mm is not None else [url])[:4]:
+        try:
+            st, body, _h, _u = http_get(u, MAX_DB_BYTES, timeout)
+        except (OSError, ValueError):
+            continue
+        if st != 200 or not body:
+            continue
+        ext = ".db.tar.zst" if body[:4] == b"\x28\xb5\x2f\xfd" else ".db.tar.gz"
+        fd = os.open(os.path.join(tmpdir, repo + ext), os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
+        with os.fdopen(fd, "wb") as f:
+            f.write(body)
+        return True
+    return False
+
+
 def keys_check(now: Optional[int] = None, stage: bool = True, db_dirs: Optional[List[str]] = None,
-               keys_root: Optional[str] = None, shipped_dir: Optional[str] = None) -> Dict[str, Any]:
-    """Key freshness for every family: stage a newer verified keyring, keep the expiry radar and the refusal record in
-    state.json. Silent; returns a summary. Does nothing for root."""
+               keys_root: Optional[str] = None, shipped_dir: Optional[str] = None, force: bool = False
+               ) -> Dict[str, Any]:
+    """Key freshness for every family: fetch a newer verified keyring, keep the expiry radar and the refusal record in
+    state.json. Silent; returns a summary {family: result}. A normal user STAGES the verified keyring in the own cache
+    (installed by the first root step of a full update); root INSTALLS it directly as a new key generation (the raw
+    bytes are verified again by gnomes_trust.install_keyring). Network contact is rate limited (once a day per family,
+    6 hours after a failure) unless `force`; a synced gnomes database is used when present, else the small repository
+    database is fetched as a hint (6A-278)."""
     d = sentinel_dir()
     out: Dict[str, Any] = {}
     t = _trust()
@@ -1574,14 +1666,33 @@ def keys_check(now: Optional[int] = None, stage: bool = True, db_dirs: Optional[
             ver_label = ""
             if not why:
                 if fam == "chaotic":
-                    if stage:
+                    if stage and not _net_allowed(ks, now, force):
+                        res = "skipped"
+                    elif stage:
+                        ks["net_ts"] = now
                         st_, pkgsig, lm = download_alias(fam, ks.get("last_modified", ""))
-                        res = st_
+                        res = "download_failed" if st_ == "failed" else st_
+                        ks["net_ok"] = st_ != "failed"
                         if st_ == "ok":
                             ks["last_modified"] = lm
                             ver_label = "alias"
                 else:
                     listed = listed_keyring(fam, db_dirs, dbcache.setdefault(fam, {}))
+                    if listed is None and stage:
+                        # no gnomes database (6A-278): the small repository database is the hint, once a day at most
+                        if not _net_allowed(ks, now, force):
+                            res = "skipped"
+                        else:
+                            ks["net_ts"] = now
+                            with tempfile.TemporaryDirectory(prefix="slacky-db-") as tmpd:
+                                os.chmod(tmpd, 0o700)
+                                if fetch_db_listing(fam, tmpd):
+                                    ks["net_ok"] = True
+                                    listed = listed_keyring(fam, [tmpd], None)
+                                    res = "current" if listed is None else "none"
+                                else:
+                                    ks["net_ok"] = False
+                                    res = "download_failed"
                     if listed is not None:
                         lkey, fn = listed
                         newer = gkey is None or lkey > gkey
@@ -1589,6 +1700,8 @@ def keys_check(now: Optional[int] = None, stage: bool = True, db_dirs: Optional[
                         refused_same = ks.get("refused_file") == fn and now - int(ks.get("refused_ts", 0)) < ALERT_REPEAT
                         if newer and (sk is None or lkey > sk) and not refused_same and stage:
                             got = download_keyring(fam, fn)
+                            ks["net_ts"] = now
+                            ks["net_ok"] = got is not None
                             if got is None:
                                 res = "download_failed"
                             else:
@@ -1597,7 +1710,12 @@ def keys_check(now: Optional[int] = None, stage: bool = True, db_dirs: Optional[
                             res = "current" if not newer else "pending"
             if pkgsig is not None:
                 try:
-                    r = t.stage_keyring(fam, pkgsig[0], pkgsig[1], _stage_dir(d), **kw, now=now)
+                    if _is_root():
+                        # root phase (6A-278): verify the raw bytes again and write a new generation, atomically
+                        outcome, _gen, _upd = t.install_keyring(fam, pkgsig[0], pkgsig[1], **kw, now=now)
+                        r = "installed" if outcome == "written" else "uptodate"
+                    else:
+                        r = t.stage_keyring(fam, pkgsig[0], pkgsig[1], _stage_dir(d), **kw, now=now)
                     res = r
                     ks.pop("refused", None)
                     ks["ok_ts"] = now
@@ -1610,6 +1728,7 @@ def keys_check(now: Optional[int] = None, stage: bool = True, db_dirs: Optional[
                         ks["last_modified"] = ""       # look at the alias again next time
             if not why:
                 ks["expiry"] = expiry_radar(d, fam, now, keys_root, shipped_dir)
+                ks["used_expiry"] = used_signer_expiry(d, fam, now, keys_root, shipped_dir)
             out[fam] = res
         state["keys_check_ts"] = now
         _save_state(d, state)
@@ -1650,6 +1769,9 @@ def active_alerts(state: Dict[str, Any], now: int) -> List[Tuple[str, str]]:
         exp = int(ks.get("expiry", 0) or 0)
         if exp:
             out.append((f"keyexp:{fam}", tr("GNOMES_TRUST_KEYS_EXPIRING", "A security key for {repo} runs out on {date}; run a full update before then so the new keys can be installed.").replace("{repo}", lab).replace("{date}", _date(exp))))
+        uexp = int(ks.get("used_expiry", 0) or 0)
+        if uexp > now and not exp:      # 6A-279: a key that really signed packages; one sentence per family
+            out.append((f"usedexp:{fam}", tr("GNOMES_TRUST_KEYS_EXPIRING", "A security key for {repo} runs out on {date}; run a full update before then so the new keys can be installed.").replace("{repo}", lab).replace("{date}", _date(uexp))))
         kind = ks.get("refused")
         if kind and t is not None and now - int(ks.get("refused_ts", 0) or 0) < 2 * WEEK:
             out.append((f"keyref:{fam}:{kind}", t.Refusal(kind, "").sentence(fam)))
@@ -1677,7 +1799,7 @@ def due_alerts(now: Optional[int] = None, mark: bool = True) -> List[str]:
             out.append(sentence)
             if mark:
                 shown[key] = now
-                record("WARN", "mirror.family_at_risk" if key.startswith(("live", "list")) else "key.expiry_soon" if key.startswith("keyexp") else "key.rejected",
+                record("WARN", "mirror.family_at_risk" if key.startswith(("live", "list")) else "key.expiry_soon" if key.startswith(("keyexp", "usedexp")) else "key.rejected",
                        sentence, {"condition": key}, cat="MIRROR" if key.startswith(("live", "list")) else "SUPPLY")
     if mark and out:
         # forget conditions that no longer hold
@@ -1685,6 +1807,51 @@ def due_alerts(now: Optional[int] = None, mark: bool = True) -> List[str]:
         state["alerts"] = {k: v for k, v in shown.items() if k in active}
         _save_state(d, state)
     return out
+
+
+# ---------------------------------------------------------------------------------------------------
+# stable entry point for other programs (6A-278)
+# ---------------------------------------------------------------------------------------------------
+# `python3 -I slacky_sentinel.py refresh-keys [--force] [--json]`  (or refresh_keys() from Python)
+# Refreshes the signed keyrings in the mode of the caller: a normal user stages, root installs a new key generation.
+# Never asks for sudo, silent (--json prints the per-family result), rate limited (once a day per family, 6 hours after
+# a failure; --force skips the limit). Exit codes, the first matching line wins:
+RK_INSTALLED = 10      # root: a new key generation was written; verify again now
+RK_STAGED = 11         # user: a verified newer keyring waits for the next root step; the keys in force are unchanged
+RK_REFUSED = 20        # a keyring was downloaded but failed the rules; the keys in force are unchanged
+RK_NETWORK = 21        # nothing could be downloaded
+RK_BUSY = 23           # another refresh is running
+RK_UNAVAILABLE = 24    # the trust module or the cache folder is missing
+RK_SKIPPED = 22        # asked less than a day ago; nothing done
+# 0 = the keys in force are current (nothing newer exists)
+
+
+def refresh_exit_code(res: Dict[str, Any]) -> int:
+    if not res:
+        return RK_UNAVAILABLE
+    if res.get("busy"):
+        return RK_BUSY
+    vals = [str(v) for k, v in res.items() if isinstance(v, str)]
+    if "installed" in vals:
+        return RK_INSTALLED
+    if any(v.startswith("refused") for v in vals):
+        return RK_REFUSED
+    if "download_failed" in vals:
+        return RK_NETWORK
+    if "staged" in vals or "pending" in vals:
+        return RK_STAGED
+    if vals and all(v == "skipped" for v in vals):
+        return RK_SKIPPED
+    return 0
+
+
+def refresh_keys(force: bool = False, **kw: Any) -> Tuple[int, Dict[str, Any]]:
+    """(exit code, per-family result) of a key refresh in the mode of the caller. Never raises."""
+    try:
+        res = keys_check(force=force, **kw)
+    except Exception:
+        return RK_UNAVAILABLE, {}
+    return refresh_exit_code(res), res
 
 
 # ---------------------------------------------------------------------------------------------------
@@ -1709,7 +1876,7 @@ def status_summary() -> Dict[str, Any]:
 
 def main(argv: List[str]) -> int:
     if len(argv) < 2 or argv[1] in ("-h", "--help"):
-        print("usage: slacky_sentinel.py due | weekly [--force] | keys-check [--no-stage] | alerts | status")
+        print("usage: slacky_sentinel.py due | weekly [--force] | keys-check [--no-stage] [--force] | refresh-keys [--force] [--json] | alerts | status")
         return 2
     cmd = argv[1]
     try:
@@ -1719,8 +1886,13 @@ def main(argv: List[str]) -> int:
             weekly_run(force="--force" in argv)
             return 0
         if cmd == "keys-check":
-            keys_check(stage="--no-stage" not in argv)
+            keys_check(stage="--no-stage" not in argv, force="--force" in argv)
             return 0
+        if cmd == "refresh-keys":
+            code, res = refresh_keys(force="--force" in argv)
+            if "--json" in argv:
+                print(json.dumps({"code": code, "result": res}, sort_keys=True))
+            return code
         if cmd == "alerts":
             for line in due_alerts():
                 print(line)
