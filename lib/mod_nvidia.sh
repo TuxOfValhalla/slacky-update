@@ -1232,7 +1232,8 @@ register_precompiled_nvidia_in_dkms() {
         if [ -d "${p}" ]; then
             while IFS= read -r f; do
                 [ -n "${f}" ] && found_mods+=("${f}")
-            done < <(find "${p}" -name "nvidia*.ko*" 2>/dev/null || true)
+            done < <(find "${p}" -path '*/build' -prune -o -type f -regextype posix-extended \
+                -regex '.*/nvidia(-drm|-modeset|-uvm|-peermem)?\.ko(\.zst|\.xz|\.gz)?' -print 2>/dev/null || true)
         fi
     done
 

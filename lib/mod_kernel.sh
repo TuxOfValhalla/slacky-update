@@ -1953,7 +1953,10 @@ build_dkms_modules_for_all_kernels() {
     for kver in "${target_kernels[@]}"; do
         case "${ss_dying}" in *" ${kver} "*) continue ;; esac
         local has_precompiled_nvidia=false
-        if find "/lib/modules/${kver}" "/usr/lib/modules/${kver}" -name "nvidia*.ko*" 2>/dev/null | grep -q "nvidia"; then
+        # 6A-326: only the driver itself (nvidia.ko[.zst|.xz|.gz]); decoys such as nvidia-wmi-ec-backlight ship in every kernel,
+        # and build/ is never walked
+        if [ -n "$(find "/lib/modules/${kver}" "/usr/lib/modules/${kver}" -path '*/build' -prune -o -type f \
+                -regextype posix-extended -regex '.*/nvidia\.ko(\.zst|\.xz|\.gz)?' -print -quit 2>/dev/null)" ]; then
             has_precompiled_nvidia=true
         fi
 

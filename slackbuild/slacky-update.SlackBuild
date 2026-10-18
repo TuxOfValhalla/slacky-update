@@ -6,7 +6,7 @@ set -euo pipefail
 PRGNAM="slacky-update"
 VERSION="1.0_RC2"
 ARCH="noarch"
-BUILD="93_slacky"
+BUILD="94_slacky"
 
 SRC_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 OUTPUT_DIR="${OUTPUT_DIR:-${SRC_DIR}/../slacky-updates_releases}"
@@ -67,6 +67,7 @@ install -m 0755 "${SRC_DIR}/lib/gnomes_pacman.py" "${PKG_DIR}/usr/share/slacky-u
 install -m 0644 "${SRC_DIR}/lib/gnomes_trust.py" "${PKG_DIR}/usr/share/slacky-update/lib/"
 install -m 0644 "${SRC_DIR}/lib/slacky_vendor_fetch.py" "${PKG_DIR}/usr/share/slacky-update/lib/"
 install -m 0644 "${SRC_DIR}/lib/slacky_mirrors.py" "${PKG_DIR}/usr/share/slacky-update/lib/"
+install -m 0644 "${SRC_DIR}/lib/slacky_release_cache.py" "${PKG_DIR}/usr/share/slacky-update/lib/"
 install -m 0644 "${SRC_DIR}/lib/slacky_net.py" "${PKG_DIR}/usr/share/slacky-update/lib/"
 install -m 0644 "${SRC_DIR}/lib/slacky_slackpkg_check.py" "${PKG_DIR}/usr/share/slacky-update/lib/"
 install -m 0644 "${SRC_DIR}/lib/slacky_sentinel.py" "${PKG_DIR}/usr/share/slacky-update/lib/"

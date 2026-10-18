@@ -845,6 +845,16 @@ for line in raw_catalog_lines:
             catalog[pid] = (name, href_pat, l32_href_pat, r_list)
 
 def fetch_url_cached(url, cdir, ttl=1800):
+    # 6A-325: GitHub API lists go through lib/slacky_release_cache.py (ETag, 6 h, rate-limit pause, 3 day stale limit, one log line)
+    if url.startswith("https://api.github.com/"):
+        try:
+            if os.environ.get('SLACKY_LIB_DIR') and os.environ['SLACKY_LIB_DIR'] not in sys.path:
+                sys.path.insert(0, os.environ['SLACKY_LIB_DIR'])
+            import slacky_release_cache as _src
+        except Exception:
+            _src = None
+        if _src is not None:
+            return _src.fetch_text(url, cdir)
     url_hash = hashlib.sha256(url.encode('utf-8')).hexdigest()[:16]
     cache_file = os.path.join(cdir, f'repo_idx_{url_hash}.html')
     now = time.time()
@@ -1010,6 +1020,14 @@ GH_SCAN_CAP = 4 << 20
 def gh_releases_cached(repo, cdir, ttl=1800):
     if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repo or ""):
         return []
+    # 6A-325: the shared cache module (ETag, 6 h, rate-limit pause, 3 day stale limit); the code below is the fallback without it
+    try:
+        if os.environ.get('SLACKY_LIB_DIR') and os.environ['SLACKY_LIB_DIR'] not in sys.path:
+            sys.path.insert(0, os.environ['SLACKY_LIB_DIR'])
+        import slacky_release_cache as _src
+        return _src.releases(repo, cdir)
+    except ImportError:
+        pass
     url = f"https://api.github.com/repos/{repo}/releases"
     cache_file = os.path.join(cdir, f"repo_idx_{hashlib.sha256(url.encode('utf-8')).hexdigest()[:16]}.html")
 
@@ -1394,10 +1412,20 @@ if pkg_id == "dvcp-aac":
     ver = None
     try:
         gh_url = "https://api.github.com/repos/GloriousEggroll/dvcp-aac/releases/latest"
-        req = urllib.request.Request(gh_url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64)"})
-        with urllib.request.urlopen(req, timeout=6) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-            ver = (data.get("tag_name") or "").lstrip("v") or ver
+        if os.environ.get('SLACKY_LIB_DIR') and os.environ['SLACKY_LIB_DIR'] not in sys.path:
+            sys.path.insert(0, os.environ['SLACKY_LIB_DIR'])
+        try:
+            import slacky_release_cache as _src   # 6A-325: same cache, ETag and rate-limit rules as the update check
+            _cd = next((d for d in ('/var/cache/slacky-update', os.path.expanduser('~/.cache/slacky-update')) if os.access(d, os.W_OK)), None)
+            if not _cd:
+                _cd = os.path.expanduser('~/.cache/slacky-update')
+                os.makedirs(_cd, exist_ok=True)
+            data = json.loads(_src.fetch_text(gh_url, _cd) or "{}")
+        except ImportError:
+            req = urllib.request.Request(gh_url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64)"})
+            with urllib.request.urlopen(req, timeout=6) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+        ver = (data.get("tag_name") or "").lstrip("v") or ver
     except Exception:
         pass
     print(f"{ver} GITHUB_DVCP_AAC NONE NONE" if ver else "NONE NONE NONE NONE")
@@ -1757,6 +1785,16 @@ if pkg_id not in catalog:
 main_pat, lib32_pat, extra_pat, main_repos, lib32_repos = catalog[pkg_id]
 
 def fetch_url_cached(url, cdir, ttl=1800):
+    # 6A-325: GitHub API lists go through lib/slacky_release_cache.py (ETag, 6 h, rate-limit pause, 3 day stale limit, one log line)
+    if url.startswith("https://api.github.com/"):
+        try:
+            if os.environ.get('SLACKY_LIB_DIR') and os.environ['SLACKY_LIB_DIR'] not in sys.path:
+                sys.path.insert(0, os.environ['SLACKY_LIB_DIR'])
+            import slacky_release_cache as _src
+        except Exception:
+            _src = None
+        if _src is not None:
+            return _src.fetch_text(url, cdir)
     url_hash = hashlib.sha256(url.encode('utf-8')).hexdigest()[:16]
     cache_file = os.path.join(cdir, f'repo_idx_{url_hash}.html')
     now = time.time()
@@ -2484,6 +2522,16 @@ catalog = {
 }
 
 def fetch_url_cached(url, cdir, ttl=1800):
+    # 6A-325: GitHub API lists go through lib/slacky_release_cache.py (ETag, 6 h, rate-limit pause, 3 day stale limit, one log line)
+    if url.startswith("https://api.github.com/"):
+        try:
+            if os.environ.get('SLACKY_LIB_DIR') and os.environ['SLACKY_LIB_DIR'] not in sys.path:
+                sys.path.insert(0, os.environ['SLACKY_LIB_DIR'])
+            import slacky_release_cache as _src
+        except Exception:
+            _src = None
+        if _src is not None:
+            return _src.fetch_text(url, cdir)
     url_hash = hashlib.sha256(url.encode('utf-8')).hexdigest()[:16]
     cache_file = os.path.join(cdir, f'repo_idx_{url_hash}.html')
     now = time.time()

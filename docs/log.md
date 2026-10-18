@@ -2079,3 +2079,9 @@
 
 ## 2026-10-18 - 6A-322..324 easyeffects / spotify / v4l2loopback update lookup, spacenav "could not check"
 - easyeffects row: `(?:2|1)` replaced by `[12]` (the `|` broke the row parser). Arch JSON lookup uses the Arch package name (spotify-launcher, v4l2loopback-dkms, arch `any` for DKMS) in the check and both resolvers. spacenav (not in any Arch/CachyOS list) is reported as "could not check" (exit 3). File: `lib/mod_gaming.sh`. Tested in a temp HOME against the live API and offline; temp files deleted.
+
+## 2026-10-18 - 6A-325 GitHub release lists: ETag, 6 h TTL, rate-limit pause, 3 day stale limit
+- New `lib/slacky_release_cache.py`; `gh_releases_cached` and `fetch_url_cached` (api.github.com only) in `lib/mod_gaming.sh` use it; SlackBuild installs it. 403/429 with rate-limit headers pause the host (reset clamped 60 s..2 h), plain 403 does not; stale list at most 3 days; failure reason logged once per run. Tested against a local HTTP server, test deleted.
+
+## 2026-10-18 - 6A-326 DKMS multi-kernel audit ignores decoy nvidia* modules
+- `has_precompiled_nvidia` (`lib/mod_kernel.sh`) and the DKMS registration module collector (`lib/mod_nvidia.sh`) now match only the driver's own modules (exact regex, `build/` pruned). `nvidia-wmi-ec-backlight` no longer makes every kernel look precompiled. Tested with fake module trees, deleted.
