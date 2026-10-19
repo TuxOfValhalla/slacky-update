@@ -2085,3 +2085,6 @@
 
 ## 2026-10-18 - 6A-326 DKMS multi-kernel audit ignores decoy nvidia* modules
 - `has_precompiled_nvidia` (`lib/mod_kernel.sh`) and the DKMS registration module collector (`lib/mod_nvidia.sh`) now match only the driver's own modules (exact regex, `build/` pruned). `nvidia-wmi-ec-backlight` no longer makes every kernel look precompiled. Tested with fake module trees, deleted.
+
+## 2026-10-19 - 6A-327 Library version check before install (host, then runtime)
+- `lib/slacky_symver.py` (pure Python ELF reader) checks the library versions every program needs before a curated package or gnomes app is installed. Host fits: unchanged. Only the shared runtime fits: the program is installed behind a launcher that uses the runtime. Neither fits: not installed, installed version stays, one sentence, version waits until a library changes. `lib/mod_gaming.sh`, `lib/gnomes_pacman.py`, SlackBuild. Layout: the moved program lives in `/opt/underpants/pkgs/<id>/<original path>`, `/usr/bin/<app>` is the launcher (same in the Rust app).

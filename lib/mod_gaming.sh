@@ -1003,6 +1003,20 @@ def rolled_back(pid, best_ver):
             return True
     return False
 
+# 6A-327: a version that was refused because it needs newer libraries than this system has waits until one of those libraries changes
+try:
+    sys.path.insert(0, os.environ.get("SLACKY_LIB_DIR") or "/usr/share/slacky-update/lib")
+    import slacky_symver as _symver
+    _lib_holds = _symver.load_holds()
+except Exception:
+    _symver, _lib_holds = None, {}
+
+def lib_waiting(pid, ver):
+    try:
+        return bool(_symver and _symver.is_held(pid, ver, _lib_holds))
+    except Exception:
+        return False
+
 # 6A-242: the six OBS plugins are DEPLOYED from GitHub releases (github_and_direct_pkgs in the resolver below), so the update scan must
 # ask the same source: newest non-prerelease, non-draft release that has an asset matching the same pattern (keep the patterns identical
 # to the resolver table). One https call to api.github.com per repo, 5 s timeout, 4 MiB cap, cached 30 min in the same file the resolver
@@ -1296,13 +1310,13 @@ def check_single_package(pid, cur_ver):
             return None
         intersected.sort(key=parse_version_key)
         best_ver = intersected[-1]
-        if is_strictly_greater(best_ver, cur_ver) and not rolled_back(pid, best_ver):
+        if is_strictly_greater(best_ver, cur_ver) and not rolled_back(pid, best_ver) and not lib_waiting(pid, best_ver):
             return f"{pid}|{name}|{cur_ver}|{best_ver}"
         return None
 
     main_candidates.sort(key=parse_version_key)
     best_ver = main_candidates[-1]
-    if is_strictly_greater(best_ver, cur_ver) and not rolled_back(pid, best_ver):
+    if is_strictly_greater(best_ver, cur_ver) and not rolled_back(pid, best_ver) and not lib_waiting(pid, best_ver):
         return f"{pid}|{name}|{cur_ver}|{best_ver}"
     return None
 
@@ -3842,6 +3856,81 @@ gaming_build_failed() {
     if [ -n "${staging_base:-}" ] && [ -d "${staging_base}" ]; then
         rm -rf "${staging_base}" 2>/dev/null || true
     fi
+    return 0
+}
+
+# 6A-327: symbol-version headroom guard. Every 64-bit program and library of the staging tree is checked (pure Python,
+# lib/slacky_symver.py) for the library versions it needs against the library that will be loaded: the package itself,
+# then the host. Host fits = installed as today. Only the Underpants runtime fits (e.g. Qt 6.12 there, 6.11 on the host) = the
+# programs move to /opt/underpants/pkgs/<id>/<original path> and a launcher wrapper that puts the runtime first takes their place in /usr/bin (host files
+# such as udev rules stay on the host). Neither fits, or the runtime is missing = not installed, the installed version stays,
+# one sentence, and the version is put on the waiting list so the update check does not offer it again until a library changes.
+gaming_symver_py() {
+    local d
+    d="$(slacky_mirrors_lib_dir)"
+    [ -n "${d}" ] && [ -f "${d}/slacky_symver.py" ] && printf '%s' "${d}/slacky_symver.py"
+    return 0
+}
+
+# gaming_symver_wrap STAGING PKG_ID REL: move the real program off its host path and leave a launcher wrapper in its place
+gaming_symver_wrap() {
+    local staging="$1" pid="$2" rel="$3"
+    local real_rel="opt/underpants/pkgs/${pid}/${rel}"
+    mkdir -p "${staging}/$(dirname "${real_rel}")" || return 1
+    mv -- "${staging}/${rel}" "${staging}/${real_rel}" || return 1
+    chmod 755 "${staging}/${real_rel}"
+    cat > "${staging}/${rel}" << 'SYMVER_WRAPPER_EOF'
+#!/bin/sh
+# 6A-327: written by slacky-update. This program needs newer libraries than Slackware has, so it starts with the
+# Underpants runtime first (same order as the gnomes launchers: runtime, then the host).
+RT=/opt/underpants/runtime
+REAL=@REAL@
+if [ ! -d "${RT}/lib" ]; then
+    echo "@APP@ needs the shared Underpants runtime (${RT}), which is missing. Run the updater to install it again." >&2
+    exit 1
+fi
+LD_LIBRARY_PATH="${RT}/lib:${RT}/lib64:/usr/lib64/libproxy:/usr/lib64/pulseaudio:/usr/lib64/pipewire-0.3:/usr/lib64/samba:${LD_LIBRARY_PATH:-/usr/lib64}"
+export LD_LIBRARY_PATH
+if [ -d "${RT}/lib/qt6/plugins" ]; then QT_PLUGIN_PATH="${RT}/lib/qt6/plugins${QT_PLUGIN_PATH:+:${QT_PLUGIN_PATH}}"; export QT_PLUGIN_PATH; fi
+if [ -d "${RT}/lib/qt6/qml" ]; then QML2_IMPORT_PATH="${RT}/lib/qt6/qml${QML2_IMPORT_PATH:+:${QML2_IMPORT_PATH}}"; export QML2_IMPORT_PATH; fi
+if [ -d "${RT}/lib/gtk-3.0" ]; then GTK_PATH="${RT}/lib/gtk-3.0${GTK_PATH:+:${GTK_PATH}}"; export GTK_PATH; fi
+if [ -f "${RT}/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache" ]; then GDK_PIXBUF_MODULE_FILE="${RT}/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache"; export GDK_PIXBUF_MODULE_FILE; fi
+if [ -d "${RT}/lib/gio/modules" ]; then GIO_MODULE_DIR="${RT}/lib/gio/modules"; export GIO_MODULE_DIR; fi
+exec "${REAL}" "$@"
+SYMVER_WRAPPER_EOF
+    sed -i -e "s|@REAL@|/${real_rel}|" -e "s|@APP@|${pid}|" "${staging}/${rel}"
+    chmod 755 "${staging}/${rel}"
+}
+
+# gaming_symver_gate PKG_ID VERSION STAGING: 0 = go on (host fits, or wrapped for the runtime), 3 = waiting (not installed, nothing failed)
+gaming_symver_gate() {
+    local pid="$1" ver="$2" staging="$3"
+    local py out verdict rel n=0
+    py="$(gaming_symver_py)"
+    [ -n "${py}" ] || return 0   # the checker file is missing: nothing can be said, nothing is blocked
+    out=$(env -u LD_LIBRARY_PATH python3 -I "${py}" check "${staging}" --mode curated 2>/dev/null) || return 0
+    verdict=$(printf '%s\n' "${out}" | head -n1)
+    case "${verdict}" in
+        HOST)
+            python3 -I "${py}" clear "${pid}" 2>/dev/null || true
+            return 0
+            ;;
+        RUNTIME)
+            while IFS= read -r rel; do
+                [ -n "${rel}" ] || continue
+                gaming_symver_wrap "${staging}" "${pid}" "${rel}" || { log_warn "${pid}: the launcher for the shared runtime could not be created."; return 3; }
+                n=$((n + 1))
+            done < <(printf '%s\n' "${out}" | tail -n +2)
+            log_info "${pid} ${ver} needs newer libraries than this system has, so it starts with the shared runtime."
+            python3 -I "${py}" clear "${pid}" 2>/dev/null || true
+            return 0
+            ;;
+        REFUSE)
+            log_warn "$(printf '%s\n' "${out}" | tail -n +2 | python3 -I "${py}" sentence "${pid}" "${ver}")"
+            printf '%s\n' "${out}" | tail -n +2 | python3 -I "${py}" hold "${pid}" "${ver}" 2>/dev/null || true
+            return 3
+            ;;
+    esac
     return 0
 }
 
@@ -7856,6 +7945,14 @@ DKMS_DOUNINST_EOF
                 ;;
         esac
     done
+
+    # 6A-327: library-version guard (host, then the shared runtime); a version that fits neither waits, nothing is installed
+    local _symver_rc=0
+    gaming_symver_gate "${pkg_id}" "${ver}" "${staging_root}" || _symver_rc=$?
+    if [ "${_symver_rc}" -ne 0 ]; then
+        rm -rf "${staging_base}" 2>/dev/null || true
+        return 0
+    fi
 
     # 2A/2B: Footprint Guard on the final staging tree (enforce mode unless SLACKY_FOOTPRINT_MODE=report)
     if [ -n "${GNOMES_PY:-}" ] && [ -f "${GNOMES_PY}" ]; then

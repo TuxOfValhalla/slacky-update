@@ -430,6 +430,28 @@ def trust_module() -> Any:
     return _TRUST_MODULE
 
 
+_SYMVER_MODULE: Any = False
+
+
+def symver_module() -> Any:
+    """6A-327: lib/slacky_symver.py (library symbol-version check), loaded by explicit path. None when missing or broken."""
+    global _SYMVER_MODULE
+    if _SYMVER_MODULE is False:
+        _SYMVER_MODULE = None
+        try:
+            import importlib.util
+            path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "slacky_symver.py")
+            spec = importlib.util.spec_from_file_location("slacky_symver", path)
+            if spec and spec.loader:
+                mod = importlib.util.module_from_spec(spec)
+                sys.modules["slacky_symver"] = mod
+                spec.loader.exec_module(mod)
+                _SYMVER_MODULE = mod
+        except Exception:
+            _SYMVER_MODULE = None
+    return _SYMVER_MODULE
+
+
 _MIRRORS_MODULE: Any = False
 
 
@@ -2485,7 +2507,7 @@ class GnomesPacmanEngine:
                 up_ver = upstream.get("VERSION", "0")
                 # P2/L1: a version held for too-new glibc/libstdc++ is not offered again until the host or the package changes
                 h = held.get(target) or held.get(name)
-                if h and h.get("version") == up_ver and h.get("host") == TransmutationFactory.host_symbol_stamp():
+                if h and TransmutationFactory.held_is_current(h, up_ver):
                     continue
                 # WP-2: the version the user rolled back from is not offered again (a newer one is)
                 rb = rb_holds.get(footprint_pkg_base(inst.get("package_id", "")))
@@ -4035,6 +4057,25 @@ exec "${{TARGET_BIN}}" "$@"
         return ";".join(f"{k}={'.'.join(map(str, v))}" for k, v in sorted(cls.host_symbol_max().items()))
 
     @classmethod
+    def held_is_current(cls, h: Dict[str, Any], up_ver: str) -> bool:
+        """True while this exact version still waits: same host symbol stamp, and (6A-327) the libraries it lacked unchanged."""
+        if not h or h.get("version") != up_ver:
+            return False
+        stamps = h.get("lib_stamps")
+        if stamps:
+            sv = symver_module()
+            if sv is None:
+                return True
+            for st in stamps:
+                if st.endswith(":none"):
+                    if os.path.exists(st[:-5]):
+                        return False
+                elif sv.stamp_now(st) != st:
+                    return False
+            return True
+        return h.get("host") == cls.host_symbol_stamp()
+
+    @classmethod
     def load_held(cls) -> Dict[str, Dict[str, str]]:
         held: Dict[str, Dict[str, str]] = {}
         for fp in cls.held_file_paths():
@@ -4048,7 +4089,7 @@ exec "${{TARGET_BIN}}" "$@"
         return held
 
     @classmethod
-    def record_held(cls, name: str, version: str, need: str, reason: str) -> None:
+    def record_held(cls, name: str, version: str, need: str, reason: str, stamps: Optional[List[str]] = None) -> None:
         """Remember a held package so it is shown and not rebuilt every run until the host or the package changes."""
         fp = cls.held_file_paths()[0 if os.geteuid() == 0 else 1]
         try:
@@ -4059,6 +4100,8 @@ exec "${{TARGET_BIN}}" "$@"
                     data = json.load(fh)
             data[name] = {"version": version, "needs": need, "host": cls.host_symbol_stamp(), "reason": reason,
                           "since": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
+            if stamps:
+                data[name]["lib_stamps"] = stamps  # 6A-327: waiting until one of these libraries changes
             tmp = fp + ".tmp"
             with open(tmp, "w", encoding="utf-8") as fh:
                 json.dump(data, fh, indent=2)
@@ -4081,6 +4124,26 @@ exec "${{TARGET_BIN}}" "$@"
         if verbose:
             for f, v in bad[:5]:
                 print(f"   {v}  {os.path.relpath(f, target_dir)}")
+        return True
+
+    def _symver_refusal(self, target_dir: str, name: str, version: str, verbose: bool) -> bool:
+        """6A-327: True (one plain sentence, version put on the waiting list) when a program of the app asks for a library
+        version that the library it will load (app, then runtime pool, then host) does not define."""
+        sv = symver_module()
+        if sv is None:
+            return False
+        try:
+            res = sv.Checker(target_dir, "app").run()
+        except Exception:
+            return False
+        if res["verdict"] != "REFUSE":
+            return False
+        sentence = sv.refusal_sentence(name, version, res)
+        self.record_held(name, version, "symbol-version", sentence, stamps=res["stamps"])
+        print(f"\n\033[1;33m:: {sentence}\033[0m")
+        if verbose:
+            for b in res["bad"][:5]:
+                print(f"   {b[2]}  {b[0]}  ({b[1]})")
         return True
 
     def patch_elf_rpaths(self, target_dir: str, verbose: bool = True) -> int:
@@ -4779,6 +4842,10 @@ exec "${{TARGET_BIN}}" "$@"
 
             # P2/L1: hold the package when it needs newer glibc/libstdc++/libgcc symbols than the host provides
             if self._headroom_refusal(opt_app_dir, actual_name, verbose, name=actual_name, version=raw_version):
+                self.safe_rmtree(staging_base)
+                return None
+            # 6A-327: any other library version the app asks for (Qt_6.12, ...) must exist where it will be loaded from
+            if not is_runtime and self._symver_refusal(opt_app_dir, actual_name, raw_version, verbose):
                 self.safe_rmtree(staging_base)
                 return None
 
