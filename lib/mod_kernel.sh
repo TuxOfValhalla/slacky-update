@@ -3,6 +3,12 @@
 
 set -euo pipefail
 
+# 6A-333: test-only path hooks are honoured only when SLACKY_SELFTEST=1 (a stray variable in a root shell must never redirect writes)
+if [ "${SLACKY_SELFTEST:-0}" != "1" ]; then
+    unset SS_FP_DIR SS_FP_BOOT SS_FP_MODS SS_FP_ETC SLACKY_BOOT_DIR SLACKY_ETC_DIR NVIDIA_HOLD_FILE NVIDIA_MODROOT \
+        LIMINE_MODULES_ROOT SLACKY_SB_EFIVAR DKMS_ROOT DKMS_SUDO MODULES_ROOT PKGDB_DIR GRUB_DROPIN_DIR GRUB_MKCONFIG_SCRIPT
+fi
+
 # --- [ ARCHITECTURE DETECTION ] ---
 detect_cpu_tier() {
     # 6A-118: SpiderSense answer first (same rules); this copy is the fallback
@@ -455,10 +461,10 @@ if not html:
     print('NONE NONE NONE NONE NONE')
     sys.exit(0)
 
-k_matches = re.findall(r'href=[\'\"]?(' + re.escape(k_pref) + r'-([0-9]+\.[0-9]+[a-zA-Z0-9\._]*-[0-9]+)[^\'\">]*\.pkg\.tar\.zst)', html)
-h_matches = re.findall(r'href=[\'\"]?(' + re.escape(h_pref) + r'-([0-9]+\.[0-9]+[a-zA-Z0-9\._]*-[0-9]+)[^\'\">]*\.pkg\.tar\.zst)', html)
-nv_matches = re.findall(r'href=[\'\"]?(' + re.escape(nv_pref) + r'-([0-9]+\.[0-9]+[a-zA-Z0-9\._]*-[0-9]+)[^\'\">]*\.pkg\.tar\.zst)', html)
-r8125_matches = re.findall(r'href=[\'\"]?(' + re.escape(r8125_pref) + r'-([0-9]+\.[0-9]+[a-zA-Z0-9\._]*-[0-9]+)[^\'\">]*\.pkg\.tar\.zst)', html)
+k_matches = re.findall(r'href=[\'\"]?(?:\./)?(' + re.escape(k_pref) + r'-([0-9]+\.[0-9]+[a-zA-Z0-9\._]*-[0-9]+)[^\'\">]*\.pkg\.tar\.zst)', html)
+h_matches = re.findall(r'href=[\'\"]?(?:\./)?(' + re.escape(h_pref) + r'-([0-9]+\.[0-9]+[a-zA-Z0-9\._]*-[0-9]+)[^\'\">]*\.pkg\.tar\.zst)', html)
+nv_matches = re.findall(r'href=[\'\"]?(?:\./)?(' + re.escape(nv_pref) + r'-([0-9]+\.[0-9]+[a-zA-Z0-9\._]*-[0-9]+)[^\'\">]*\.pkg\.tar\.zst)', html)
+r8125_matches = re.findall(r'href=[\'\"]?(?:\./)?(' + re.escape(r8125_pref) + r'-([0-9]+\.[0-9]+[a-zA-Z0-9\._]*-[0-9]+)[^\'\">]*\.pkg\.tar\.zst)', html)
 
 if not k_matches or not h_matches:
     print('NONE NONE NONE NONE NONE')
@@ -597,10 +603,10 @@ for flv in flavors:
         html = fetch_url_cached(u, cache_dir)
         if not html:
             continue
-        k_matches = re.findall(r'href=[\'\"]?(' + re.escape(k_pref) + r'-([0-9]+\.[0-9]+[a-zA-Z0-9\._]*-[0-9]+)[^\'\">]*\.pkg\.tar\.zst)', html)
-        h_matches = re.findall(r'href=[\'\"]?(' + re.escape(h_pref) + r'-([0-9]+\.[0-9]+[a-zA-Z0-9\._]*-[0-9]+)[^\'\">]*\.pkg\.tar\.zst)', html)
-        nv_matches = re.findall(r'href=[\'\"]?(' + re.escape(nv_pref) + r'-([0-9]+\.[0-9]+[a-zA-Z0-9\._]*-[0-9]+)[^\'\">]*\.pkg\.tar\.zst)', html) if nv_pref != 'NONE' else []
-        r8125_matches = re.findall(r'href=[\'\"]?(' + re.escape(r8125_pref) + r'-([0-9]+\.[0-9]+[a-zA-Z0-9\._]*-[0-9]+)[^\'\">]*\.pkg\.tar\.zst)', html) if r8125_pref != 'NONE' else []
+        k_matches = re.findall(r'href=[\'\"]?(?:\./)?(' + re.escape(k_pref) + r'-([0-9]+\.[0-9]+[a-zA-Z0-9\._]*-[0-9]+)[^\'\">]*\.pkg\.tar\.zst)', html)
+        h_matches = re.findall(r'href=[\'\"]?(?:\./)?(' + re.escape(h_pref) + r'-([0-9]+\.[0-9]+[a-zA-Z0-9\._]*-[0-9]+)[^\'\">]*\.pkg\.tar\.zst)', html)
+        nv_matches = re.findall(r'href=[\'\"]?(?:\./)?(' + re.escape(nv_pref) + r'-([0-9]+\.[0-9]+[a-zA-Z0-9\._]*-[0-9]+)[^\'\">]*\.pkg\.tar\.zst)', html) if nv_pref != 'NONE' else []
+        r8125_matches = re.findall(r'href=[\'\"]?(?:\./)?(' + re.escape(r8125_pref) + r'-([0-9]+\.[0-9]+[a-zA-Z0-9\._]*-[0-9]+)[^\'\">]*\.pkg\.tar\.zst)', html) if r8125_pref != 'NONE' else []
 
         if k_matches and h_matches:
             avail_vers = sorted(list(set(m[1] for m in k_matches)), key=parse_ver_key, reverse=True)
@@ -1708,7 +1714,33 @@ sync_bootloader_configuration() {
 
     # 1. GRUB Configuration (CRITICAL: Never execute grub-install, preserve signed Shim)
     local grub_default_file="/etc/default/grub"
-    if [ -f "${grub_default_file}" ]; then
+    # 6A-332 (6A-304): when grub-mkconfig reads /etc/default/grub.d/*.cfg, the NVIDIA parameters go into our own drop-in and
+    # /etc/default/grub is left alone; the old in-place edit stays as the fallback for a grub-mkconfig without drop-in support.
+    local g_dropin_dir="${GRUB_DROPIN_DIR:-/etc/default/grub.d}" g_mkconfig="${GRUB_MKCONFIG_SCRIPT:-/usr/sbin/grub-mkconfig}" g_dropin_ok=false
+    if [ -d "${g_dropin_dir}" ] && grep -q 'default/grub\.d/\*\.cfg' "${g_mkconfig}" 2>/dev/null; then
+        g_dropin_ok=true
+        if [ "${HAS_NVIDIA}" = "true" ]; then
+            local g_tmp
+            g_tmp=$(mktemp /tmp/slacky-grub-cmdline.XXXXXX) || g_tmp=""
+            if [ -n "${g_tmp}" ]; then
+                cat > "${g_tmp}" <<'GRUBDROP'
+# Written by slacky-update. Safe to delete; it only adds the NVIDIA kernel parameters.
+for _slacky_p in nvidia_drm.modeset=1 nvidia_drm.fbdev=1 nvidia.NVreg_PreserveVideoMemoryAllocations=1; do
+    case " ${GRUB_CMDLINE_LINUX_DEFAULT:-} " in
+        *" ${_slacky_p} "*) ;;
+        *) GRUB_CMDLINE_LINUX_DEFAULT="${GRUB_CMDLINE_LINUX_DEFAULT:+${GRUB_CMDLINE_LINUX_DEFAULT} }${_slacky_p}" ;;
+    esac
+done
+unset _slacky_p
+GRUBDROP
+                sudo install -m 644 -o root -g root "${g_tmp}" "${g_dropin_dir}/08-slacky-cmdline.cfg" 2>/dev/null || true
+                rm -f "${g_tmp}"
+            fi
+        else
+            sudo rm -f "${g_dropin_dir}/08-slacky-cmdline.cfg" 2>/dev/null || true
+        fi
+    fi
+    if [ "${g_dropin_ok}" != "true" ] && [ -f "${grub_default_file}" ]; then
         python3 - << PYGRUB
 import os, re
 
@@ -1806,7 +1838,7 @@ verify_cachyos_package_integrity() {
         log_error "Archive $(basename "${archive}") failed zstd CRC integrity verification!"
         return 1
     fi
-    if ! tar --zstd -tf "${archive}" >/dev/null 2>&1; then
+    if ! sudo tar --zstd -tf "${archive}" >/dev/null 2>&1; then
         log_error "Archive $(basename "${archive}") failed tar structure verification!"
         return 1
     fi
@@ -2139,8 +2171,14 @@ deploy_cachyos_kernel_packages() {
         return 1
     fi
 
-    sudo tar --zstd --exclude=.PKGINFO --exclude=.BUILDINFO --exclude=.MTREE --exclude=.INSTALL --exclude=.CHANGELOG -xf "${k_file}" -C /
-    sudo tar --zstd --exclude=.PKGINFO --exclude=.BUILDINFO --exclude=.MTREE --exclude=.INSTALL --exclude=.CHANGELOG -xf "${h_file}" -C /
+    if ! sudo tar --zstd --exclude=.PKGINFO --exclude=.BUILDINFO --exclude=.MTREE --exclude=.INSTALL --exclude=.CHANGELOG -xf "${k_file}" -C /; then
+        log_error "The new kernel could not be unpacked, so nothing was installed."
+        return 1
+    fi
+    if ! sudo tar --zstd --exclude=.PKGINFO --exclude=.BUILDINFO --exclude=.MTREE --exclude=.INSTALL --exclude=.CHANGELOG -xf "${h_file}" -C /; then
+        log_error "The new kernel headers could not be unpacked, so the kernel update was not finished."
+        return 1
+    fi
 
     if [ -z "${kver_full}" ]; then
         local ver_clean
@@ -2254,8 +2292,11 @@ deploy_cachyos_kernel_packages() {
     if [ -n "${r8125_file}" ] && [ -f "${r8125_file}" ]; then
         if verify_cachyos_package_integrity "${r8125_file}"; then
             log_info "Deploying matching Realtek 2.5GbE (r8125) module for ${kver_full}..."
-            sudo tar --zstd --exclude=.PKGINFO --exclude=.BUILDINFO --exclude=.MTREE --exclude=.INSTALL --exclude=.CHANGELOG -xf "${r8125_file}" -C /
-            log_success "$(_ R8125_DEPLOY_SUCCESS version="${kver_full}" 2>/dev/null || echo "Realtek r8125 module successfully deployed for kernel ${kver_full}.")"
+            if sudo tar --zstd --exclude=.PKGINFO --exclude=.BUILDINFO --exclude=.MTREE --exclude=.INSTALL --exclude=.CHANGELOG -xf "${r8125_file}" -C /; then
+                log_success "$(_ R8125_DEPLOY_SUCCESS version="${kver_full}" 2>/dev/null || echo "Realtek r8125 module successfully deployed for kernel ${kver_full}.")"
+            else
+                log_error "The Realtek r8125 module could not be unpacked, so it was not installed."
+            fi
         else
             log_warn "Realtek r8125 package integrity verification failed! Skipping module extraction."
         fi
@@ -2325,7 +2366,10 @@ deploy_cachyos_kernel_packages() {
                     log_error "NVIDIA driver package integrity verification failed! Skipping extraction."
                     sudo rm -f "${nv_file}" 2>/dev/null || true
                 else
-                    sudo tar --zstd --exclude=.PKGINFO --exclude=.BUILDINFO --exclude=.MTREE --exclude=.INSTALL --exclude=.CHANGELOG -xf "${nv_file}" -C /
+                    if ! sudo tar --zstd --exclude=.PKGINFO --exclude=.BUILDINFO --exclude=.MTREE --exclude=.INSTALL --exclude=.CHANGELOG -xf "${nv_file}" -C /; then
+                        log_error "The NVIDIA driver files could not be unpacked, so nothing was installed."
+                        return 1
+                    fi
                     local act_nv_ver=""
                     if command -v detect_cachyos_nvidia_upstream_version >/dev/null 2>&1; then
                         act_nv_ver=$(detect_cachyos_nvidia_upstream_version)
@@ -2599,6 +2643,8 @@ initramfs_inputs_fingerprint() {
         sudo find "${d}/${k}" \( -path '*/extramodules/*' -o -path '*/updates/*' -o -name 'nvidia*.ko*' \) -type f \
             -exec sha256sum -- {} + 2>/dev/null | LC_ALL=C sort -k2 | sed 's/^\([0-9a-f]*\)  /module \1 /'
     done
+    echo "modprobe-conf $( { sudo find "${etc}/modprobe.d" -maxdepth 1 -type f \
+        -exec sha256sum -- {} + 2>/dev/null | LC_ALL=C sort -k2; } | sha256sum | cut -d' ' -f1)"
     echo "dracut-conf $( { sudo find "${etc}/dracut.conf" "${etc}/dracut.conf.d" -maxdepth 1 -type f \
         -exec sha256sum -- {} + 2>/dev/null | LC_ALL=C sort -k2; } | sha256sum | cut -d' ' -f1)"
     echo "image $(sudo stat -c '%s %Y' -- "${img}")"
@@ -2664,6 +2710,7 @@ initramfs_is_stale() {
 record_initramfs_inputs_all() {
     local kdir k dying=""
     case "${SS_INITRD_FAILED-ALL}" in *ALL*) return 0 ;; esac
+    SS_MENU_INITRD_FAILED="${SS_INITRD_FAILED:-}"   # 6A-328: kept for the boot menu step [5/5]; SS_INITRD_FAILED is cleared below
     command -v ss_purge_set >/dev/null 2>&1 && dying=" $(ss_purge_set 2>/dev/null | tr '\n' ' ') "
     local mroot="${SS_FP_MODS:-/lib/modules}"; mroot="${mroot%% *}"
     for kdir in "${mroot}"/*; do

@@ -1,5 +1,14 @@
 # Slacky-Update-RS Development Changelog
 
+## [Cross-file fixes and the monthly runtime refresh (6A-360..6A-366, 7J-7O)] - 2026-10-20
+
+### Fixes
+- **`lib/gnomes_pacman.py`** (6A-360, 6A-361): the trust gate fails closed when `gnomes_trust.py` is missing (override `SLACKY_GNOMES_TRUST=log`); a downloaded repository database must pass `check_db_before_replace` before it replaces the cache.
+- **`lib/mod_gaming.sh`, `lib/slacky_tui.py`, `lib/mod_limine.sh`, `lib/mod_nvidia.sh`, `lib/mod_kernel.sh`, `lib/slacky_mirrors.py`, `bin/slacky-update`** (6A-362..6A-366): spacenav manual list, honest offline text in the TUI list, transaction id and footprint mode hardening, root ignores the mirror cache override, `./` prefix in listings, plain sentence when the NVIDIA module rebuild fails.
+
+### Features
+- **Runtime refresh** (7J-7O, spec `docs/runtime_refresh_spec.md`): detection and status key `runtime_refresh` (`lib/slacky_runtime_refresh.py`, `gnomes_pacman.py runtime refresh-status`), notice in `--check` and the tray, same-filesystem disk rule (`space_precheck`), startability check of all apps against a candidate runtime (`lib/slacky_symver.py startcheck`, also used by `gnomes runtime install`), shared state file with weekly re-ask and remembered stop, interactive plan line and root phase in `lib/mod_runtime_refresh.sh` (one `upgradepkg --reinstall` after snapshot and running-app warning). Never automatic. Shared fixtures in `docs/runtime_refresh_fixtures/`.
+
 ## [Catalog parsing, safe Limine restore, gnomes cleanup rules (6A-250, 6A-251, 6A-260..6A-265)] - 2026-10-16
 
 ### Fixes
@@ -2088,3 +2097,33 @@
 
 ## 2026-10-19 - 6A-327 Library version check before install (host, then runtime)
 - `lib/slacky_symver.py` (pure Python ELF reader) checks the library versions every program needs before a curated package or gnomes app is installed. Host fits: unchanged. Only the shared runtime fits: the program is installed behind a launcher that uses the runtime. Neither fits: not installed, installed version stays, one sentence, version waits until a library changes. `lib/mod_gaming.sh`, `lib/gnomes_pacman.py`, SlackBuild. Layout: the moved program lives in `/opt/underpants/pkgs/<id>/<original path>`, `/usr/bin/<app>` is the launcher (same in the Rust app).
+
+## 2026-10-20 - 6A-328..334 Boot menu keeps good kernels, honest NVIDIA sync, checked extracts
+- Limine menu: a kernel is left out only if this run's initramfs build failed or its fingerprint record is stale; file-time changes from depmod/DKMS/signing no longer drop kernels (6A-282 regression). Running kernel never left out; empty set keeps all. `lib/mod_limine.sh`, `lib/mod_kernel.sh`.
+- Initramfs fingerprint includes `/etc/modprobe.d` (6A-321). `build_nvidia_modules ALL` fails when a kernel's driver could not be built. GRUB NVIDIA parameters go to a drop-in when supported (6A-304). Test hooks need SLACKY_SELFTEST=1. `sudo tar -C /` exit codes checked in kernel and NVIDIA deploy.
+
+## 2026-10-20 - 6A-335..344 Build 96: gnomes/curated/packaging audit fixes
+- 6A-335 (S8): upgrade no longer leaves executable `<job>.slacky-keep.*` copies in cron/profile.d/autostart/kernel hook dirs (root jobs ran twice). Old copies are removed on upgrade, the spare copy now lives in `/var/cache/slacky-update`, and the helper ignores HUP/INT. `slackbuild/slacky-update.SlackBuild` (BUILD 96).
+- 6A-336: the OpenRGB udev rule is no longer world-writable (MODE 0666 on all USB/hidraw/i2c). The upstream rules of the package are used when present, otherwise `TAG+="uaccess"` scoped to common RGB vendor IDs. An already installed OpenRGB keeps the old rule at `/lib/udev/rules.d/60-openrgb.rules` until it is rebuilt. `lib/mod_gaming.sh`.
+- 6A-337: `gnomes -R` hands the run-lock marker to `purge-service` through sudo only when it holds the lock (no 60 s wait, rc.local block removed); `sudo python3` calls use `-I`. `grep -qF` for the wrapper marker (the `[` made grep fail silently); rollback lock file is created once. `bin/gnomes`, `lib/mod_clean.sh`.
+- 6A-338: `SLACKY_SYMVER_*` and `SLACKY_GNOMES_BUILD_ROOT` only with `SLACKY_SELFTEST=1`; the ELF reader maps the file instead of reading all of it; docstring corrected. `lib/slacky_symver.py`, `bin/gnomes`.
+- 6A-339: a symbol-version / glibc hold in `gnomes -S` counts as "waiting" (exit 0, sentence printed, no curated-fallback prompt, no failure in a full update), like curated. The build writes `<output-dir>/.waiting`. `lib/gnomes_pacman.py`, `bin/gnomes`.
+- 6A-340 (V6): the update scan for Claude Desktop uses Anthropic's apt index, the same source as the install. `lib/mod_gaming.sh`.
+- 6A-341 (F3): the Limine/sbctl major-version hold now sees `underpants-limine-*` and `cachyos-gnome-sbctl-*`. `lib/mod_gaming.sh`.
+- 6A-342: the zip path-safety check no longer loses its match to SIGPIPE under pipefail on long listings. `lib/mod_gaming.sh`.
+- 6A-343: the TUI catalog reader splits rows outside regex groups, so hidden rows (OpenGHub) stay hidden. `lib/slacky_tui.py`.
+- 6A-344 (S12): kernel purge removes only packages of exactly that kernel (no more `7.2.10-1-cachyos` matching the `-bore` packages). `lib/mod_clean.sh`.
+- Verification: fake-root scratch tests (deleted): keep-file removal and helper surviving HUP, sudo env hand-over, waiting match, installed-package regex on real pkgdb names, zip bypass reproduced and fixed, catalog field counts, kernel glob cases; `bash -n` and `py_compile` on all touched files. Not tested: real upgradepkg doinst, real udev, full `gnomes -S` build with a hold.
+
+## 2026-10-20 - 6A-345..359 Build 96: honest endings, trust messages, env hooks, tray, docs
+- Waiting kernel/driver updates (no snapshot, /boot not ready) end the run with exit 20 and one sentence; held Slackware kernel packages stay listed; an offline or incomplete check is never reported as "All updates are completed"; the health line says healthy only after a real success; one Press-ENTER at exit 20.
+- Trust: one forced key refresh per run after an unknown/expired key; separate sentences for wrong-source key, expired signature and expired key; wrong-family detection; root records signers; sentinel returns exit 25 on an internal error; `verify_db_sig` and `check_db_before_replace` added (F2, not yet wired in gnomes_pacman.py).
+- Env hooks gated (SLACKBUILDS_DIR, FOOTPRINT_MODE in mod_rocm, TX_ID, CPU_TIER); SBo cache checked after a 304; NVIDIA page without nvidia-utils is a failed lookup; spacenav reported as a manual item.
+- Tray shows "could not check"/offline instead of "up to date" and survives bad status files; self-update glob fixed; unknown option exits 2 with help; README corrected.
+
+- 2026-10-20 6A-367/6A-368: a failed Underpants app or runtime install is never reported as done (mirrors Rust Build 89).
+
+- 2026-10-20 6A-369 (Build 97): a stale initramfs record never removes a kernel from the boot menu (Build 96 regression dropped 9 of 11 kernels).
+
+- 2026-10-21 6A-370 (Build 97): curated vram-booster renamed Game Priority Booster (CPU/IO); wrapper boosts games only, no fake cgroup.
+- 2026-10-23 6A-371 (Build 98): an unreadable package index gives "could not check", never a silent "up to date" from an old copy; 20 s time limit.

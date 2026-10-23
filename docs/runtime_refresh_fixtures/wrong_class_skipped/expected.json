@@ -1,0 +1,13 @@
+{
+  "new_failures": [
+    {
+      "app": "vlc",
+      "file": "bin/vlc",
+      "rule": "S1",
+      "soname": "libz.so.1",
+      "version": ""
+    }
+  ],
+  "plugins_unchecked": null,
+  "veto": true
+}

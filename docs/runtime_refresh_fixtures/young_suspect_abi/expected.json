@@ -1,0 +1,9 @@
+{
+  "age_days": 5,
+  "gone": 0,
+  "newer": 1,
+  "state": "due_now",
+  "suspects": [
+    "qt6-base 6.12.0-2.1 -> 6.13.0-1.1"
+  ]
+}

@@ -430,6 +430,28 @@ def trust_module() -> Any:
     return _TRUST_MODULE
 
 
+_REFRESH_MODULE: Any = False
+
+
+def refresh_module() -> Any:
+    """7J-7N: lib/slacky_runtime_refresh.py (runtime refresh helpers), loaded by explicit path. None when missing or broken."""
+    global _REFRESH_MODULE
+    if _REFRESH_MODULE is False:
+        _REFRESH_MODULE = None
+        try:
+            import importlib.util
+            path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "slacky_runtime_refresh.py")
+            spec = importlib.util.spec_from_file_location("slacky_runtime_refresh", path)
+            if spec and spec.loader:
+                mod = importlib.util.module_from_spec(spec)
+                sys.modules["slacky_runtime_refresh"] = mod
+                spec.loader.exec_module(mod)
+                _REFRESH_MODULE = mod
+        except Exception:
+            _REFRESH_MODULE = None
+    return _REFRESH_MODULE
+
+
 _SYMVER_MODULE: Any = False
 
 
@@ -632,6 +654,21 @@ def space_precheck(installed_bytes: int, build_dir: str, label: str) -> Optional
     tree + package being written) and /opt the unpacked size, each with 10 % headroom."""
     if installed_bytes <= 0:
         return None
+    # 7K (spec docs/runtime_refresh_spec.md 5.2, F16): the build dir and /opt on ONE filesystem (same major:minor in
+    # /proc/self/mountinfo, e.g. two Btrfs subvolumes) share the free space, so both needs are summed there
+    rr = refresh_module()
+    if rr is not None:
+        try:
+            res = rr.space_plan(int(installed_bytes), 0, 0, build_dir)
+            if not res["ok"]:
+                probe = res["path"]
+                while not os.path.exists(probe) and probe != "/":
+                    probe = os.path.dirname(probe)
+                return (f"Not enough free disk space for {label}: {res['need'] / 1e9:.1f} GB needed on {probe}, "
+                        f"{res['free'] / 1e9:.1f} GB free. Nothing was changed.")
+            return None
+        except Exception:
+            pass
     for path, need in ((build_dir, 2.2 * installed_bytes), ("/opt", 1.1 * installed_bytes)):
         probe = path
         while not os.path.exists(probe) and probe != "/":
@@ -1443,6 +1480,7 @@ class GnomesPacmanEngine:
                 resp_last_mod = ""
                 not_modified = False
                 last_err: Any = None
+                data_url = ""
                 for cand_url in urls:
                     try:
                         req = urllib.request.Request(cand_url, headers=req_headers)
@@ -1452,6 +1490,7 @@ class GnomesPacmanEngine:
                         if not (body.startswith(b"\x1f\x8b") or body.startswith(b"\x28\xb5\x2f\xfd")):
                             raise ValueError("the server did not send a package database")
                         data, resp_last_mod = body, lm
+                        data_url = cand_url
                         if mm is not None:
                             mm.note_success(cand_url)   # 6A-201: mirror health history
                         break
@@ -1468,6 +1507,25 @@ class GnomesPacmanEngine:
                         last_err = e
                         if mm is not None:
                             mm.note_failure(cand_url)
+                if data is not None and data_url:
+                    # 6A-361 (F2): the downloaded database must pass the signature / parse / monotonic check BEFORE it
+                    # replaces the cached one; a blocked database keeps the cached copy (enforce mode only)
+                    t = trust_module()
+                    if t is not None:
+                        try:
+                            def _parse_db(b: bytes) -> Dict[str, Dict[str, Any]]:
+                                return PacmanDBParser.parse_archive(b, is_zstd=b.startswith(b"\x28\xb5\x2f\xfd"))
+                            fam = t.repo_family(rname)
+                            chk = t.check_db_before_replace(
+                                data, rname, _parse_db, sig=t.fetch_signature(t.sig_url(data_url)),
+                                require_sig=(fam == "cachyos"))
+                            if not chk.ok:
+                                trust_log([dict(chk.as_dict(), check="database", mode=t.trust_mode())])
+                            if chk.blocks():
+                                last_err = chk.message()
+                                data = None
+                        except Exception as e:
+                            trust_log([{"check": "database", "status": "error", "name": rname, "detail": str(e)[:200]}])
                 if not_modified:
                     try:
                         os.utime(local_path, (now, now))
@@ -3823,6 +3881,11 @@ exec "${{TARGET_BIN}}" "$@"
         trust_log([{"check": "sha256", "status": "missing", "name": pd.get("NAME", ""), "repo": pd.get("_REPO", "")}
                    for pd, _ in downloaded if not str(pd.get("SHA256SUM", "") or "").strip()])
         trust = trust_module()
+        if trust is None and downloaded and os.environ.get("SLACKY_GNOMES_TRUST", "") != "log":
+            # 6A-360: no signature checker = no verified package; fail closed (emergency override: SLACKY_GNOMES_TRUST=log)
+            print(":: The signature checker (gnomes_trust.py) is missing or broken, so no downloaded package was used; "
+                  "reinstall slacky-update.")
+            return False
         if trust is None or not downloaded:
             return True
         mode = trust.trust_mode()
@@ -4088,9 +4151,12 @@ exec "${{TARGET_BIN}}" "$@"
                 continue
         return held
 
+    HELD_NOW: List[str] = []
+
     @classmethod
     def record_held(cls, name: str, version: str, need: str, reason: str, stamps: Optional[List[str]] = None) -> None:
         """Remember a held package so it is shown and not rebuilt every run until the host or the package changes."""
+        cls.HELD_NOW.append(name)  # 6A-339: this run held it, the CLI reports "waiting" (not a failure)
         fp = cls.held_file_paths()[0 if os.geteuid() == 0 else 1]
         try:
             os.makedirs(os.path.dirname(fp), exist_ok=True)
@@ -5364,11 +5430,18 @@ esac
 
         return created_services
 
-    def transmute_runtime_profile(self, profile_name: str, verbose: bool = True, force: bool = False, output_dir: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    def transmute_runtime_profile(self, profile_name: str, verbose: bool = True, force: bool = False, output_dir: Optional[str] = None,
+                                  keep_staging: bool = False, hooks: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
         """
         Transmute a curated runtime profile (core, gui, media, engineering, all) or list of packages
         into a unified /opt/underpants/runtime/ shared runtime environment packaged as a genuine Slackware .txz.
+
+        7N (docs/runtime_refresh_spec.md 5.3): keep_staging leaves the staged tree in place on success (the caller removes it;
+        result keys "staging_base" / "staging_runtime"); hooks = {"space": fn(S, C, C_missing) -> None | text,
+        "check": fn(staged_runtime_dir) -> None | text}. A hook that answers with text stops the build (nothing is
+        packaged, the caller prints the sentence) and the reason is left in self.outcome["kind"] ("no_space" / "vetoed").
         """
+        self.outcome: Dict[str, Any] = {"kind": "build_failed"}
         self.engine.ensure_loaded()
         if output_dir:
             self.output_dir = output_dir
@@ -5401,10 +5474,23 @@ esac
                 print(f"    • ({i:>2d}/{len(to_install)}) [{p.get('_REPO')}] {p.get('NAME')} ({p.get('VERSION')}) [{csize_mb:.2f} MB]")
             print()
 
-        no_room = space_precheck(sum(int(p.get("ISIZE", 0) or 0) for p in to_install), build_dir_base(), f"the {profile_name} runtime")
-        if no_room:
-            print(f":: {no_room}")
-            return None
+        s_bytes = sum(int(p.get("ISIZE", 0) or 0) for p in to_install)
+        if hooks and hooks.get("space"):
+            c_bytes = sum(int(p.get("CSIZE", 0) or 0) for p in to_install)
+            c_missing = 0
+            for p in to_install:
+                fn = p.get("FILENAME") or ""
+                if not fn or not os.path.exists(os.path.join(self.cache_pkg_dir, os.path.basename(fn))):
+                    c_missing += int(p.get("CSIZE", 0) or 0)
+            no_room = hooks["space"](s_bytes, c_bytes, c_missing)
+            if no_room:
+                self.outcome = {"kind": "no_space"}
+                return None
+        else:
+            no_room = space_precheck(s_bytes, build_dir_base(), f"the {profile_name} runtime")
+            if no_room:
+                print(f":: {no_room}")
+                return None
 
         downloaded_files = self.download_packages_parallel(to_install, verbose=verbose)
         if len(downloaded_files) < len(to_install):
@@ -5420,6 +5506,7 @@ esac
         opt_share_dir = os.path.join(opt_runtime_dir, "share")
         opt_inc_dir = os.path.join(opt_runtime_dir, "include")
         install_dir = os.path.join(staging_pkg, "install")
+        keep_now = {"v": False}
 
         try:
             os.makedirs(opt_bin_dir, exist_ok=True)
@@ -5520,6 +5607,13 @@ esac
             self._write_runtime_manifest(opt_runtime_dir, profile_name, RUNTIME_PKG_VERSION, downloaded_files, plan,
                                          host_only_removed)
 
+            # 7L/7N: the startability check of the candidate runs on the staged tree BEFORE anything is packaged
+            if hooks and hooks.get("check"):
+                veto = hooks["check"](opt_runtime_dir)
+                if veto:
+                    self.outcome = {"kind": "vetoed"}
+                    return None
+
             # Slackware package metadata
             tag = f"underpants-runtime-{profile_name}"
             slack_desc_path = os.path.join(install_dir, "slack-desc")
@@ -5614,19 +5708,23 @@ fi
                 print(f"  Installed Root  : /opt/underpants/runtime/")
                 print(f"  Install Command : \033[1;36mupgradepkg --install-new {txz_output_path}\033[0m\n")
 
+            keep_now["v"] = bool(keep_staging)
             return {
                 "name": f"runtime-{profile_name}",
                 "version": RUNTIME_PKG_VERSION,
                 "txz_path": txz_output_path,
                 "size_bytes": os.path.getsize(txz_output_path),
-                "packages": [p["NAME"] for p in to_install]
+                "packages": [p["NAME"] for p in to_install],
+                "staging_base": staging_base if keep_staging else "",
+                "staging_runtime": opt_runtime_dir if keep_staging else "",
             }
         except MergeCopyError as e:
             # 6A-138: a file that could not be staged stops the build; nothing half-built is packaged
             print(f":: {e} The package was not built.")
             return None
         finally:
-            shutil.rmtree(staging_base, ignore_errors=True)
+            if not keep_now["v"]:
+                shutil.rmtree(staging_base, ignore_errors=True)
 
     @staticmethod
     def purge_gnomes_service_hooks(svc_name: str, files: Optional[Tuple[str, ...]] = None, lock_path: str = "/run/lock/slacky-update.lock") -> List[str]:
@@ -5799,13 +5897,14 @@ class RuntimeManager:
             "available_profiles": list(self.PROFILES.keys())
         }
 
-    def install_profile(self, profile_name: str = "core", verbose: bool = True, output_dir: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    def install_profile(self, profile_name: str = "core", verbose: bool = True, output_dir: Optional[str] = None,
+                        hooks: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
         """Transmute and generate underpants-runtime-<profile> Slackware package."""
         self.engine.ensure_loaded()
         factory = TransmutationFactory(self.engine, output_dir=output_dir)
         if profile_name == "python":
             return factory.transmute("python", verbose=verbose, force=True, is_runtime=True)
-        return factory.transmute_runtime_profile(profile_name, verbose=verbose, output_dir=output_dir)
+        return factory.transmute_runtime_profile(profile_name, verbose=verbose, output_dir=output_dir, hooks=hooks)
 
     def deduplicate_storage(self, verbose: bool = True) -> Dict[str, Any]:
         """
@@ -6489,6 +6588,222 @@ def record_rollback_hold(base: str, skip_version: str, path: str = ROLLBACK_HOLD
 
 # --- [ CLI INTERACTION INTERFACE ] ---
 
+
+# --- [ 7J-7N: SHARED RUNTIME MONTHLY REFRESH (docs/runtime_refresh_spec.md) ] ---
+
+def rr_paths() -> Tuple[str, str]:
+    """(live runtime dir, apps dir). SLACKY_RR_ROOT moves both below a fake root, honoured only with SLACKY_SELFTEST=1."""
+    pre = os.environ.get("SLACKY_RR_ROOT", "") if os.environ.get("SLACKY_SELFTEST") == "1" else ""
+    return pre + RuntimeManager.RUNTIME_DIR, pre + RuntimeManager.PKGS_DIR
+
+
+def runtime_refresh_status(record: bool = True) -> Dict[str, Any]:
+    """7J: read-only detection (spec 3). Uses only the repository databases already in the cache (nothing is downloaded), the
+    live manifest and the state file. Returns the status key (spec 8.2) plus offering details. Never raises."""
+    rr = refresh_module()
+    base: Dict[str, Any] = {"state": "unknown", "age_days": 0, "newer": 0, "checked": 0, "gone": 0, "suspects": [],
+                            "built": "", "checked_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                            "offerable": False, "candidate_basis": "", "apps_basis": "", "profile": "", "size_hint": ""}
+    if rr is None:
+        return base
+    try:
+        live, _pkgs = rr_paths()
+        manifest, mtime, _why = rr.read_manifest(live)
+        now = rr.now_ts()
+        repo_versions: Dict[str, str] = {}
+        idx_file = os.environ.get("SLACKY_RR_INDEX", "") if os.environ.get("SLACKY_SELFTEST") == "1" else ""
+        if idx_file:
+            with open(idx_file, "r", encoding="utf-8") as fh:
+                repo_versions = {str(k): str(v) for k, v in json.load(fh).items()}
+        elif manifest is not None:
+            def _newest_db(basedir: str) -> Optional[float]:
+                d = os.path.join(basedir, "db")
+                try:
+                    ts = [os.stat(os.path.join(d, n)).st_mtime for n in os.listdir(d) if n.endswith((".db.tar.zst", ".db.tar.gz"))]
+                except OSError:
+                    return None
+                return max(ts) if ts else None
+            sys_t, user_t = _newest_db(DEFAULT_CACHE_BASE), _newest_db(USER_CACHE_BASE)
+            if sys_t is not None or user_t is not None:
+                use = DEFAULT_CACHE_BASE if (sys_t is not None and (user_t is None or sys_t >= user_t)) else USER_CACHE_BASE
+                eng = GnomesPacmanEngine(cache_dir=use)
+                eng.load_cached_databases()
+                repo_versions = {n: str(p.get("VERSION", "")) for n, p in eng.index.items()}
+        pre = os.environ.get("SLACKY_RR_ROOT", "") if os.environ.get("SLACKY_SELFTEST") == "1" else ""
+        pkgdb = pre + rr.PKGDB
+        res = rr.detect(manifest, mtime, repo_versions, GnomesPacmanEngine.is_newer_version, now,
+                        set(RuntimeManager.PROFILES.keys()), runtime_dir=live, pkgdb=pkgdb)
+        newest = res.pop("newest", {})
+        clock_future = bool(res.pop("clock_future", False))
+        res["candidate_basis"] = rr.candidate_basis(newest)
+        res["apps_basis"] = rr.apps_basis(pkgdb)
+        res["profile"] = str(manifest.get("profile", "")) if manifest else ""
+        state = res["state"]
+        if state in ("due", "due_now"):
+            st, why = rr.state_read()
+            eff = rr.state_effective(st, res["built"])
+            sup = rr.suppression(eff, res["candidate_basis"], res["apps_basis"], now)
+            if record:
+                if why:
+                    rr.rr_log("RR-STATE-IGNORED", why, throttle_daily=True)
+                rr.rr_log("RR-DUE-NOW" if state == "due_now" else "RR-DUE",
+                          f"age={res['age_days']}d newer={res['newer']} suspects={'; '.join(res['suspects']) or '-'}",
+                          throttle_daily=True)
+                if sup == "remembered_veto":
+                    rr.rr_log("RR-VETO-REMEMBERED", f"app={eff['veto'].get('app', '')}", throttle_daily=True)
+            if sup:
+                res["state"] = sup
+            res["offerable"] = not sup
+            res["size_hint"] = rr.size_hint(res["profile"], pkgdb)
+        if clock_future and record:
+            rr.rr_log("RR-CLOCK", "runtime build time is in the future; age counted as 0", throttle_daily=True)
+        return res
+    except Exception as e:  # never break the check
+        base["error"] = type(e).__name__
+        return base
+
+
+def rr_hooks_for(profile_check: bool, pkgs_dir: str, live_dir: str, outcome: Dict[str, Any], staged: Tuple[str, ...] = (),
+                 with_space: bool = True) -> Dict[str, Any]:
+    """Build the {space, check} hooks of transmute_runtime_profile. Details are left in `outcome` for the caller."""
+    rr, sv = refresh_module(), symver_module()
+    hooks: Dict[str, Any] = {}
+    if rr is not None and with_space:
+        def space_hook(s_bytes: int, c_bytes: int, c_missing: int) -> Optional[str]:
+            res = rr.space_plan(s_bytes, c_bytes, c_missing, build_dir_base())
+            outcome["space"] = res
+            return None if res["ok"] else "no space"
+        hooks["space"] = space_hook
+    if profile_check:
+        def check_hook(staged_runtime: str) -> Optional[str]:
+            if sv is None:
+                outcome["check_missing"] = True
+                return "the startability checker is missing"
+            res = sv.run_startcheck(staged_runtime, live_dir, pkgs_dir, staged)
+            outcome["check"] = res
+            if rr is not None:
+                rr.rr_log("RR-CHECK-TIME", f"seconds={res['seconds']} apps={res['apps']} programs={res['programs']} files={res['files']}")
+                if res.get("plugins_unchecked"):
+                    rr.rr_log("RR-PLUGINS-UNCHECKED", f"count={res['plugins_unchecked']}")
+                if res["veto"] and rr is not None:
+                    rr.rr_log("RR-VETO", f"count={len(res['new'])} " + "; ".join("|".join(x) for x in res["new"][:50]))
+            return f"{res['first_app']} would not start" if res["veto"] else None
+        hooks["check"] = check_hook
+    return hooks
+
+
+def runtime_refresh_build(engine: "GnomesPacmanEngine", out_dir: str) -> int:
+    """7N user phase (spec 5.3): build the candidate, check it, package it, keep the staging tree. Writes <out_dir>/result.json.
+    Exit 0 = a package is ready or the refresh was skipped on purpose; 1 = nothing to install (the reason is in result.json)."""
+    rr = refresh_module()
+    live, pkgs = rr_paths()
+    result: Dict[str, Any] = {"state": "build_failed", "txz": "", "sha256": "", "staging_base": "", "old_built": "", "new_built": "",
+                              "app": "", "rule": "", "detail": "", "candidate_basis": "", "apps_basis": "", "packages": 0, "baseline": []}
+
+    def finish(code: int) -> int:
+        try:
+            os.makedirs(out_dir, mode=0o700, exist_ok=True)
+            with open(os.path.join(out_dir, "result.json"), "w", encoding="utf-8") as fh:
+                json.dump(result, fh)
+        except OSError:
+            pass
+        return code
+    if rr is None:
+        result["detail"] = "slacky_runtime_refresh.py is missing"
+        return finish(1)
+    manifest, _mt, why = rr.read_manifest(live)
+    if manifest is None or manifest.get("profile") not in RuntimeManager.PROFILES:
+        result["state"], result["detail"] = "skipped", f"runtime manifest not usable ({why})"
+        return finish(0)
+    profile = str(manifest["profile"])
+    result["old_built"] = str(manifest.get("built", ""))
+    engine.ensure_loaded()
+    # the databases are fresh now: the remembered-veto rule uses the same basis as the plan
+    st = runtime_refresh_status(record=False)
+    result["candidate_basis"], result["apps_basis"] = st.get("candidate_basis", ""), st.get("apps_basis", "")
+    if st.get("state") == "remembered_veto":
+        rr.rr_log("RR-VETO-REMEMBERED", "build skipped")
+        result["state"] = "skipped"
+        result["detail"] = "remembered veto"
+        return finish(0)
+    factory = TransmutationFactory(engine, output_dir=out_dir)
+    outcome: Dict[str, Any] = {}
+    hooks = rr_hooks_for(True, pkgs, live, outcome)
+    t0 = time.time()
+    res = factory.transmute_runtime_profile(profile, verbose=False, output_dir=out_dir, keep_staging=True, hooks=hooks)
+    kind = getattr(factory, "outcome", {}).get("kind", "build_failed")
+    if res is None:
+        if kind == "no_space":
+            sp = outcome.get("space", {})
+            result.update(state="no_space", detail=json.dumps(sp))
+            rr.rr_log("RR-SPACE", f"need={sp.get('need')} free={sp.get('free')} path={sp.get('path')} same_fs={'yes' if sp.get('same_fs') else 'no'}")
+        elif kind == "vetoed":
+            chk = outcome.get("check", {})
+            first = chk.get("new", [[]])[0] if chk.get("new") else []
+            result.update(state="vetoed", app=chk.get("first_app", ""), rule=first[1] if len(first) > 1 else "",
+                          detail="|".join(first), baseline=chk.get("baseline", []))
+        else:
+            result.update(state="build_failed", detail="check missing" if outcome.get("check_missing") else "build failed")
+            rr.rr_log("RR-BUILD-FAIL", result["detail"])
+        return finish(1)
+    chk = outcome.get("check", {})
+    txz = res["txz_path"]
+    h = hashlib.sha256()
+    with open(txz, "rb") as fh:
+        for chunk in iter(lambda: fh.read(1 << 20), b""):
+            h.update(chunk)
+    nm, _mt2, _w2 = rr.read_manifest(res["staging_runtime"])
+    result.update(state="built", txz=txz, sha256=h.hexdigest(), staging_base=res["staging_base"],
+                  staging_runtime=res["staging_runtime"], new_built=str(nm.get("built", "")) if nm else "",
+                  packages=len(res.get("packages", [])), baseline=chk.get("baseline", []), apps=chk.get("apps", 0))
+    rr.rr_log("RR-BUILD-OK", f"packages={result['packages']} size={res['size_bytes']} seconds={int(time.time() - t0)}")
+    return finish(0)
+
+
+def runtime_refresh_check(staging_runtime: str, baseline_file: str = "", postcheck_built: str = "") -> int:
+    """7L/7N: run the startability check again (root-phase re-check on the kept staging tree, or the post-check on the live
+    tree when postcheck_built is given). JSON on stdout; exit 1 on a veto / a runtime that is not the expected one."""
+    sv, rr = symver_module(), refresh_module()
+    live, pkgs = rr_paths()
+    out: Dict[str, Any] = {"veto": False, "first_app": "", "built_ok": True}
+    if sv is None:
+        out.update(veto=True, first_app="", error="checker missing")
+        print(json.dumps(out))
+        return 1
+    base = None
+    if baseline_file:
+        try:
+            with open(baseline_file, "r", encoding="utf-8") as fh:
+                data = json.load(fh)
+            if isinstance(data, dict):
+                data = data.get("baseline")
+            base = data if isinstance(data, list) else None
+        except (OSError, ValueError):
+            base = None
+    if postcheck_built and rr is not None:
+        m, _mt, _w = rr.read_manifest(live)
+        out["built_ok"] = bool(m and str(m.get("built", "")) == postcheck_built)
+    res = sv.run_startcheck(staging_runtime or live, live, pkgs, (), base)
+    out.update(veto=res["veto"], first_app=res["first_app"], new=res["new"][:50], seconds=res["seconds"])
+    if rr is not None and res["veto"]:
+        rr.rr_log("RR-POSTCHECK-FAIL" if postcheck_built else "RR-VETO",
+                  "; ".join("|".join(x) for x in res["new"][:50]))
+    print(json.dumps(out))
+    return 1 if (res["veto"] or not out["built_ok"]) else 0
+
+
+def runtime_refresh_clean(path: str) -> int:
+    """Remove a kept staging tree. Only a folder named transmute-gnomes-runtime-* directly below the build base is removed."""
+    try:
+        base = os.path.realpath(build_dir_base())
+        real = os.path.realpath(path)
+        if os.path.dirname(real) == base and os.path.basename(real).startswith("transmute-gnomes-runtime-") and os.path.isdir(real):
+            TransmutationFactory.safe_rmtree(real)
+    except OSError:
+        pass
+    return 0
+
+
 def main():
     """CLI dispatcher for shell integration and testing."""
     if len(sys.argv) < 2:
@@ -6623,6 +6938,14 @@ def main():
             res = factory.transmute(targets[0], verbose=not as_json, force=force, noconfirm=noconfirm)
         else:
             res = factory.transmute(targets, verbose=not as_json, force=force, noconfirm=noconfirm)
+        # 6A-339: names held on the waiting list in THIS run go to <output-dir>/.waiting so the shell front end can tell
+        # "waiting for a newer library" from a failure
+        if TransmutationFactory.HELD_NOW:
+            try:
+                with open(os.path.join(factory.output_dir, ".waiting"), "w", encoding="utf-8") as wfh:
+                    wfh.write("\n".join(TransmutationFactory.HELD_NOW) + "\n")
+            except OSError:
+                pass
         if as_json:
             print(json.dumps(res, indent=2))
         elif not res:
@@ -6661,6 +6984,20 @@ def main():
                 for prof, pkgs in RuntimeManager.PROFILES.items():
                     print(f"  • \033[1;36m{prof:<12}\033[0m : {', '.join(pkgs)}")
                 print("\nInstall a profile with: gnomes runtime install <profile>")
+        elif sub == "refresh-status":
+            res = runtime_refresh_status(record="--no-record" not in sys.argv)
+            print(json.dumps(res))
+        elif sub == "refresh-build":
+            out_d = sys.argv[sys.argv.index("--output-dir") + 1] if "--output-dir" in sys.argv else build_dir_base()
+            sys.exit(runtime_refresh_build(engine, out_d))
+        elif sub == "refresh-check":
+            argv = sys.argv
+            stg = argv[argv.index("--staging") + 1] if "--staging" in argv else ""
+            bfile = argv[argv.index("--baseline") + 1] if "--baseline" in argv else ""
+            pb = argv[argv.index("--expect-built") + 1] if "--expect-built" in argv else ""
+            sys.exit(runtime_refresh_check(stg, bfile, pb))
+        elif sub == "refresh-clean":
+            sys.exit(runtime_refresh_clean(sys.argv[3] if len(sys.argv) > 3 else ""))
         elif sub == "install":
             prof_name = "core"
             out_dir = None  # 6A-139: default is build_dir_base(), not /tmp
@@ -6677,7 +7014,15 @@ def main():
                 elif not a.startswith("-") and not prof_set:
                     prof_name = a
                     prof_set = True
-            res = mgr.install_profile(profile_name=prof_name, verbose=not as_json, output_dir=out_dir)
+            # 7L: the manual install gets the same startability check as the monthly refresh when a runtime is installed
+            _live, _pkgs = rr_paths()
+            _outcome: Dict[str, Any] = {}
+            _hooks = rr_hooks_for(os.path.isdir(os.path.join(_live, "lib")) and symver_module() is not None, _pkgs, _live, _outcome, with_space=False) \
+                if prof_name in RuntimeManager.PROFILES else None
+            res = mgr.install_profile(profile_name=prof_name, verbose=not as_json, output_dir=out_dir, hooks=_hooks)
+            if not res and _outcome.get("check", {}).get("veto"):
+                print(f":: The runtime was not installed because {_outcome['check'].get('first_app', 'an app')} would not start "
+                      f"with it; your current runtime stays.")
             if as_json:
                 print(json.dumps(res, indent=2))
             elif not res:

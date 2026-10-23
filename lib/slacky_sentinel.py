@@ -1871,7 +1871,24 @@ def status_summary() -> Dict[str, Any]:
         fams[f] = {"candidates": len(cands), "extras": len(extras(h, f)), "retired": sum(1 for p in cands if state_of(h, f, p) == "retired"),
                    "demoted": sum(1 for p in cands if state_of(h, f, p) == "demoted"),
                    "list_ok_ts": st.get("lists_ok", {}).get(f, 0)}
-    return {"last_run": st.get("last_run", 0), "families": fams, "lists": st.get("lists", {})}
+    return {"last_run": st.get("last_run", 0), "families": fams, "lists": st.get("lists", {}),
+            "last_error": st.get("last_error", {})}
+
+
+MAIN_FAILED = 25         # an unexpected error inside a command (was exit 0)
+
+
+def _record_main_failure(cmd: str, exc: BaseException) -> None:
+    """Best effort, never raises: state.json gets last_error {cmd, error (class name only), ts}."""
+    try:
+        d = sentinel_dir()
+        if not d:
+            return
+        st = _load_state(d)
+        st["last_error"] = {"cmd": str(cmd)[:40], "error": type(exc).__name__, "ts": int(time.time())}
+        _save_state(d, st)
+    except Exception:
+        pass
 
 
 def main(argv: List[str]) -> int:
@@ -1900,8 +1917,11 @@ def main(argv: List[str]) -> int:
         if cmd == "status":
             print(json.dumps(status_summary(), indent=1, sort_keys=True))
             return 0
-    except Exception:
-        return 0                    # the sentinel is silent and never breaks the caller
+    except Exception as exc:
+        # 6A-353 (4f): still silent and never breaking the caller, but no longer a fake success: exit 25 and a note in the
+        # sentinel state (last_error) so `status` and the alerts can show that a run did not work
+        _record_main_failure(cmd, exc)
+        return MAIN_FAILED
     print("unknown command")
     return 2
 

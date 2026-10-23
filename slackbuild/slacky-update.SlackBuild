@@ -6,7 +6,7 @@ set -euo pipefail
 PRGNAM="slacky-update"
 VERSION="1.0_RC2"
 ARCH="noarch"
-BUILD="95_slacky"
+BUILD="98_slacky"
 
 SRC_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 OUTPUT_DIR="${OUTPUT_DIR:-${SRC_DIR}/../slacky-updates_releases}"
@@ -69,6 +69,7 @@ install -m 0644 "${SRC_DIR}/lib/slacky_vendor_fetch.py" "${PKG_DIR}/usr/share/sl
 install -m 0644 "${SRC_DIR}/lib/slacky_mirrors.py" "${PKG_DIR}/usr/share/slacky-update/lib/"
 install -m 0644 "${SRC_DIR}/lib/slacky_release_cache.py" "${PKG_DIR}/usr/share/slacky-update/lib/"
 install -m 0644 "${SRC_DIR}/lib/slacky_symver.py" "${PKG_DIR}/usr/share/slacky-update/lib/"
+install -m 0644 "${SRC_DIR}/lib/slacky_runtime_refresh.py" "${PKG_DIR}/usr/share/slacky-update/lib/"
 install -m 0644 "${SRC_DIR}/lib/slacky_net.py" "${PKG_DIR}/usr/share/slacky-update/lib/"
 install -m 0644 "${SRC_DIR}/lib/slacky_slackpkg_check.py" "${PKG_DIR}/usr/share/slacky-update/lib/"
 install -m 0644 "${SRC_DIR}/lib/slacky_sentinel.py" "${PKG_DIR}/usr/share/slacky-update/lib/"
@@ -213,6 +214,8 @@ config etc/sysctl.d/50-slacky-protect-links.conf.new
 config_job() {
   NEW="$1"; MODE="$2"; shift 2
   OLD="${NEW%.new}"
+  # 6A-335: earlier builds left executable copies next to the job (run-parts ran them, root jobs ran twice): remove them
+  rm -f "$OLD".slacky-keep.* 2>/dev/null || true
   [ -f "$NEW" ] || return 0
   if [ ! -e "$OLD" ]; then
     mv "$NEW" "$OLD"
@@ -231,9 +234,12 @@ config_job() {
       fi
     done
   fi
-  KEEP="$(mktemp "$OLD.slacky-keep.XXXXXX" 2>/dev/null)" || return 0
+  # 6A-335: the spare copy lives outside every run-parts / profile.d / autostart directory
+  mkdir -p var/cache/slacky-update 2>/dev/null || return 0
+  KEEP="$(mktemp "var/cache/slacky-update/keep.$(basename "$OLD").XXXXXX" 2>/dev/null)" || return 0
   cp -p "$OLD" "$KEEP" 2>/dev/null || { rm -f "$KEEP"; return 0; }
-  ( i=0
+  ( trap '' HUP INT
+    i=0
     while [ "$i" -lt "${SLACKY_KEEP_POLLS:-60}" ]; do
       if [ ! -e "$OLD" ]; then mv "$KEEP" "$OLD" 2>/dev/null; break; fi
       sleep "${SLACKY_KEEP_SLEEP:-2}"; i=$((i + 1))

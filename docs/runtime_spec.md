@@ -34,7 +34,9 @@ libraries (**[Q15]**); signature verification of repository packages (**[Q16]**,
 
 The existing monolith (`.gnomes/manifest.json`, schema 1, profile `all`, layout 1.1, FACT: 518 packages, installed package
 `underpants-runtime-all-1.1-x86_64-1_gnomes`) is `Monolith`. It is left completely alone: no writer, no `runtime.next`, no
-convert prompt (the existing `LEGO_MODEL_ENABLED=false` gate stays off) until a user-run migration (section 12). Every code path that
+convert prompt (the existing `LEGO_MODEL_ENABLED=false` gate stays off) until a user-run migration (section 12).
+The ONLY writer allowed in state `Monolith` is the monthly refresh of `docs/runtime_refresh_spec.md` (owner 2026-10-20): it replaces the whole
+monolith through the existing package path and never creates `.bricks`, `runtime.next`, `runtime.prev`, `.db` or `/opt/underpants/.runtime.lock`. Every other code path that
 could write under the runtime MUST first call the state check and refuse when the state is not `Absent` or `Bricks`.
 
 ## 3. Layout on disk

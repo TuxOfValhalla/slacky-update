@@ -1,0 +1,10 @@
+{
+  "free_gb": null,
+  "need_build": 8380000000,
+  "need_gb": null,
+  "need_opt": 4640000000,
+  "need_same": 12120000000,
+  "ok": true,
+  "same_filesystem": true,
+  "short": null
+}

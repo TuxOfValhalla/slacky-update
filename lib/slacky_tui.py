@@ -467,6 +467,23 @@ def detect_installed_packages():
                     break
     return installed
 
+def split_catalog_fields(line):
+    """6A-343: split a catalog row on '|' outside regex groups (a pattern like (?:-bin|-git) holds pipes), as the shell reader does."""
+    parts, cur, depth = [], [], 0
+    for ch in line:
+        if ch == '(':
+            depth += 1
+        elif ch == ')' and depth > 0:
+            depth -= 1
+        if ch == '|' and depth == 0:
+            parts.append(''.join(cur))
+            cur = []
+        else:
+            cur.append(ch)
+    parts.append(''.join(cur))
+    return parts
+
+
 def load_gnomes_catalog():
     """Extracts catalog entries from lib/mod_gaming.sh or built-in table."""
     catalog = []
@@ -488,7 +505,7 @@ def load_gnomes_catalog():
                         line = line.strip()
                         if not line or line.startswith('#'):
                             continue
-                        parts = line.split('|')
+                        parts = split_catalog_fields(line)
                         if len(parts) >= 3:
                             pkg_id = parts[0].strip()
                             name = parts[1].strip()
@@ -552,7 +569,12 @@ def get_pending_updates_lines(max_available_lines=None, cols=80, ascii_only=Fals
             try:
                 with open(c, "r", encoding="utf-8") as f:
                     _d = json.load(f)
-                _ts = float(_d.get("last_check_ts", os.path.getmtime(c)))
+                if not isinstance(_d, dict):
+                    continue
+                try:
+                    _ts = float(_d.get("last_check_ts", os.path.getmtime(c)))
+                except (TypeError, ValueError):
+                    _ts = os.path.getmtime(c)
                 if _ts > _best_ts:
                     _best, _best_ts = _d, _ts
             except Exception:
@@ -659,6 +681,17 @@ def get_pending_updates_lines(max_available_lines=None, cols=80, ascii_only=Fals
             except Exception:
                 pass
 
+    # 6A-363: a check that did not run (offline) or only partly ran must not say "up to date"
+    if isinstance(_best, dict) and _best.get("check_offline") is True:
+        return [
+            f"{BOLD_CYAN}{_tr('CLI_UPDATES_HEADER', 'Available Updates:')}{RESET}",
+            f"{BOLD_YELLOW}{_tr('CHECK_OFFLINE', 'No internet connection, so nothing was checked; the list shows the last known state')}{RESET}"
+        ]
+    if isinstance(_best, dict) and _best.get("check_failed"):
+        return [
+            f"{BOLD_CYAN}{_tr('CLI_UPDATES_HEADER', 'Available Updates:')}{RESET}",
+            f"{BOLD_YELLOW}{_tr('CHECK_COULD_NOT', 'Could not check')}{RESET}"
+        ]
     return [
         f"{BOLD_CYAN}{_tr('CLI_UPDATES_HEADER', 'Available Updates:')}{RESET}",
         f"{BOLD_GREEN}{_tr('NO_PENDING_UPDATES', 'No pending updates found. System is up to date.')}{RESET}"

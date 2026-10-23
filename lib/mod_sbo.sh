@@ -782,7 +782,9 @@ menu_category_system() {
 }
 
 manage_curated_suite_interactive() {
-    local suite_dir="${SLACKY_SLACKBUILDS_DIR:-/var/cache/slacky-update/slacky-slackbuilds}"
+    local suite_dir="/var/cache/slacky-update/slacky-slackbuilds"
+    # 6A-355: a folder from the environment is only honoured in the self-tests (it would be built as root)
+    [ "${SLACKY_SELFTEST:-0}" = "1" ] && suite_dir="${SLACKY_SLACKBUILDS_DIR:-${suite_dir}}"
     local bundled_assets=""
     for cand in "${APP_DIR}/../assets/slacky-slackbuilds" "${APP_DIR}/assets/slacky-slackbuilds" "/usr/share/slacky-update/assets/slacky-slackbuilds" "/usr/local/lib/slacky-update/assets/slacky-slackbuilds"; do
         if [ -d "${cand}" ]; then

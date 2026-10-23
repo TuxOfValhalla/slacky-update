@@ -125,6 +125,8 @@ MESSAGES = {
     "nokey_refreshed": "The package {name} is signed with a key that is not in your security keys yet, even after a key refresh was tried; a full update (slacky-update) renews the keys, then try again.",
     "sha_bad": "The downloaded file for {name} does not match the checksum in the package list, so it may be damaged or changed.",
     "nokey": "The package {name} is signed by a publisher we do not trust, so we cannot prove who made it.",
+    "wrong_source": "The package {name} was signed with a key that does not belong to its package source, so it cannot be trusted.",
+    "sig_expired": "The signature of {name} is damaged or has run out, so the package was not used; try the download again later.",
     "unsigned": "The package {name} has no signature, so we cannot prove who made it.",
     "error": "The signature check for {name} could not run, so its origin is unknown.",
     "db_older": "The package list from {name} is older than the one we already have, so it was not used.",
@@ -213,10 +215,14 @@ class TrustResult:
         key = {"older": "db_older", "ok": "db_ok"}.get(self.status, self.status)
         if self.status == "nokey" and self.extra.get("refreshed"):
             key = "nokey_refreshed"
+        if self.status == "nokey" and "not one of the keys" in (self.detail or ""):
+            key = "wrong_source"          # 6A-351 (4b): a refresh cannot fix a key that belongs to another source
+        if self.status == "bad" and "signature itself has expired" in (self.detail or ""):
+            key = "sig_expired"           # 6A-351 (4c): EXPSIG is a damaged/expired signature, not an expired key
         if self.extra.get("sha_mismatch"):
             key = "sha_bad"
         text = _t(key if key in MESSAGES else "error").format(name=self.name or self.repo or "this package")
-        if not self.ok and key in ("bad", "nokey", "nokey_refreshed", "unsigned", "error", "expired", "sha_bad"):
+        if not self.ok and key in ("bad", "nokey", "nokey_refreshed", "unsigned", "error", "expired", "sha_bad", "wrong_source", "sig_expired"):
             text += _t("held_suffix") if trust_mode(mode) == "enforce" else _t("log_suffix")
         return text
 
@@ -616,9 +622,35 @@ def verify_package(pkg_path: str, sig_bytes: Optional[bytes], repo: str, keys_ro
         res = check_rings(rings, pkg_path, sig_bytes, name=name, repo=repo, family=family)
         if res.ok:
             _note_used_signer(family, res)
+        elif res.status == "nokey" and res.detail == "signing key not in the trusted keyring":
+            # 6A-351 (4b): a key that is unknown here but valid for ANOTHER package source is a wrong-source package,
+            # not a key the next refresh could fix. Only decided on the nokey path (extra gpg work stays rare).
+            other = _signed_by_other_family(family, pkg_path, sig_bytes, keys_root, shipped_dir)
+            if other:
+                return TrustResult("nokey", key_fpr=res.key_fpr,
+                                   detail=f"signing key is not one of the keys this keyring is trusted for (it belongs to {other})",
+                                   name=res.name, repo=repo, family=family)
         return res
     except Exception as e:  # trust code must never crash the engine
         return TrustResult("error", detail=f"{type(e).__name__}: {e}", name=name or os.path.basename(pkg_path), repo=repo)
+
+
+def _signed_by_other_family(family: str, pkg_path: str, sig_bytes: bytes, keys_root: str,
+                            shipped_dir: Optional[str]) -> str:
+    """Name of another keyring family whose keys make this signature valid ("" when none). Never raises."""
+    try:
+        for other in TRUST_PINS:
+            if other == family:
+                continue
+            rings, _why = reader_rings(other, keys_root, shipped_dir)
+            if not rings:
+                continue
+            r = check_rings(rings, pkg_path, sig_bytes, family=other)
+            if r.status in ("good", "expired"):
+                return other
+    except Exception:
+        pass
+    return ""
 
 
 _USED: Dict[str, Dict[str, str]] = {}
@@ -640,13 +672,19 @@ def _note_used_signer(family: str, res: "TrustResult") -> None:
 
 
 def _flush_used_signers() -> None:
-    if not _USED or os.geteuid() == 0:
+    if not _USED:
         return
     try:
         import importlib.util
         mod = sys.modules.get("slacky_sentinel")
         if mod is None:
             path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "slacky_sentinel.py")
+            if os.geteuid() == 0:
+                # 6A-352 (R4): root records the signers in the system sentinel folder too, but only loads a sentinel module
+                # that belongs to root and nobody else can write
+                st = os.stat(path)
+                if st.st_uid != 0 or (st.st_mode & 0o022):
+                    return
             spec = importlib.util.spec_from_file_location("slacky_sentinel", path)
             if not spec or not spec.loader:
                 return
@@ -2049,6 +2087,58 @@ def check_db_monotonic(repo: str, packages: Dict[str, Dict[str, Any]], state_pat
     return TrustResult("ok", detail=f"newest build {newest}", extra=extra, **base)
 
 
+_DB_SIG_REPO = {"archlinux": "extra", "cachyos": "cachyos", "chaotic": "chaotic"}
+
+
+def verify_db_sig(path: str, sig: Optional[bytes], family: str, keys_root: str = KEYS_ROOT,
+                  shipped_dir: Optional[str] = None, name: str = "") -> TrustResult:
+    """6A-354 (F2): the detached `.db.sig` of a repository database file against the keys of its family (the same rings,
+    revoked lists and wrong-source rule as a package). `sig` None or empty = "unsigned". Never raises."""
+    repo = _DB_SIG_REPO.get(family or "")
+    nm = name or os.path.basename(path)
+    if repo is None:
+        return TrustResult("nokey", detail=f"no keyring family {family}", name=nm, repo=family or "")
+    if not sig:
+        return TrustResult("unsigned", detail="no signature available", name=nm, repo=repo, family=family)
+    return verify_package(path, sig, repo, keys_root=keys_root, name=nm, shipped_dir=shipped_dir)
+
+
+def check_db_before_replace(data: bytes, repo: str, parse: Any, state_path: Optional[str] = None,
+                            sig: Optional[bytes] = None, require_sig: bool = False,
+                            keys_root: str = KEYS_ROOT, shipped_dir: Optional[str] = None,
+                            now: Optional[float] = None) -> TrustResult:
+    """6A-354 (F2): everything that must hold BEFORE a downloaded repository database replaces the cached one.
+    1 the signature (when `sig` is given or `require_sig`): a missing or bad signature is "unsigned"/"bad"/...;
+    2 the database parses (`parse(data)` -> {name: {...}}) and is not empty;
+    3 the newest BUILDDATE is not older than the last accepted one (check_db_monotonic, not recorded here).
+    Returns the first failing TrustResult, else status "ok". The caller replaces the cache file only when
+    `not result.blocks()` and records the new date afterwards (check_db_monotonic with record=True).
+    Never raises (a trust error blocks)."""
+    family = repo_family(repo)
+    base = dict(name=repo, repo=repo, family=family or "")
+    try:
+        if sig is not None or require_sig:
+            if not family:
+                return TrustResult("nokey", detail=f"no keyring family for repo {repo}", **base)
+            with tempfile.TemporaryDirectory(prefix="gnomes-db-") as work:
+                os.chmod(work, 0o700)
+                fp = os.path.join(work, "repo.db")
+                with open(fp, "wb") as f:
+                    f.write(data)
+                res = verify_db_sig(fp, sig, family, keys_root=keys_root, shipped_dir=shipped_dir, name=repo)
+            if not res.ok:
+                return res
+        try:
+            packages = parse(data)
+        except Exception as e:
+            return TrustResult("error", detail=f"database could not be read: {type(e).__name__}", **base)
+        if not isinstance(packages, dict) or not packages:
+            return TrustResult("error", detail="database is empty or unreadable", **base)
+        return check_db_monotonic(repo, packages, state_path or default_state_path(), record=False, now=now)
+    except Exception as e:
+        return TrustResult("error", detail=f"{type(e).__name__}: {e}", **base)
+
+
 def default_state_path() -> str:
     """Root uses the system cache; a user run uses its own cache (root never trusts ~/.cache)."""
     if os.geteuid() == 0:
@@ -2175,6 +2265,31 @@ def _selftest_signatures() -> Tuple[int, List[str]]:
         res = check_db_monotonic("extra", db_future, st, now=now)
         expect("db future ignored", TrustResult("ok" if res.ok and res.extra.get("newest") == 1700000300 else "bad"), "ok")
         expect("db empty", check_db_monotonic("extra", {}, st, now=now), "error")
+        # 6A-354 (F2): signed database check before the cache is replaced (fake keys root, archlinux family)
+        dbf = os.path.join(work, "extra.db")
+        with open(dbf, "wb") as f:
+            f.write(b"\x28\xb5\x2f\xfd" + os.urandom(2048))
+        cp = subprocess.run(["gpg", "--homedir", home_a, "--batch", "--no-tty", "--quiet", "--pinentry-mode", "loopback",
+                             "--passphrase", "", "--detach-sign", "-o", dbf + ".sig", dbf],
+                            env=_clean_env(), capture_output=True, timeout=GPG_TIMEOUT, check=False)
+        with open(dbf, "rb") as f:
+            dbdata = f.read()
+        with open(dbf + ".sig", "rb") as f:
+            dbsig = f.read()
+        st2 = os.path.join(work, "state2.json")
+        pk_new = {"a": {"BUILDDATE": "1700000200"}}
+        pk_old = {"a": {"BUILDDATE": "1700000100"}}
+        kw = dict(keys_root=keys, shipped_dir=none_shipped, state_path=st2, now=now)
+        expect("db sig good", verify_db_sig(dbf, dbsig, "archlinux", keys_root=keys, shipped_dir=none_shipped), "good")
+        expect("db sig missing", verify_db_sig(dbf, None, "archlinux", keys_root=keys, shipped_dir=none_shipped), "unsigned")
+        expect("db sig other file", verify_db_sig(flipped, dbsig, "archlinux", keys_root=keys, shipped_dir=none_shipped), "bad")
+        expect("db before replace ok", check_db_before_replace(dbdata, "extra", lambda b: pk_new, sig=dbsig, **kw), "ok")
+        expect("db before replace unsigned", check_db_before_replace(dbdata, "extra", lambda b: pk_new, require_sig=True, **kw), "unsigned")
+        expect("db before replace bad sig", check_db_before_replace(dbdata + b"x", "extra", lambda b: pk_new, sig=dbsig, **kw), "bad")
+        expect("db before replace unparsable", check_db_before_replace(dbdata, "extra", lambda b: 1 / 0, sig=dbsig, **kw), "error")
+        check_db_monotonic("extra", pk_new, st2, now=now)         # the caller records after replacing
+        expect("db before replace older", check_db_before_replace(dbdata, "extra", lambda b: pk_old, sig=dbsig, **kw), "older")
+        expect("db before replace not recorded", TrustResult("ok" if _load_state(st2).get("repos", {}).get("extra", {}).get("newest_builddate") == 1700000200 else "bad"), "ok")
     return n, fails
 
 

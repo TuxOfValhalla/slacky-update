@@ -1,0 +1,13 @@
+{
+  "new_failures": [
+    {
+      "app": "lite",
+      "file": "lib/lua/5.4",
+      "rule": "S3",
+      "soname": "lua",
+      "version": "5.4 -> 5.5"
+    }
+  ],
+  "plugins_unchecked": null,
+  "veto": true
+}

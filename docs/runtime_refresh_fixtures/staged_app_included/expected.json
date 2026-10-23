@@ -1,0 +1,13 @@
+{
+  "new_failures": [
+    {
+      "app": "newapp",
+      "file": "bin/newapp",
+      "rule": "S2",
+      "soname": "libQt6Core.so.6",
+      "version": "Qt_6.12"
+    }
+  ],
+  "plugins_unchecked": null,
+  "veto": true
+}

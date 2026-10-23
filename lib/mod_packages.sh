@@ -436,6 +436,32 @@ for it in items:
 PYNAMES
 }
 
+# 6A-345 (1a): true (0) when the stored Slackware lists still name a stock kernel package that the snapshot hold keeps back.
+slacky_stock_kernel_pending() {
+    local sf
+    sf=$(get_status_json_path 2>/dev/null || true)
+    [ "${SLACKY_SELFTEST:-0}" = "1" ] && [ -n "${SLACKY_STATUS_JSON:-}" ] && sf="${SLACKY_STATUS_JSON}"
+    [ -n "${sf}" ] && [ -r "${sf}" ] || return 1
+    python3 -I - "${sf}" <<'PYKP' 2>/dev/null
+import json, os, re, sys
+try:
+    d = json.load(open(sys.argv[1]))
+except Exception:
+    sys.exit(1)
+for key in ("slackware_updates", "slackware_new_packages"):
+    items = d.get(key)
+    if not isinstance(items, list):
+        continue
+    for it in items:
+        if not isinstance(it, str):
+            continue
+        base = re.sub(r'\.(t[xgb]z|tlz)$', '', os.path.basename(it.strip()))
+        if base.startswith(('kernel-generic', 'kernel-huge', 'kernel-modules', 'kernel-source')):
+            sys.exit(0)
+sys.exit(1)
+PYKP
+}
+
 update_slackware_core() {
     validate_privileges
 
@@ -801,11 +827,13 @@ slacky_find_helper() {
 # happens, no sudo is asked). One plain sentence per refusal; the update itself continues (the old keys stay in force).
 slacky_keys_first() {
     local sentinel trust stage out
+    local rk_force=""
+    [ "${1:-}" = "force" ] && rk_force="--force"     # 6A-351 (4a): one forced refresh after an unknown or expired key
     sentinel=$(slacky_find_helper slacky_sentinel.py) || return 0
     trust=$(slacky_find_helper gnomes_trust.py) || return 0
     # 6A-278: refresh in every mode. A user stages a verified newer keyring; root (sudo slacky-update) installs it at once as
     # a new key generation. Works without gnomes, at most once a day, never asks for sudo (we are already running).
-    timeout 40 python3 -I "${sentinel}" refresh-keys >/dev/null 2>&1 || true
+    timeout 40 python3 -I "${sentinel}" refresh-keys ${rk_force} >/dev/null 2>&1 || true
     if [ "$(id -u)" -eq 0 ]; then
         # the mirror list is refreshed weekly in the background
         if python3 -I "${sentinel}" due >/dev/null 2>&1; then

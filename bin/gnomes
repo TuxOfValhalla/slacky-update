@@ -29,6 +29,8 @@ fi
 [ -f "${APP_DIR}/common.sh" ] && source "${APP_DIR}/common.sh"
 # shellcheck source=/dev/null
 [ -f "${APP_DIR}/mod_gnomes_engine.sh" ] && source "${APP_DIR}/mod_gnomes_engine.sh"
+# shellcheck source=/dev/null
+[ -f "${APP_DIR}/mod_runtime_refresh.sh" ] && source "${APP_DIR}/mod_runtime_refresh.sh"
 
 # 6A-293 (M4): every pkgtools step (upgradepkg/removepkg) runs under the shared run lock of a full update. When gnomes is
 # called from inside an update that already holds it, SLACKY_RUN_LOCK_HELD=1 is inherited and nothing is locked again.
@@ -42,6 +44,30 @@ gnomes_pkgtools_lock() {
         sleep 1
     done
     acquire_run_lock
+}
+
+# 6A-337: sudo drops the environment, so the child would wait 60 s for a lock this script already holds; hand the marker
+# over only when it is really held (acquire_run_lock exports it, so this is decided at call time).
+gnomes_purge_service() {
+    if [ "${SLACKY_RUN_LOCK_HELD:-0}" = "1" ]; then
+        sudo env SLACKY_RUN_LOCK_HELD=1 python3 -I "${GNOMES_PY}" purge-service "$1" 2>/dev/null || true
+    else
+        sudo python3 -I "${GNOMES_PY}" purge-service "$1" 2>/dev/null || true
+    fi
+}
+
+# 6A-339: 0 when the build named TARGET on its waiting list (a symbol-version hold), see TransmutationFactory.HELD_NOW
+gnomes_is_waiting() {
+    local wf="$1/.waiting" t="$2" w
+    [ -r "${wf}" ] || return 1
+    while IFS= read -r w; do
+        [ -n "${w}" ] || continue
+        if [ "${w}" = "${t}" ] || [ "${w}" = "${t#underpants-}" ] || [ "${t}" = "${w#underpants-}" ] \
+           || [ "${w}" = "${t#cachyos-gnome-}" ]; then
+            return 0
+        fi
+    done < "${wf}"
+    return 1
 }
 
 GNOMES_PY=""
@@ -248,12 +274,12 @@ cleanup_stale_wrappers() {
     # Core host sovereignty check: python/python3/pip are never hijacked. 6A-231: this function no longer creates
     # /usr/bin/python, python3 or python3-config (those belong to the Slackware python3 package); 6A-232: advice only.
     for host_bin in python python3 python3-config python2 pip pip3 idle idle3 pydoc pydoc3; do
-        if [ -f "/usr/bin/${host_bin}" ] && grep -q "# --- [ Underpants Gnomes Launcher Wrapper for" "/usr/bin/${host_bin}" 2>/dev/null; then
+        if [ -f "/usr/bin/${host_bin}" ] && grep -qF "# --- [ Underpants Gnomes Launcher Wrapper for" "/usr/bin/${host_bin}" 2>/dev/null; then
             advise_protected_wrapper "/usr/bin/${host_bin}"
         fi
     done
     for f in /usr/bin/*; do
-        if [ -f "${f}" ] && grep -q "# --- [ Underpants Gnomes Launcher Wrapper for" "${f}" 2>/dev/null; then
+        if [ -f "${f}" ] && grep -qF "# --- [ Underpants Gnomes Launcher Wrapper for" "${f}" 2>/dev/null; then
             app_name=$(grep '^APP_NAME=' "${f}" 2>/dev/null | cut -d'"' -f2 || true)
             bname=$(basename "${f}")
             if [ -n "${app_name}" ]; then
@@ -277,11 +303,11 @@ cleanup_stale_wrappers() {
                     if [ "$(id -u)" -eq 0 ]; then
                         "${rc}" stop 2>/dev/null || true
                         rm -f "${rc}"
-                        python3 "${GNOMES_PY}" purge-service "${svc_name}" 2>/dev/null || true
+                        python3 -I "${GNOMES_PY}" purge-service "${svc_name}" 2>/dev/null || true
                     else
                         sudo "${rc}" stop 2>/dev/null || true
                         sudo rm -f "${rc}" 2>/dev/null || true
-                        sudo python3 "${GNOMES_PY}" purge-service "${svc_name}" 2>/dev/null || true
+                        gnomes_purge_service "${svc_name}"
                     fi
                 fi
             fi
@@ -355,6 +381,10 @@ case "${OP}" in
             for TARGET in "${TARGETS[@]}"; do
                 TXZ_PATH=$(built_txz_for "${GNOMES_OUT}" "${TARGET}" "${single_target}")
                 if [ -z "${TXZ_PATH}" ] || [ ! -f "${TXZ_PATH}" ]; then
+                    # 6A-339: held on the waiting list (needs a newer library): nothing failed, the sentence was printed
+                    if gnomes_is_waiting "${GNOMES_OUT}" "${TARGET}"; then
+                        continue
+                    fi
                     # 6A-135: a target that produced no package is a failure, never a silent skip
                     echo -e "${RED}:: No package was built for ${TARGET}.${RESET}"
                     failed=1
@@ -425,6 +455,15 @@ case "${OP}" in
             [ "${failed}" -eq 0 ] || exit 1
             [ "${refused}" -eq 0 ] || exit 3
         else
+            # 6A-339: every requested app is only waiting (not installed, nothing failed): same as curated, exit 0
+            waiting_all=1
+            for TARGET in "${TARGETS[@]}"; do
+                gnomes_is_waiting "${GNOMES_OUT}" "${TARGET}" || { waiting_all=0; break; }
+            done
+            if [ "${waiting_all}" -eq 1 ]; then
+                rm -rf "${GNOMES_OUT}"
+                exit 0
+            fi
             rm -rf "${GNOMES_OUT}"
             # 6A-71: a build-only run never installs anything, and the curated fallback (a root install) only runs
             # after the user said yes on a terminal
@@ -533,7 +572,7 @@ case "${OP}" in
         # 6A-293 (M4): the shared run lock first, so no full update runs between the snapshot and the reinstall
         gnomes_pkgtools_lock || exit 1
         if command -v flock >/dev/null 2>&1; then
-            sudo install -m 0644 -o root -g root /dev/null /run/lock/slacky-rollback.lock 2>/dev/null || true
+            [ -e /run/lock/slacky-rollback.lock ] || sudo install -m 0644 -o root -g root /dev/null /run/lock/slacky-rollback.lock 2>/dev/null || true
             # 6A-294 (S3): braces keep the 2>/dev/null on the open only; a bare exec would silence stderr for the rest
             if { exec 7</run/lock/slacky-rollback.lock; } 2>/dev/null; then
                 flock -n 7 || { echo -e "${RED}:: Another rollback is running. Nothing was changed.${RESET}"; exit 1; }
@@ -547,7 +586,9 @@ case "${OP}" in
                 || { echo -e "${RED}:: Could not take a snapshot first. Nothing was changed.${RESET}"; exit 1; }
         fi
         # D14: root-phase work dir on disk (not tmpfs), root-only
-        rb_root="${SLACKY_GNOMES_BUILD_ROOT:-/var/cache/slacky-update/gnomes/build}"
+        rb_root="/var/cache/slacky-update/gnomes/build"
+        # 6A-338: a different build root is for the self-tests only
+        [ "${SLACKY_SELFTEST:-0}" = "1" ] && rb_root="${SLACKY_GNOMES_BUILD_ROOT:-${rb_root}}"
         sudo mkdir -p -m 0755 "${rb_root%/*}" && sudo mkdir -p -m 0700 "${rb_root}" || exit 1
         RB_OUT=$(sudo mktemp -d "${rb_root}/rollback.XXXXXX") || exit 1
         rb_ok=0
@@ -682,9 +723,9 @@ case "${OP}" in
                             fi
                         fi
                         if [ "$(id -u)" -eq 0 ]; then
-                            python3 "${GNOMES_PY}" purge-service "${svc}" 2>/dev/null || true
+                            python3 -I "${GNOMES_PY}" purge-service "${svc}" 2>/dev/null || true
                         else
-                            sudo python3 "${GNOMES_PY}" purge-service "${svc}" 2>/dev/null || true
+                            gnomes_purge_service "${svc}"
                         fi
                     fi
                 done
@@ -776,8 +817,25 @@ case "${OP}" in
                             exit 1
                         fi
                         gnomes_pkgtools_lock || { rm -rf "${GNOMES_OUT}"; exit 1; }  # 6A-293
+                        # 7L: a replacement of the runtime needs the safety snapshot like the monthly refresh (warning only
+                        # when this system cannot make one); running apps are named (they may need a restart)
+                        if declare -F runtime_refresh_snapshot_gate >/dev/null 2>&1; then
+                            if ! runtime_refresh_snapshot_gate; then
+                                echo -e "${YELLOW}$(_ RUNTIME_REFRESH_SNAPSHOT_FAILED)${RESET}"
+                                rm -rf "${GNOMES_OUT}"
+                                exit 1
+                            fi
+                            if [ "${RR_SNAP_NUM:-0}" = "0" ] && ! rr_has_snapshot_support; then
+                                echo -e "${YELLOW}$(_ RUNTIME_REFRESH_NO_SNAPSHOT_WARN)${RESET}"
+                            fi
+                            runtime_refresh_warn_running
+                        fi
                         echo -e "\n${BOLD}${CYAN}:: Deploying ${PKG_NAME_BASE} to Slackware host via upgradepkg (requires sudo)...${RESET}"
-                        sudo upgradepkg --install-new --reinstall "${TXZ_PATH}"
+                        if ! sudo upgradepkg --install-new --reinstall "${TXZ_PATH}"; then
+                            echo -e "${YELLOW}The shared runtime package could not be installed, so the previous runtime stays.${RESET}"
+                            rm -rf "${GNOMES_OUT}"
+                            exit 1
+                        fi
                         echo -e "\n${BOLD}${GREEN}PROFIT! Underpants Shared Runtime [${prof}] is now active in /opt/underpants/runtime/${RESET}\n"
                     fi
                 fi

@@ -1,0 +1,10 @@
+{
+  "candidate_versions": {
+    "lua": "5.5.0-1"
+  },
+  "kind": "startability",
+  "live_versions": {
+    "lua": "5.4.8-1"
+  },
+  "staged_apps": []
+}

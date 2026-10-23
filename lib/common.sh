@@ -148,7 +148,19 @@ get_cachyos_repo_url() {
     esac
 }
 
-export SLACKY_CPU_TIER="${SLACKY_CPU_TIER:-$(detect_cpu_tier)}"
+# 6A-355 (env hooks): a CPU tier handed in from the environment is only honoured in the self-tests, or when this CPU
+# really supports it (a value above what the CPU can do would download kernels that crash at boot).
+slacky_cpu_tier_rank() { case "$1" in generic) echo 0 ;; v3) echo 1 ;; v4) echo 2 ;; znver4) echo 3 ;; *) echo -1 ;; esac; }
+_slacky_cpu_tier_detected="$(detect_cpu_tier)"
+if [ -n "${SLACKY_CPU_TIER:-}" ] && [ "${SLACKY_SELFTEST:-0}" != "1" ]; then
+    _slacky_cpu_tier_want=$(slacky_cpu_tier_rank "${SLACKY_CPU_TIER}")
+    if [ "${_slacky_cpu_tier_want}" -lt 0 ] || [ "${_slacky_cpu_tier_want}" -gt "$(slacky_cpu_tier_rank "${_slacky_cpu_tier_detected}")" ]; then
+        SLACKY_CPU_TIER="${_slacky_cpu_tier_detected}"
+    fi
+    unset _slacky_cpu_tier_want
+fi
+export SLACKY_CPU_TIER="${SLACKY_CPU_TIER:-${_slacky_cpu_tier_detected}}"
+unset _slacky_cpu_tier_detected
 
 compare_versions_strictly_greater() {
     local v1="$1"
@@ -593,6 +605,31 @@ else:
 " "${key}" 2>/dev/null || echo "0"
 }
 
+# 6A-346 (1b): did the last check really look at everything? Prints "offline" (no server reached), "failed <names>"
+# (parts that could not be checked) or nothing (all checked). The newest status.json wins; unreadable = nothing printed.
+slacky_check_state() {
+    local sf
+    sf=$(get_status_json_path 2>/dev/null || true)
+    [ "${SLACKY_SELFTEST:-0}" = "1" ] && [ -n "${SLACKY_STATUS_JSON:-}" ] && sf="${SLACKY_STATUS_JSON}"
+    [ -n "${sf}" ] && [ -r "${sf}" ] || return 0
+    python3 -I - "${sf}" <<'PYCS' 2>/dev/null || true
+import json, sys
+try:
+    d = json.load(open(sys.argv[1]))
+    if not isinstance(d, dict):
+        raise ValueError
+except Exception:
+    sys.exit(0)
+if d.get("check_offline") is True:
+    print("offline")
+else:
+    f = d.get("check_failed")
+    f = [x for x in f if isinstance(x, str) and x] if isinstance(f, list) else []
+    if f:
+        print("failed " + " ".join(f))
+PYCS
+}
+
 resolve_check_bin() {
     if [ -n "${CHECK_BIN:-}" ] && [ -x "${CHECK_BIN}" ]; then
         echo "${CHECK_BIN}"
@@ -704,11 +741,13 @@ reconcile_post_update_status() {
     local gaming_done="${5:-0}"
     local gnomes_done="${6:-0}"
     local nvidia_done="${7:-0}"
+    local rr_done="${8:-0}"
 
-    python3 - "${slack_done}" "${cachy_done}" "${flatpak_done}" "${sbo_done}" "${gaming_done}" "${gnomes_done}" "${nvidia_done}" << 'PYRECON'
+    python3 - "${slack_done}" "${cachy_done}" "${flatpak_done}" "${sbo_done}" "${gaming_done}" "${gnomes_done}" "${nvidia_done}" "${rr_done}" << 'PYRECON'
 import sys, os, json, time, pwd
 
 slack_done, cachy_done, flatpak_done, sbo_done, gaming_done, gnomes_done, nvidia_done = sys.argv[1:8]
+rr_done = sys.argv[8] if len(sys.argv) > 8 else "0"
 
 candidates = []
 xdg = os.environ.get("XDG_CACHE_HOME")
@@ -768,9 +807,14 @@ if not base_data:
 
 # Clear updated sections based on completed steps
 if slack_done == "1":
-    base_data["slackware_updates"] = []
-    base_data["slackpkgplus_updates"] = []
-    base_data["slackware_new_packages"] = []
+    # 6A-345 (1e): in hold mode (no safety snapshot) the stock kernel packages were NOT installed; they stay listed
+    def _held_kernel(it):
+        if os.environ.get("SLACKY_HOLD_STOCK_KERNEL") != "1" or not isinstance(it, str):
+            return False
+        return os.path.basename(it.strip()).startswith(("kernel-generic", "kernel-huge", "kernel-modules", "kernel-source"))
+    for _k in ("slackware_updates", "slackpkgplus_updates", "slackware_new_packages"):
+        _old = base_data.get(_k)
+        base_data[_k] = [x for x in _old if _held_kernel(x)] if isinstance(_old, list) else []
 if cachy_done == "1":
     base_data["cachyos_kernel_updates"] = []
 if flatpak_done == "1":
@@ -787,6 +831,9 @@ if gnomes_done == "1":
 if nvidia_done == "1":
     base_data["nvidia_driver_updates"] = []
     base_data["nvidia_gl_mismatch"] = False
+if rr_done == "1" and isinstance(base_data.get("runtime_refresh"), dict):
+    # 7N: the runtime was refreshed in this run (the next check recomputes the real answer)
+    base_data["runtime_refresh"].update(state="nominal", age_days=0, newer=0, suspects=[])
 
 base_data["last_check_ts"] = int(time.time())
 base_data["last_check"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
@@ -966,12 +1013,13 @@ verify_cachyos_gpg_signature() {
 
     if [ "${status}" != "good" ]; then
         # unknown or expired signing key: the key may simply be newer than our store; refresh once per run, then retry once
-        if { [ "${status}" = "nokey" ] && [[ "${detail}" != *"not one of the keys"* ]]; } || [[ "${detail}" == *"expired"* ]]; then
+        if { [ "${status}" = "nokey" ] && [[ "${detail}" != *"not one of the keys"* ]]; } || [ "${status}" = "expired" ]; then
             if [ -z "${_SLACKY_KEYS_REFRESH_TRIED:-}" ]; then
                 _SLACKY_KEYS_REFRESH_TRIED=1
                 if command -v slacky_keys_first >/dev/null 2>&1; then
                     log_info "The signing key of ${name} is not known yet; fetching the newest security keys."
-                    slacky_keys_first >/dev/null 2>&1 || true
+                    # 6A-351 (4a): forced, because the daily limit already used up the refresh at the start of the run
+                    slacky_keys_first force >/dev/null 2>&1 || true
                 fi
             fi
             if [ -n "${_SLACKY_KEYS_REFRESH_TRIED:-}" ]; then
@@ -986,16 +1034,26 @@ verify_cachyos_gpg_signature() {
         return 0
     fi
 
-    case "${status}|${detail}" in
-        nokey\|*"not one of the keys"*)
-            log_error "${name} was signed with a key that does not belong to its package source, so it was not used." ;;
-        *"expired"*|nokey\|*)
-            log_error "The signing key of ${name} is not known or has run out; the next key refresh fixes this: run a full update with 'slacky-update' and try again." ;;
-        bad\|*"revoked"*)
-            log_error "The signing key of ${name} has been withdrawn by its publisher, so the package was not used." ;;
-        bad\|*)
-            log_error "${name} does not match its signature, so it was not used; the download may be damaged, try again later." ;;
-        unsigned\|*)
+    # 6A-351 (4b/4c): the sentence follows the status, never a word inside the detail text; no sentence promises a fix
+    # that a key refresh cannot deliver (a refresh was already tried above for an unknown or expired key)
+    case "${status}" in
+        nokey)
+            if [[ "${detail}" == *"not one of the keys"* ]]; then
+                log_error "${name} was signed with a key that does not belong to its package source, so it was not used."
+            else
+                log_error "The signing key of ${name} is not known, even after the newest security keys were fetched, so it was not used."
+            fi ;;
+        expired)
+            log_error "The signing key of ${name} has run out, even after the newest security keys were fetched, so it was not used." ;;
+        bad)
+            if [[ "${detail}" == *"revoked"* ]]; then
+                log_error "The signing key of ${name} has been withdrawn by its publisher, so the package was not used."
+            elif [[ "${detail}" == *"signature itself has expired"* ]]; then
+                log_error "The signature of ${name} is damaged or has run out, so it was not used; try the download again later."
+            else
+                log_error "${name} does not match its signature, so it was not used; the download may be damaged, try again later."
+            fi ;;
+        unsigned)
             log_error "${name} came without a usable signature, so it was not used." ;;
         *)
             log_error "The signature of ${name} could not be checked (${detail:-unknown reason}), so it was not used." ;;
@@ -1085,6 +1143,19 @@ log_success() {
     local msg="$1"
     echo -e "${GREEN}OK${RESET} ${msg}"
     { echo "[$(date '+%Y-%m-%d %H:%M:%S')] [SUCCESS] ${msg}" >> "${LOG_FILE}"; } 2>/dev/null || true
+}
+
+# 6A-345: localised one-line message with an English fallback (the key may be missing in an older locale or without the
+# translation helper). Usage: slacky_msg KEY "English text" [value for {0}].
+slacky_msg() {
+    local key="$1" def="$2" arg="${3:-}" v=""
+    if declare -F _ >/dev/null 2>&1; then
+        v=$(_ "${key}" 2>/dev/null || true)
+    fi
+    if [ -z "${v}" ] || [ "${v}" = "${key}" ]; then
+        v="${def}"
+    fi
+    printf '%s' "${v//\{0\}/${arg}}"
 }
 
 log_warn() {
@@ -1485,6 +1556,8 @@ create_pre_update_snapshot() {
     local n
     # 6A-94: tagged as ours, no snapper cleanup algorithm (our 48-hour pruner removes it; the owner's numbered
     # snapshots no longer share snapper's NUMBER_LIMIT with ours)
+    # 6A-355: the id ends up in snapper userdata and a file name: only a plain token from the environment is kept
+    [[ "${SLACKY_TX_ID:-}" =~ ^[0-9A-Za-z._-]{1,64}$ ]] || SLACKY_TX_ID=""
     SLACKY_TX_ID="${SLACKY_TX_ID:-$(date +%Y%m%d%H%M%S)-$$}"
     n=$(sudo timeout 180 snapper -c root create --type pre \
         --description "slacky-update: before full update" \
@@ -1595,11 +1668,14 @@ try:
                     a_ver, a_build = m.group(1), int(m.group(2))
                     if parse_v(a_ver) == parse_v(cur):
                         import glob
-                        local_pkgs = glob.glob('/var/log/packages/slacky-update-*')
-                        if local_pkgs:
-                            local_name = os.path.basename(local_pkgs[0])
-                            lm = pkg_pattern.search(local_name)
-                            if lm and int(lm.group(2)) < a_build:
+                        # 6A-350: only slacky-update-<version>-... (never slacky-update-rs); the highest installed build counts
+                        local_best = -1
+                        for lp in sorted(glob.glob('/var/log/packages/slacky-update-[0-9]*')):
+                            lm = pkg_pattern.search(os.path.basename(lp))
+                            if lm and parse_v(lm.group(1)) == parse_v(cur):
+                                local_best = max(local_best, int(lm.group(2)))
+                        if local_best >= 0:
+                            if local_best < a_build:
                                 asset_newer = True
                                 asset_display_tag = '{}-build{}'.format(tag, a_build)
                 if dl_url:
@@ -2095,6 +2171,11 @@ run_post_update_smoke_test() {
     echo -e "${CYAN}${BOLD}=== POST-UPDATE SUBSYSTEM HEALTH CHECK ===${RESET}"
     if [ "${1:-}" = "SKIPPED_MIRROR_ERROR" ] || [ "${SLACK_CORE_STATUS:-}" = "SKIPPED_MIRROR_ERROR" ]; then
         echo -e "  ${YELLOW}[WARN]${RESET} 64-bit Slackware Core : ${YELLOW}Skipped (the Slackware update server did not answer)${RESET}"
+    elif [ "${1:-}" = "FAILED" ]; then
+        # 6A-347 (1c): "healthy" is only said after a real success (not after errors or a declined update)
+        echo -e "  ${RED}[FAIL]${RESET} 64-bit Slackware Core : ${RED}The update did not finish (see the messages above)${RESET}"
+    elif [ "${1:-}" = "PENDING" ]; then
+        echo -e "  ${YELLOW}[WARN]${RESET} 64-bit Slackware Core : ${YELLOW}Updates are still waiting; they were not installed${RESET}"
     else
         echo -e "  ${GREEN}[ OK ]${RESET} 64-bit Slackware Core : ${GREEN}Up-to-date & healthy${RESET}"
     fi

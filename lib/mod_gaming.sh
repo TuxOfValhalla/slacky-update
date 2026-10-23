@@ -26,7 +26,7 @@ get_gaming_catalog() {
 mangohud|MangoHud (+ 32-bit Multilib & mangoapp)|engine|mangohud-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|lib32-mangohud-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|glfw-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos-extra-v3,arch-extra,arch-multilib,cachyos
 gamemode|Feral GameMode (+ 32-bit Multilib & Governor)|engine|gamemode-(?:[0-9]+%3A)?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|lib32-gamemode-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||cachyos-extra-v3,arch-extra,arch-multilib,cachyos
 goverlay|GOverlay (MangoHud GUI Configurator)|engine|goverlay-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||qt6pas-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|arch-extra,cachyos
-vram-booster|Dynamic VRAM Booster & Foreground Shield (dmemcg)|engine|dmemcg-booster-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst||plasma-foreground-booster-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|cachyos,chaotic-aur,arch-extra
+vram-booster|Game Priority Booster (CPU/IO)|engine|dmemcg-booster-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst||plasma-foreground-booster-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|cachyos,chaotic-aur,arch-extra
 scx|Sched-EXT SCX Schedulers, Tools & Manager|engine|scx-manager-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||scx-scheds(?:-git)?-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,scx-tools(?:-git)?-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos,arch-extra
 ananicy|Ananicy-CPP & CachyOS Rules (Auto-Priority & Latency)|engine|ananicy-cpp(?:-git)?-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst||cachyos-ananicy-rules(?:-git)?-[0-9a-zA-Z_\.%:-]*\.pkg\.tar\.zst|cachyos,cachyos-extra-v3
 gamescope|Gamescope (Micro-Compositor & HDR/Upscaling)|engine|gamescope-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|lib32-gamescope-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|libavif-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos,arch-extra
@@ -384,7 +384,7 @@ PKG_DESCRIPTIONS = {
     "mangohud": "High-performance Vulkan/OpenGL overlay with hardware telemetry and mangoapp integration.",
     "gamemode": "Feral GameMode auto-governor prioritizing games and multilib 32-bit processes.",
     "goverlay": "Graphical Qt6 configurator for MangoHud, vkBasalt, and ReplaySorcery.",
-    "vram-booster": "Dynamic VRAM cgroups booster prioritizing GPU memory for active game windows.",
+    "vram-booster": "Raises the CPU and disk priority of the game in focus.",
     "scx": "Sched-EXT eBPF user-space CPU schedulers and manager for minimal frame latency.",
     "ananicy": "Auto-nice daemon applying CachyOS latency and priority rules to gaming workloads.",
     "gamescope": "Valve SteamOS micro-compositor with HDR, integer scaling, and FSR upscaling.",
@@ -844,6 +844,9 @@ for line in raw_catalog_lines:
             l32_href_pat = rf'href=[\'\"]?(?:\./)?({l32_pat})[\'\"]?' if l32_pat else None
             catalog[pid] = (name, href_pat, l32_href_pat, r_list)
 
+# 6A-371: sources (index URLs) that could not be read in this run
+FAILED_FETCH = set()
+
 def fetch_url_cached(url, cdir, ttl=1800):
     # 6A-325: GitHub API lists go through lib/slacky_release_cache.py (ETag, 6 h, rate-limit pause, 3 day stale limit, one log line)
     if url.startswith("https://api.github.com/"):
@@ -877,7 +880,7 @@ def fetch_url_cached(url, cdir, ttl=1800):
             except Exception:
                 pass
         req = urllib.request.Request(url, headers=headers)
-        with urllib.request.urlopen(req, timeout=5) as resp:
+        with urllib.request.urlopen(req, timeout=20) as resp:
             content = resp.read().decode("utf-8", errors="ignore")
             try:
                 with open(cache_file, 'w', encoding='utf-8', errors='ignore') as f:
@@ -893,12 +896,17 @@ def fetch_url_cached(url, cdir, ttl=1800):
                     return f.read()
             except Exception:
                 pass
+        FAILED_FETCH.add(url)
         return ""
     except Exception:
+        # 6A-371: the source could not be read this time. A saved copy younger than 3 days still gives versions, but the
+        # source counts as "could not check" (never a silent "up to date" from an old list)
+        FAILED_FETCH.add(url)
         if os.path.exists(cache_file):
             try:
-                with open(cache_file, 'r', encoding='utf-8', errors='ignore') as f:
-                    return f.read()
+                if (now - os.path.getmtime(cache_file)) < 3 * 86400:
+                    with open(cache_file, 'r', encoding='utf-8', errors='ignore') as f:
+                        return f.read()
             except Exception:
                 pass
         return ""
@@ -1064,7 +1072,7 @@ def gh_releases_cached(repo, cdir, ttl=1800):
         pass
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64)", "Accept": "application/vnd.github+json"})
-        with urllib.request.urlopen(req, timeout=5) as resp:
+        with urllib.request.urlopen(req, timeout=20) as resp:
             if not resp.geturl().startswith("https://api.github.com/"):
                 raise ValueError("redirected away from api.github.com")
             raw = resp.read(GH_SCAN_CAP + 1)
@@ -1110,7 +1118,7 @@ def installed_major(pid):
     best = None
     try:
         for e in os.listdir("/var/log/packages"):
-            m = re.match(re.escape(pid) + r'-([0-9][^-]*)-(?:x86_64|noarch|i[3-6]86)-[^-]+$', e)
+            m = re.match(r'(?:underpants-|cachyos-gnome-)?' + re.escape(pid) + r'-([0-9][^-]*)-(?:x86_64|noarch|i[3-6]86)-[^-]+$', e)  # 6A-341: our packages carry a prefix
             if m:
                 mj = version_major(m.group(1))
                 if mj is not None and (best is None or mj > best):
@@ -1131,6 +1139,8 @@ def major_held(pid, ver, inst_major=None):
 MAJOR_HELD = []
 # 6A-306 (V4): ids for which no upstream source answered at all (offline, mirror down): these are "could not check", never "up to date"
 LOOKED = set()
+# 6A-371: items with at least one source that could not be read (reported as "could not check")
+INCOMPLETE = set()
 
 def check_single_package(pid, cur_ver):
     if pid not in catalog:
@@ -1176,9 +1186,13 @@ def check_single_package(pid, cur_ver):
         main_candidates.append({"mactahoe-icons": "2026.09.10.r0.839848b9", "mactahoe-cursors": "2026.09.10.r0.839848b9",
                                 "whitesur-icons": "2026.09.10", "whitesur-cursors": "2025.04.05.r0.e190baf6"}[pid])
     # 6A-306 (V4): the same live sources the resolver uses (npm registry, GitHub release); no fixed version number anywhere
-    elif pid in ("claude-code", "gemini-cli", "dvcp-aac"):
+    elif pid in ("claude-code", "gemini-cli", "dvcp-aac", "claude-desktop"):
         try:
-            if pid == "dvcp-aac":
+            if pid == "claude-desktop":
+                # 6A-340 (V6): the same source the install resolves from (Anthropic's apt index), not the AUR
+                import slacky_vendor_fetch as _vf
+                live_v = _vf.apt_latest_version("claude-desktop") or ""
+            elif pid == "dvcp-aac":
                 raw_json = fetch_url_cached("https://api.github.com/repos/GloriousEggroll/dvcp-aac/releases/latest", cache_dir, ttl=1800)
                 live_v = (json.loads(raw_json).get("tag_name") or "").lstrip("v") if raw_json else ""
             else:
@@ -1239,6 +1253,9 @@ def check_single_package(pid, cur_ver):
     if pat:
         for rk in expand_repos_for_tier(r_list, cpu_tier):
             base_u = repos.get(rk, "")
+            if base_u in FAILED_FETCH:
+                # 6A-371: one of this item's sources could not be read, so a newer version there may be missing
+                INCOMPLETE.add(pid)
             html = repo_contents.get(base_u, "")
             if not html:
                 continue
@@ -1264,7 +1281,17 @@ def check_single_package(pid, cur_ver):
     # 6A-322: spacenavd is in no Arch / CachyOS / Chaotic list (the Rust app reads a signed Debian index for it, owner decision 2026-10-15);
     # an empty answer here is "could not check", never "up to date" (6A-298 / 6A-306 exit code)
     if pid == "spacenav" and not main_candidates:
-        LOOKED.discard(pid)
+        # 6A-362: when the caller gave a "manual" file, spacenav is reported there (by design, not a failed check)
+        _mf = os.environ.get("SLACKY_GAMING_MANUAL_FILE", "")
+        if _mf:
+            LOOKED.add(pid)
+            try:
+                with open(_mf, "a") as _mfh:
+                    _mfh.write(pid + "\n")
+            except OSError:
+                pass
+        else:
+            LOOKED.discard(pid)
 
     if not main_candidates:
         return None
@@ -1346,7 +1373,7 @@ for _d in ("/var/cache/slacky-update", os.path.expanduser("~/.cache/slacky-updat
 
 # 6A-306 (V4): the list above is complete for everything that could be checked. Exit 3 = some installed items could not be
 # checked (the caller keeps the list and records "could not check"); exit 1 = none of them could be checked.
-_unchecked = [x for x in detected_installed if x in catalog and x != "steam-devices" and x not in LOOKED]
+_unchecked = [x for x in detected_installed if x in catalog and x != "steam-devices" and (x not in LOOKED or x in INCOMPLETE)]
 if _unchecked:
     sys.exit(1 if len(_unchecked) == len([x for x in detected_installed if x in catalog and x != "steam-devices"]) else 3)
 PYFASTCHECK
@@ -1822,7 +1849,7 @@ def fetch_url_cached(url, cdir, ttl=1800):
             pass
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64)"})
-        with urllib.request.urlopen(req, timeout=5) as resp:
+        with urllib.request.urlopen(req, timeout=20) as resp:
             content = resp.read().decode("utf-8", errors="ignore")
             try:
                 with open(cache_file, 'w', encoding='utf-8', errors='ignore') as f:
@@ -1874,7 +1901,7 @@ def installed_major(pid):
     best = None
     try:
         for e in os.listdir("/var/log/packages"):
-            m = re.match(re.escape(pid) + r'-([0-9][^-]*)-(?:x86_64|noarch|i[3-6]86)-[^-]+$', e)
+            m = re.match(r'(?:underpants-|cachyos-gnome-)?' + re.escape(pid) + r'-([0-9][^-]*)-(?:x86_64|noarch|i[3-6]86)-[^-]+$', e)  # 6A-341: our packages carry a prefix
             if m:
                 mj = version_major(m.group(1))
                 if mj is not None and (best is None or mj > best):
@@ -2559,7 +2586,7 @@ def fetch_url_cached(url, cdir, ttl=1800):
             pass
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64)"})
-        with urllib.request.urlopen(req, timeout=5) as resp:
+        with urllib.request.urlopen(req, timeout=20) as resp:
             content = resp.read().decode("utf-8", errors="ignore")
             try:
                 with open(cache_file, 'w', encoding='utf-8', errors='ignore') as f:
@@ -2611,7 +2638,7 @@ def installed_major(pid):
     best = None
     try:
         for e in os.listdir("/var/log/packages"):
-            m = re.match(re.escape(pid) + r'-([0-9][^-]*)-(?:x86_64|noarch|i[3-6]86)-[^-]+$', e)
+            m = re.match(r'(?:underpants-|cachyos-gnome-)?' + re.escape(pid) + r'-([0-9][^-]*)-(?:x86_64|noarch|i[3-6]86)-[^-]+$', e)  # 6A-341: our packages carry a prefix
             if m:
                 mj = version_major(m.group(1))
                 if mj is not None and (best is None or mj > best):
@@ -3412,7 +3439,7 @@ scx|Sched-EXT gaming scheduler
 coolercontrol|CoolerControl daemon
 asusd|ASUS control daemon
 syncthing|Syncthing service
-dmemcg-booster|dmemcg-booster VRAM daemon"
+dmemcg-booster|dmemcg-booster game priority daemon"
 # 6A-83: kernel modules to load at boot, "MODULE|file that shows the package is installed". Slackware never reads
 # modules-load.d; its place for this is /etc/rc.d/rc.modules.local (a sysadmin file pkgtools never overwrites).
 SU_RC_MODULES="zenpower|/etc/modprobe.d/zenpower.conf
@@ -4825,7 +4852,7 @@ except vf.VendorError as exc:
 PYUNPACK_APPIMAGE
         elif [[ "${main_file}" =~ \.zip$ ]] || [[ "${main_url}" =~ download\?file= ]]; then
             # 6A-295 (V1): a zip with an absolute or ".." member name is refused before anything is unpacked
-            if ! { unzip -Z1 "${main_file}" 2>/dev/null | grep -qE '^/|(^|/)\.\.(/|$)'; } && unzip -q -o "${main_file}" -d "${tmp_extract}/main" 2>/dev/null; then
+            if ! { unzip -Z1 "${main_file}" 2>/dev/null | grep -E '^/|(^|/)\.\.(/|$)' >/dev/null; } && unzip -q -o "${main_file}" -d "${tmp_extract}/main" 2>/dev/null; then
                 find "${tmp_extract}/main" -type f \( -name "*.tar.gz" -o -name "*.tar.xz" -o -name "*.tgz" \) | while read -r inner_tar; do
                     tar -xf "${inner_tar}" -C "${tmp_extract}/main" 2>/dev/null || exit 1
                     rm -f "${inner_tar}" 2>/dev/null || true
@@ -6166,12 +6193,30 @@ SCX_RC_EOF
 
     if [ "${pkg_id}" = "openrgb" ]; then
         mkdir -p "${staging_root}/lib/udev/rules.d"
-        cat << 'OPENRGB_UDEV_EOF' > "${staging_root}/lib/udev/rules.d/60-openrgb.rules"
-# OpenRGB Udev rules for Slackware
-SUBSYSTEM=="usb", ATTR{idVendor}=="*", MODE="0666", TAG+="uaccess"
-SUBSYSTEM=="hidraw", MODE="0666", TAG+="uaccess"
-KERNEL=="i2c-[0-9]*", GROUP="users", MODE="0666"
+        # 6A-336: never world-writable. Prefer the upstream rules shipped in the package (vendor/product scoped,
+        # TAG+="uaccess"); the fallback gives only the logged-in seat user access (uaccess, no MODE), for every
+        # controller, so no supported device is left out by an incomplete vendor list.
+        openrgb_upstream=""
+        for openrgb_cand in "${staging_root}/usr/lib/udev/rules.d/60-openrgb.rules" "${staging_root}/lib/udev/rules.d/60-openrgb.rules" "${staging_root}/usr/lib64/udev/rules.d/60-openrgb.rules"; do
+            if [ -s "${openrgb_cand}" ] && ! grep -qE 'MODE="0?6[67][67]"' "${openrgb_cand}" 2>/dev/null; then
+                openrgb_upstream="${openrgb_cand}"
+                break
+            fi
+        done
+        if [ -n "${openrgb_upstream}" ]; then
+            if [ "${openrgb_upstream}" != "${staging_root}/lib/udev/rules.d/60-openrgb.rules" ]; then
+                cp -f "${openrgb_upstream}" "${staging_root}/lib/udev/rules.d/60-openrgb.rules"
+            fi
+        else
+            cat << 'OPENRGB_UDEV_EOF' > "${staging_root}/lib/udev/rules.d/60-openrgb.rules"
+# OpenRGB udev rules for Slackware (fallback): the logged-in user gets access, nobody else
+SUBSYSTEM=="hidraw", TAG+="uaccess"
+SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", TAG+="uaccess"
+KERNEL=="i2c-[0-9]*", TAG+="uaccess"
 OPENRGB_UDEV_EOF
+        fi
+        # the package owns exactly one copy, under lib/udev
+        rm -f "${staging_root}/usr/lib/udev/rules.d/60-openrgb.rules" "${staging_root}/usr/lib64/udev/rules.d/60-openrgb.rules" 2>/dev/null || true
 
         # Ensure cross-desktop icon compatibility (KDE Plasma, XFCE, GNOME)
         if [ -d "${staging_root}/usr/share/icons" ]; then
@@ -7115,15 +7160,21 @@ SUNSHINE_UDEV_EOF
         cat << 'DMEMCG_BIN_EOF' > "${staging_root}/usr/bin/dmemcg-booster"
 #!/usr/bin/env python3
 """
-dmemcg-booster - Dynamic Device Memory Cgroups (dmemcg) & Resizable BAR VRAM Optimizer for Slackware Linux
+dmemcg-booster - Game Priority Booster for Slackware Linux (CPU and disk priority of the game in focus)
 Part of the Underpants Gnomes Gaming Suite (slacky-update)
+
+What this program really does: it raises the CPU priority (renice) and the disk priority (ionice) of the game in
+front and of known game processes. It also keeps the NVIDIA driver in persistence mode.
+VRAM protection through the kernel "dmem" cgroup is only used when the machine has a real dmem cgroup AND an AMD or
+Intel graphics memory region. NVIDIA drivers ignore it today, so on NVIDIA nothing is claimed.
 """
 import sys, os, re, time, subprocess, signal
 
-CGROUP_ROOT = "/sys/fs/cgroup"
-GAMING_SLICE = "/sys/fs/cgroup/dmemcg-gaming"
+# The real dmem controller lives here on Slackware (a v1 hierarchy). It is optional.
+DMEM_ROOT = os.environ.get("DMEMCG_BOOSTER_DMEM_ROOT", "/sys/fs/cgroup/dmem")
+DMEM_GROUP = os.path.join(DMEM_ROOT, "slacky-gaming")
 PIDFILE = "/run/dmemcg-booster.pid"
-LOGFILE = "/var/log/dmemcg-booster.log"
+LOGFILE = os.environ.get("DMEMCG_BOOSTER_LOGFILE", "/var/log/dmemcg-booster.log")
 
 GAME_PROCESS_NAMES = {
     "steam", "steamwebhelper", "wine-preloader", "wine64-preloader",
@@ -7131,6 +7182,17 @@ GAME_PROCESS_NAMES = {
     "lutris", "retroarch", "vkcube", "yabridge-host", "yabridgectl",
     "mangohud", "gamemoded", "goverlay", "obs", "obs64"
 }
+
+# Never boosted: shells, terminals, desktop shells, compositors, panels.
+NEVER_BOOST = {
+    "plasmashell", "kwin_wayland", "kwin_x11", "systemsettings", "konsole", "zsh", "bash", "sh", "dash", "fish",
+    "Hyprland", "noctalia", "waybar", "xfwm4", "xfce4-panel", "xfdesktop", "Xorg", "Xwayland", "sddm", "gnome-shell",
+    "xterm", "alacritty", "kitty", "foot", "wezterm", "gnome-terminal", "yakuake", "tmux", "screen", "sudo", "su",
+    "dmemcg-booster",
+}
+# Generic interpreters are boosted only when their command line shows a game.
+GENERIC_INTERPRETERS = ("python", "perl", "ruby", "node", "java", "lua", "php")
+GAME_MARKERS = ("steamapps", "Proton", "proton", "wine", "gamescope", "lutris", "heroic", "faugus", "retroarch")
 
 def log(msg):
     ts = time.strftime("%Y-%m-%d %H:%M:%S")
@@ -7142,37 +7204,73 @@ def log(msg):
     except Exception:
         pass
 
-def init_cgroups():
-    if not os.path.exists(CGROUP_ROOT):
-        try:
-            os.makedirs(CGROUP_ROOT, exist_ok=True)
-            subprocess.run(["mount", "-t", "cgroup2", "none", CGROUP_ROOT], check=False)
-        except Exception as e:
-            log(f"Warning mounting cgroup2: {e}")
+def is_generic_interpreter(comm):
+    return any(comm == g or comm.startswith(g) for g in GENERIC_INTERPRETERS)
 
-    subtree = os.path.join(CGROUP_ROOT, "cgroup.subtree_control")
-    if os.path.exists(subtree):
-        try:
-            with open(subtree, "w") as f:
-                f.write("+memory +io\n")
-        except Exception:
-            try:
-                with open(subtree, "w") as f:
-                    f.write("+memory\n")
-            except Exception as e:
-                log(f"Subtree controller setup note: {e}")
+def has_game_marker(cmdline):
+    return any(m in cmdline for m in GAME_MARKERS)
 
-    os.makedirs(GAMING_SLICE, exist_ok=True)
+def boost_reason(pid, comm, cmdline, foreground=False):
+    """Why this process may be boosted, or None. Never the daemon itself, never shells or desktop parts."""
+    if str(pid) == str(os.getpid()):
+        return None
+    if comm in NEVER_BOOST:
+        return None
+    if is_generic_interpreter(comm) and not has_game_marker(cmdline):
+        return None
+    if comm in GAME_PROCESS_NAMES or comm.startswith("wine") or comm.startswith("proton"):
+        return "known game process"
+    if has_game_marker(cmdline):
+        return "game command line"
+    if foreground:
+        return "window in focus"
+    return None
 
-    # Configure high priority memory & I/O for gaming slice
-    for conf, val in [("memory.high", "max"), ("memory.low", "2G"), ("memory.min", "1G"), ("io.weight", "1000")]:
-        p = os.path.join(GAMING_SLICE, conf)
-        if os.path.exists(p):
-            try:
-                with open(p, "w") as f:
-                    f.write(f"{val}\n")
-            except Exception:
-                pass
+def read_proc(pid):
+    comm = cmdline = ""
+    try:
+        with open(f"/proc/{pid}/comm", "r") as f:
+            comm = f.read().strip()
+    except Exception:
+        return None
+    try:
+        with open(f"/proc/{pid}/cmdline", "rb") as f:
+            cmdline = f.read().replace(b"\0", b" ").decode("utf-8", errors="ignore")
+    except Exception:
+        pass
+    return comm, cmdline
+
+def dmem_regions():
+    """Graphics memory regions of AMD or Intel GPUs as {name: bytes}. NVIDIA regions are left out on purpose:
+    the NVIDIA driver ignores the low-memory protection of the dmem controller."""
+    out = {}
+    try:
+        with open(os.path.join(DMEM_ROOT, "dmem.capacity")) as f:
+            for line in f:
+                parts = line.split()
+                if len(parts) == 2 and parts[1].isdigit() and not parts[0].lower().startswith("nvidia"):
+                    out[parts[0]] = int(parts[1])
+    except Exception:
+        pass
+    return out
+
+def init_dmem():
+    """Create the gaming group and set a conservative protection (half of each region). Returns True when active."""
+    regions = dmem_regions()
+    if not regions:
+        return False
+    try:
+        os.makedirs(DMEM_GROUP, exist_ok=True)
+        low = os.path.join(DMEM_GROUP, "dmem.low")
+        if not os.path.exists(low):
+            return False
+        for name, cap in regions.items():
+            with open(low, "w") as f:
+                f.write(f"{name} {cap // 2}\n")
+        return True
+    except Exception as e:
+        log(f"VRAM protection not available: {e}")
+        return False
 
 def get_nvidia_info():
     info = {"detected": False, "driver": "Unknown", "rebar": "Unknown", "vram_total": "Unknown", "vram_free": "Unknown"}
@@ -7239,24 +7337,17 @@ def optimize_gpu_hardware():
                 except Exception:
                     pass
 
-def get_boosted_pids():
-    procs_file = os.path.join(GAMING_SLICE, "cgroup.procs")
-    if os.path.exists(procs_file):
-        try:
-            with open(procs_file, "r") as f:
-                return set(line.strip() for line in f if line.strip())
-        except Exception:
-            pass
-    return set()
-
-def boost_pid(pid):
-    procs_file = os.path.join(GAMING_SLICE, "cgroup.procs")
+def boost_pid(pid, dmem=False):
     try:
-        with open(procs_file, "a") as f:
-            f.write(f"{pid}\n")
-        subprocess.run(["renice", "-n", "-5", "-p", str(pid)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+        r = subprocess.run(["renice", "-n", "-5", "-p", str(pid)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
         subprocess.run(["ionice", "-c", "2", "-n", "0", "-p", str(pid)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
-        return True
+        if dmem:
+            try:
+                with open(os.path.join(DMEM_GROUP, "cgroup.procs"), "a") as f:
+                    f.write(f"{pid}\n")
+            except Exception:
+                pass
+        return r.returncode == 0
     except Exception:
         return False
 
@@ -7282,57 +7373,47 @@ def get_foreground_pid():
             pass
     return None
 
+BOOSTED = set()
+DMEM_ACTIVE = False
+
 def scan_and_boost_games():
-    boosted = get_boosted_pids()
     count = 0
+    # drop finished processes so a reused PID can be boosted again
+    for p in list(BOOSTED):
+        if not os.path.exists(f"/proc/{p}"):
+            BOOSTED.discard(p)
 
-    # 1. Boost active Wayland / X11 / Gamescope foreground window
     fg_pid = get_foreground_pid()
-    if fg_pid and fg_pid not in boosted:
-        try:
-            with open(f"/proc/{fg_pid}/comm", "r") as f:
-                fg_comm = f.read().strip()
-            if fg_comm not in ["plasmashell", "kwin_wayland", "systemsettings", "konsole", "zsh", "bash", "Hyprland", "noctalia", "waybar", "xfwm4", "xfce4-panel", "xfdesktop"]:
-                if boost_pid(fg_pid):
-                    log(f"Foreground GPU Shield: Boosted active window '{fg_comm}' (PID {fg_pid}) into dmemcg-gaming slice")
-                    count += 1
-                    boosted.add(str(fg_pid))
-        except Exception:
-            pass
-
-    # 2. Boost game engines, Proton, Wine, Steam, and GPU compute processes
+    candidates = []
+    if fg_pid:
+        candidates.append((str(fg_pid), True))
     try:
-        pids = [p for p in os.listdir("/proc") if p.isdigit()]
-        for p in pids:
-            if p in boosted:
-                continue
-            comm_path = f"/proc/{p}/comm"
-            cmdline_path = f"/proc/{p}/cmdline"
-            if not os.path.exists(comm_path):
-                continue
-            try:
-                with open(comm_path, "r") as f:
-                    comm = f.read().strip()
-                match = comm in GAME_PROCESS_NAMES or comm.startswith("wine") or comm.startswith("proton")
-                if not match and os.path.exists(cmdline_path):
-                    with open(cmdline_path, "rb") as f:
-                        cmdline = f.read().decode("utf-8", errors="ignore")
-                        if any(g in cmdline for g in ["steamapps", "Proton", "wine64"]):
-                            match = True
-                if match:
-                    if boost_pid(p):
-                        log(f"Boosted gaming process: {comm} (PID {p}) into dmemcg-gaming slice")
-                        count += 1
-            except Exception:
-                continue
+        candidates += [(p, False) for p in os.listdir("/proc") if p.isdigit()]
     except Exception:
         pass
+    for p, is_fg in candidates:
+        if p in BOOSTED:
+            continue
+        info = read_proc(p)
+        if info is None:
+            continue
+        comm, cmdline = info
+        reason = boost_reason(p, comm, cmdline, foreground=is_fg)
+        if reason and boost_pid(p, DMEM_ACTIVE):
+            BOOSTED.add(p)
+            log(f"Boosted '{comm}' (PID {p}): {reason}")
+            count += 1
     return count
 
 def run_daemon():
-    log("Starting dmemcg-booster VRAM shield & cgroups manager daemon...")
-    init_cgroups()
+    global DMEM_ACTIVE
+    log("Starting dmemcg-booster game priority daemon (CPU and disk priority).")
     optimize_gpu_hardware()
+    DMEM_ACTIVE = init_dmem()
+    if DMEM_ACTIVE:
+        log("VRAM protection active (dmem cgroup, AMD or Intel graphics memory).")
+    else:
+        log("VRAM protection not active: it needs a dmem cgroup and an AMD or Intel GPU.")
     
     nv = get_nvidia_info()
     if nv["detected"]:
@@ -7359,21 +7440,8 @@ def print_status():
     else:
         print("GPU Driver:     Generic DRM / AMD / Intel")
     
-    cg_active = os.path.exists(GAMING_SLICE)
-    print(f"Cgroups v2:     {'Active (' + GAMING_SLICE + ')' if cg_active else 'Inactive'}")
-    
-    boosted = get_boosted_pids()
-    print(f"Boosted Procs:  {len(boosted)} active process(es)")
-    if boosted:
-        for pid in list(boosted)[:10]:
-            try:
-                with open(f"/proc/{pid}/comm", "r") as f:
-                    comm = f.read().strip()
-                print(f"  • PID {pid}: {comm}")
-            except Exception:
-                pass
-        if len(boosted) > 10:
-            print(f"  ... and {len(boosted) - 10} more")
+    print(f"VRAM protection: {'available (dmem cgroup)' if dmem_regions() else 'not available on this GPU'}")
+    print("Priority boost: CPU (renice) and disk (ionice) for games in focus")
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
@@ -7385,10 +7453,9 @@ if __name__ == "__main__":
             run_daemon()
             sys.exit(0)
         elif arg in ["boost", "--boost"] and len(sys.argv) > 2:
-            init_cgroups()
             target = sys.argv[2]
             if target.isdigit():
-                if boost_pid(target):
+                if boost_pid(target, init_dmem()):
                     print(f"Successfully boosted PID {target}")
                 else:
                     print(f"Failed to boost PID {target}")
@@ -7407,7 +7474,7 @@ DMEMCG_BIN_EOF
         cat << 'RC_DMEMCG_EOF' > "${staging_root}/etc/rc.d/rc.dmemcg-booster"
 #!/bin/sh
 #
-# /etc/rc.d/rc.dmemcg-booster - Device Memory Cgroups (dmemcg) VRAM Booster Daemon for Slackware
+# /etc/rc.d/rc.dmemcg-booster - Device Memory Cgroups (dmemcg) Game Priority Booster Daemon for Slackware
 #
 
 PIDFILE="/run/dmemcg-booster.pid"
@@ -7425,7 +7492,7 @@ dmemcg_mount_cgroup2() {
 
 dmemcg_start() {
   if [ -x "$BIN" ]; then
-    echo "Starting dmemcg-booster VRAM daemon: $BIN --use-system-bus"
+    echo "Starting dmemcg-booster game priority daemon: $BIN --use-system-bus"
     dmemcg_mount_cgroup2
     if ! pgrep -f "$BIN" > /dev/null 2>&1; then
       rm -f "$PIDFILE" 2>/dev/null || true
@@ -7436,7 +7503,7 @@ dmemcg_start() {
 }
 
 dmemcg_stop() {
-  echo "Stopping dmemcg-booster VRAM daemon..."
+  echo "Stopping dmemcg-booster game priority daemon..."
   pkill -TERM -f "$BIN" 2>/dev/null || true
   sleep 0.5
   pkill -KILL -f "$BIN" 2>/dev/null || true

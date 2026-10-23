@@ -1,0 +1,18 @@
+{
+  "declined_at": "2026-11-18T07:00:00Z",
+  "last_offered": "2026-11-14T08:00:00Z",
+  "last_result": "declined",
+  "last_result_at": "2026-11-14T08:00:00Z",
+  "runtime_built": "2026-09-01T00:00:00Z",
+  "schema": 1,
+  "snapshot": 0,
+  "spec": "underpants-runtime-refresh/1",
+  "veto": {
+    "app": "vlc",
+    "apps_basis": "",
+    "candidate_basis": "",
+    "detail": "libQt6Core.so.6 Qt_6.13",
+    "rule": "S2"
+  },
+  "writer": "slacky-update 90_slacky"
+}

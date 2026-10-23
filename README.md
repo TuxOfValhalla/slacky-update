@@ -8,7 +8,7 @@
 [![Release](https://img.shields.io/badge/Release-v1.0%20LTS-purple?style=for-the-badge)](https://github.com/TuxOfValhalla/slacky-update/releases)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-green.svg?style=for-the-badge)](LICENSE)
 [![Architecture: 100% Pure Source](https://img.shields.io/badge/Architecture-100%25%20Pure%20Source-brightgreen?style=for-the-badge)](lib/)
-[![Locales: 24 Languages](https://img.shields.io/badge/Locales-24%20Languages%20(100%25)-yellow?style=for-the-badge)](locales/)
+[![Locales: English and Norwegian complete](https://img.shields.io/badge/Locales-24%20(English%20%2B%20Norwegian%20complete)-yellow?style=for-the-badge)](locales/)
 [![Manual: Survival Guide](https://img.shields.io/badge/Manual-Survival%20Guide-teal?style=for-the-badge)](docs/THE_ULTIMATE_SLACKY_UPDATE_SURVIVAL_GUIDE.md)
 
 ---
@@ -74,7 +74,7 @@ Slacky-Update incorporates cutting-edge optimizations engineered to eliminate mi
 
 Need bleeding-edge applications not yet packaged in standard Slackware or SlackBuilds repositories? Slacky-Update’s **Underpants Gnomes engine** delivers pure package transmutation with zero compromise to your host system:
 
-* **In-Memory Streaming Transmutation:** Inspects and decompresses upstream Arch/CachyOS package archives (`.pkg.tar.zst`) directly in RAM using pure Python 3 standard library and native `zstandard` decoding. Zero foreign package managers (`pacman`, `libalpm`, `apt`, `dnf`) are ever installed or executed on your host system.
+* **In-Memory Streaming Transmutation:** Inspects and decompresses upstream Arch/CachyOS package archives (`.pkg.tar.zst`) directly in RAM using the Python 3 standard library and the stock `zstd` command-line tool. Zero foreign package managers (`pacman`, `libalpm`, `apt`, `dnf`) are ever installed or executed on your host system.
 * **Isolated `/opt/underpants/` Architecture:** Applications, shared runtime libraries, and assets are extracted and maintained strictly inside isolated `/opt/underpants/` directory structures with private `RPATH`/`RUNPATH` environments.
 * **Host Sovereignty Shielding:** Native Slackware system libraries (`/lib64`, `/usr/lib64`, system `glibc`, PAM, and SysVinit) are 100% shielded and protected from upstream ABI clashes or runtime overrides.
 * **Zero Host Package Pollution:** Transmuted software builds authentic namespaced Slackware `.txz` packages (`underpants-*.txz`) and installs cleanly via Slackware's native `upgradepkg --install-new`. They log cleanly under `/var/log/packages/underpants-*`, ensuring native Slackware packages (`AAA_base`, `glibc`, `coreutils`, etc.) are never overwritten, hijacked, or corrupted. Slackware’s host sovereignty remains 100% shielded and pristine.
@@ -106,12 +106,12 @@ Slacky-Update adheres strictly to Slackware's native packaging standards. Build 
 
 **From GitHub:**
 ```bash
-git clone https://github.com/TuxOfValhalla/slacky-update.git && cd slacky-update && bash slackbuild/slacky-update.SlackBuild && sudo upgradepkg --reinstall --install-new /tmp/slacky-update-*.txz && slacky-update
+git clone https://github.com/TuxOfValhalla/slacky-update.git && cd slacky-update && bash slackbuild/slacky-update.SlackBuild && sudo upgradepkg --reinstall --install-new "$(ls -t ../slacky-updates_releases/slacky-update-[0-9]*.txz | head -n 1)" && slacky-update
 ```
 
 **From Codeberg:**
 ```bash
-git clone https://codeberg.org/TuxOfValhalla/slacky-update.git && cd slacky-update && bash slackbuild/slacky-update.SlackBuild && sudo upgradepkg --reinstall --install-new /tmp/slacky-update-*.txz && slacky-update
+git clone https://codeberg.org/TuxOfValhalla/slacky-update.git && cd slacky-update && bash slackbuild/slacky-update.SlackBuild && sudo upgradepkg --reinstall --install-new "$(ls -t ../slacky-updates_releases/slacky-update-[0-9]*.txz | head -n 1)" && slacky-update
 ```
 
 ### 🛠️ Step-by-Step Manual Build
@@ -123,8 +123,8 @@ cd slacky-update
 # 2. Build the native Slackware package
 bash slackbuild/slacky-update.SlackBuild
 
-# 3. Install or upgrade the package
-sudo upgradepkg --reinstall --install-new /tmp/slacky-update-*.txz
+# 3. Install or upgrade the package (the build writes it next to the repository, never to /tmp)
+sudo upgradepkg --reinstall --install-new "$(ls -t ../slacky-updates_releases/slacky-update-[0-9]*.txz | head -n 1)"
 
 # 4. Launch Slacky-Update
 slacky-update
@@ -136,9 +136,9 @@ slacky-update
 
 ---
 
-## 🌍 Complete Multilingual Support (24 Languages)
+## 🌍 Multilingual Support (24 Languages)
 
-Slacky-Update features 100% complete string parity across all 24 supported language packs, automatically honoring your system's `$LANG` and `$LC_MESSAGES` locale:
+English (`en`) and Norwegian Bokmål (`nb`) are complete. The other 22 language packs are partial: texts that are not translated yet are shown in English. The language is chosen automatically from your system's `$LANG` and `$LC_MESSAGES`:
 
 | Language | Code | Language | Code | Language | Code |
 | :--- | :--- | :--- | :--- | :--- | :--- |

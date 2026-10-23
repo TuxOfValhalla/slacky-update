@@ -194,6 +194,24 @@ def status_is_incomplete(data):
         return False
     return bool(data.get("check_failed")) or bool(data.get("check_offline"))
 
+def runtime_refresh_note(data):
+    """7J: one calm menu line when the shared runtime is due for its monthly refresh (empty otherwise). Never a notification."""
+    try:
+        rr = data.get("runtime_refresh") if isinstance(data, dict) else None
+        if not isinstance(rr, dict):
+            return ""
+        if rr.get("state") == "due_now":
+            return _("RUNTIME_REFRESH_NOTICE_NOW")
+        if rr.get("state") == "due":
+            try:
+                days = int(rr.get("age_days", 30))
+            except (TypeError, ValueError):
+                days = 30
+            return _("RUNTIME_REFRESH_NOTICE", days=days)
+    except Exception:
+        pass
+    return ""
+
 def first_mirror_host(path="/etc/slackpkg/mirrors"):
     """Host name of the first mirror line (for the silent DNS probe); 'slackware.nl' when none is readable."""
     try:
@@ -445,13 +463,38 @@ class SlackyUpdateTray(QSystemTrayIcon):
             try:
                 with open(path, "r", encoding="utf-8") as f:
                     data = json.load(f)
+                # 6A-358: a file that is not a JSON object (or has odd values) must never break the tray
+                if not isinstance(data, dict):
+                    continue
+                try:
                     ts = float(data.get("last_check_ts", os.path.getmtime(path)))
-                    if ts > best_ts:
-                        best_ts = ts
-                        best_data = data
-            except (json.JSONDecodeError, OSError):
+                except (TypeError, ValueError, OverflowError):
+                    ts = os.path.getmtime(path)
+                if ts != ts:    # NaN
+                    ts = os.path.getmtime(path)
+                if ts > best_ts:
+                    best_ts = ts
+                    best_data = data
+            except (ValueError, OSError):    # JSONDecodeError is a ValueError
                 continue
+        if best_data is not None:
+            for key in ("slackware_updates", "slackware_new_packages", "slackpkgplus_updates", "flatpak_updates",
+                        "sbo_updates", "cachyos_kernel_updates", "cachyos_gaming_updates", "gnomes_updates",
+                        "nvidia_driver_updates"):
+                val = best_data.get(key, [])
+                best_data[key] = [x for x in val if isinstance(x, str)] if isinstance(val, list) else []
         return best_data
+
+    def incomplete_note(self, data):
+        """6A-358: one sentence when the last check did not look at everything (offline, a part failed, timed out);
+        empty when the check was complete. The 'up to date' wording is never used then."""
+        if getattr(self, "check_timed_out_note", False):
+            return _("CHECK_COULD_NOT")
+        if isinstance(data, dict) and data.get("check_offline"):
+            return _("CHECK_OFFLINE")
+        if status_is_incomplete(data):
+            return _("CHECK_COULD_NOT")
+        return ""
 
     def update_status(self):
         if getattr(self, "is_updating", False):
@@ -510,9 +553,14 @@ class SlackyUpdateTray(QSystemTrayIcon):
                         details.append(f"{_('CAT_NVIDIA')}: {len(nvidia_list)}")
                     if details:
                         tooltip += "\n• " + "\n• ".join(details)
+                    note = self.incomplete_note(data)
+                    if note:
+                        tooltip += "\n" + note
                     self.setToolTip(tooltip)
                 else:
-                    self.setToolTip(_("SYSTEM_UP_TO_DATE"))
+                    note = self.incomplete_note(data)
+                    # 6A-358: never "up to date" after a check that could not look at everything
+                    self.setToolTip(note if note else _("SYSTEM_UP_TO_DATE"))
 
             if not self.isVisible() and QSystemTrayIcon.isSystemTrayAvailable():
                 self.show()
@@ -553,7 +601,9 @@ class SlackyUpdateTray(QSystemTrayIcon):
             tuple(gaming_list),
             tuple(gnomes_list),
             tuple(nvidia_list),
-            i18n.current_language
+            i18n.current_language,
+            self.incomplete_note(data),
+            runtime_refresh_note(data)
         )
 
         if getattr(self, "_last_packages_fingerprint", None) != packages_fingerprint or not self.pending_menu.actions():
@@ -579,9 +629,17 @@ class SlackyUpdateTray(QSystemTrayIcon):
                             action.setEnabled(False)
                             self.pending_menu.addAction(action)
             else:
-                no_up = QAction(_("ALL_PACKAGES_UP_TO_DATE"), self.pending_menu)
+                no_up = QAction(self.incomplete_note(data) or _("ALL_PACKAGES_UP_TO_DATE"), self.pending_menu)
                 no_up.setEnabled(False)
                 self.pending_menu.addAction(no_up)
+
+            # 7J: one calm line (no notification) when the shared runtime is due for its monthly refresh
+            rr_note = runtime_refresh_note(data)
+            if rr_note:
+                rr_action = QAction(rr_note, self.pending_menu)
+                rr_action.setEnabled(False)
+                self.pending_menu.addSeparator()
+                self.pending_menu.addAction(rr_action)
 
         time_since = get_time_since_last_check(data)
         next_in = get_next_check_in(self.check_timer)
@@ -627,6 +685,7 @@ class SlackyUpdateTray(QSystemTrayIcon):
             return
         self.recheck_running = self.recheck_next
         self.recheck_next = False
+        self.check_timed_out_note = False     # 6A-358: a new check starts clean
         self.is_checking = True
         self.stop_pulse()
         self.setIcon(self.icon_checking)
@@ -686,9 +745,9 @@ class SlackyUpdateTray(QSystemTrayIcon):
             self.check_timer.start(wait_ms)
         except Exception:
             pass
+        # 6A-358: the note stays until the next check starts, so the 30 second poll cannot overwrite it
+        self.check_timed_out_note = timed_out
         self.update_status()
-        if timed_out:
-            self.setToolTip(_("CHECK_COULD_NOT"))
 
     def _get_slacky_bin(self):
         return shutil.which("slacky-update") or "/usr/bin/slacky-update" or "/usr/local/bin/slacky-update"

@@ -232,16 +232,19 @@ DOINST_EOF
 
     chmod -R u=rwX,go=rX "${staging_root}"
 
-    # 6A-2 (B7 mirror): Footprint Guard before packaging (enforce unless SLACKY_FOOTPRINT_MODE=report)
+    # 6A-2 (B7 mirror): Footprint Guard before packaging. 6A-355: "report" (the guard only reports) is honoured in the
+    # self-tests only (SLACKY_SELFTEST=1); a value from the environment can never switch the guard off in a real run.
+    local footprint_mode="enforce"
+    [ "${SLACKY_SELFTEST:-0}" = "1" ] && footprint_mode="${SLACKY_FOOTPRINT_MODE:-enforce}"
     if [ -n "${GNOMES_PY:-}" ] && [ -f "${GNOMES_PY}" ]; then
         if ! python3 "${GNOMES_PY}" footprint-guard "${staging_root}" --label "cachyos-rocm-opencl-${rocm_ver}"; then
-            if [ "${SLACKY_FOOTPRINT_MODE:-enforce}" != "report" ]; then
+            if [ "${footprint_mode}" != "report" ]; then
                 log_error "Footprint check failed for cachyos-rocm-opencl. Package not built."
                 rm -rf "${work_dir}"
                 return 1
             fi
         fi
-    elif [ "${SLACKY_FOOTPRINT_MODE:-enforce}" != "report" ]; then
+    elif [ "${footprint_mode}" != "report" ]; then
         log_error "Footprint check unavailable (gnomes_pacman.py not found). Package not built."
         rm -rf "${work_dir}"
         return 1

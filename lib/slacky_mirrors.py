@@ -205,7 +205,7 @@ def all_failed_sentence(url):
 def default_cache_dir():
     """SLACKY_MIRROR_CACHE_DIR (tests), else the system cache when writable, else the user cache."""
     env = os.environ.get("SLACKY_MIRROR_CACHE_DIR")
-    if env:
+    if env and os.geteuid() != 0:      # 6A-364: root never takes a cache folder from the environment
         return env
     for d in ("/var/cache/slacky-update", os.path.expanduser("~/.cache/slacky-update")):
         try:
@@ -451,6 +451,8 @@ def _ranked_json_order(fam):
     """Arch / CachyOS order from ranked_mirrors.json (rank_mirrors.py), valid mirrors fastest first."""
     out = []
     env = os.environ.get("SLACKY_MIRROR_CACHE_DIR")
+    if os.geteuid() == 0:              # 6A-364: ignored for root
+        env = None
     paths = [os.path.join(env, "ranked_mirrors.json")] if env else [
         os.path.expanduser("~/.cache/slacky-update/ranked_mirrors.json"), "/var/cache/slacky-update/ranked_mirrors.json"]
     for p in paths:

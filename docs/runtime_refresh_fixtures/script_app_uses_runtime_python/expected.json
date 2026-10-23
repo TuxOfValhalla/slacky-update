@@ -1,0 +1,13 @@
+{
+  "new_failures": [
+    {
+      "app": "lutris",
+      "file": "runtime/bin/python3",
+      "rule": "S1",
+      "soname": "libmpdec.so.5",
+      "version": ""
+    }
+  ],
+  "plugins_unchecked": null,
+  "veto": true
+}

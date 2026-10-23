@@ -30,10 +30,13 @@ purge_old_cachyos_kernels() {
         # Remove registered packages in /var/log/packages if present
         # 6A-143: if a removepkg fails, the kernel files are kept (deleting them would orphan the package entry)
         local rm_failed=0
-        for pkg in /var/log/packages/*cachyos*${kver}* /var/log/packages/linux-*${kver}*; do
+        for pkg in /var/log/packages/*"${kver}"*; do
             [ -f "${pkg}" ] || continue
             local p_base
             p_base=$(basename "${pkg}")
+            # 6A-344 (S12): only kernel packages of exactly this kernel: <cachyos-...|linux-...>-<kver>-<pkgver starting with a digit>
+            # (so 7.2.10-1-cachyos never matches the 7.2.10-1-cachyos-bore packages, nor 7.2.1 matches 7.2.11)
+            [[ "${p_base}" =~ ^(cachyos-|linux-)(.*-)?"${kver}"-[0-9] ]] || continue
             if [[ "${p_base}" =~ ^kernel-headers ]] || [[ "${p_base}" =~ ^kernel-firmware ]]; then
                 continue
             fi
@@ -317,7 +320,7 @@ clean_package_and_build_caches() {
     if command -v gnomes >/dev/null 2>&1; then
         sudo gnomes -Sc >/dev/null 2>&1 || true
     elif [ -f "/usr/share/slacky-update/lib/gnomes_pacman.py" ]; then
-        sudo python3 /usr/share/slacky-update/lib/gnomes_pacman.py clean >/dev/null 2>&1 || true
+        sudo python3 -I /usr/share/slacky-update/lib/gnomes_pacman.py clean >/dev/null 2>&1 || true
     fi
 
     log_success "Package caches and temporary build artifacts cleaned."
@@ -355,7 +358,7 @@ dedup_underpants_storage() {
         log_success "Underpants Gnomes storage deduplication completed."
     elif [ -f "${SCRIPT_DIR}/../lib/gnomes_pacman.py" ]; then
         log_info "Running Underpants Gnomes storage deduplication..."
-        sudo python3 "${SCRIPT_DIR}/../lib/gnomes_pacman.py" dedup
+        sudo python3 -I "${SCRIPT_DIR}/../lib/gnomes_pacman.py" dedup
         log_success "Underpants Gnomes storage deduplication completed."
     else
         log_info "Underpants Gnomes runtime is not installed. Nothing to deduplicate."

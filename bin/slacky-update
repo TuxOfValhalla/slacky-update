@@ -65,6 +65,8 @@ source "${APP_DIR}/mod_clean.sh"
 [ -f "${APP_DIR}/mod_gnomes_engine.sh" ] && source "${APP_DIR}/mod_gnomes_engine.sh"
 # shellcheck source=/dev/null
 [ -f "${APP_DIR}/mod_docs.sh" ] && source "${APP_DIR}/mod_docs.sh"
+# shellcheck source=/dev/null
+[ -f "${APP_DIR}/mod_runtime_refresh.sh" ] && source "${APP_DIR}/mod_runtime_refresh.sh"
 
 if [ -f "${SCRIPT_DIR}/../lib/slacky_update_i18n.py" ]; then
     I18N_PY="${SCRIPT_DIR}/../lib/slacky_update_i18n.py"
@@ -105,7 +107,8 @@ cleanup_on_exit() {
     if [ -t 1 ]; then
         printf "\033]0;\007\033]2;\007\033]30;\007" 2>/dev/null || true
     fi
-    if [ "${INTERACTIVE_SESSION}" -eq 1 ] && [ -t 0 ] && [ "${exit_code}" -ne 0 ]; then
+    # 6A-348 (1d): the window was already held open by "Press ENTER to close"; asking a second time was noise
+    if [ "${INTERACTIVE_SESSION}" -eq 1 ] && [ -t 0 ] && [ "${exit_code}" -ne 0 ] && [ "${SLACKY_CLOSE_PROMPTED:-0}" != "1" ]; then
         echo ""
         read -r -p "$(_ PRESS_ENTER_EXIT)" || true
     fi
@@ -223,6 +226,43 @@ if _offline:
 elif _failed:
     _names = ", ".join(_PART_NAMES.get(x, x) for x in _failed)
     print("\033[1;33m" + _msg("CHECK_COULD_NOT", "Could not check") + ": " + _names + ".\033[0m")
+
+# 7J: the shared runtime is old (or a core library moved): one calm line, never counted as an update
+try:
+    _rr = data.get("runtime_refresh")
+    if isinstance(_rr, dict) and _rr.get("state") in ("due", "due_now"):
+        if _rr.get("state") == "due_now":
+            _rr_txt = _msg("RUNTIME_REFRESH_NOTICE_NOW", "A core library of the shared app runtime has a new version; the next full update offers to refresh it.")
+        else:
+            try:
+                _rr_days = str(int(_rr.get("age_days", 0)))
+            except (TypeError, ValueError):
+                _rr_days = "30"
+            _rr_txt = _msg("RUNTIME_REFRESH_NOTICE", "The shared app runtime is {days} days old; the next full update offers to refresh it.").replace("{days}", _rr_days)
+        print("\033[2m" + _rr_txt + "\033[0m")
+except Exception:
+    pass
+
+# 6A-357: items without an upstream list by design are named once as "manual" (never as a failed check)
+try:
+    _manual = [x for x in (data.get("manual_items") or []) if isinstance(x, str)]
+    if _manual:
+        _seen_path = os.path.join(os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache"), "slacky-update", "manual_seen.json")
+        try:
+            with open(_seen_path, "r", encoding="utf-8") as _f:
+                _seen = json.load(_f)
+            if not isinstance(_seen, list):
+                _seen = []
+        except Exception:
+            _seen = []
+        _new = [x for x in _manual if x not in _seen]
+        if _new:
+            print("\033[2m" + _msg("CHECK_MANUAL", "Not checked automatically, please check by hand") + ": " + ", ".join(_new) + ".\033[0m")
+            os.makedirs(os.path.dirname(_seen_path), exist_ok=True)
+            with open(_seen_path, "w", encoding="utf-8") as _f:
+                json.dump(sorted(set(_seen) | set(_manual)), _f)
+except Exception:
+    pass
 
 total = len(data.get("slackware_updates", [])) + len(data.get("slackpkgplus_updates", [])) + len(data.get("slackware_new_packages", [])) + len(data.get("flatpak_updates", [])) + len(data.get("sbo_updates", [])) + len(data.get("cachyos_kernel_updates", [])) + len(data.get("cachyos_gaming_updates", [])) + len(data.get("gnomes_updates", [])) + len(data.get("nvidia_driver_updates", []))
 if total == 0 and not data.get("nvidia_gl_mismatch", False) and not _failed and not _offline:
@@ -429,6 +469,7 @@ prompt_reboot_or_close() {
             echo ""
             echo -e "${GREEN}${BOLD}All updates are completed${RESET}"
         fi
+        SLACKY_CLOSE_PROMPTED=1
         read -r -p "$(_ PRESS_ENTER_TO_CLOSE)" || true
     fi
     exit "${final_rc}"
@@ -456,6 +497,11 @@ run_full_update() {
     # 6A-102: the boot lock is taken when the boot-chain step starts (below), not here. Nothing writes the live boot
     # files before that step any more (6A-97/98/99/101), the hourly job waits for the run lock, and holding the boot
     # lock for the whole run made limine-snapper-sync time out and write the menu without it.
+
+    # 6A-346 (1b): remember whether the check behind this run was complete (offline / parts not checked)
+    local ss_check_state=""
+    ss_check_state=$(slacky_check_state 2>/dev/null || true)
+    unset SLACKY_RUN_PARTIAL || true     # 6A-349: a value from the caller's environment must never decide the exit code
 
     local slack_done=0
     local cachy_done=0
@@ -522,7 +568,15 @@ run_full_update() {
         nv_count=$(get_status_key_count "nvidia_driver_updates")
     fi
 
+    # 7N: the monthly runtime refresh is offered only in an interactive run (never headless, never with -y)
+    local rr_offer=0 rr_done=0
+    if declare -F runtime_refresh_probe >/dev/null 2>&1 && [ "${is_headless}" -eq 0 ]; then
+        runtime_refresh_probe || true
+        [ "${RR_OFFER:-0}" = "1" ] && rr_offer=1
+    fi
+
     local active_suites=0
+    [ "${rr_offer}" -eq 1 ] && active_suites=$(( active_suites + 1 ))
     [ "${total_slack_pkgs}" -gt 0 ] && active_suites=$(( active_suites + 1 ))
     [ "${cachy_count}" -gt 0 ] && active_suites=$(( active_suites + 1 ))
     { [ "${flatpak_count}" -gt 0 ] || [ "${nvidia_mismatch}" = "true" ]; } && active_suites=$(( active_suites + 1 ))
@@ -544,7 +598,7 @@ run_full_update() {
     fi
 
     local auto_approve_all=0
-    if [ "${is_headless}" -eq 0 ] && [ "${active_suites}" -gt 1 ]; then
+    if [ "${is_headless}" -eq 0 ] && { [ "${active_suites}" -gt 1 ] || [ "${rr_offer}" -eq 1 ]; }; then
         echo ""
         echo -e "${CYAN}${BOLD}Full System Update plan (${active_suites} suites with pending updates):${RESET}"
         [ "${total_slack_pkgs}" -gt 0 ] && echo -e "  • Slackware Core & Multilib : ${total_slack_pkgs} package(s)"
@@ -552,8 +606,11 @@ run_full_update() {
         { [ "${flatpak_count}" -gt 0 ] || [ "${nvidia_mismatch}" = "true" ]; } && echo -e "  • Flatpak Runtimes & Apps   : ${flatpak_count} update(s)"
         [ "${sbo_count}" -gt 0 ] && echo -e "  • SlackBuilds (sbotools)    : ${sbo_count} package(s)"
         [ "${gaming_count}" -gt 0 ] && echo -e "  • CachyOS Gaming Suite      : ${gaming_count} package(s)"
+        [ "${rr_offer}" -eq 1 ] && echo -e "  • $(_ RUNTIME_REFRESH_PLAN_LINE)"
         [ "${gnomes_count}" -gt 0 ] && echo -e "  • Underpants Gnomes Apps    : ${gnomes_count} package(s)"
         [ "${nv_count}" -gt 0 ] && echo -e "  • NVIDIA Driver Suite       : ${nv_count} update(s)"
+        [ "${rr_offer}" -eq 1 ] && [ "${RR_NO_SNAP:-0}" = "1" ] && echo -e "${YELLOW}$(_ RUNTIME_REFRESH_NO_SNAPSHOT_WARN)${RESET}" \
+            && rr_log_line "RR-NO-SNAPSHOT offered"
         echo ""
         local reply_batch="Y"
         read_update_prompt "Apply all pending updates in a single automated pass? [Y/n/c(ustom)]: " "Y" reply_batch
@@ -628,6 +685,25 @@ run_full_update() {
         log_info "$(_ SLACKWARE_CORE_UP_TO_DATE)"
     fi
 
+    # 6A-345 (1a): kernel and driver updates that wait for a snapshot or for /boot are NOT finished: they stay listed, the
+    # run ends with exit code 20 and without the success line, and one sentence says what waits and why.
+    if [ "${ss_hold_boot}" -eq 1 ]; then
+        local ss_held_what=""
+        [ "${cachy_count}" -gt 0 ] && ss_held_what=" cachyos"
+        [ "${nv_count}" -gt 0 ] && nvidia_generation_supported >/dev/null 2>&1 && ss_held_what+=" nvidia"
+        if [ "${SLACKY_HOLD_STOCK_KERNEL:-0}" = "1" ] && slacky_stock_kernel_pending; then
+            ss_held_what+=" slackware-kernel"
+        fi
+        if [ -n "${ss_held_what}" ]; then
+            ss_failed+="${ss_held_what}"
+            if [ "${ss_boot_unready}" -eq 1 ]; then
+                log_warn "$(slacky_msg HOLD_KERNEL_BOOT 'The kernel and graphics driver updates wait because the boot partition (/boot) is not ready for writing; mount it and run the update again.')"
+            else
+                log_warn "$(slacky_msg HOLD_KERNEL_SNAPSHOT 'The kernel and graphics driver updates wait because no safety snapshot could be made; fix the snapshot and run the update again.')"
+            fi
+        fi
+    fi
+
     if [ "${cachy_count}" -gt 0 ] && [ "${ss_hold_boot}" -eq 0 ] && ss_continue; then
         local reply_cachy="Y"
         if [ "${is_headless}" -eq 0 ] && [ "${auto_approve_all}" -eq 0 ]; then
@@ -639,6 +715,30 @@ run_full_update() {
             update_cachyos_kernels || { log_warn "The CachyOS kernel update did not finish; the boot menu is still checked below."; ss_failed+=" cachyos"; }
             kernel_or_driver_changed=1
             [[ "${ss_failed}" == *" cachyos"* ]] || cachy_done=1
+        fi
+    fi
+
+    # 7N: shared runtime refresh, after the Slackware base and the kernel, before the Gnomes and curated apps (spec 5.4)
+    if [ "${rr_offer}" -eq 1 ] && ss_continue; then
+        local reply_rr="Y"
+        rr_state_record offered
+        rr_log_line "RR-OFFERED"
+        if [ "${auto_approve_all}" -eq 0 ]; then
+            [ "${RR_NO_SNAP:-0}" = "1" ] && log_warn "$(_ RUNTIME_REFRESH_NO_SNAPSHOT_WARN)"
+            read_update_prompt "$(_ RUNTIME_REFRESH_PROMPT size="${RR_SIZE}") " "Y" reply_rr
+        fi
+        if [[ "$reply_rr" =~ ^[YyJjSsOo]$ ]]; then
+            local rr_rc=0
+            runtime_refresh_execute || rr_rc=$?
+            if [ "${rr_rc}" -ne 0 ]; then
+                ss_failed+=" runtime"
+            elif [ "${RR_INSTALLED:-0}" = "1" ]; then
+                rr_done=1
+            fi
+        else
+            rr_log_line "RR-DECLINED"
+            rr_state_record declined
+            echo -e "$(_ RUNTIME_REFRESH_DEFERRED)"
         fi
     fi
 
@@ -720,7 +820,13 @@ run_full_update() {
                                 b="${f##*/}"; b="${b%.txz}"
                                 [ "${b%-*-*-*}" = "underpants-${gt}" ] && txz_cand="${f}"
                             done
-                            [ -n "${txz_cand}" ] && [ -f "${txz_cand}" ] && upgradepkg --install-new --reinstall "${txz_cand}" || true
+                            # 6A-367: a missing or failed package stays pending (never crossed off)
+                            local g_priv=""; [ "$(id -u)" -eq 0 ] || g_priv="sudo"
+                            if [ -z "${txz_cand}" ] || ! ${g_priv} upgradepkg --install-new --reinstall "${txz_cand}"; then
+                                log_warn "Some Gnomes app updates did not finish; the apps you had are kept."
+                                ss_failed+=" gnomes"
+                                continue
+                            fi
                             for old_cg in /var/log/packages/cachyos-gnome-"${gt}"-*; do
                                 # 6A-41: exact base name only
                                 [ -f "${old_cg}" ] && [ "$(basename "${old_cg%-*-*-*}")" = "cachyos-gnome-${gt}" ] \
@@ -833,6 +939,7 @@ run_full_update() {
                 nv_status="Synchronized for every kernel"
             else
                 nv_status="FAILED for at least one kernel - the screen may stay black on it (see the log)"; nv_color="${RED}"
+                ss_failed+=" nvidia-modules"   # 6A-345: a failed module build is never a success run (exit 20, no final line)
             fi
         else
             nv_status="Up to date (Non-NVIDIA)"
@@ -944,7 +1051,7 @@ run_full_update() {
     unset SLACKY_UPDATE_RUNNING || true
 
     ss_wait_background_check   # 6A-150: the run's own background check first, then what this run updated
-    reconcile_post_update_status "${slack_done}" "${cachy_done}" "${flatpak_done}" "${sbo_done}" "${gaming_done}" "${gnomes_done}" "${nvidia_done}"
+    reconcile_post_update_status "${slack_done}" "${cachy_done}" "${flatpak_done}" "${sbo_done}" "${gaming_done}" "${gnomes_done}" "${nvidia_done}" "${rr_done}"
 
     # SpiderSense phase 1: post snapshot paired with the pre snapshot ("undo this update")
     create_post_update_snapshot
@@ -979,10 +1086,15 @@ except Exception:
     pass
 " 2>/dev/null || true
 
+    # 6A-347 (1c): OK only on a real success (slack_done=1) or when nothing was pending; failed and declined are shown as such
     if [ "${slack_done}" -eq 2 ]; then
         run_post_update_smoke_test "SKIPPED_MIRROR_ERROR"
-    else
+    elif [ "${slack_done}" -eq 1 ] || { [ "${total_slack_pkgs}" -eq 0 ] && [[ "${ss_failed}" != *" slackware"* ]]; }; then
         run_post_update_smoke_test
+    elif [[ "${ss_failed}" == *" slackware"* ]]; then
+        run_post_update_smoke_test "FAILED"
+    else
+        run_post_update_smoke_test "PENDING"
     fi
 
     if [ "${is_headless}" -eq 0 ] && [ -f "${APP_DIR}/gnomes_pacman.py" ]; then
@@ -1027,6 +1139,25 @@ else:
         if heal_helper_post=$(slacky_find_helper slacky_heal.py); then
             python3 -I "${heal_helper_post}" post || true
         fi
+    fi
+
+    if [ -n "${ss_check_state}" ]; then
+        # 6A-346 (1b): an incomplete check is never reported as "All updates are completed"
+        if [ "${ss_check_state}" = "offline" ]; then
+            log_warn "$(slacky_msg CHECK_RUN_OFFLINE 'There is no internet connection, so updates could not be checked and nothing was updated; try again when you are online.')"
+        else
+            local ss_cs_names="" ss_cs_p
+            for ss_cs_p in ${ss_check_state#failed }; do
+                case "${ss_cs_p}" in
+                    slackware) ss_cs_p="Slackware" ;; slackpkgplus) ss_cs_p="extra Slackware repositories" ;;
+                    flatpak) ss_cs_p="Flatpak" ;; sbo) ss_cs_p="SlackBuilds" ;; cachyos_kernel) ss_cs_p="CachyOS kernels" ;;
+                    cachyos_gaming) ss_cs_p="gaming apps" ;; gnomes) ss_cs_p="Underpants apps" ;; nvidia) ss_cs_p="NVIDIA driver" ;;
+                esac
+                ss_cs_names+="${ss_cs_names:+, }${ss_cs_p}"
+            done
+            log_warn "$(slacky_msg CHECK_RUN_PARTIAL 'Some parts could not be checked ({0}), so they were not updated; run slacky-update again later.' "${ss_cs_names}")"
+        fi
+        SLACKY_RUN_PARTIAL=1
     fi
 
     if [ -n "${ss_failed}" ]; then
@@ -1176,12 +1307,16 @@ manage_nvidia_interactive() {
                 ;;
             2)
                 validate_privileges
-                build_nvidia_modules "ALL"
-                generate_kernel_initramfs "ALL"
-                enforce_secure_boot_armor
-                sync_bootloader_configuration "$(uname -r)"
-                command -v record_initramfs_inputs_all >/dev/null 2>&1 && record_initramfs_inputs_all || true
-                register_flatpak_gl_sync
+                # 6A-365: a failed module build is said in one plain sentence; the later steps are skipped (nothing half-done)
+                if build_nvidia_modules "ALL"; then
+                    generate_kernel_initramfs "ALL"
+                    enforce_secure_boot_armor
+                    sync_bootloader_configuration "$(uname -r)"
+                    command -v record_initramfs_inputs_all >/dev/null 2>&1 && record_initramfs_inputs_all || true
+                    register_flatpak_gl_sync
+                else
+                    log_error "$(_ NVIDIA_MODULES_REBUILD_FAILED)"
+                fi
                 echo ""
                 read -r -p "$(_ PRESS_ENTER_CONTINUE)" || true
                 ;;
@@ -1433,6 +1568,54 @@ interactive_menu() {
     done
 }
 
+# 6A-359: help text as a function (used by --help and by the answer to an unknown option)
+slacky_print_help() {
+    echo -e "${BLUE}${BOLD}Slacky-Update v${CURRENT_VERSION} '${RELEASE_CODENAME}'${RESET}"
+    echo -e "${YELLOW}Notice: This program changes system files, kernels and the boot menu. Make sure you have a backup.${RESET}"
+    echo "Usage: slacky-update [OPTIONS]"
+    echo ""
+    echo "Options:"
+    echo "  -y, --non-interactive   Run full unattended system upgrade (Slackware, Flatpaks, Kernels, Drivers, SBo)"
+    echo "      --check             Run non-modifying read-only status check"
+    echo "      --doctor, --health  Run instant system health audit & hardware diagnostics (non-destructive)"
+    echo "      --hardware          Show what SpiderSense knows about this machine (graphics, processor, boot setup)"
+    echo "      (also: the separate 'spidersense' command shows status, package check, hardware, snapshots and the flight recorder)"
+    echo "  -H, --hash-check        Dynamically verify on-disk kernel & initramfs BLAKE2B hashes against Limine"
+    echo "  -l, --limine            Open Limine Bootloader & Secure Boot Matrix"
+    echo "  -c, --cmdline           Configure Kernel Boot Parameters (CMDLINE & Gaming Hub)"
+    echo "  -b, --sync-boot         Synchronize initramfs (only changed kernels), Limine/GRUB bootloader, BLAKE2B hashes & Secure Boot"
+    echo "      --sync-boot --all   Same, but rebuild the startup images of every kernel"
+    echo "      --sync-snapper      Synchronize Btrfs Snapper snapshots into Limine menu and reseal"
+    echo "      --sync-nvidia       Synchronize NVIDIA driver suite and compile/match kernel modules"
+    echo "      --clean             Clean package caches, remove obsolete kernels and orphaned packages"
+    echo "      --restore-limine    Restore Limine bootloader from known good self-heal backup"
+    echo "      --sb, --secure-boot Open UEFI Secure Boot & MOK Armor Command Center"
+    echo "  -g, --gaming            Open CachyOS Underpants Gnomes Gaming Suite menu"
+    echo "      --hyprland          Install curated Hyprland Desktop Suite (Noctalia Shell)"
+    echo "      --hyprland-core     Install Hyprland Minimal Core Compositor"
+    echo "  -m, --heal-multilib     Audit and repair AlienBOB 32-bit Multilib subsystem"
+    echo "      --heal-check        Look for damaged installed packages (read only; prints the slackpkg command to restore them)"
+    echo "      --heal-host         Audit /usr/bin/ and restore Host Sovereignty for native packages"
+    echo "  -s, --slackbuilds       Open SlackBuilds and sbotools management hub"
+    echo "  -M, --rank-mirrors      Test the Slackware download servers and pick the fastest ones (also: --mirrors)"
+    echo "  -P, --gnomes-pacman     Run the Underpants Gnomes package tool (same as the 'gnomes' command)"
+    echo "      --protect-links on|off|status  Guard the system against folders replaced by links"
+    echo "      --gaming-deploy <app...>       Install curated apps by name (also: --gnomes-deploy)"
+    echo "      --gaming-uninstall <app>       Remove one curated app (also: --gnomes-uninstall)"
+    echo "      --hyprmod                      Install the HyprMod settings app"
+    echo "      --mactahoe-icons, --mactahoe-cursors, --whitesur-icons, --whitesur-cursors"
+    echo "                                     Install the matching icon or cursor theme"
+    echo "  -t, --tweaks            Open system performance and gaming tweaks menu"
+    echo "  -d, --guide, --manual   Open Master Field Guide & Diagnostics menu (Doctor/PDF/QR/Email)"
+    echo "      --lang <code|nb|en> Set system language preference"
+    echo "      --list-langs        List all available languages"
+    echo "  -v, --version           Display version and release codename"
+    echo "  -h, --help              Display this help menu"
+    echo ""
+    echo "Exit codes: 0 done, 1 error, 20 finished but some updates are still waiting (they are tried again next time),"
+    echo "            30 startup menu not updated safely (do not restart), 31 no consent, 32 another update is running, 130 stopped by you"
+}
+
 # --- [ ENTRY POINT ] ---
 if [ "${1:-}" = "--non-interactive" ] || [ "${1:-}" = "-y" ]; then
     export NON_INTERACTIVE=1
@@ -1651,43 +1834,13 @@ elif [ "${1:-}" = "--version" ] || [ "${1:-}" = "-v" ]; then
     echo "slacky-update v${CURRENT_VERSION} '${RELEASE_CODENAME}' (Slackware Linux)"
     exit 0
 elif [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
-    echo -e "${BLUE}${BOLD}Slacky-Update v${CURRENT_VERSION} '${RELEASE_CODENAME}'${RESET}"
-    echo -e "${YELLOW}Notice: This program changes system files, kernels and the boot menu. Make sure you have a backup.${RESET}"
-    echo "Usage: slacky-update [OPTIONS]"
-    echo ""
-    echo "Options:"
-    echo "  -y, --non-interactive   Run full unattended system upgrade (Slackware, Flatpaks, Kernels, Drivers, SBo)"
-    echo "      --check             Run non-modifying read-only status check"
-    echo "      --doctor, --health  Run instant system health audit & hardware diagnostics (non-destructive)"
-    echo "      --hardware          Show what SpiderSense knows about this machine (graphics, processor, boot setup)"
-    echo "      (also: the separate 'spidersense' command shows status, package check, hardware, snapshots and the flight recorder)"
-    echo "  -H, --hash-check        Dynamically verify on-disk kernel & initramfs BLAKE2B hashes against Limine"
-    echo "  -l, --limine            Open Limine Bootloader & Secure Boot Matrix"
-    echo "  -c, --cmdline           Configure Kernel Boot Parameters (CMDLINE & Gaming Hub)"
-    echo "  -b, --sync-boot         Synchronize initramfs (only changed kernels), Limine/GRUB bootloader, BLAKE2B hashes & Secure Boot"
-    echo "      --sync-boot --all   Same, but rebuild the startup images of every kernel"
-    echo "      --sync-snapper      Synchronize Btrfs Snapper snapshots into Limine menu and reseal"
-    echo "      --sync-nvidia       Synchronize NVIDIA driver suite and compile/match kernel modules"
-    echo "      --clean             Clean package caches, remove obsolete kernels and orphaned packages"
-    echo "      --restore-limine    Restore Limine bootloader from known good self-heal backup"
-    echo "      --sb, --secure-boot Open UEFI Secure Boot & MOK Armor Command Center"
-    echo "  -g, --gaming            Open CachyOS Underpants Gnomes Gaming Suite menu"
-    echo "      --hyprland          Install curated Hyprland Desktop Suite (Noctalia Shell)"
-    echo "      --hyprland-core     Install Hyprland Minimal Core Compositor"
-    echo "  -m, --heal-multilib     Audit and repair AlienBOB 32-bit Multilib subsystem"
-    echo "      --heal-check        Look for damaged installed packages (read only; prints the slackpkg command to restore them)"
-    echo "      --heal-host         Audit /usr/bin/ and restore Host Sovereignty for native packages"
-    echo "  -s, --slackbuilds       Open SlackBuilds and sbotools management hub"
-    echo "  -t, --tweaks            Open system performance and gaming tweaks menu"
-    echo "  -d, --guide, --manual   Open Master Field Guide & Diagnostics menu (Doctor/PDF/QR/Email)"
-    echo "      --lang <code|nb|en> Set system language preference"
-    echo "      --list-langs        List all available languages"
-    echo "  -v, --version           Display version and release codename"
-    echo "  -h, --help              Display this help menu"
-    echo ""
-    echo "Exit codes: 0 done, 1 error, 20 finished but some updates are still waiting (they are tried again next time),"
-    echo "            30 startup menu not updated safely (do not restart), 31 no consent, 32 another update is running, 130 stopped by you"
+    slacky_print_help
     exit 0
-else
+elif [ "$#" -eq 0 ]; then
     interactive_menu
+else
+    # 6A-359: an unknown option never opens the menu or starts anything; one sentence, the help, exit code 2
+    echo -e "${YELLOW}Unknown option: ${1}. Nothing was started; here is what slacky-update understands.${RESET}" >&2
+    slacky_print_help >&2
+    exit 2
 fi

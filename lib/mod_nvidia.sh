@@ -3,6 +3,12 @@
 
 set -euo pipefail
 
+# 6A-333: test-only path hooks are honoured only when SLACKY_SELFTEST=1 (a stray variable in a root shell must never redirect writes)
+if [ "${SLACKY_SELFTEST:-0}" != "1" ]; then
+    unset SS_FP_DIR SS_FP_BOOT SS_FP_MODS SS_FP_ETC SLACKY_BOOT_DIR SLACKY_ETC_DIR NVIDIA_HOLD_FILE NVIDIA_MODROOT \
+        LIMINE_MODULES_ROOT SLACKY_SB_EFIVAR DKMS_ROOT DKMS_SUDO MODULES_ROOT PKGDB_DIR GRUB_DROPIN_DIR GRUB_MKCONFIG_SCRIPT
+fi
+
 # --- [ HARDWARE DETECTION & DKMS CHECK ] ---
 # 6A-130 (N1): NVIDIA generation from the PCI device ID. The old lspci regex matched three hex digits, so a four-digit ID
 # such as 10de:1b80 (GTX 1080) was never seen as Pascal and fell through to MODERN. sysfs is read first (no lspci text
@@ -222,7 +228,7 @@ if not html:
     sys.exit(0)
 
 prefix = '$prefix'
-matches = re.findall(r'href=[\'\"]?(' + re.escape(prefix) + r'\.[0-9]+(?:\.[0-9]+)?)/?[\'\"]?', html)
+matches = re.findall(r'href=[\'\"]?(?:\./)?(' + re.escape(prefix) + r'\.[0-9]+(?:\.[0-9]+)?)/?[\'\"]?', html)
 if not matches:
     print('$default_ver')
     sys.exit(0)
@@ -563,6 +569,7 @@ build_nvidia_modules() {
         target_ver=$(cat /sys/module/nvidia/version 2>/dev/null | tr -d '[:space:]' || echo "")
     fi
 
+    local all_failed=()
     if [ "${target_kver}" = "ALL" ]; then
         log_info "Rebuilding NVIDIA DKMS modules for installed Slackware kernels..."
         if [ -d "/lib/modules" ]; then
@@ -590,8 +597,17 @@ build_nvidia_modules() {
                 fi
 
                 log_info "Building NVIDIA DKMS modules for kernel: ${kver}..."
-                sudo "${dkms_bin}" autoinstall -k "${kver}" >/dev/null 2>&1 || log_warn "DKMS build warning for kernel: ${kver}"
+                # 6A-331 (S6): a failed build is counted, so the caller can say so instead of "Synchronized for every kernel"
+                if ! sudo "${dkms_bin}" autoinstall -k "${kver}" >/dev/null 2>&1 \
+                    || [ -z "$(find -L "${kdir}" -name 'nvidia.ko*' 2>/dev/null | head -n 1)" ]; then
+                    log_warn "The graphics driver could not be built for kernel ${kver}, so the screen may stay black on that kernel."
+                    all_failed+=("${kver}")
+                fi
             done
+        fi
+        if [ "${#all_failed[@]}" -gt 0 ]; then
+            log_warn "The graphics driver is missing for: ${all_failed[*]}."
+            return 1
         fi
     else
         local existing_mod
@@ -771,30 +787,30 @@ build_and_deploy_cachyos_nvidia_userspace() {
 
     local pkg_utils pkg_lib32 pkg_settings pkg_opencl pkg_lib32_opencl
     if [ "${gpu_arch}" = "PASCAL" ]; then
-        pkg_utils=$(echo "${html}" | grep -o -E 'href="nvidia-580xx-utils-'${target_ver}'-[^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 || echo "")
-        pkg_lib32=$(echo "${html}" | grep -o -E 'href="lib32-nvidia-580xx-utils-'${target_ver}'-[^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 || echo "")
-        pkg_settings=$(echo "${html}" | grep -o -E 'href="nvidia-settings-[^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 || echo "")
-        pkg_opencl=$(echo "${html}" | grep -o -E 'href="opencl-nvidia-580xx-'${target_ver}'-[^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 || echo "")
-        pkg_lib32_opencl=$(echo "${html}" | grep -o -E 'href="lib32-opencl-nvidia-580xx-'${target_ver}'-[^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 || echo "")
+        pkg_utils=$(echo "${html}" | grep -o -E 'href="(\./)?nvidia-580xx-utils-'${target_ver}'-[^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 | sed 's|^\./||' || echo "")
+        pkg_lib32=$(echo "${html}" | grep -o -E 'href="(\./)?lib32-nvidia-580xx-utils-'${target_ver}'-[^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 | sed 's|^\./||' || echo "")
+        pkg_settings=$(echo "${html}" | grep -o -E 'href="(\./)?nvidia-settings-[^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 | sed 's|^\./||' || echo "")
+        pkg_opencl=$(echo "${html}" | grep -o -E 'href="(\./)?opencl-nvidia-580xx-'${target_ver}'-[^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 | sed 's|^\./||' || echo "")
+        pkg_lib32_opencl=$(echo "${html}" | grep -o -E 'href="(\./)?lib32-opencl-nvidia-580xx-'${target_ver}'-[^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 | sed 's|^\./||' || echo "")
     else
-        pkg_utils=$(echo "${html}" | grep -o -E 'href="nvidia-utils-'${target_ver}'-[^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 || echo "")
-        pkg_lib32=$(echo "${html}" | grep -o -E 'href="lib32-nvidia-utils-'${target_ver}'-[^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 || echo "")
-        pkg_settings=$(echo "${html}" | grep -o -E 'href="nvidia-settings-[^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 || echo "")
-        pkg_opencl=$(echo "${html}" | grep -o -E 'href="opencl-nvidia-'${target_ver}'-[^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 || echo "")
-        pkg_lib32_opencl=$(echo "${html}" | grep -o -E 'href="lib32-opencl-nvidia-'${target_ver}'-[^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 || echo "")
+        pkg_utils=$(echo "${html}" | grep -o -E 'href="(\./)?nvidia-utils-'${target_ver}'-[^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 | sed 's|^\./||' || echo "")
+        pkg_lib32=$(echo "${html}" | grep -o -E 'href="(\./)?lib32-nvidia-utils-'${target_ver}'-[^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 | sed 's|^\./||' || echo "")
+        pkg_settings=$(echo "${html}" | grep -o -E 'href="(\./)?nvidia-settings-[^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 | sed 's|^\./||' || echo "")
+        pkg_opencl=$(echo "${html}" | grep -o -E 'href="(\./)?opencl-nvidia-'${target_ver}'-[^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 | sed 's|^\./||' || echo "")
+        pkg_lib32_opencl=$(echo "${html}" | grep -o -E 'href="(\./)?lib32-opencl-nvidia-'${target_ver}'-[^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 | sed 's|^\./||' || echo "")
     fi
 
     # Resolve libva-nvidia-driver (CachyOS mirror or Arch Linux official extra repository)
     local pkg_libva=""
     local libva_url=""
-    pkg_libva=$(echo "${html}" | grep -o -E 'href="libva-nvidia-driver-[^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 || echo "")
+    pkg_libva=$(echo "${html}" | grep -o -E 'href="(\./)?libva-nvidia-driver-[^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 | sed 's|^\./||' || echo "")
     if [ -n "${pkg_libva}" ]; then
         libva_url="${cachy_repo}/${pkg_libva}"
     else
         local arch_extra_repo="https://geo.mirror.pkgbuild.com/extra/os/x86_64"
         local arch_html
         arch_html=$(curl -sSL -m 15 "${arch_extra_repo}/" 2>/dev/null || echo "")
-        pkg_libva=$(echo "${arch_html}" | grep -o -E 'href="libva-nvidia-driver-[0-9][^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 || echo "")
+        pkg_libva=$(echo "${arch_html}" | grep -o -E 'href="(\./)?libva-nvidia-driver-[0-9][^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 | sed 's|^\./||' || echo "")
         if [ -n "${pkg_libva}" ]; then
             libva_url="${arch_extra_repo}/${pkg_libva}"
         fi
@@ -803,14 +819,14 @@ build_and_deploy_cachyos_nvidia_userspace() {
     # Resolve egl-gbm (NVIDIA GBM external platform bridge for Xwayland GLAMOR & KWin)
     local pkg_egl_gbm=""
     local egl_gbm_url=""
-    pkg_egl_gbm=$(echo "${html}" | grep -o -E 'href="egl-gbm-[^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 || echo "")
+    pkg_egl_gbm=$(echo "${html}" | grep -o -E 'href="(\./)?egl-gbm-[^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 | sed 's|^\./||' || echo "")
     if [ -n "${pkg_egl_gbm}" ]; then
         egl_gbm_url="${cachy_repo}/${pkg_egl_gbm}"
     else
         local arch_extra_repo="https://geo.mirror.pkgbuild.com/extra/os/x86_64"
         local arch_html
         arch_html=$(curl -sSL -m 15 "${arch_extra_repo}/" 2>/dev/null || echo "")
-        pkg_egl_gbm=$(echo "${arch_html}" | grep -o -E 'href="egl-gbm-[0-9][^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 || echo "")
+        pkg_egl_gbm=$(echo "${arch_html}" | grep -o -E 'href="(\./)?egl-gbm-[0-9][^"]*\.pkg\.tar\.zst"' | head -n 1 | cut -d'"' -f2 | sed 's|^\./||' || echo "")
         if [ -n "${pkg_egl_gbm}" ]; then
             egl_gbm_url="${arch_extra_repo}/${pkg_egl_gbm}"
         fi
@@ -892,7 +908,7 @@ build_and_deploy_cachyos_nvidia_userspace() {
 
     log_info "Unpacking and mapping Complete Suite in user staging..."
     # 6A-134 (B-M8): the core package must unpack, or nothing is built
-    if ! tar --zstd -xf "${cache_dir}/${pkg_utils}" -C "${tmp_extract}/utils" 2>/dev/null; then
+    if ! sudo tar --zstd -xf "${cache_dir}/${pkg_utils}" -C "${tmp_extract}/utils" 2>/dev/null; then
         log_error "The NVIDIA userspace package ${pkg_utils} could not be unpacked, so nothing was installed."
         rm -rf "${staging_base}"
         trap - INT TERM
@@ -1109,18 +1125,21 @@ DOINST_EOF
     # Enforce standard permissions before packaging
     chmod -R u=rwX,go=rX "${staging_root}"
 
+    # 6A-364: "report" is honoured in the self-tests only (SLACKY_SELFTEST=1); the environment cannot switch the guard off
+    local footprint_mode="enforce"
+    [ "${SLACKY_SELFTEST:-0}" = "1" ] && footprint_mode="${SLACKY_FOOTPRINT_MODE:-enforce}"
     # 6A-288 (S4): Footprint Guard on the final staging tree, as in the other packagers (enforce unless
     # SLACKY_FOOTPRINT_MODE=report). The NVIDIA files that must reach the host (profile.d VA-API) are on the guard's vetted list.
     if [ -n "${GNOMES_PY:-}" ] && [ -f "${GNOMES_PY}" ]; then
         if ! python3 "${GNOMES_PY}" footprint-guard "${staging_root}" --label "cachyos-nvidia-utils-${target_ver}"; then
-            if [ "${SLACKY_FOOTPRINT_MODE:-enforce}" != "report" ]; then
+            if [ "${footprint_mode}" != "report" ]; then
                 log_error "Footprint check failed for the NVIDIA userspace package. Package not built."
                 rm -rf "${staging_base}"
                 trap - INT TERM
                 return 1
             fi
         fi
-    elif [ "${SLACKY_FOOTPRINT_MODE:-enforce}" != "report" ]; then
+    elif [ "${footprint_mode}" != "report" ]; then
         log_error "Footprint check unavailable (gnomes_pacman.py not found). Package not built."
         rm -rf "${staging_base}"
         trap - INT TERM
@@ -1143,7 +1162,7 @@ DOINST_EOF
     fi
 
     # 6A-288 (S4): the finished archive must be root-owned and must not overwrite files of another package
-    if [ "${pack_ok}" -eq 1 ] && [ "${SLACKY_FOOTPRINT_MODE:-enforce}" != "report" ]; then
+    if [ "${pack_ok}" -eq 1 ] && [ "${footprint_mode}" != "report" ]; then
         if [ -z "${GNOMES_PY:-}" ] || [ ! -f "${GNOMES_PY}" ] \
             || ! python3 "${GNOMES_PY}" footprint-guard --verify-archive "${txz_out}" \
             || ! python3 "${GNOMES_PY}" footprint-guard --verify-host-paths "${txz_out}" --mode curated; then
@@ -1444,7 +1463,11 @@ sync_stock_kernel_nvidia_module() {
         if [ -f "${dkms_archive}" ] && [ -s "${dkms_archive}" ]; then
             validate_privileges
             # Unpack /usr/src/nvidia-* to system
-            sudo tar --zstd --exclude=.PKGINFO --exclude=.BUILDINFO --exclude=.MTREE --exclude=.INSTALL --exclude=.CHANGELOG -xf "${dkms_archive}" -C / 2>/dev/null || true
+            if ! sudo tar --zstd --exclude=.PKGINFO --exclude=.BUILDINFO --exclude=.MTREE --exclude=.INSTALL --exclude=.CHANGELOG -xf "${dkms_archive}" -C / 2>/dev/null; then
+                log_error "The NVIDIA driver sources could not be unpacked, so nothing was installed."
+                rm -rf "${staging_dir}"
+                return 1
+            fi
 
             # Self-heal dead DKMS module registrations prior to build/install
             if command -v dkms_purge_orphaned_ghosts >/dev/null 2>&1; then
@@ -1579,7 +1602,10 @@ ensure_cachyos_nvidia_dkms_source_unpacked() {
         if download_parallel_pacman "CachyOS NVIDIA DKMS (${dkms_pkg})" "${dkms_items[@]}" 2>/dev/null; then
             if verify_cachyos_gpg_signature "${dkms_archive}" "${dkms_archive}.sig" "${cachy_repo}/${dkms_pkg}" 2>/dev/null; then
                 validate_privileges
-                sudo tar --zstd --exclude=.PKGINFO --exclude=.BUILDINFO --exclude=.MTREE --exclude=.INSTALL --exclude=.CHANGELOG -xf "${dkms_archive}" -C / 2>/dev/null || true
+                if ! sudo tar --zstd --exclude=.PKGINFO --exclude=.BUILDINFO --exclude=.MTREE --exclude=.INSTALL --exclude=.CHANGELOG -xf "${dkms_archive}" -C / 2>/dev/null; then
+                    log_error "The NVIDIA driver sources could not be unpacked, so nothing was installed."
+                    return 1
+                fi
                 if command -v dkms_purge_orphaned_ghosts >/dev/null 2>&1; then
                     dkms_purge_orphaned_ghosts >/dev/null 2>&1 || true
                 fi

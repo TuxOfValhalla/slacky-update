@@ -4,6 +4,12 @@
 
 set -euo pipefail
 
+# 6A-333: test-only path hooks are honoured only when SLACKY_SELFTEST=1 (a stray variable in a root shell must never redirect writes)
+if [ "${SLACKY_SELFTEST:-0}" != "1" ]; then
+    unset SS_FP_DIR SS_FP_BOOT SS_FP_MODS SS_FP_ETC SLACKY_BOOT_DIR SLACKY_ETC_DIR NVIDIA_HOLD_FILE NVIDIA_MODROOT \
+        LIMINE_MODULES_ROOT SLACKY_SB_EFIVAR DKMS_ROOT DKMS_SUDO MODULES_ROOT PKGDB_DIR GRUB_DROPIN_DIR GRUB_MKCONFIG_SCRIPT
+fi
+
 if ! type resolve_boot_root_cmd >/dev/null 2>&1; then
     for cand in "${SCRIPT_DIR:-}/common.sh" \
                 "$(dirname "${BASH_SOURCE[0]}")/common.sh" \
@@ -923,6 +929,36 @@ limine_esp_copy_failed() {
     [ -n "${LIMINE_ESP_COPY_FAIL_FILE}" ] && printf '%s\n' "$1" >> "${LIMINE_ESP_COPY_FAIL_FILE}" 2>/dev/null
     return 0
 }
+# 6A-328: 0 = leave this kernel out of the boot menu (its image is known to be bad), 1 = keep it.
+# Excluded only when this run's initramfs build failed for it (SS_MENU_INITRD_FAILED, a copy kept past record_initramfs_inputs_all)
+# or initramfs_record_check says the image is stale (return 1). Never the running kernel; never when that would empty the menu.
+limine_initrd_excluded() {
+    local kver="$1" bad=0 f other k boot="${SLACKY_BOOT_DIR:-/boot}"
+    [ "${kver}" = "$(uname -r)" ] && return 1
+    limine_initrd_is_bad() {
+        local kv="$1"
+        [ "${kv}" = "$(uname -r)" ] && return 1
+        case " ${SS_MENU_INITRD_FAILED:-} " in *" ${kv} "*) return 0 ;; esac
+        # 6A-369: only an image whose build FAILED in this run is left out. A stale input record only means "rebuild it next
+        # time"; the image on disk still boots (it did before), so it never removes a kernel from the menu. (6A-328 used the
+        # record too: after the 6A-329 format change every record was stale and the hourly sync dropped all kernels but two.)
+        return 1
+    }
+    limine_initrd_is_bad "${kver}" || return 1
+    other=0
+    for f in "${boot}"/vmlinuz-*; do
+        [ -e "${f}" ] || continue
+        k="${f##*/vmlinuz-}"
+        [ "${k}" = "${kver}" ] && continue
+        limine_initrd_is_bad "${k}" || { other=1; break; }
+    done
+    if [ "${other}" -eq 0 ]; then
+        { echo "[$(date '+%Y-%m-%d %H:%M:%S')] [WARN] Every startup image looks out of date, so all kernels were kept in the boot menu." >> "${LOG_FILE}"; } 2>/dev/null || true
+        echo "Every startup image looks out of date, so all kernels were kept in the boot menu." >&2
+        return 1
+    fi
+    return 0
+}
 resolve_and_hash_boot_assets() {
     local kver="$1"
     local esp_path="$2"
@@ -950,29 +986,20 @@ resolve_and_hash_boot_assets() {
     # initrd into the default entry (kernel panic).
     local cand_initrd
     local cand_list=("/boot/initramfs-${kver}.img" "/boot/initrd-${kver}.gz" "/boot/initrd-${kver}.img")
-    if [[ "${kver}" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
+    if [[ "${kver}" =~ ^(generic-|huge-)?[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
         cand_list+=("/boot/initrd.gz")
     fi
     cand_list+=("${esp_path}/initramfs-${kver}.img" "${esp_path}/initrd-${kver}.gz")
     for cand_initrd in "${cand_list[@]}"; do
         if sudo test -f "${cand_initrd}"; then
             initrd_src="${cand_initrd}"
-            # 6A-282: a kernel-specific initramfs older than its kernel or modules was built before the update (dracut failed)
-            if [[ "${cand_initrd}" == /boot/* && "${cand_initrd}" != "/boot/initrd.gz" ]]; then
-                local i_mt k_mt m_mt m_dir
-                i_mt=$(sudo stat -c %Y "${cand_initrd}" 2>/dev/null || echo 0)
-                k_mt=$(sudo stat -c %Y "/boot/vmlinuz-${kver}" 2>/dev/null || echo 0)
-                m_mt=0
-                for m_dir in "${LIMINE_MODULES_ROOT:-}/usr/lib/modules/${kver}" "${LIMINE_MODULES_ROOT:-}/lib/modules/${kver}"; do
-                    if [ -d "${m_dir}" ]; then
-                        m_mt=$(sudo stat -L -c %Y "${m_dir}" 2>/dev/null || echo 0)
-                        break
-                    fi
-                done
-                if [ "${i_mt}" -lt "${k_mt}" ] || [ "${i_mt}" -lt "${m_mt}" ]; then
-                    echo "The startup image for kernel ${kver} is older than the kernel, so that kernel was left out of the boot menu." >&2
-                    return 1
-                fi
+            # 6A-328 (M2 / 6A-282 regression): the old rule "initramfs older than vmlinuz or the modules folder" dropped good kernels,
+            # because depmod, DKMS and sbctl signing bump those times. A kernel is now left out only when THIS run's dracut failed for
+            # it or the fingerprint record says its image is stale; no record means keep. The running kernel is never left out.
+            if [[ "${cand_initrd}" == /boot/* && "${cand_initrd}" != "/boot/initrd.gz" ]] && limine_initrd_excluded "${kver}"; then
+                { echo "[$(date '+%Y-%m-%d %H:%M:%S')] [WARN] The startup image for kernel ${kver} is not current, so that kernel was left out of the boot menu." >> "${LOG_FILE}"; } 2>/dev/null || true
+                echo "The startup image for kernel ${kver} is not current, so that kernel was left out of the boot menu." >&2
+                return 1
             fi
             if [ "${esp_path}" != "/boot" ] && [[ "${initrd_src}" == /boot/* ]]; then
                 local base_initrd
@@ -1764,6 +1791,11 @@ limine_write_committed_record() {
     [ "${#b2}" -eq 128 ] && [ "${#s256}" -eq 64 ] || return 1
     now=$(date +%s)
     txid="${SLACKY_TXID:-legacy-${now}-$$}"
+    # 6A-364: the id goes into a JSON line: only a short plain id is accepted, anything else gets the generated one
+    case "${txid}" in
+        ''|*[!0-9A-Za-z._-]*) txid="legacy-${now}-$$" ;;
+    esac
+    [ "${#txid}" -le 64 ] || txid="legacy-${now}-$$"
     sudo install -d -m 0755 -o root -g root "${dir}" 2>/dev/null || return 1
     [ ! -L "${dir}" ] || return 1
     tmp="${SLACKY_LIMINE_COMMITTED}.tmp.$$"

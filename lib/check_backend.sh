@@ -551,8 +551,19 @@ for cl_url in changelog_urls:
         break
     except urllib.error.HTTPError as e:
         if e.code == 304 and os.path.exists(cl_file) and os.path.getsize(cl_file) > 0: # Not modified, cache is fresh
-            fetched = True
-            break
+            # 6A-356: "not modified" does not make an old bad cache good: the stored file must still look like a ChangeLog
+            try:
+                with open(cl_file, "rb") as _cf:
+                    _cached_ok = looks_like_sbo_changelog(_cf.read(8 * 1024 * 1024))
+            except Exception:
+                _cached_ok = False
+            if _cached_ok:
+                fetched = True
+                break
+            try:
+                os.unlink(cl_file)
+            except OSError:
+                pass
     except Exception:
         continue
 
@@ -773,6 +784,10 @@ check_cachyos_gaming_background() {
     if command -v check_all_installed_gaming_updates_fast >/dev/null 2>&1; then
         local raw_g_updates g_rc=0
         # 6A-298 (F1): a lookup that crashed is "could not check", not "no gaming updates"
+        # 6A-357: items that cannot be looked up by design (spacenav) are reported through this file ("manual"), not as a
+        # failed check; the checker writes one id per line when it supports it
+        export SLACKY_GAMING_MANUAL_FILE="${TMP_DIR}/gaming_manual"
+        : > "${SLACKY_GAMING_MANUAL_FILE}"
         raw_g_updates=$(check_all_installed_gaming_updates_fast 2>/dev/null) || g_rc=$?
         # 6A-306 (V4): exit 3 = some items could not be checked (the rest of the answer is valid); any other failure = nothing
         if [ "${g_rc}" -eq 3 ]; then
@@ -885,6 +900,28 @@ PYGNOMES
 }
 check_underpants_gnomes_background "$@" & PID_GNOMES=$!
 
+# --- [ 3.6. SHARED RUNTIME REFRESH DUE? (7J, docs/runtime_refresh_spec.md section 3) ] ---
+# Read only: the cached repository databases, the runtime manifest and the state file; no network, no sudo, no build, no
+# write to /opt. The answer goes into the status key "runtime_refresh" (not counted as an update).
+check_runtime_refresh_background() {
+    local rr_py="" rcand
+    for rcand in "${SCRIPT_DIR:-}/gnomes_pacman.py" \
+                 "${APP_DIR:-}/gnomes_pacman.py" \
+                 "/usr/share/slacky-update/lib/gnomes_pacman.py" \
+                 "/usr/local/share/slacky-update/lib/gnomes_pacman.py" \
+                 "/usr/local/lib/slacky-update/gnomes_pacman.py"; do
+        if [ -f "${rcand}" ]; then
+            rr_py="${rcand}"
+            break
+        fi
+    done
+    [ -n "${rr_py}" ] && command -v python3 >/dev/null 2>&1 || return 0
+    local rr_out
+    rr_out=$(timeout 45 python3 "${rr_py}" runtime refresh-status 2>/dev/null) || return 0
+    [ -n "${rr_out}" ] && printf '%s\n' "${rr_out}" > "${TMP_DIR}/runtime_refresh" || true
+}
+check_runtime_refresh_background & PID_RR=$!
+
 # 6A-141: self-contained NVIDIA generation check (this worker runs standalone, so it cannot rely on mod_nvidia.sh).
 # Prints "modern" when every NVIDIA display device is Turing or newer (PCI device ID >= 0x1e00), "legacy" when any is
 # older (Pascal/Volta 0x15xx-0x1dxx, Maxwell and below), "none" when no NVIDIA display device is visible.
@@ -947,6 +984,8 @@ slacky_check_nvidia_gpu_class() {
             cachy_nv_html=$(curl -fsSL -m 10 "${cachy_nv_repo}" 2>/dev/null || echo "")
             [ -n "${cachy_nv_html}" ] || NVIDIA_LOOKUP_FAILED=1
             LATEST_NVIDIA=$(echo "${cachy_nv_html}" | grep -o -E 'nvidia-utils-[0-9]+\.[0-9]+(\.[0-9]+)?' | sed 's/nvidia-utils-//' | sort -V | tail -n 1 || true)
+            # 6A-356: a page that came back but names no nvidia-utils package is a failed lookup (error page, wrong folder)
+            [ -n "${LATEST_NVIDIA}" ] || NVIDIA_LOOKUP_FAILED=1
             # Atomic Triad Preflight Gate ("Spider-Sense"):
             # Ensure target LATEST_NVIDIA exists simultaneously across userspace, DKMS, and precompiled modules
             if [ -n "${LATEST_NVIDIA}" ]; then
@@ -1080,7 +1119,7 @@ SLACKY_CHECK_TIMEOUT="${SLACKY_CHECK_TIMEOUT:-240}"
 ) >/dev/null 2>&1 &
 PID_WATCHDOG=$!
 
-wait "${PID_SLACK:-}" "${PID_PLUS:-}" "${PID_FLATPAK:-}" "${PID_SBO:-}" "${PID_CACHY:-}" "${PID_GAMING:-}" "${PID_GNOMES:-}" "${PID_NVIDIA:-}" 2>/dev/null || true
+wait "${PID_SLACK:-}" "${PID_PLUS:-}" "${PID_FLATPAK:-}" "${PID_SBO:-}" "${PID_CACHY:-}" "${PID_GAMING:-}" "${PID_GNOMES:-}" "${PID_NVIDIA:-}" "${PID_RR:-}" 2>/dev/null || true
 pkill -TERM -P "${PID_WATCHDOG}" 2>/dev/null || true
 kill -TERM "${PID_WATCHDOG}" 2>/dev/null || true
 wait "${PID_WATCHDOG}" 2>/dev/null || true
@@ -1316,6 +1355,22 @@ for _part in read_file_lines("check_failed_parts"):
     if _part not in check_failed:
         check_failed.append(_part)
 
+# 6A-357: installed items that have no upstream list by design (shown once as "manual", never as a failed check)
+manual_items = []
+for _m in read_file_lines("gaming_manual"):
+    if re.fullmatch(r'[A-Za-z0-9_.+-]{1,64}', _m) and _m not in manual_items:
+        manual_items.append(_m)
+
+# 7J: the runtime-refresh answer (spec 8.2). Only the documented fields are kept; a missing or broken answer keeps the last one.
+runtime_refresh = existing_data.get("runtime_refresh")
+try:
+    _rr_raw = json.loads(read_file_content("runtime_refresh", "") or "null")
+    if isinstance(_rr_raw, dict) and not _rr_raw.get("error") and _rr_raw.get("state") in (
+            "nominal", "due", "due_now", "deferred", "remembered_veto", "unknown", "not_applicable"):
+        runtime_refresh = {k: _rr_raw.get(k) for k in ("state", "age_days", "newer", "checked", "gone", "suspects", "built", "checked_at")}
+except (ValueError, TypeError):
+    pass
+
 now_dt = datetime.now(timezone.utc)
 
 data = {
@@ -1345,6 +1400,8 @@ data = {
     "check_failed": check_failed,
     "check_offline": check_offline,
     "check_timed_out": check_timed_out,
+    "manual_items": manual_items,
+    "runtime_refresh": runtime_refresh,
     "last_ok_check_ts": int(time.time()) if not check_failed else int(existing_data.get("last_ok_check_ts", 0) or 0),
     "last_check": now_dt.strftime("%Y-%m-%dT%H:%M:%SZ"),
     "last_check_ts": int(time.time())
