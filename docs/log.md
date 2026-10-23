@@ -2127,3 +2127,5 @@
 
 - 2026-10-21 6A-370 (Build 97): curated vram-booster renamed Game Priority Booster (CPU/IO); wrapper boosts games only, no fake cgroup.
 - 2026-10-23 6A-371 (Build 98): an unreadable package index gives "could not check", never a silent "up to date" from an old copy; 20 s time limit.
+
+- 2026-10-23 6A-372 (Build 99): initramfs is rebuilt for the NVIDIA module only when its content changed, never for a time stamp alone.

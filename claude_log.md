@@ -1612,3 +1612,10 @@
 - Fix (check scan, lib/mod_gaming.sh): the index time limit is 20 s (all four copies of fetch_url_cached); in the check scan a source that could not be read is recorded, a saved copy is used only when younger than 3 days, and every item with an unread source counts as "could not check" (exit 3, the list is kept, no "up to date").
 - Verification: bash -n, Python ast of the scan; real read-only scan on the owner's machine now lists brave 1.97.59 -> 1.98.60 (rc 0).
 - Not a feature change: the LTS test week continues (owner 2026-10-23, day 2/7).
+
+### 2026-10-23 Build 99_slacky - 6A-372 - initramfs rebuilt for an NVIDIA module only when the module content changed
+- Seen 2026-10-23: the full update rebuilt the initramfs of the running bore kernel although its NVIDIA modules were unchanged (same sha256 in every snapshot since 2026-10-14). During the DKMS step the modules' time stamp changed (DKMS reinstalls through the extramodules symlinks of the DKMS bridge), and the stale test in mod_nvidia.sh only compared nvidia.ko's mtime with the image.
+- Fix: new nvidia_initrd_needs_rebuild uses the 6A-321 input record (it holds the module sha256): record current = keep, changed = rebuild; only without a usable record the old time test is used.
+- Files: lib/mod_nvidia.sh.
+- Verification: bash -n; stub tests for record current/changed/missing and no record function. Not run on the machine yet.
+- Rust: uses content fingerprints, not affected. Small change, LTS test week continues (owner 2026-10-23, day 2/7).

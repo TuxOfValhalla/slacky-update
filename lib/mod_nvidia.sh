@@ -1800,6 +1800,20 @@ sync_all_cachyos_kernels_nvidia() {
     done
 }
 
+# 6A-372: an image is rebuilt for its NVIDIA module only when the module CONTENT changed. The input record (6A-321) holds the
+# sha256 of the module files; a time stamp alone (DKMS reinstalling through the extramodules symlinks touches the file without
+# changing it) never triggers a rebuild. Without a usable record the old time test is the fallback.
+nvidia_initrd_needs_rebuild() {
+    local kver="$1" k_mod="$2" img="$3" rc
+    if declare -F initramfs_record_check >/dev/null 2>&1; then
+        rc=0
+        initramfs_record_check "${kver}" || rc=$?
+        [ "${rc}" -eq 0 ] && return 1
+        [ "${rc}" -eq 1 ] && return 0
+    fi
+    [ -n "${k_mod}" ] && [ -f "${k_mod}" ] && sudo test "${k_mod}" -nt "${img}"
+}
+
 ensure_cachyos_nvidia_duties() {
     probe_gpu_hardware
     [ "${HAS_NVIDIA}" = "true" ] || return 0
@@ -1958,7 +1972,7 @@ ensure_cachyos_nvidia_duties() {
                 local img="/boot/initramfs-${kver}.img"
                 if ! sudo test -f "${img}"; then
                     missing_kvers+=("${kver}")
-                elif [ -n "${k_mod}" ] && [ -f "${k_mod}" ] && sudo test "${k_mod}" -nt "${img}"; then
+                elif nvidia_initrd_needs_rebuild "${kver}" "${k_mod}" "${img}"; then
                     log_info "Detected initramfs for kernel ${kver} is older than its updated NVIDIA module. Rebuilding..."
                     missing_kvers+=("${kver}")
                 fi
@@ -1968,7 +1982,7 @@ ensure_cachyos_nvidia_duties() {
                 sudo test -f "${img}" || img="/boot/initrd.gz"
                 if ! sudo test -f "${img}"; then
                     missing_kvers+=("${kver}")
-                elif [ -n "${k_mod}" ] && [ -f "${k_mod}" ] && sudo test "${k_mod}" -nt "${img}"; then
+                elif nvidia_initrd_needs_rebuild "${kver}" "${k_mod}" "${img}"; then
                     log_info "Detected initrd for kernel ${kver} is older than its updated NVIDIA module. Rebuilding..."
                     missing_kvers+=("${kver}")
                 fi
