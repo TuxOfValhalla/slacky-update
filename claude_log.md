@@ -1626,3 +1626,11 @@
 - Files: lib/mod_gaming.sh.
 - Verification: bash -n; real read-only gaming scan now lists antigravity, faugus, limine, obs-composite-blur (same 4 as the Rust app), no OBS.
 - Rust: matches exact package names from the repo databases, not affected. Small catalog fix; LTS test week continues.
+
+### 2026-10-25 Build 101_slacky - 6A-374 - plan prompt asks again on a stray answer; honest initramfs and Vulkan layer messages
+- Seen 2026-10-25: stray keys ("7916", typed after a failed password) at "Apply all pending updates ... [Y/n/c(ustom)]" switched the run to step-by-step questions. Now only Y, n or c are answers; anything else asks again ("Please answer Y, n or c.").
+- Seen 2026-10-25: 9 kernels rebuilt "older than its updated NVIDIA module" although every input in their records (vmlinuz, module sha256, modprobe, dracut) was unchanged before and after the run, and the records all pass the check afterwards. Cause not yet proven (INFERENCE: the DKMS bridge briefly changes the module set the fingerprint reads). Now the log gets one diff per kernel when its record does not match, so the next kernel update shows the exact line; the screen message says "The startup image for kernel X no longer matches its driver modules or settings, so it is rebuilt."
+- Gamescope note: an implicit Vulkan layer whose JSON has enable_environment is reported as "only active when ENABLE_GAMESCOPE_WSI=1 is set", not "every game ... will load".
+- Files: bin/slacky-update, lib/mod_nvidia.sh, lib/gnomes_pacman.py.
+- Verification: bash -n, py_compile; prompt loop with stray input; vulkan_layer_enable_env on a package built from the real gamescope layer JSON.
+- Small change; LTS test week continues.

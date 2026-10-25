@@ -1809,7 +1809,13 @@ nvidia_initrd_needs_rebuild() {
         rc=0
         initramfs_record_check "${kver}" || rc=$?
         [ "${rc}" -eq 0 ] && return 1
-        [ "${rc}" -eq 1 ] && return 0
+        if [ "${rc}" -eq 1 ]; then
+            # 6A-374: record why the image no longer matches (one diff in the log), to find avoidable rebuilds
+            { echo "[$(date '+%Y-%m-%d %H:%M:%S')] [INFO] initramfs inputs of ${kver} differ from the record:"
+              diff <(sudo cat -- "$(ss_fp_dir)/${kver}" 2>/dev/null) <(initramfs_inputs_fingerprint "${kver}" 2>&1) | sed 's/^/    /'
+            } >> "${LOG_FILE:-/dev/null}" 2>/dev/null || true
+            return 0
+        fi
     fi
     [ -n "${k_mod}" ] && [ -f "${k_mod}" ] && sudo test "${k_mod}" -nt "${img}"
 }
@@ -1973,7 +1979,7 @@ ensure_cachyos_nvidia_duties() {
                 if ! sudo test -f "${img}"; then
                     missing_kvers+=("${kver}")
                 elif nvidia_initrd_needs_rebuild "${kver}" "${k_mod}" "${img}"; then
-                    log_info "Detected initramfs for kernel ${kver} is older than its updated NVIDIA module. Rebuilding..."
+                    log_info "The startup image for kernel ${kver} no longer matches its driver modules or settings, so it is rebuilt."
                     missing_kvers+=("${kver}")
                 fi
             else
@@ -1983,7 +1989,7 @@ ensure_cachyos_nvidia_duties() {
                 if ! sudo test -f "${img}"; then
                     missing_kvers+=("${kver}")
                 elif nvidia_initrd_needs_rebuild "${kver}" "${k_mod}" "${img}"; then
-                    log_info "Detected initrd for kernel ${kver} is older than its updated NVIDIA module. Rebuilding..."
+                    log_info "The startup image for kernel ${kver} no longer matches its driver modules or settings, so it is rebuilt."
                     missing_kvers+=("${kver}")
                 fi
             fi

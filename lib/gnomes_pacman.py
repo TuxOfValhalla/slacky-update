@@ -6383,6 +6383,31 @@ def archive_host_paths(txz: str) -> List[str]:
     return paths
 
 
+def vulkan_layer_enable_env(txz: str, rel: str) -> str:
+    """6A-374: "VAR=value" from the layer JSON's enable_environment inside the package archive, or "" when unknown."""
+    try:
+        import tarfile, json as _json
+        with tarfile.open(txz) as tf:
+            for name in (rel, "./" + rel):
+                try:
+                    member = tf.getmember(name)
+                except KeyError:
+                    continue
+                fh = tf.extractfile(member)
+                if fh is None:
+                    return ""
+                data = _json.loads(fh.read(1 << 20).decode("utf-8", "replace"))
+                layer = data.get("layer") or {}
+                env = layer.get("enable_environment") or {}
+                if isinstance(env, dict) and env:
+                    k, v = next(iter(env.items()))
+                    return f"{k}={v}"
+                return ""
+    except Exception:
+        return ""
+    return ""
+
+
 def verify_host_paths(txz: str, mode: str = "gnomes", pkgdb: str = FOOTPRINT_PKGDB,
                       scripts: str = FOOTPRINT_SCRIPTS) -> Dict[str, Any]:
     """WP-1 install-time guard. mode "gnomes": no host path may belong to another package (Slackware, curated, other
@@ -6415,7 +6440,13 @@ def verify_host_paths(txz: str, mode: str = "gnomes", pkgdb: str = FOOTPRINT_PKG
         for o in hits:
             clash.setdefault(o, []).append(rel)
         if not hits and rel.startswith(VULKAN_IMPLICIT_LAYER_DIR):
-            warnings.append(f"{rel} adds a Vulkan layer that every game and Vulkan program will load.")
+            # 6A-374: an implicit layer with "enable_environment" is only loaded when that variable is set
+            cond = vulkan_layer_enable_env(txz, rel)
+            if cond:
+                warnings.append(f"{rel} adds a Vulkan layer that is only active when {cond} is set "
+                                f"(the program that needs it sets this itself).")
+            else:
+                warnings.append(f"{rel} adds a Vulkan layer that every game and Vulkan program will load.")
     for owner, rels in sorted(clash.items()):
         if owner.endswith("_gnomes"):
             fix = f"Remove that app first with: gnomes -R {footprint_pkg_base(owner).replace('underpants-', '', 1)}"

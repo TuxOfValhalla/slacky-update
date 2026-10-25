@@ -613,7 +613,13 @@ run_full_update() {
             && rr_log_line "RR-NO-SNAPSHOT offered"
         echo ""
         local reply_batch="Y"
-        read_update_prompt "Apply all pending updates in a single automated pass? [Y/n/c(ustom)]: " "Y" reply_batch
+        # 6A-374: only Y, n or c are answers; anything else (stray keys after a password prompt) asks again
+        while true; do
+            read_update_prompt "Apply all pending updates in a single automated pass? [Y/n/c(ustom)]: " "Y" reply_batch
+            [[ "${reply_batch}" =~ ^[YyJjSsOoNnCc]$ ]] && break
+            [ "${SS_ABORT:-0}" -gt 0 ] && { reply_batch="n"; break; }
+            echo -e "${YELLOW}Please answer Y, n or c.${RESET}"
+        done
         if [[ "${reply_batch}" =~ ^[YyJjSsOo]$ ]]; then
             auto_approve_all=1
             echo -e "${GREEN}Automated batch upgrade engaged.${RESET}\n"

@@ -2131,3 +2131,5 @@
 - 2026-10-23 6A-372 (Build 99): initramfs is rebuilt for the NVIDIA module only when its content changed, never for a time stamp alone.
 
 - 2026-10-25 6A-373 (Build 100): catalog patterns for obs-studio, google-chrome and opera match only the package itself (no false OBS update from obs-studio-browser).
+
+- 2026-10-25 6A-374 (Build 101): plan prompt asks again on a stray answer; log line with the reason when an initramfs record does not match; honest gamescope Vulkan layer note.
