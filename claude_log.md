@@ -1619,3 +1619,10 @@
 - Files: lib/mod_nvidia.sh.
 - Verification: bash -n; stub tests for record current/changed/missing and no record function. Not run on the machine yet.
 - Rust: uses content fingerprints, not affected. Small change, LTS test week continues (owner 2026-10-23, day 2/7).
+
+### 2026-10-25 Build 100_slacky - 6A-373 - catalog patterns match only the package itself (no false OBS update)
+- Seen 2026-10-25: legacy offered "OBS Studio 32.2.2 -> 33.0.0"; the Rust app did not. arch-extra has obs-studio 32.2.2 (installed); the check pattern `obs-studio-[0-9a-zA-Z_.-]*` also matched the different CachyOS package `obs-studio-browser-33.0.0`.
+- Fix: the catalog patterns of obs-studio, google-chrome (could match google-chrome-beta/-unstable) and opera, and the opera install resolver, require the version to start with a digit, like the other rows. The obs-studio and google-chrome install resolvers already did.
+- Files: lib/mod_gaming.sh.
+- Verification: bash -n; real read-only gaming scan now lists antigravity, faugus, limine, obs-composite-blur (same 4 as the Rust app), no OBS.
+- Rust: matches exact package names from the repo databases, not affected. Small catalog fix; LTS test week continues.

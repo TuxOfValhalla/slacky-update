@@ -71,7 +71,7 @@ claude-desktop|Anthropic Claude Desktop (Official Linux Beta App)|tools|claude-d
 claude-code|Anthropic Claude Code (Official Terminal AI Agent)|tools|claude-code-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|||npm,anthropic
 gemini-cli|Google Gemini CLI (Official Terminal AI Agent)|tools|gemini-cli-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|||npm,google
 gnome-disk-utility|GNOME Disk Utility (Storage Management & S.M.A.R.T. + libhandy)|tools|gnome-disk-utility-(?:[0-9]+(?:%3A|:))?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||libhandy-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,libdvdread-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|cachyos-extra-v4,cachyos-extra-v3,arch-extra,cachyos
-obs-studio|OBS Studio (Isolated App-Bundle & Python 3.14)|streaming|obs-studio-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst||python-3\.[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,mbedtls-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,obs-studio-plugin-browser-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,cef-minimal-obs(?:-bin)?-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,libdatachannel-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,libjuice-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,librist-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,libusrsctp-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|arch-extra,arch-core,cachyos
+obs-studio|OBS Studio (Isolated App-Bundle & Python 3.14)|streaming|obs-studio-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||python-3\.[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,mbedtls-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,obs-studio-plugin-browser-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,cef-minimal-obs(?:-bin)?-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,libdatachannel-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,libjuice-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,librist-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst,libusrsctp-[0-9a-zA-Z_\.-]*\.pkg\.tar\.zst|arch-extra,arch-core,cachyos
 obs-vkcapture|OBS VKCapture (+ 32-bit Multilib Vulkan/GL)|streaming|obs-vkcapture-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|lib32-obs-vkcapture-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||cachyos,arch-extra
 obs-move-transition|OBS Move Transition (Source & Scene Motion)|streaming|obs-move-transition(?:-bin|-git)?-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||chaotic-aur,cachyos-extra,cachyos
 obs-source-record|OBS Source Record (Isolated ISO Track Recording)|streaming|obs-source-record(?:-bin|-git)?-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||chaotic-aur,cachyos-extra,cachyos
@@ -83,11 +83,11 @@ obs-teleport|OBS Teleport (Ultra-Low Latency NDI/LAN Stream)|streaming|obs-telep
 discord|Official Discord Linux Client|social|discord-[0-9][a-zA-Z0-9_\.:-]*\.pkg\.tar\.zst|||arch-extra,cachyos
 vesktop|Vesktop (Discord Client with Vencord & Wayland Screen)|social|vesktop(?:-bin)?-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos
 sunshine|Sunshine (Self-Hosted Game Stream Host)|social|sunshine-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||libayatana-appindicator-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,miniupnpc-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,numactl-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos,arch-extra
-google-chrome|Google Chrome (Official Web Browser)|browser|google-chrome-[0-9a-zA-Z_\.:-]*\.pkg\.tar\.zst|||chaotic-aur,chaotic-cdn,cachyos
+google-chrome|Google Chrome (Official Web Browser)|browser|google-chrome-[0-9][a-zA-Z0-9_\.:-]*\.pkg\.tar\.zst|||chaotic-aur,chaotic-cdn,cachyos
 microsoft-edge|Microsoft Edge (Official Web Browser)|browser|microsoft-edge-(?:stable|beta|dev)-bin-[0-9a-zA-Z_\.:-]*\.pkg\.tar\.zst|||chaotic-aur,chaotic-cdn,cachyos
 brave|Brave Browser (Privacy Browser with AdBlock)|browser|brave-bin-(?:1(?:%3A|:))?[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos,chaotic-aur,chaotic-cdn
 zen-browser|Zen Browser (High-Performance Gecko Browser)|browser|zen-browser-bin-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos,chaotic-aur,chaotic-cdn
-opera|Opera Web Browser (Fast & Secure with Built-In Free VPN)|browser|opera-[0-9a-zA-Z_\.:-]*\.pkg\.tar\.zst|||chaotic-aur,chaotic-cdn,cachyos|hidden
+opera|Opera Web Browser (Fast & Secure with Built-In Free VPN)|browser|opera-[0-9][a-zA-Z0-9_\.:-]*\.pkg\.tar\.zst|||chaotic-aur,chaotic-cdn,cachyos|hidden
 sbctl|sbctl (Secure Boot Key Manager & Signer)|bootloader|sbctl-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||arch-extra,cachyos
 limine|Limine Bootloader (>= 12.x EFI & Tools)|bootloader|limine-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos
 limine-entry-tool|Limine Entry Tool (Config & Enrollment Generator)|bootloader|limine-entry-tool-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos
@@ -2551,7 +2551,7 @@ catalog = {
     "mactahoe-cursors": (None, None, None, [], []),
     "whitesur-icons": (None, None, None, [], []),
     "whitesur-cursors": (None, None, None, [], []),
-    "opera": (r'href=[\'\"]?(?:\./)?(opera-([0-9a-zA-Z_\.:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "chaotic-cdn", "cachyos"], []),
+    "opera": (r'href=[\'\"]?(?:\./)?(opera-([0-9][a-zA-Z0-9_\.:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["chaotic-aur", "chaotic-cdn", "cachyos"], []),
     "gnome-disk-utility": (r'href=[\'\"]?(?:\./)?(gnome-disk-utility-(?:[0-9]+%3A)?([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
         r'href=[\'\"]?(?:\./)?(libhandy-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(?:\./)?(libdvdread-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?'
