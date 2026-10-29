@@ -2133,3 +2133,5 @@
 - 2026-10-25 6A-373 (Build 100): catalog patterns for obs-studio, google-chrome and opera match only the package itself (no false OBS update from obs-studio-browser).
 
 - 2026-10-25 6A-374 (Build 101): plan prompt asks again on a stray answer; log line with the reason when an initramfs record does not match; honest gamescope Vulkan layer note.
+
+- 2026-10-29 6A-375 (Build 102): the check reads every source (no cap of 10) and uses the Arch mirror when archlinux.org does not answer; never a silent old answer.

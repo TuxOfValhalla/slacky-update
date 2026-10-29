@@ -993,7 +993,8 @@ for pid in detected_installed:
                 if u:
                     needed_repos.add(u)
 
-needed_repos_list = list(needed_repos)[:10]
+# 6A-375: every needed source is read (a cap of 10 on an unordered set dropped random sources in each run)
+needed_repos_list = sorted(needed_repos)
 with concurrent.futures.ThreadPoolExecutor(max_workers=min(max(len(needed_repos_list), 1), 8)) as ex:
     repo_contents = dict(zip(needed_repos_list, ex.map(lambda u: fetch_url_cached(u, cache_dir), needed_repos_list)))
 
@@ -1234,10 +1235,14 @@ def check_single_package(pid, cur_ver):
 
     # Fast Arch Linux JSON API check for Arch Extra / Multilib packages
     if any(r in ("arch-extra", "arch-core", "arch-multilib") for r in r_list):
+        _arch_api_failed = False
+        _arch_found = False
         for repo_cand in ("extra", "multilib", "core"):
             try:
                 api_url = f"https://archlinux.org/packages/{repo_cand}/{ARCH_API_ARCH.get(pid, 'x86_64')}/{ARCH_API_NAMES.get(pid, pid)}/json/"
                 raw_json = fetch_url_cached(api_url, cache_dir, ttl=1800)
+                if api_url in FAILED_FETCH:
+                    _arch_api_failed = True
                 if raw_json:
                     LOOKED.add(pid)
                     data = json.loads(raw_json)
@@ -1246,9 +1251,32 @@ def check_single_package(pid, cur_ver):
                         cv = clean_pkg_version(pid, v)
                         if cv:
                             main_candidates.append(cv)
+                            _arch_found = True
                             break
             except Exception:
                 pass
+        # 6A-375: when archlinux.org could not be asked, the Arch mirror listing (same repos) gives the version; if that
+        # cannot be read either, the item is "could not check" (never a silent old answer)
+        if _arch_api_failed and pat:
+            _mirror_ok = False
+            for rk in ("arch-extra", "arch-core", "arch-multilib"):
+                if rk not in r_list:
+                    continue
+                base_u = repos.get(rk, "")
+                html = fetch_url_cached(base_u, cache_dir) if base_u else ""
+                if not html or base_u in FAILED_FETCH:
+                    continue
+                _mirror_ok = True
+                LOOKED.add(pid)
+                try:
+                    for m in re.findall(pat, html):
+                        cv = clean_pkg_version(pid, m[0] if isinstance(m, tuple) else m)
+                        if cv:
+                            main_candidates.append(cv)
+                except Exception:
+                    pass
+            if not _mirror_ok:
+                INCOMPLETE.add(pid)
 
     if pat:
         for rk in expand_repos_for_tier(r_list, cpu_tier):

@@ -1634,3 +1634,9 @@
 - Files: bin/slacky-update, lib/mod_nvidia.sh, lib/gnomes_pacman.py.
 - Verification: bash -n, py_compile; prompt loop with stray input; vulkan_layer_enable_env on a package built from the real gamescope layer JSON.
 - Small change; LTS test week continues.
+
+### 2026-10-29 Build 102_slacky - 6A-375 - the update check reads every source and never answers silently from an old Arch lookup
+- Seen 2026-10-29: OBS Studio 33.0.0 was in Arch extra (the Rust app listed it), legacy said nothing. archlinux.org's JSON API failed (SSL EOF) and the saved answer (32.2.2) was used without marking the item as could-not-check (6A-371 only covered repo listings). Also found: the scan read only the first 10 of a randomly ordered set of sources (`list(needed_repos)[:10]`), so random sources were skipped per run.
+- Fix (check scan, lib/mod_gaming.sh): all needed sources are read (sorted, no cap); when the Arch API could not be asked, the Arch mirror listing (geo.mirror.pkgbuild.com, same pattern) gives the version; if that also fails the item counts as could-not-check.
+- Verification: bash -n, Python ast; real read-only scan twice while archlinux.org was failing: obs-studio 32.2.2 -> 33.0.0 listed both times, next to faugus, google-chrome, hyprland-noctalia, obs-advanced-scene-switcher.
+- Rust: reads the repo databases (arch-extra.db), not the Arch API; the same audit is running there. Small check fix; LTS test week continues.
