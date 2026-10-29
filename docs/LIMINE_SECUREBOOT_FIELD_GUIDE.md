@@ -188,7 +188,7 @@ Now run:
 ```bash
 sudo slacky-update --limine
 ```
-Slacky-Update will detect the properly sized `/boot` partition, install Limine UEFI binaries, autogenerate the two-zone `limine.conf`, calculate BLAKE2B hashes, and create the UEFI NVRAM boot entry!
+and choose option 1 (`Install / Re-deploy Limine Bootloader (Coexistence Mode)`). Slacky-Update will detect the properly sized `/boot` partition, install Limine UEFI binaries, autogenerate the two-zone `limine.conf`, calculate BLAKE2B hashes, and create the UEFI NVRAM boot entry!
 
 ---
 
@@ -206,27 +206,25 @@ If you choose not to configure partitions manually, `slacky-update` includes a b
 ### Scenario A: In-Place ESP Promotion (`/boot/efi` -> `/boot`)
 * **Detection:** `/boot/efi` is mounted, is `vfat`, and is $\ge 3500\text{ MB}$, while `/boot` is just a standard folder on root.
 * **Action:**
-  1. Prompts the user with a visual confirmation dialog.
-  2. Checks for `chattr +i` immutability flags on `/boot` and unsets them.
-  3. Creates a timestamped safety backup: `/etc/fstab.bak.<timestamp>`.
-  4. Copies all kernel files and System.maps from `/boot/*` into `/boot/efi/`.
-  5. Updates `/etc/fstab`: changes `/boot/efi` to `/boot`.
-  6. Enforces `SOURCE_TREE="/var/tmp/slacky-initrd-tree"` in `/etc/mkinitrd.conf`.
-  7. Unmounts `/boot/efi` and mounts the partition directly at `/boot`.
+  1. Asks for confirmation (`[y/N]`; no answer means no).
+  2. Creates a timestamped safety backup: `/etc/fstab.bak.<timestamp>`.
+  3. Copies all kernel files and System.maps from `/boot/*` into `/boot/efi/` and checks the copy before anything else changes.
+  4. Updates `/etc/fstab`: changes `/boot/efi` to `/boot`.
+  5. Enforces `SOURCE_TREE="/var/tmp/slacky-initrd-tree"` in `/etc/mkinitrd.conf`.
+  6. Unmounts `/boot/efi` and mounts the partition directly at `/boot` (if that mount fails, the old `/etc/fstab` is restored).
 
 ### Scenario C: New Dedicated ESP Partition Adoption
-* **Detection:** `/boot/efi` is too small (< 3500 MB) or missing, and a spare unformatted/clean partition ($\ge 3500\text{ MB}$) is selected by the user.
+* **Detection:** `/boot/efi` is too small (< 3500 MB) or missing, and a spare partition ($\ge 3500\text{ MB}$) that is either empty (no filesystem at all) or already FAT32 is selected by the user.
 * **Action:**
   1. Checks partition sizes and presents interactive selection menu.
-  2. Sets GPT partition type to `ef00` (EFI System Partition).
-  3. Formats the target with `mkfs.vfat -F32 -n "LIMINE_BOOT"`.
-  4. Temporarily mounts the new partition at `/mnt/slacky_new_esp_XXXXXX`.
-  5. Unsets immutable flags on `/boot` if present.
-  6. Copies all kernels and initramfs files from `/boot/*`.
-  7. **Preserves Multiboot:** Copies `/boot/efi/EFI/*` into the new partition so Windows Boot Manager and GRUB are kept intact!
-  8. Creates a timestamped backup of `/etc/fstab` and inserts the new UUID for `/boot`.
-  9. Sets `SOURCE_TREE="/var/tmp/slacky-initrd-tree"` in `/etc/mkinitrd.conf`.
-  10. Unmounts temporary and old paths, then mounts the new ESP at `/boot`.
+  2. An empty partition is formatted with `mkfs.vfat -F32 -n "ESP_BOOT"` only after you type `ERASE`; an existing FAT32 partition is kept (its files stay) after a `[y/N]` confirmation. A partition with any other filesystem is never formatted.
+  3. Sets GPT partition type to `ef00` (EFI System Partition) on GPT disks.
+  4. Temporarily mounts the new partition at `/mnt/slacky_new_boot_<PID>`.
+  5. Copies all kernels and initramfs files from `/boot/*` and checks the copy.
+  6. **Preserves Multiboot:** Copies `/boot/efi/EFI/*` into the new partition so Windows Boot Manager and GRUB are kept intact!
+  7. Creates a timestamped backup of `/etc/fstab`, comments out the old `/boot/efi` and `/boot` lines and adds the new UUID for `/boot`.
+  8. Sets `SOURCE_TREE="/var/tmp/slacky-initrd-tree"` in `/etc/mkinitrd.conf`.
+  9. Unmounts temporary and old paths, then mounts the new ESP at `/boot` (if that mount fails, the old `/etc/fstab` is restored).
 
 ---
 
@@ -271,7 +269,7 @@ term_foreground: 55ffff
 > By setting `split_lock_mitigate=0`, the Linux kernel skips the artificial CPU throttling penalty, restoring buttery-smooth framerates.
 
 In Slacky-Update, you can toggle `split_lock_mitigate=0` directly via:
-* **Interactive TUI:** Run `slacky-update --limine-cmdline` or navigate to Limine Hub -> Option 4 (`⚙️ Configure Kernel Boot Parameters`).
+* **Interactive TUI:** Run `slacky-update --cmdline` or navigate to Limine Hub -> Option 4 (`⚙️ Configure Kernel Boot Parameters`).
 * **Manual CMDLINE:** Add `split_lock_mitigate=0` to the CMDLINE flags in `/boot/limine.conf`.
 
 ---
@@ -398,8 +396,8 @@ If your Slackware system is formatted with Btrfs, `slacky-update` includes a bui
   * **Retention Policies**:
     * **`Daily Spread` (Recommended)**: Selects 1 snapshot per distinct calendar day across the past week, providing a **full 7-day rollback safety net** rather than only the last few hours.
     * **`Recent Sequence`**: Sequence of the N most recent snapshots.
-    * **`Important Only`**: Milestones and manual pre/post upgrade snapshots.
-  * **Configurable Depth**: Choose between 3, 5, 7, or 10 bootable entries in the menu.
+    * **`Important / Manual Only`** (default until you pick another): Milestones and manual pre/post upgrade snapshots.
+  * **Configurable Depth**: Choose between 3, 5 (default), 7, or 10 bootable entries in the menu.
 
 * **Opt-In & ESP Flash Wear Protection**:
   * **Strictly Opt-In**: Background sync is disabled by default (`ENABLE_AUTO_SNAPPER_SYNC=no` in `/etc/default/limine`).
@@ -411,14 +409,14 @@ If your Slackware system is formatted with Btrfs, `slacky-update` includes a bui
 ## 10. 🚑 Emergency Recovery & Zero-Destruction Coexistence
 
 `slacky-update` follows a strict **Zero-Destruction policy**:
-* **GRUB Coexistence**: Your original Slackware GRUB installation (`/EFI/Slackware/grubx64.efi`) is never deleted and is registered as `Boot0005` in UEFI NVRAM.
+* **GRUB Coexistence**: Your original Slackware GRUB installation (`/EFI/Slackware/grubx64.efi`) is never deleted and keeps its own entry in UEFI NVRAM.
 * **UEFI One-Shot Boot Menu**: Tap `F8` (ASUS), `F11` (MSI/ASRock), or `F12` (Gigabyte) during boot to select between **Limine Slackware** and **GRUB Bootloader**.
 * **Self-Healing Backup Restoration**:
   If `/boot` is ever wiped or corrupted, restore your verified signed setup with:
   ```bash
   sudo slacky-update --restore-limine
   ```
-  *(Or manually restore from `~/.limine_backup/`)*.
+  *(Or manually restore from the root-owned backup in `/var/cache/slacky-update/limine_backup/`)*.
 
 ### The Shim/MOK path is frozen at pinned Fedora versions (read this before a firmware or Windows update)
 

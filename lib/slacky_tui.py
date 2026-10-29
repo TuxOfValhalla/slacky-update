@@ -1224,6 +1224,9 @@ class SimpleSelectTUI(SlackyTUI):
             return ""
 
         raw_str = str(raw).strip()
+        # 6A-376: callers that build badges in bash pass the escape as the text "\033" (not interpreted by echo -e);
+        # turn it into the real escape so the colour is shown instead of the code in capitals
+        raw_str = raw_str.replace('\\033', '\x1b').replace('\\x1b', '\x1b').replace('\\e[', '\x1b[')
         if '\x1b' in raw_str:
             return raw_str if not self.ascii_only else strip_ansi(raw_str)
 

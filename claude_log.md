@@ -1640,3 +1640,9 @@
 - Fix (check scan, lib/mod_gaming.sh): all needed sources are read (sorted, no cap); when the Arch API could not be asked, the Arch mirror listing (geo.mirror.pkgbuild.com, same pattern) gives the version; if that also fails the item counts as could-not-check.
 - Verification: bash -n, Python ast; real read-only scan twice while archlinux.org was failing: obs-studio 32.2.2 -> 33.0.0 listed both times, next to faugus, google-chrome, hyprland-noctalia, obs-advanced-scene-switcher.
 - Rust: reads the repo databases (arch-extra.db), not the Arch API; the same audit is running there. Small check fix; LTS test week continues.
+
+### 2026-10-29 Build 103_slacky - 6A-376 - kernel picker shows coloured status badges again (cosmetic)
+- The kernel picker showed "[\033[1;32M[INSTALLED: 7.3.0-5]\033[0M]": the badges are built in bash with a literal "\033" text, the TUI did not see a real escape, upper-cased the whole badge and printed the codes. The TUI now turns "\033" / "\x1b" / "\e[" text into the real escape before it looks at the badge, so the green/cyan colour is shown.
+- Files: lib/slacky_tui.py.
+- Verification: py_compile; get_badge on the picker's exact strings returns the coloured badge.
+- Cosmetic; LTS test week continues.
