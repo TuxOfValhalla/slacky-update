@@ -56,3 +56,13 @@ slackbuild/commit_legacy.md
 AGENTS.md
 CLAUDE.md
 .claude/
+
+# Internal specs, shared test fixtures and release notes: kept locally, not published (owner 2026-10-29)
+docs/gnomes_spec.md
+docs/runtime_spec.md
+docs/runtime_refresh_spec.md
+docs/spidersense_spec.md
+docs/healing_legacy_9A-9D.md
+docs/runtime_refresh_fixtures/
+docs/runtime_spec_fixtures/
+docs/release_notes*

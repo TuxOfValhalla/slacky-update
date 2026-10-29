@@ -1,8 +1,0 @@
-{
-  "display": "due",
-  "offerable": true,
-  "read": "valid",
-  "rewrite_keeps": [
-    "future_field"
-  ]
-}

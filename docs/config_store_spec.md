@@ -1,8 +1,7 @@
 # Config base store (format 1, 2026-10-14)
 
 Shared by slacky-update (legacy) and slacky-update-rs (Rust). Names files, fields and rules; no code. Both apps MUST read
-and write exactly this layout (legacy shares only this spec, never code). Part of the Spider-Sense contract
-(`docs/spidersense_spec.md`, section 13).
+and write exactly this layout (legacy shares only this spec, never code). Part of the Spider-Sense contract.
 
 ## 1. Purpose
 
