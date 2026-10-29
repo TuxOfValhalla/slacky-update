@@ -535,7 +535,7 @@ def looks_like_sbo_changelog(data):
 fetched = False
 for cl_url in changelog_urls:
     try:
-        req = urllib.request.Request(cl_url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) Slacky-Update/1.0_RC2"})
+        req = urllib.request.Request(cl_url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) Slacky-Update/1.0_LTS"})
         if os.path.exists(cl_file) and os.path.getsize(cl_file) > 0:
             mtime = os.path.getmtime(cl_file)
             req.add_header("If-Modified-Since", time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime(mtime)))

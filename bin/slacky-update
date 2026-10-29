@@ -7,7 +7,7 @@ export PYTHONSAFEPATH=1
 # 6A-316 (N0d): a wrapped desktop session (LD_LIBRARY_PATH from a runtime) must not make host tools load foreign libraries
 unset LD_LIBRARY_PATH LD_PRELOAD LD_AUDIT LD_BIND_NOW
 
-CURRENT_VERSION="1.0_RC2"
+CURRENT_VERSION="1.0_LTS"
 RELEASE_CODENAME="Dark Star"
 
 # --- [ DYNAMIC HiDPI & MULTI-MONITOR DISPLAY SCALING ] ---

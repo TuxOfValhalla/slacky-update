@@ -1427,7 +1427,7 @@ class GnomesPacmanEngine:
     def sync_repositories(self, force: bool = False, verbose: bool = True) -> Dict[str, int]:
         """Download and cache all active repository sync databases in parallel with If-Modified-Since."""
         results: Dict[str, int] = {}
-        headers_base = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) Slacky-Update/1.0_RC2 UnderpantsGnomes"}
+        headers_base = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) Slacky-Update/1.0_LTS UnderpantsGnomes"}
 
         active_repos = [r for r in self.repositories if r["name"] not in BLACKLISTED_REPOS]
         now = time.time()
@@ -3282,7 +3282,7 @@ exec "${{TARGET_BIN}}" "$@"
         total_bytes_expected = sum(int(p.get("CSIZE", 15 * 1024 * 1024)) for p in pkgs)
         downloaded_results: List[Tuple[Dict[str, Any], str]] = []
 
-        headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) Slacky-Update/1.0_RC2 UnderpantsGnomes"}
+        headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) Slacky-Update/1.0_LTS UnderpantsGnomes"}
         lock = threading.Lock()
         slot_lock = threading.Lock()
         print_lock = threading.Lock()
@@ -6838,7 +6838,7 @@ def runtime_refresh_clean(path: str) -> int:
 def main():
     """CLI dispatcher for shell integration and testing."""
     if len(sys.argv) < 2:
-        print("Underpants Gnomes Pacman Engine v1.0_RC2 ('Dark Star')")
+        print("Underpants Gnomes Pacman Engine v1.0_LTS ('Dark Star')")
         print("Usage: gnomes_pacman.py [sync|search|info|deps|transmute|runtime|heal|url|check-host|list-repos|list-installed] [args...]")
         sys.exit(0)
 
