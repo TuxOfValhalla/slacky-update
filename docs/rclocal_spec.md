@@ -1,12 +1,13 @@
 # rc.local block spec (shared by slacky-update and slacky-update-rs; spec only, never shared code)
 
-Source: Claude subagent design + temp-dir tests, 2026-10-12. Status: PROPOSAL, not implemented (roadmap 6A-6c).
+Source: Claude subagent design + temp-dir tests, 2026-10-12. Status: implemented in legacy (6A-6c): the helpers are printed into
+each curated package's doinst.sh / douninst.sh by `slacky_rc_helpers` in `lib/mod_gaming.sh`; gnomes service packages keep
+their own marker format with the upgrade guard (`lib/gnomes_pacman.py`). Section 1 describes the state before that change.
 
 # rc.local / rc.local_shutdown block recipe (read-only design, tested in mktemp dir)
 
-Code:  .../scratchpad/rclocal_funcs.sh   (POSIX sh, ~100 lines: su_rc_add / su_rc_remove / su_rc_migrate + helpers)
-Tests: .../scratchpad/rclocal_test.sh    (run: env -u LD_LIBRARY_PATH sh rclocal_test.sh; all cases PASS, temp dir auto-deleted)
-(scratchpad = /tmp/claude-1000/-home-tux-SSD2-Kake-07-Software-Dev-06-slacky-update-rs/bf671cc5-8391-475e-98d0-c04577ae43e5/scratchpad)
+Code:  `lib/mod_gaming.sh` (`slacky_rc_helpers`: su_rc_add / su_rc_remove / su_rc_migrate + helpers; POSIX sh). The
+       design-time copy (rclocal_funcs.sh) and its test script (rclocal_test.sh) were temporary and are not kept.
 
 ## 1. Current state
 FACT mod_gaming.sh doinst (L6320-6470), per daemon, appended with `cat << 'RC_EOF' >>`, guarded by `grep -q "rc.NAME" file`:
@@ -62,7 +63,7 @@ Consequence: douninst cannot tell upgrade from removal by arguments. Reliable di
   leaves blocks (harmless: guarded by `[ -x ]`, so a dangling block is a no-op, never an error).
   Safety property worth stating: even if a removal is missed, the `if [ -x ... ]` guard makes the leftover inert.
 
-## 2. Recipe (implemented in rclocal_funcs.sh)
+## 2. Recipe (implemented in `lib/mod_gaming.sh`, `slacky_rc_helpers`)
 Marker pair, column 0, one name per block:
     # >>> slacky-update:NAME >>>
     <self-contained shell: complete if/fi, no unclosed quote/heredoc>

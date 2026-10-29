@@ -36,7 +36,7 @@
    - [NVIDIA CachyOS Master Suite & DKMS](#nvidia-cachyos-master-suite--dkms)
    - [AMD ROCm & HIP Creator Toolkit](#amd-rocm--hip-creator-toolkit)
 7. [7. NVIDIA 615+ VRAM Booster & Memory Architecture](#7-nvidia-615-vram-booster--memory-architecture)
-8. [8. The Underpants Gnomes Workstation Suite](#8-the-underpants-gnomes-workstation-suite-52-components--gnomes-cli)
+8. [8. The Underpants Gnomes Workstation Suite](#8-the-underpants-gnomes-workstation-suite-70-components--gnomes-cli)
    - [Pacman Command-Line Parity](#pacman-command-line-parity-gnomes)
    - [Curated Hyprland Desktop Suite](#curated-hyprland-desktop-suite-hyprland-noctalia--hyprland-core)
    - [OBS Creator Suite & DKMS Hardware Driver Fleet](#obs-creator-suite--dkms-hardware-driver-fleet)
@@ -125,12 +125,12 @@ To build and install in a single automated pass without leaving lingering build 
 
 **GitHub One-Liner:**
 ```bash
-git clone https://github.com/TuxOfValhalla/slacky-update.git && cd slacky-update && bash slackbuild/slacky-update.SlackBuild && sudo upgradepkg --reinstall --install-new /tmp/slacky-update-*.txz && slacky-update
+git clone https://github.com/TuxOfValhalla/slacky-update.git && cd slacky-update && bash slackbuild/slacky-update.SlackBuild && sudo upgradepkg --reinstall --install-new "$(ls -t ../slacky-updates_releases/slacky-update-[0-9]*.txz | head -n 1)" && slacky-update
 ```
 
 **Codeberg One-Liner:**
 ```bash
-git clone https://codeberg.org/TuxOfValhalla/slacky-update.git && cd slacky-update && bash slackbuild/slacky-update.SlackBuild && sudo upgradepkg --reinstall --install-new /tmp/slacky-update-*.txz && slacky-update
+git clone https://codeberg.org/TuxOfValhalla/slacky-update.git && cd slacky-update && bash slackbuild/slacky-update.SlackBuild && sudo upgradepkg --reinstall --install-new "$(ls -t ../slacky-updates_releases/slacky-update-[0-9]*.txz | head -n 1)" && slacky-update
 ```
 
 ### Manual Source Build (`.txz`)
@@ -139,13 +139,13 @@ If you prefer building from a persistent local repository:
 ```bash
 # 1. Clone repository
 git clone https://github.com/TuxOfValhalla/slacky-update.git
-cd slacky-update/slackbuild
+cd slacky-update
 
-# 2. Build the package via SlackBuild
-sudo ./slacky-update.SlackBuild
+# 2. Build the package via SlackBuild (as a normal user; the package lands in ../slacky-updates_releases/)
+bash slackbuild/slacky-update.SlackBuild
 
 # 3. Install or upgrade the package
-sudo upgradepkg --install-new --reinstall /tmp/slacky-update.txz
+sudo upgradepkg --reinstall --install-new "$(ls -t ../slacky-updates_releases/slacky-update-[0-9]*.txz | head -n 1)"
 ```
 
 ### Starting the Background System Monitor
@@ -169,25 +169,25 @@ The primary synchronization workflow (`slacky-update` option 1 or `slacky-update
 [1/7] Multi-Worker Pre-fetch (10 Parallel Streams) ➔ Warm-Cache Handoff
 [2/7] Slackware Core Upgrade via slackpkg (Atomic Multi-Pass Resume)
 [3/7] CachyOS Kernel Synchronization & CPU Microarchitecture Tiering
-[4/7] NVIDIA / ROCm Driver Pipeline (DKMS Build & Flatpak GL Sync)
+[4/7] Flatpak Updates (with Flatpak NVIDIA GL Sync)
 [5/7] SBo SlackBuilds Pipeline via sbotools
-[6/7] Underpants Gnomes Workstation & Gaming Suite Verification
-[7/7] Post-Upgrade Matrix Pipeline (5-Step Deterministic Chain)
+[6/7] Curated Software & Underpants Gnomes Package Updates
+[7/7] NVIDIA Driver Check ➔ Post-Upgrade Matrix Pipeline (5-Step Deterministic Chain)
 ```
 
 ### Deterministic 5-Step Post-Upgrade Pipeline
 When package or kernel changes occur, Slacky-Update executes an atomic, sequential 5-step pipeline:
 ```
-  [1/5] CachyOS NVIDIA Module Match     : Active driver modules linked in kernel tree
-  [2/5] Module Dependency Tree (depmod) : Symbol references resolved across all modules
-  [3/5] Dracut Initramfs Generation     : Live animated ticker + Hardware Guard (>=12 threads, >=16GB RAM)
-  [4/5] Limine Config & BLAKE2B Hash    : BLAKE2B enrolled for tamper-proof boot
-  [5/5] Secure Boot MOK / sbctl Signing : Unified cryptographic UEFI signature validation
+  [1/5] NVIDIA Driver & DKMS Modules   : Driver modules matched to every installed kernel
+  [2/5] Secure Boot MOK Signing        : Out-of-tree modules signed with your MOK key
+  [3/5] Dracut Initramfs Generation    : Live animated ticker + Hardware Guard (parallel builds need >=12 threads, ~16GB RAM)
+  [4/5] Secure Boot Kernel Signing     : Kernels signed with sbctl (when sbctl keys are set up)
+  [5/5] Limine Matrix & Boot Sync      : limine.conf regenerated, BLAKE2B enrolled & EFI signed
 ```
 
 ### Key Synchronization Features
-1. **10-Worker Parallel Pre-fetcher**: Accelerates downloads using 10 concurrent HTTP/FTP worker streams (`SLACKY_PREFETCH_JOBS=10`). Downloads `.txz` packages and `.asc` GPG signatures into a warm cache with resume capability (`-C -`), cutting download phases by 5–10×.
-2. **Multi-Pass Resume Engine**: If foundational packages (`slackpkg`, `pkgtools`, `glibc-solibs`, or `ca-certificates`) upgrade mid-transaction, Slacky-Update detects the toolchain replacement and seamlessly resumes the transaction without split-brain failures.
+1. **10-Worker Parallel Pre-fetcher**: Accelerates downloads using 10 concurrent HTTP/FTP worker streams (`SLACKY_PREFETCH_JOBS=10`). Downloads `.txz` packages and `.asc` GPG signatures into slackpkg's cache (`/var/cache/packages/`) with resume capability (`-C -`), cutting download phases by 5–10×.
+2. **Multi-Pass Resume Engine**: If foundational packages (`slackpkg`, `pkgtools`, `glibc-solibs`, or `ca-certificates`) upgrade mid-transaction, Slacky-Update detects the toolchain replacement and seamlessly resumes the transaction (up to 3 passes) without split-brain failures.
 3. **Smart `.new` Configuration Reconciliation**: Scans `/etc/` post-upgrade and categorizes `.new` files into 4 groups (*New Configurations*, *Identical Duplicates*, *Unmodified Defaults*, *Custom User Configurations*) with batch actions, eliminating 95% of upgrade prompt fatigue.
 4. **Smart Reboot Evaluator**: Inspects updated package manifests to detect if the active running kernel, glibc, or NVIDIA driver was updated, prompting for a reboot only when strictly necessary.
 
@@ -208,10 +208,10 @@ Slacky-Update manages `/boot/limine.conf` using a strict Two-Zone architecture:
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                           LIMINE.CONF ARCHITECTURE                          │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│ ZONE A: USER-CONTROLLED HEADER (Preserved Across All Updates)               │
+│ ZONE A: USER CUSTOMIZATION & THEME ZONE (Preserved Across All Updates)      │
 │ - Timeout, default entry, resolution, graphical wallpaper, theme colors     │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│ ### --- SLACKY-UPDATE DYNAMIC KERNEL ZONE (DO NOT EDIT BELOW) --- ###      │
+│ # ⚡ AUTOGENERATED SLACKWARE MATRIX (DO NOT EDIT BELOW THIS LINE)           │
 │ ZONE B: AUTOMATED KERNEL ENTRIES (Generated & Verified Atomically)          │
 │ - CachyOS BORE / LTS kernels with exact BLAKE2B hashes                       │
 │ - Stock Slackware kernels with Dracut initramfs & microcode modules         │
@@ -225,7 +225,7 @@ Slacky-Update enrolls BLAKE2B cryptographic hashes directly into boot entries:
 ```ini
 /Slackware Linux (CachyOS BORE)
     protocol: linux
-    kernel_path: boot():/vmlinuz-linux-cachyos-bore#2c74e8a104...
+    path: boot():/vmlinuz-linux-cachyos-bore#2c74e8a104...
     module_path: boot():/initramfs-linux-cachyos-bore.img#9bf8a02c...
     cmdline: root=UUID=xxxx-xxxx-xxxx rw quiet splash
 ```
@@ -233,10 +233,10 @@ If an unverified binary modification occurs on disk, Limine detects the hash mis
 
 ### Interactive Kernel CMDLINE & Gaming Hub (`slacky-update --cmdline`)
 * **Root Protection**: Fixed filesystem root parameters (`root=UUID=...`) are automatically protected.
-* **Smart Parameter Toggles**: Quick toggles for `quiet splash`, `nvidia_drm.modeset=1`, AMD LACT GPU overclocking (`amdgpu.ppfeaturemask=0xffffffff`), `nowatchdog`, USB autosuspend, IOMMU/VFIO passthrough, ZSWAP memory compression, and Universal Split Lock Protection (`split_lock_mitigate=0 split_lock_detect=off`).
+* **Smart Parameter Toggles**: Quick toggles for `quiet splash`, `nvidia_drm.modeset=1`, AMD LACT GPU overclocking (`amdgpu.ppfeaturemask=0xffffffff`), `nowatchdog`, USB autosuspend, Hypervisor/VM UMIP fix (`clearcpuid=umip`), IOMMU/VFIO passthrough, ZSWAP memory compression, skipping the initramfs FSCK (`fsck.mode=skip`), and Universal Split Lock Protection (`split_lock_mitigate=0 split_lock_detect=off`).
 
 ### Windows 11 Dual-Booting & UEFI Secure Boot
-With Slacky-Update's `sbctl` and MOK (Machine Owner Key) integration, you can keep **Secure Boot permanently enabled in BIOS** and boot freely between Windows 11 and Slackware Linux without security warnings. Slacky-Update provides a guided, streamlined setup for key generation and enrollment—which operates fully automatically on all subsequent kernel builds once configured.
+With Slacky-Update's `sbctl` and MOK (Machine Owner Key) integration (Main Menu `[7]`, *Secure Boot MOK Configuration*, or `slacky-update --sb`), you can keep **Secure Boot permanently enabled in BIOS** and boot freely between Windows 11 and Slackware Linux without security warnings. Slacky-Update provides a guided, streamlined setup for key generation and enrollment—which operates fully automatically on all subsequent kernel builds once configured.
 
 > [!TIP]
 > For a comprehensive A–Z manual partitioning guide, ESP requirements ($\ge 3.5\text{ GB}$), and migration scenarios, see **[docs/LIMINE_SECUREBOOT_FIELD_GUIDE.md](LIMINE_SECUREBOOT_FIELD_GUIDE.md)**.
@@ -252,15 +252,15 @@ With Slacky-Update's `sbctl` and MOK (Machine Owner Key) integration, you can ke
 Slacky-Update provides full lifecycle management for upstream CachyOS high-performance Linux kernels compiled with aggressive `-O3` optimizations, `futex2` fast synchronization, and modern scheduling architectures.
 
 ### CPU Microarchitecture Auto-Detection
-Slacky-Update inspects your CPU microarchitecture via `/proc/cpuinfo` and `gcc -march=native -Q --help=target`:
-* **Tier 4 (`x86_64_v4` / `znver4`)**: AVX-512, AVX-VNNI, BFLOAT16 (AMD Zen 4/5, Intel 12th–15th+ Gen Core).
-* **Tier 3 (`x86_64_v3`)**: AVX, AVX2, FMA, BMI1/2 (AMD Zen 1–3, Intel Haswell through 11th Gen Core).
-* **Tier 2 (`x86_64_v2`)**: SSE4.2, SSSE3 (Older 64-bit x86 processors).
+Slacky-Update inspects your CPU microarchitecture via the `/proc/cpuinfo` flags:
+* **Tier 4 (`x86_64_v4` / `znver4`)**: AVX-512 (`znver4` for AMD Zen 4/5; `x86_64_v4` for other AVX-512 CPUs).
+* **Tier 3 (`x86_64_v3`)**: AVX2, FMA, BMI1/2 (AMD Zen 1–3, Intel Haswell and newer without AVX-512).
+* **Generic (`x86_64`)**: Older 64-bit x86 processors.
 
 ### Kernel Flavors & Retention Rules
-* **9 Specialized Schedulers**: Deploys upstream CachyOS kernels across `standard` (`linux-cachyos`), `bore` (Burst-Oriented Response Enhancer), `lto` (`bore-lto` Clang LTO optimized), `eevdf` (Earliest Eligible Virtual Deadline First), `bmq` (Project C BitMap Queue), `deckify` (Steam Deck & handheld gaming profile), `rt-bore` (PREEMPT_RT Real-Time low-latency), `rc` (Release Candidate), and `lts` (Long-Term Support fallback).
+* **9 Specialized Schedulers**: Deploys upstream CachyOS kernels across `standard` (`linux-cachyos`), `bore` (Burst-Oriented Response Enhancer), `lto` (`bore-lto` Clang LTO optimized), `eevdf` (Earliest Eligible Virtual Deadline First), `bmq` (Project C BitMap Queue), `deckify` (Steam Deck & handheld gaming profile), `rt-bore` (PREEMPT_RT Real-Time low-latency), `rc` (Release Candidate), and `lts` (Long-Term Support fallback). The Kernel Picker (Kernel menu `[2]`) also offers Arch Linux `linux-zen` and vanilla `linux` (11 flavors in total).
 * **Smart Realtek 2.5GbE (`r8125`) Auto-Sync**: Probes for RTL8125 / Killer E3100X controllers (`10ec:8125` / `10ec:3000`) and seamlessly downloads precompiled CachyOS `r8125` driver packages alongside kernel upgrades.
-* **Retention Safeguards**: Automatically retains the **2 newest standard/BORE kernels** and 1 newest RC kernel, while strictly shielding the active booted kernel (`uname -r`).
+* **Retention Safeguards**: Automatically retains the **2 newest kernels of each flavor** and 1 newest RC kernel, while strictly shielding the active booted kernel (`uname -r`).
 
 ---
 
@@ -309,14 +309,12 @@ For creative professionals using AMD Radeon GPUs in DaVinci Resolve Studio:
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-* **KDE Plasma Dynamic VRAM Leak Guard & Memory Compaction**:
-  * **`underpants-kwin-dynamic-vram-fix`**: Directly hooks into KWin Wayland compositor surface allocation lifecycle, monitoring unevicted video memory buffers, preventing runaway VRAM creep, and releasing stale surface allocations.
-  * **`underpants-vram-booster`**: Continuously monitors GPU utilization and system buffer caches, triggering proactive memory compaction and defragmentation before OOM thresholds are reached—drastically stabilizing 1% low FPS and eliminating micro-stutters.
-* Configured automatically via `/etc/modprobe.d/nvidia-power-management.conf` and `/etc/sysctl.d/99-gaming-performance.conf`.
+* **Game Priority Booster (CPU/IO)** (`vram-booster` in the Curated Software grid): Installs `dmemcg-booster` and `plasma-foreground-booster`, which raise the CPU and disk priority of the game in focus. On NVIDIA it needs driver 615 or newer; AMD and Intel GPUs are supported by the kernel.
+* Configured automatically via `/etc/modprobe.d/nvidia.conf` (NVIDIA options) and `/etc/sysctl.d/99-slacky-gaming.conf` (memory tweaks, `slacky-update --tweaks`).
 
 ---
 
-## 8. The Underpants Gnomes Workstation Suite (52 Components) & `gnomes` CLI
+## 8. The Underpants Gnomes Workstation Suite (70 Components) & `gnomes` CLI
 
 > [!NOTE]
 > ### 🧩 ELI5 — What does this module do and why do you care?
@@ -326,7 +324,7 @@ For creative professionals using AMD Radeon GPUs in DaVinci Resolve Studio:
 * Full CLI parity with Pacman: `gnomes -S <pkg>`, `gnomes -Ss <query>`, `gnomes -Syu`, `gnomes -R <pkg>`, `gnomes -Si <pkg>`, `gnomes -Q`, and `gnomes runtime install all`.
 * **Zero Foreign Package Managers**: Pure in-memory Python implementation (`lib/gnomes_pacman.py`). Zero foreign package manager binaries (`pacman`, `apt`, `dnf`, `libalpm`) or `/var/lib/pacman` databases are ever installed or executed on the host.
 * **Authentic Slackware Packages**: Every application is built into authentic namespaced Slackware `.txz` packages (`underpants-*.txz`), installed cleanly via `upgradepkg --install-new`, and logged cleanly under `/var/log/packages/underpants-*`. Host system libraries (`/lib64`, `/usr/lib64`, `glibc`, PAM) are 100% shielded and sovereign.
-* **Fast-Race Mirror Engine**: Instant-win (<55ms) sub-second benchmarking with 750ms cutoffs for Chaotic-AUR packages.
+* **Ranked Mirror Fall-back**: Chaotic-AUR mirrors are ranked weekly (2.5s probe limit); if a mirror fails, the same file is tried on the next ranked mirrors (at most 4). A file that fails its signature or checksum is never "healed" from another mirror.
 * **Self-Healing 404 Engine**: Transparent background resync and auto-retry if upstream releases a new version during database TTL.
 
 ### Curated Hyprland Desktop Suite (`hyprland-noctalia` & `hyprland-core`)
@@ -334,11 +332,10 @@ For creative professionals using AMD Radeon GPUs in DaVinci Resolve Studio:
 * **3-Minute OLED & Multi-Monitor DPMS**: Dedicated `hypridle` standby protection turning displays off at 180s without self-resetting config-change loops.
 * **Native Hyprland Lua (`hyprland.lua`)**: Pre-configured Lua configuration ready for Hyprland 0.57+ with complete keybindings, window rules, and snappy 200–250ms bezier curves.
 * **HyprMod Visual Settings Editor (`hyprmod`)**: GTK4 & Libadwaita settings manager supporting named monitor layouts, optional 10-bit OLED color modes, custom active/inactive borders, and non-destructive modular Lua (`hyprland-gui.lua`) overrides.
-* **PipeWire AT_SECURE Protection**: Automatically strips conflicting file capabilities from `pipewire` (`setcap -r`), preventing Wayland session DBus drops.
 
 ### OBS Creator Suite & DKMS Hardware Driver Fleet
 * **OBS Streamer Pack (9 Components)**: `obs-studio`, `obs-vkcapture`, `obs-move-transition`, `obs-source-record`, `obs-pipewire-audio-capture`, `obs-advanced-scene-switcher`, `obs-multi-rtmp`, `obs-composite-blur`, `obs-teleport` with automatic dual-mode bridging into native Slackware and isolated `/opt/obs-studio`.
-* **Out-of-Tree DKMS Drivers**: `zenpower3-dkms`, `v4l2loopback-dkms`, `rtl8821cu-dkms-git`, `rtl88x2bu-dkms-git`, `rtl8812au-dkms-git`, `broadcom-wl-dkms`, `r8125`.
+* **Out-of-Tree DKMS Drivers**: `zenpower3-dkms`, `v4l2loopback-dkms`, `rtl8821cu-dkms-git`, `broadcom-wl-dkms`, `r8125`.
 
 ### Security, Polkit & SysVinit Services
 * **GPG Validation**: All upstream archives are strictly verified against official GPG signatures before transmutation.
@@ -352,11 +349,11 @@ For creative professionals using AMD Radeon GPUs in DaVinci Resolve Studio:
 
 > [!NOTE]
 > ### 🧩 ELI5 — What does this module do and why do you care?
-> SlackBuilds.org (SBo) is Slackware's official library of build recipes. Slacky-Update connects you automatically to the right repository for your version and lets you build popular software like Blender, FreeOffice, and DaVinci Resolve with a single keypress.
+> SlackBuilds.org (SBo) is Slackware's official library of build recipes. Slacky-Update connects you automatically to the right repository for your version and lets you build popular software like Unreal Engine, FreeOffice, and DaVinci Resolve with a single keypress.
 
 * **Version Auto-Routing**: Routes recipes to Ponce's git tree on `-current` or standard SBo on `15.0`.
 * **Hardware Thread Scaling**: Sets `JOBS=$(nproc)` for optimal build speed without locking system responsiveness.
-* **Curated Recipes**: Blender, Storyboarder, Affinity Suite, SoftMaker FreeOffice 2024, DaVinci Resolve Studio, LACT, Snapper, and OpenRGB.
+* **Curated Recipes (7)**: DaVinci Resolve Studio, Unreal Engine, SoftMaker FreeOffice 2024, Wine Staging, Winetricks, GRUB-Btrfs, and Snapper. (Blender, FreeCAD, Bambu Studio, LACT and OpenRGB are now in the Curated Software grid, `slacky-update --gaming`.)
 
 ---
 
@@ -372,7 +369,7 @@ Accessible via `slacky-update --tweaks` with 100% symmetric individual reversibi
 3. **Google TCP BBR**: Minimizes bufferbloat and network latency during online gaming via `net.ipv4.tcp_congestion_control=bbr` and `net.core.default_qdisc=fq`.
 4. **NTSYNC Primitives**: Prepares fast in-kernel Windows NT synchronization primitives (`/dev/ntsync` with 0666 permissions) for Proton and Wine.
 5. **Universal Gamepad Forcefield**: Deploys udev hardware rules across 27+ vendor profiles, disabling USB autosuspend on gaming peripherals (`ATTR{power/control}="on"`).
-6. **Turbo Boot & Fast Shutdown**: Disables legacy 16-bit PCMCIA routines, skips inactive NFS server pauses, enforces NetworkManager interface sovereignty, mounts `/tmp` as RAM-backed `tmpfs`, and reduces SysVinit shutdown sleeps from 5s to 0.5s.
+6. **Turbo Boot & Fast Shutdown**: Disables legacy 16-bit PCMCIA routines, skips inactive NFS server pauses, enforces NetworkManager interface sovereignty, mounts `/tmp` as RAM-backed `tmpfs`, and reduces SysVinit shutdown sleeps from 5s to 2s.
 7. **Storage & NVMe Direct I/O Scheduler**: Configures hardware bypass (`none`) on NVMe PCIe Gen 4/5 SSDs to eliminate kernel I/O queue lock overhead, with `mq-deadline` for SATA SSDs and `bfq` for HDDs.
 8. **NVIDIA & Mesa 10GB Global Shader Disk Cache**: Permanent shader retention (`__GL_SHADER_DISK_CACHE_SIZE=10737418240`, `MESA_SHADER_CACHE_MAX_SIZE=10G`) eliminating micro-stutters from ongoing shader recompilation.
 9. **PipeWire Low-Latency Audio**: Drop-in PipeWire quantum configuration locked to 256 samples (5.33ms) paired with RT95 audio priority limits for zero-xrun audio production and gaming communication.
@@ -385,7 +382,7 @@ Accessible via `slacky-update --tweaks` with 100% symmetric individual reversibi
 > ### 🧩 ELI5 — What does this module do and why do you care?
 > Slacky-Update speaks 24 different languages! In addition to standard sober English and Norwegian, we feature 'Radical Editions' packed with 90s pop-culture slang from Ninja Turtles, Wayne's World, and Bill & Ted for authentic retro vibes in your terminal.
 
-* **Full Localization**: 24 languages with 100% key parity (`en`, `nb`, `nn`, `da`, `sv`, `de`, `fr`, `es`, `it`, `pl`, `fi`, `is`, `nl`, `pt`, `ru`, `ja`, `zh`, `ko`, `hi`, `ar`, `se`).
+* **Full Localization**: 24 languages with English fallback for any line not yet translated (`en`, `en-ca`, `nb`, `nn`, `da`, `sv`, `de`, `fr`, `es`, `it`, `pl`, `fi`, `is`, `nl`, `pt`, `ru`, `ja`, `zh`, `ko`, `hi`, `ar`, `se`).
 * **Radical Editions (`en-radical`, `nb-radical`)**: 90s pop-culture slang with pulsing lightning bolt animations (`⚡`/`✨`) during kernel builds.
 * **Switch Language:**
   ```bash

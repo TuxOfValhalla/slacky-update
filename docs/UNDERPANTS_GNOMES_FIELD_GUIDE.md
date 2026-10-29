@@ -31,7 +31,7 @@
 
 The Underpants Gnomes transmutation engine is strictly governed by **The Sacred Slackware Base System** and **The Five Engineering Pillars**:
 * **The Sacred Slackware Base System:** Foreign package manager binaries (`pacman`, `apt`, `dnf`, `libalpm`) are **never installed or executed on the host system**. Instead, an in-memory pure Python streaming engine (`lib/gnomes_pacman.py`) reads repository manifests, decompresses upstream archives directly in RAM with `zstandard`, isolates application files strictly in `/opt/underpants/`, builds authentic namespaced Slackware `.txz` packages (`underpants-*.txz`), and installs them cleanly via `upgradepkg --install-new`. Host system libraries (`/lib64`, `/usr/lib64`, `glibc`, PAM) are 100% shielded and sovereign, and packages log cleanly under `/var/log/packages/underpants-*` with zero foreign package manager databases or base system collisions.
-* **⚡ Speed:** Fast-Race multi-threaded mirror evaluation with sub-55ms short-circuit selection; in-memory database search (<50ms).
+* **⚡ Speed:** Fast-Race multi-threaded mirror evaluation with a weekly mirror ranking; in-memory database search (<50ms).
 * **🛋️ Comfort:** Familiar Pacman command syntax (`gnomes -S`, `-Syu`, `-Ss`, `-R`), interactive 2-column TUI workstation manager, and timestamp-paced animated Gnome download bars.
 * **🛡️ Safety:** Complete Host Sovereignty Shielding in `/opt/underpants/` with private `RPATH`/`RUNPATH`, zero rootfs pollution, and automatic self-healing 404 repository synchronization.
 * **🎨 UI Design:** Clean Dark Star styling, dynamic terminal width adaptation, and pixel-perfect text rendering.
@@ -78,11 +78,10 @@ gnomes runtime status
 ## 4. 📜 Golden Rules & Best Practices
 
 ### 1. 🛡️ Always Check Slackware Base & SBo First!
-Before installing a package via `gnomes -S`, always check if it is already provided natively by Slackware (`/var/log/packages`) or available via SlackBuilds (`sbopkg` / `slacky-update --sbo`). Native Slackware packages should always be your first choice.
+Before installing a package via `gnomes -S`, always check if it is already provided natively by Slackware (`/var/log/packages`) or available via SlackBuilds (`sbotools` / `slacky-update --slackbuilds`). Native Slackware packages should always be your first choice.
 
 ### 2. 🎮 For Gaming Packages & Desktop Suites, Use Curated Modules!
-For core gaming components such as **Steam, MangoHud, Gamescope, GOverlay, ProtonPlus, Faugus Launcher, and Ananicy-Cpp**, complete desktop environments like **`hyprland-noctalia`** (Mac-like Wayland desktop with Noctalia Shell) and **`hyprland-core`**, or settings suites like **`hyprmod`** (GTK4 visual settings editor for Hyprland), we strongly recommend installing them through `slacky-update --party-on`, `slacky-update --hyprland`, `slacky-update --hyprmod`, or the curated Underpants Gnomes menu (`gnomes -S hyprland-noctalia`). These curated packages are tuned and patched specifically for optimal Slackware desktop and gaming performance:
-* **PipeWire AT_SECURE Protection:** Automatically strips conflicting file capabilities from `pipewire` and `wireplumber` (`setcap -r`), preventing session DBus drops under Wayland.
+For core gaming components such as **Steam, MangoHud, Gamescope, GOverlay, ProtonPlus, Faugus Launcher, and Ananicy-Cpp**, complete desktop environments like **`hyprland-noctalia`** (Mac-like Wayland desktop with Noctalia Shell) and **`hyprland-core`**, or settings suites like **`hyprmod`** (GTK4 visual settings editor for Hyprland), we strongly recommend installing them through the curated Underpants Gnomes menu (`slacky-update --gaming`, Main Menu `[4]`), `slacky-update --gaming-deploy <app>`, `slacky-update --hyprland`, or `slacky-update --hyprmod`. These curated packages are tuned and patched specifically for optimal Slackware desktop and gaming performance:
 * **HyprMod Visual Configuration:** Visual GTK4/Libadwaita management for monitors, 10-bit OLED color modes, animations, and keybindings via modular `hyprland-gui.lua`.
 * **Systray Daemon Integration:** Built-in autostart and StatusNotifierItem registration for `slacky-update-tray`, `openrgb` (with automatic profile loading), and `easyeffects`.
 * **Hardware-Accelerated Browsers:** Installing `google-chrome`, `brave`, or `microsoft-edge` automatically detects NVIDIA hardware and provisions hardware-accelerated Wayland and VA-API flags (`--ozone-platform=wayland`, `VaapiOnNvidiaGPUs`, `--enable-gpu-rasterization`, `--enable-zero-copy`).
@@ -90,10 +89,10 @@ For core gaming components such as **Steam, MangoHud, Gamescope, GOverlay, Proto
 ### 3. ⚠️ KERNELS MUST NEVER BE INSTALLED VIA `gnomes -S`!
 **Do NOT attempt to install Linux kernels, kernel headers, or out-of-tree kernel modules via `gnomes -S` (e.g. `gnomes -S linux` or `gnomes -S linux-zen`).**  
 The pacman engine has built-in guardrails (`CORE_EXCLUDES`) that block kernel packages from transmuting to protect your bootloader.  
-👉 **Kernel lifecycle management (CachyOS, Arch vanilla `linux`, and Arch `linux-zen` kernels) must strictly be managed through `slacky-update --kernel` / `mod_kernel.sh`!**
+👉 **Kernel lifecycle management (CachyOS, Arch vanilla `linux`, and Arch `linux-zen` kernels) must strictly be managed through Main Menu `[2]` (*CachyOS Kernel Management*) / `mod_kernel.sh`!**
 
 ### 4. ⚡ Fast-Race Mirror Benchmarking Engine
-When fetching Chaotic-AUR packages (such as `hyprpicker`, `easyeffects`, or `coolercontrol`), the engine evaluates global mirrors concurrently via `concurrent.futures.as_completed`. A sub-55ms response triggers an instant win, returning the fastest node immediately and terminating slower mirror checks with a strict 750ms timeout.
+When fetching Chaotic-AUR packages (such as `hyprpicker`, `easyeffects`, or `coolercontrol`), the engine evaluates global mirrors concurrently via `concurrent.futures.as_completed` (2.5-second limit) and keeps a weekly ranking. If a mirror fails, the same file is tried on the next ranked mirrors (at most 4). A file that fails its signature or checksum check is never "healed" from another mirror; it is refused.
 
 ### 5. 🔄 Transparent 404 Self-Healing Auto-Sync
 If an upstream repository rolls out an update while local database manifests are cached, returning HTTP 404, Gnomes automatically traps the error, runs a silent forced resynchronization (`sync_repositories(force=True, verbose=False)`), updates the URL to the latest version, and retries the download seamlessly.
@@ -108,41 +107,44 @@ You can use `gnomes` directly from Konsole, Bash, or Zsh just like `pacman` — 
 | Action | Pacman Syntax | Long-form Syntax | Description |
 |---|---|---|---|
 | **Sync Repositories** | `gnomes -Sy` | `gnomes sync` | Downloads latest database indexes from Arch/CachyOS |
-| **Force Full Resync** | `gnomes -Syy` | `gnomes sync -f` | Forces a fresh download of all database archives |
-| **List Active Mirrors** | — | `gnomes list-repos` | Lists active repository matrix and priority ordering |
+| **Force Full Resync** | `gnomes -Sy -f` | `gnomes sync -f` | Forces a fresh download of all database archives |
 
 ### 2. Searching & Inspecting Packages
 | Action | Pacman Syntax | Long-form Syntax | Description |
 |---|---|---|---|
 | **Search Packages** | `gnomes -Ss <query>` | `gnomes search <query>` | Sub-50ms search across package names and descriptions |
 | **View Package Info** | `gnomes -Si <pkg>` | `gnomes info <pkg>` | Displays upstream version, size, dependencies, and URL |
-| **Simulate Dependency Plan** | `gnomes -Sp <pkg>` | `gnomes deps <pkg>` | Solves the DAG and shows what will be downloaded vs host-provided |
+| **Simulate Dependency Plan** | `gnomes -Sd <pkg>` | `gnomes deps <pkg>` | Solves the DAG and shows what will be downloaded vs host-provided |
 
 ### 3. Installing & Transmuting Packages
 | Action | Pacman Syntax | Long-form Syntax | Description |
 |---|---|---|---|
-| **Install Package(s)** | `gnomes -S <pkg...>` | `gnomes transmute <pkg...>` | Resolves deps, downloads, transmutes to `.txz`, and installs |
+| **Install Package(s)** | `gnomes -S <pkg...>` | `gnomes install <pkg...>` | Resolves deps, downloads, transmutes to `.txz`, and installs |
 | **Force Re-transmute** | `gnomes -S --force <pkg>` | `gnomes transmute -f <pkg>` | Rebuilds and reinstalls even if already installed |
 | **Non-interactive Install** | `gnomes -S --noconfirm <pkg>` | `gnomes transmute -y <pkg>` | Skips confirmation prompts (useful in scripts) |
-| **Build Only (No Install)** | `gnomes -S --build-only <pkg>` | `gnomes transmute --build-only <pkg>` | Generates the `.txz` package in `/tmp` without installing |
+| **Build Only (No Install)** | `gnomes -S --build-only <pkg>` | `gnomes transmute --build-only <pkg>` | Generates the `.txz` package in a private build folder (`~/.cache/slacky-update/gnomes/build/`) without installing |
 
 ### 4. Updating & Managing Installed Packages
 | Action | Pacman Syntax | Long-form Syntax | Description |
 |---|---|---|---|
-| **Check for Updates** | `gnomes -Syu` | `gnomes list-updates` | Checks installed gnomes packages against upstream repos |
-| **List Installed Packages** | `gnomes -Q` | `gnomes list-installed` | Lists all transmuted packages in `/var/log/packages` |
-| **Remove Transmuted App** | `gnomes -R <pkg>` | `removepkg underpants-<pkg>` | Uninstalls package cleanly from Slackware package database |
+| **Sync & Upgrade** | `gnomes -Syu` | `gnomes update` | Syncs databases and upgrades installed gnomes packages (asks first; `--yes` without a terminal) |
+| **Check for Updates** | `gnomes -Qu` | `gnomes list-updates` | Lists available updates from the last sync (read-only, no root) |
+| **List Installed Packages** | `gnomes -Q` | `gnomes list` | Lists all transmuted packages in `/var/log/packages` |
+| **Remove Transmuted App** | `gnomes -R <pkg>` | `gnomes remove <pkg>` | Uninstalls package cleanly via `removepkg` (asks first) |
+| **Roll Back an App** | — | `gnomes --rollback <pkg>` | Goes back to the previous version, rebuilt from a system snapshot |
 
 ### 5. Runtime & Storage Management
 | Action | Command | Description |
 |---|---|---|
 | **Inspect Runtime Pool** | `gnomes runtime status` | Reports soname count, active profiles, and Python version |
-| **List Runtime Profiles** | `gnomes runtime profiles` | Shows available profiles (`core`, `gui`, `media`, `graphics`, `all`) |
-| **Install Runtime Profile** | `gnomes runtime install <prof>` | Transmutes and deploys a shared runtime profile |
-| **Reclaim Storage (Dedup)** | `gnomes dedup` | Hardlinks identical libraries across `/opt/underpants/` via SHA256 |
-| **Clean Uninstalled Cache** | `gnomes -Sc` | `gnomes clean-cache` (removes old downloaded packages) |
-| **Purge Entire Cache** | `gnomes -Scc` | `gnomes clean-cache --all` (prunes all build files and caches) |
+| **List Runtime Profiles** | `gnomes runtime profiles` | Shows available profiles (`core`, `gui`, `media`, `graphics`, `cad`, `mobile`, `desktop`, `hyprland`, `noctalia`, `all`) |
+| **Install Runtime Profile** | `gnomes runtime install <prof>` | Transmutes and deploys a shared runtime profile (default: `core`) |
+| **Remove Runtime** | `gnomes runtime remove [prof]` | Removes the shared runtime (asks first); apps that use it stop working |
+| **Reclaim Storage (Dedup)** | `gnomes dedup` (or `-Sdd`) | Hardlinks identical libraries across `/opt/underpants/` via SHA256 |
+| **Clean Uninstalled Cache** | `gnomes -Sc` | `gnomes clean` (removes old downloaded packages) |
+| **Purge Entire Cache** | `gnomes -Scc` | `gnomes clean --all` (prunes all build files and caches) |
 | **Check Host Sovereignty** | `gnomes check-host` | Displays CPU tier, max GLIBC version, and indexed sonames |
+| **Heal Native Packages** | `gnomes -Sh` | `gnomes heal` (audits `/usr/bin/` and heals native Slackware packages from rogue wrappers) |
 
 ---
 

@@ -48,3 +48,11 @@ legacy_roadmap.md
 roadmap.md
 rs_roadmap.md
 rs_and_legacy_roadmap.md
+claude_log.md
+docs/m11*_results.json
+slackbuild/commit_legacy.md
+
+# AI Agent Instructions & Local Tool Settings
+AGENTS.md
+CLAUDE.md
+.claude/

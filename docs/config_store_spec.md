@@ -2,7 +2,7 @@
 
 Shared by slacky-update (legacy) and slacky-update-rs (Rust). Names files, fields and rules; no code. Both apps MUST read
 and write exactly this layout (legacy shares only this spec, never code). Part of the Spider-Sense contract
-(`docs/spidersense_spec.md`, section 13). Study: `docs/spidersense_newconf/B_design.md`.
+(`docs/spidersense_spec.md`, section 13).
 
 ## 1. Purpose
 

@@ -98,7 +98,7 @@ Every feature, routine, and interface in Slacky-Update is continuously measured 
 > [!IMPORTANT]
 > **Slacky-Update NEVER compiles, builds, or mutates packages directly on the host root filesystem (`/`).**
 
-1. **Ephemeral Sandboxes**: Every compilation, archive extraction, and transmutation occurs inside an isolated scratch space: `/tmp/slacky-build-XXXXXX` (in RAM via tmpfs).
+1. **Ephemeral Sandboxes**: Every compilation, archive extraction, and transmutation occurs inside an isolated scratch space: `/tmp/slacky-build-XXXXXX` for SlackBuilds (in RAM when `/tmp` is tmpfs), and a private `0700` build folder under `~/.cache/slacky-update/gnomes/build/` (or `/var/cache/slacky-update/gnomes/build/` as root) for Underpants Gnomes.
 2. **Deterministic Staging**: Upstream files are organized into a strict root staging directory (`/tmp/package-name/`), permissions are normalized.
 3. **Atomic Package Creation**: `makepkg -l y -c n /tmp/target-package.txz` generates a clean Slackware package archive.
 4. **Standard Installation**: The resulting `.txz` is handed over to `upgradepkg --install-new`, guaranteeing complete tracking in `/var/log/packages/`.
@@ -127,7 +127,7 @@ Slacky-Update operates strictly on a model of non-destructive coexistence rather
 ├─────────────────────────────────────────────────────────────────────────────┤
 │  TUI INTERACTION ENGINE (lib/slacky_tui.py)                                 │
 │  ├── Absolute Cursor Addressing          ├── Dynamic Screen Budgeting       │
-│  ├── Native Mouse Selection for LLMs     └── Universal (ESC) Navigation     │
+│  ├── Mouse Clicks + Shift-Drag Copy      └── Universal (ESC) Navigation     │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │  TRANSACTION & PACKAGE ORCHESTRATION                                        │
 │  ├── Parallel Pre-fetcher (10 Streams)  ├── In-Flight Signal Armor (SIGINT) │
@@ -166,14 +166,14 @@ Slacky-Update operates strictly on a model of non-destructive coexistence rather
 * **Role**: Renders interactive single-select and multi-select checklist menus with zero third-party dependencies (Python standard library only: `sys`, `termios`, `tty`, `os`, `signal`, `shutil`).
 * **Absolute Cursor Addressing**: Employs `\033[{row};1H\033[2K` row-by-row updates instead of relative cursor jumps, completely eliminating terminal "staircase" tearing across resizes.
 * **Dynamic Screen Height Budgeting**: Reads terminal rows and columns via `shutil.get_terminal_size()`, reserving exact line allowances for headers, menu items, action docks, and status grids.
-* **Native Mouse Text Selection for LLMs**: Avoids capturing mouse reporting events (`\033[?1000h`), leaving the terminal emulator's native drag-to-select and copy-to-clipboard functionality 100% active for instant clipboard sharing with LLM coding agents.
+* **Mouse Navigation & Shift-Drag Copying**: Enables SGR mouse reporting (`\033[?1000h\033[?1002h\033[?1006h`) so menu lines, buttons and checkboxes can be clicked (not on the Linux text console). To select and copy text for sharing with LLM coding agents, hold `Shift` while dragging; this bypasses mouse reporting in modern terminal emulators.
 * **Universal (ESC) Navigation**: Explicitly maps the Escape key (`\x1b`) to return to previous menus or exit cleanly.
 
 ---
 
 ### Engine 3: 10-Worker Asynchronous Turbo Pre-Fetcher
-* **Source File**: `lib/mod_packages.sh`
-* **Role**: Spawns 10 concurrent `curl` download workers using HTTP range resume (`-C -`) to pre-populate `/var/cache/slacky-update/packages/` before package installation starts.
+* **Source Files**: `lib/mod_packages.sh`, `lib/common.sh`
+* **Role**: Spawns 10 concurrent `curl` download workers (`SLACKY_PREFETCH_JOBS`) using HTTP range resume (`-C -`) to pre-populate slackpkg's cache (`/var/cache/packages/`) before package installation starts.
 * **Network Saturation**: Maximizes high-bandwidth connections by saturating gigabit pipes during the pre-fetch phase so `pkgtools` operations run entirely from local NVMe storage.
 
 ---
@@ -188,28 +188,28 @@ Slacky-Update operates strictly on a model of non-destructive coexistence rather
 
 ### Engine 5: CachyOS Kernel Lifecycle, Multi-Flavor & CPU Microarchitecture
 * **Source Files**: `lib/mod_kernel.sh`, `lib/mod_limine.sh`
-* **Role**: Inspects host CPU features (x86_64_v4, v3, v2) and deploys optimized CachyOS kernels across 10 scheduler flavors (`standard`, `bore`, `lto`, `eevdf`, `bmq`, `deckify`, `rt-bore`, `rc`, `lts`, `zen`).
+* **Role**: Inspects host CPU features (`znver4` / `x86_64_v4`, `x86_64_v3`, generic `x86_64`) and deploys optimized kernels across 11 flavors in the Kernel Picker (`standard`, `bore`, `lto`, `eevdf`, `bmq`, `deckify`, `rt-bore`, `rc`, `lts`, plus Arch Linux `linux-zen` and vanilla `linux`).
 * **Active Kernel Armor**: Identifies the currently booted kernel (`uname -r`) and protects it with `[ACTIVE - CANNOT REMOVE]` badges to ensure a user never deletes their live operating kernel.
-* **Multi-Kernel DKMS**: Rebuilds third-party kernel modules (NVIDIA, ZFS, OpenRGB, VirtualBox) automatically across all installed kernel versions.
+* **Multi-Kernel DKMS**: Rebuilds registered third-party kernel modules (NVIDIA, v4l2loopback, zenpower3, broadcom-wl, VirtualBox and others) automatically across all installed kernel versions.
 
 ---
 
 ### Engine 6: NVIDIA Driver & DKMS Pipeline
 * **Source File**: `lib/mod_nvidia.sh`
 * **Role**: Deploys pre-compiled modules for CachyOS kernels, DKMS for standard Slackware kernels, purges stale modules, and aligns 32-bit multilib drivers with strict DKMS collision shielding.
-* **VRAM Booster & Preserver**: Enforces `nvidia.NVreg_PreserveVideoMemoryAllocations=1` and hooks systemd/SysVinit suspend-resume scripts to preserve VRAM state across sleep cycles.
+* **VRAM Booster & Preserver**: Enforces `NVreg_PreserveVideoMemoryAllocations=1` and `NVreg_TemporaryFilePath=/var/tmp` in `/etc/modprobe.d/nvidia.conf` (and offers `nvidia.NVreg_PreserveVideoMemoryAllocations=1` in the CMDLINE Hub) to preserve VRAM state across sleep cycles.
 
 ---
 
 ### Engine 7: System Performance, Memory Architecture & 9 Granular Tweaks
 * **Source File**: `lib/mod_tweaks.sh`
-* **Role**: Provides 9 independently toggleable and fully reversible performance optimizations:
+* **Role**: Provides 9 independently toggleable and fully reversible performance optimizations (`slacky-update --tweaks`):
   1. **1 Million File Descriptors**: Eliminates `EMFILE` limits for Wine, Proton, and ESync/FSync.
   2. **THP & Memory Tuning**: Enforces `madvise` with deferred defragmentation (`defer`), sets `max_map_count=2147483642`, and lowers `swappiness=10`.
   3. **TCP BBR Congestion Control**: Replaces Cubic with Google BBR and Fair Queuing (`fq`) for lower network bufferbloat.
   4. **NTSYNC Gaming Synchronization**: Sets udev permissions (`0666`) on `/dev/ntsync` for ultra-low latency Wine threading.
   5. **Gamepad & Controller Forcefield**: Installs universal udev rules for DualSense, Xbox, Switch Pro, and Steam Deck controllers.
-  6. **Turbo Boot & Fast Shutdown**: Strips legacy SysVinit delays and applies parallel zstd level 1 dracut initramfs generation.
+  6. **Turbo Boot & Fast Shutdown**: Strips legacy SysVinit delays (shutdown waits from 5s to 2s) and applies parallel zstd level 1 dracut initramfs generation.
   7. **NVMe Direct I/O Scheduler (`none`)**: Bypasses CPU-bound software I/O queues for hardware NVMe controllers.
   8. **10GB Shader Disk Cache**: Expands NVIDIA OpenGL/Vulkan shader cache to 10GB (`__GL_SHADER_DISK_CACHE_SIZE=10737418240`), eliminating stutter.
   9. **PipeWire 256 Low-Latency Audio**: Drops audio buffer quantum from 1024 to 256 (5.3ms latency) via `/etc/pipewire/pipewire.conf.d/` drop-in.
@@ -219,7 +219,8 @@ Slacky-Update operates strictly on a model of non-destructive coexistence rather
 ### Engine 8: FastBoot & Turbo Shutdown Acceleration Engine
 * **Source Files**: `lib/mod_tweaks.sh`, `/etc/rc.d/rc.6`
 * **Role**: Shaves 10 to 15 seconds off system boot and shutdown:
-  - **PCMCIA & Inactive NFS Removal**: Disables legacy PCMCIA probes (5-second sleep) and skips unmounted NFS unmount loops.
+  - **PCMCIA & Inactive NFS Removal**: Disables legacy PCMCIA probes and the NFS server when `/etc/exports` shares nothing.
+  - **Shorter Shutdown Waits**: Cuts the `rc.6` shutdown waits from 5 to 2 seconds.
   - **NetworkManager Sovereignty**: Prevents redundant `rc.inet1` DHCP timeout blocking when NetworkManager manages interfaces.
   - **tmpfs `/tmp`**: Mounts `/tmp` in RAM for instantaneous ephemeral I/O.
   - **Dracut Multi-Core Compression**: Enforces `zstd -1 -T0` parallel compression, reducing kernel decompression time to under 20ms.
@@ -234,8 +235,8 @@ Slacky-Update operates strictly on a model of non-destructive coexistence rather
 
 ### Engine 10: Limine Two-Zone & Guided Secure Boot Engine
 * **Source Files**: `lib/mod_limine.sh`, `lib/mod_secureboot.sh`
-* **Role**: Generates `/boot/limine.conf` preserving Zone A (user custom entries) while atomically recalculating Zone B (kernels, BLAKE2B cryptographic hashes, Snapper snapshots, and Secure Boot signing).
-* **Guided MOK Setup**: Provides clear, step-by-step guidance for enrolling custom Machine Owner Keys (`sbctl` / `mokutil`) in UEFI firmware. Once enrolled, all subsequent kernel updates and initramfs builds are signed **100% automatically**.
+* **Role**: Generates `limine.conf` on the boot partition preserving Zone A (user customization & theme) while atomically recalculating Zone B (kernels, BLAKE2B cryptographic hashes, Snapper snapshots, and Secure Boot signing).
+* **Guided MOK Setup**: Provides clear, step-by-step guidance for enrolling custom Machine Owner Keys (`sbctl` / `mokutil`) in UEFI firmware (Main Menu `[7]`, *Secure Boot MOK Configuration*, or `slacky-update --sb`). Once enrolled, all subsequent kernel updates and initramfs builds are signed **100% automatically**.
 * **Split-Lock Mitigation Toggle**: Includes a dedicated CMDLINE toggle for `split_lock_mitigate=0` to prevent micro-stutters in heavy gaming workloads.
 
 ---
@@ -248,19 +249,19 @@ Slacky-Update operates strictly on a model of non-destructive coexistence rather
 
 ### Engine 12: Real-Time System Tray Telemetry & Notifications
 * **Source Files**: `bin/slacky-update-tray`, `lib/slacky-update-tray`, `lib/check_backend.sh`
-* **Role**: Lightweight PyQt6 background monitor polling on-demand and on schedule, featuring cascading submenus for Underpants Gnomes (TUI/GUI) and triggering D-Bus desktop notifications.
+* **Role**: Lightweight PyQt6 (PyQt5 fallback) background monitor polling on-demand and on schedule, featuring cascading submenus for Underpants Gnomes (TUI/GUI) and triggering D-Bus desktop notifications.
 
 ---
 
 ### Engine 13: Internationalization & Fallback Engine (24 Locales)
 * **Source Files**: `lib/slacky_update_i18n.py`, `locales/*.json`
-* **Role**: High-performance multi-language translation engine providing 100% key parity across 24 global languages (262 keys each) with English fallback and 90s pop-culture Radical Editions.
+* **Role**: High-performance multi-language translation engine across 24 global languages, with English fallback for any line not yet translated, and 90s pop-culture Radical Editions.
 
 ---
 
 ### Engine 14: Documentation & Groff PDF / QR Export Engine
 * **Source File**: `lib/mod_docs.sh`
-* **Role**: Compiles Markdown documentation into professional Groff/Troff PDFs in `~/Documents/` and starts an ephemeral Wi-Fi QR web server for mobile reading during BIOS setup.
+* **Role**: Powers Main Menu `[8]` (*Master Field Guide & Diagnostics*). Compiles Markdown documentation into professional Groff/Troff PDFs (`groff` + `ps2pdf`) in `~/Documents/` and starts an ephemeral Wi-Fi QR web server (`qrencode`) for mobile reading during BIOS setup.
 
 ---
 
@@ -271,9 +272,9 @@ Slacky-Update operates strictly on a model of non-destructive coexistence rather
 ---
 
 ### Engine 16: Fast-Race Chaotic-AUR Probing & Self-Healing 404 Engine
-* **Source Files**: `lib/mod_gaming.sh`, `lib/gnomes_pacman.py`
+* **Source Files**: `lib/slacky_mirrors.py`, `lib/gnomes_pacman.py`, `lib/mod_gaming.sh`
 * **Role**: Parallel, non-blocking latency evaluator and repository integrity recovery engine:
-  - **Fast-Race Mirror Benchmarking**: Evaluates global mirrors simultaneously using `concurrent.futures.as_completed` with aggressive 750ms cutoffs and sub-55ms short-circuit instant selection.
+  - **Fast-Race Mirror Benchmarking**: Probes Chaotic-AUR mirrors simultaneously using `concurrent.futures.as_completed` (2.5s limit) and keeps a weekly ranking; a failed download moves to the next ranked mirror (at most 4 tries). A file that fails its signature or checksum is never "healed" from another mirror.
   - **Self-Healing 404 Recovery**: Intercepts upstream mirror 404 errors when upstream package versions bump, automatically re-syncs database metadata, and retries in-flight.
 
 ---
@@ -324,8 +325,9 @@ Slacky-Update operates strictly on a model of non-destructive coexistence rather
 | `~/.config/slacky-update/config.json` | User settings, language override | User (0644) |
 | `/var/cache/slacky-update/` | Download cache, SlackBuild recipes, update status | Root (0755) |
 | `/var/cache/slacky-update/backup/` | Offline backup of stock kernels and drivers | Root (0700) |
-| `/usr/share/slacky-update/keys/` | Machine Owner Keys (MOK) and vendor GPG keys | Root (0644) |
-| `/usr/share/slacky-update/locales/` | 24 JSON language translation files (262 keys each) | Root (0644) |
+| `/usr/share/slacky-update/keys/` | Repository signing keys (Arch Linux, CachyOS, Chaotic-AUR) | Root (0644) |
+| `/etc/mok/` | Machine Owner Key (MOK) pair for module signing | Root |
+| `/usr/share/slacky-update/locales/` | 24 JSON language translation files | Root (0644) |
 | `/usr/share/slacky-update/docs/` | System manuals, Survival Guide, Companion Guide | Root (0644) |
 | `/etc/boot/hooks/post.d/` | Post-kernel installation hooks (Limine hash enrollment) | Root (0755) |
 
@@ -343,7 +345,7 @@ Slacky-Update operates strictly on a model of non-destructive coexistence rather
 slacky-update --check
 
 # Test bash script syntax across all modules
-for f in /usr/local/lib/slacky-update/*.sh; do bash -n "$f"; done
+for f in /usr/share/slacky-update/lib/*.sh; do bash -n "$f"; done
 
 # Inspect active language translations
 python3 /usr/share/slacky-update/lib/slacky_update_i18n.py CLI_TITLE

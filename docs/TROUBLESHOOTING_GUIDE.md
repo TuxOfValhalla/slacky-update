@@ -46,7 +46,7 @@ Slacky-Update’s recovery architecture is founded on **The Sacred Slackware Bas
 * **The Sacred Slackware Base System:** Stock Slackware kernels (`vmlinuz-generic`, `vmlinuz-huge`), stock initrds, and default bootloaders (GRUB, ELILO) are **never wiped or damaged**. If a custom kernel or configuration glitch occurs, your original Slackware foundation remains 100% intact and ready to boot.
 * **⚡ Speed:** FastBoot and Turbo Shutdown eliminate 10–15 seconds of boot/shutdown latency; emergency restore routines finish in seconds.
 * **🛋️ Comfort:** Native mouse text selection stays active across all menus so you can easily copy logs and errors directly to LLM assistants.
-* **🛡️ Safety:** In-flight signal armor (`trap '' INT QUIT TSTP`) prevents half-installed package or kernel states; BLAKE2B cryptographic hashes verify binary integrity; Snapper snapshots provide instantaneous rollbacks.
+* **🛡️ Safety:** In-flight signal armor (`trap '' INT QUIT TSTP HUP`) prevents half-installed package or kernel states; BLAKE2B cryptographic hashes verify binary integrity; Snapper snapshots provide instantaneous rollbacks.
 * **🎨 UI Design:** Absolute cursor row addressing (`\033[{row};1H\033[2K`) completely eliminates staircase tearing, rendering crisp, legible diagnostic screens.
 * **🤝 Ease of Use:** Every failure scenario provides an ELI5 summary, root-cause diagnosis, and 1-line resolution.
 
@@ -105,22 +105,22 @@ Boot the system via a Slackware Live-USB or UEFI Shell and inspect NVRAM:
 ```bash
 efibootmgr -v
 ```
-*Expected failure output:* No entries present for `Slackware (Limine)` or `Limine Bootloader`.
+*Expected failure output:* No entry named `Limine Slackware`.
 
 #### D. Fix (Recovery Procedure)
 1. **Method 1: UEFI Fallback Boot (Automatic)**  
-   Slacky-Update always installs Limine to the standard UEFI fallback path: `/EFI/BOOT/BOOTX64.EFI`. Open your BIOS Boot Menu (F11/F12 during power-on) and select the SSD drive directly (e.g., `UEFI OS (Samsung 990 PRO)`).
+   Slacky-Update also installs Limine to the standard UEFI fallback path `/EFI/BOOT/BOOTX64.EFI` when that path is still free (an existing fallback file from another bootloader is left alone). Open your BIOS Boot Menu (F11/F12 during power-on) and select the SSD drive directly (e.g., `UEFI OS (Samsung 990 PRO)`).
 2. **Method 2: Re-register NVRAM Entry from Live-USB**  
    If fallback boot is not auto-detected by firmware, boot your Slackware Live-USB and run:
    ```bash
-   sudo efibootmgr --create --disk /dev/nvme0n1 --part 1 --label "Slackware (Limine)" --loader '\EFI\limine\limine-uefi-x86_64.efi'
+   sudo efibootmgr --create --disk /dev/nvme0n1 --part 1 --label "Limine Slackware" --loader '\EFI\limine\limine_x64.efi'
    ```
 3. **Method 3: Slacky-Update Shortcut**  
    Once booted into your system:
    ```bash
    sudo slacky-update --limine
    ```
-   Select the reinstall option to restore and re-register the NVRAM entry cleanly.
+   Choose option 1 (`Install / Re-deploy Limine Bootloader (Coexistence Mode)`) to restore and re-register the NVRAM entry cleanly.
 
 #### E. Stop-Line
 If `efibootmgr` returns `EFI variables are not supported on this system`, it indicates the Live-USB was booted in Legacy CSM/BIOS mode instead of UEFI. Reboot the Live-USB in **UEFI Native Mode**.
@@ -192,7 +192,7 @@ lsmod | grep -i nvidia
    - Scans all kernel directories and purges conflicting, obsolete `nvidia*.ko*` module remnants.
    - For CachyOS kernels: Installs pre-compiled matching CachyOS open modules with zero build delay.
    - For custom/stock kernels: Executes automated DKMS module rebuilding.
-   - Runs `depmod -a` and regenerates Dracut initramfs with early NVIDIA KMS drivers.
+   - Runs `depmod -a` and rebuilds the initramfs (Dracut or mkinitrd) of each kernel whose NVIDIA modules or settings changed.
 2. **Restart Graphical Display Manager:**
    ```bash
    sudo /etc/rc.d/rc.4 restart
@@ -209,7 +209,7 @@ If DKMS fails due to missing kernel header packages, verify that `cachyos-kernel
 
 > [!TIP]
 > #### 🧩 ELI5 (Explain Like I'm 5)
-> *Windows is still relaxing in its own room on your SSD, completely unharmed. When you created a dedicated Slackware EFI partition, Limine was configured for Linux and simply hasn't knocked on Windows' door yet. Running `--limine` scans all your drives and puts the Windows button back on your boot screen.*
+> *Windows is still relaxing in its own room on your SSD, completely unharmed. When you created a dedicated Slackware EFI partition, Limine was configured for Linux and simply hasn't knocked on Windows' door yet. Running `--limine` looks for Windows on your boot partition and puts the Windows button back on your boot screen.*
 
 #### A. Symptom
 Following adoption or creation of a dedicated Slackware ESP partition (Scenario C), Windows 11 no longer appears as a boot option in the Limine menu.
@@ -230,12 +230,13 @@ sudo blkid | grep -i vfat
    ```bash
    sudo slacky-update --limine
    ```
-   Slacky-Update scans all connected storage drives for `EFI/Microsoft/Boot/bootmgfw.efi` and generates a dedicated chainload entry in Zone B:
+   Choose option 2 (`Regenerate limine.conf & Re-enroll BLAKE2B Checksums`). Slacky-Update looks for `EFI/Microsoft/Boot/bootmgfw.efi` on the boot partition itself (Scenario C copies the old `EFI/*` there) and generates a dedicated chainload entry in Zone B:
    ```ini
-   /Windows 11 Boot Manager
+   /Windows Boot Manager
        protocol: efi_chainload
-       image_path: guid(xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx):/EFI/Microsoft/Boot/bootmgfw.efi
+       image_path: boot():/EFI/Microsoft/Boot/bootmgfw.efi
    ```
+   A Windows Boot Manager that lives only on another drive's ESP is not added; use the firmware boot menu below for it.
 2. **Firmware Direct Boot:**  
    You can always tap F11/F12 during power-on to boot Windows directly from the motherboard BIOS menu.
 
@@ -267,7 +268,7 @@ df -h /tmp /boot
 
 #### D. Fix
 1. **Slacky-Update Staging Shield (Automatic):**  
-   Slacky-Update forces Dracut and `mkinitrd` to stage builds in `/var/tmp` on physical SSD storage (`TMPDIR=/var/tmp`).
+   Slacky-Update makes `mkinitrd` stage its build tree in `/var/tmp/slacky-initrd-tree` on physical SSD storage (`SOURCE_TREE` in `/etc/mkinitrd.conf`). Dracut keeps its own default work folder in `/var/tmp`; the finished image is written to a private `/tmp/slacky-dracut.*` folder and then copied to `/boot`.
 2. **Manual Safe Rebuild:**
    ```bash
    sudo TMPDIR=/var/tmp dracut --force --kver $(uname -r) /boot/initramfs-$(uname -r).img
@@ -489,7 +490,7 @@ If the app opens but crashes immediately with missing shared libraries, run `ldd
 
 > [!TIP]
 > #### 🧩 ELI5 (Explain Like I'm 5)
-> *Most Windows games are 32-bit programs running on your 64-bit Linux machine. To run them, your system needs 32-bit translation libraries (multilib). If a game closes the second you click Play, or MangoHud doesn't show up, running `slacky-update --multilib` checks every single 32-bit bridge and fixes broken links automatically.*
+> *Most Windows games are 32-bit programs running on your 64-bit Linux machine. To run them, your system needs 32-bit translation libraries (multilib). If a game closes the second you click Play, or MangoHud doesn't show up, running `slacky-update --heal-multilib` checks every single 32-bit bridge and fixes broken links automatically.*
 
 #### A. Symptom
 Steam launches, but games crash immediately upon starting, Proton displays a black window, or MangoHud HUD overlays fail to render in Vulkan games.
@@ -510,7 +511,7 @@ Steam launches, but games crash immediately upon starting, Proton displays a bla
 #### D. Fix
 1. **Run Slacky-Update Multilib Auto-Heal:**
    ```bash
-   sudo slacky-update --multilib
+   sudo slacky-update --heal-multilib
    ```
 2. **Test Game with MangoHud in Terminal:**
    ```bash
@@ -624,24 +625,19 @@ On a 4K / 1440p high-DPI display, Qt5/Qt6 applications (like the tray applet, OB
 * **Position:** Slackware graphical desktop (KDE Plasma, XFCE, or Hyprland).
 
 #### C. Diagnosis
-Check if HiDPI profile scripts are loaded:
+Check if HiDPI profile scripts are loaded (under Wayland the script sets the platform variables; under X11 it sets the Qt scaling variables):
 ```bash
+echo "QT_QPA_PLATFORM=$QT_QPA_PLATFORM GDK_BACKEND=$GDK_BACKEND"
 echo "QT_ENABLE_HIGHDPI_SCALING=$QT_ENABLE_HIGHDPI_SCALING"
 echo "QT_SCALE_FACTOR_ROUNDING_POLICY=$QT_SCALE_FACTOR_ROUNDING_POLICY"
 ```
 
 #### D. Fix (Deploy System HiDPI Profile Script)
-1. **Ensure `/etc/profile.d/slacky-hidpi.sh` is present and executable:**
+1. **Ensure `/etc/profile.d/slacky-hidpi.sh` is present and executable:**  
+   The package installs it (and `slacky-hidpi.csh`) when the file is absent. If you edited your copy, it is kept and the new version waits next to it as `slacky-hidpi.sh.new`; if you switched it off with `chmod -x`, it stays off.
    ```bash
-   sudo bash -c 'cat << "EOF" > /etc/profile.d/slacky-hidpi.sh
-   #!/bin/sh
-   # System-wide HiDPI & Wayland Scaling Defaults
-   export QT_ENABLE_HIGHDPI_SCALING=1
-   export QT_AUTO_SCREEN_SCALE_FACTOR=1
-   export QT_SCALE_FACTOR_ROUNDING_POLICY=PassThrough
-   [ -n "$WAYLAND_DISPLAY" ] && export QT_QPA_PLATFORM="wayland;xcb"
-   [ -n "$WAYLAND_DISPLAY" ] && export GDK_BACKEND="wayland,x11,*"
-   EOF'
+   ls -l /etc/profile.d/slacky-hidpi.sh*
+   # Switch it back on (log out and in afterwards):
    sudo chmod 0755 /etc/profile.d/slacky-hidpi.sh
    ```
 2. **For Hyprland XWayland scaling parity, ensure in `hyprland.conf` or `hyprland.lua`:**
@@ -682,7 +678,7 @@ Never pipe `slackpkg` into raw unbuffered `tee` or complex terminal wrappers wit
 
 > [!TIP]
 > #### 🧩 ELI5 (Explain Like I'm 5)
-> *Imagine updating your computer is like performing heart surgery. If you accidentally bump the table or hit `Ctrl+C` while the heart is disconnected, everything could break! Slacky-Update puts on an invisible forcefield (`trap '' INT QUIT TSTP`) during critical surgery so accidental keystrokes can't stop it midway. If a power outage pulls the plug, running one command heals any unfinished work.*
+> *Imagine updating your computer is like performing heart surgery. If you accidentally bump the table or hit `Ctrl+C` while the heart is disconnected, everything could break! Slacky-Update puts on an invisible forcefield (`trap '' INT QUIT TSTP HUP`) during critical surgery so accidental keystrokes can't stop it midway. If a power outage pulls the plug, running one command heals any unfinished work.*
 
 #### A. Symptom
 During an active kernel installation or package upgrade transaction, the terminal window was accidentally closed, or the user pressed `Ctrl+C` repeatedly, or the system suffered sudden power loss.
@@ -690,16 +686,16 @@ During an active kernel installation or package upgrade transaction, the termina
 #### B. Diagnosis & In-Flight Armor
 * **Active Protection:** Slacky-Update wraps all atomic package installations, initramfs builds, and kernel registrations with **In-Flight Transaction Armor**:
   ```bash
-  trap '' INT QUIT TSTP
+  trap '' INT QUIT TSTP HUP
   ```
-  Accidental keystrokes (`Ctrl+C`, `Ctrl+\`, `Ctrl+Z`) are **completely ignored** during active package extractions, preventing half-written libraries.
+  Accidental keystrokes (`Ctrl+C`, `Ctrl+\`, `Ctrl+Z`) and closing the terminal window (`SIGHUP`) are **completely ignored** during active package extractions, preventing half-written libraries.
 * **If Hard Power Loss Occurred:** Files may have been partially extracted before power failed.
 
 #### C. Recovery Procedure
 Re-open your terminal and run Slacky-Update's self-healing reconciliation:
 ```bash
 # 1. Clear any stale lock files
-sudo rm -f /var/lock/slackpkg.* /var/run/slacky-update.lock
+sudo rm -f /var/lock/slackpkg.* /run/lock/slacky-update.lock
 
 # 2. Re-run package upgrade to catch any partially installed packages
 sudo slacky-update
@@ -721,10 +717,10 @@ Never shut down your PC with the physical power button while a kernel or glibc p
 | **Restore Limine from Known-Good Backup** | `sudo slacky-update --restore-limine` |
 | **Verify On-Disk BLAKE2B Hashes** | `slacky-update --hash-check` |
 | **Repair NVIDIA & DKMS after Crash** | `sudo slacky-update --sync-nvidia` |
-| **Repair 32-bit Multilib for Gaming** | `sudo slacky-update --multilib` |
+| **Repair 32-bit Multilib for Gaming** | `sudo slacky-update --heal-multilib` |
 | **Benchmark Slackware Mirrors** | `slacky-update --rank-mirrors` |
 | **Purge Old Kernels when Disk is Full** | `sudo slacky-update --clean` |
-| **Configure Secure Boot & sbctl** | `sudo slacky-update --limine` |
+| **Configure Secure Boot & sbctl** | `sudo slacky-update --sb` |
 | **Check System Health (Read-Only)** | `slacky-update --check` |
 | **Repair Transmuted App / Host Sovereignty** | `sudo gnomes heal` |
 

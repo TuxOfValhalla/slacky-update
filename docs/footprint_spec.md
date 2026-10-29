@@ -14,7 +14,8 @@ A package in `/var/lib/pkgtools/packages` is ours if its name starts with `under
 
 ## Ownership map
 Relative path -> owning package, built read-only from:
-1. Every non-own package's `FILE LIST:` (skip blank lines, `./`, entries ending in `/`, `install/*`).
+1. Every non-own package's `FILE LIST:` (skip blank lines, `./`, entries ending in `/`, `install/*`). A listed `X.new`
+   also makes `X` owned (Slackware's doinst installs the config file as `X`).
 2. Every non-own package's install script in `/var/lib/pkgtools/scripts`: lines `( cd DIR ; ln -sf TARGET LINK )`
    own the path `normpath(DIR/LINK)`.
 First owner wins.

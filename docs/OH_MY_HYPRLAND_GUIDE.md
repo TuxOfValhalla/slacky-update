@@ -34,7 +34,7 @@ The Hyprland desktop integration within Slacky-Update is strictly anchored in **
 * **The Sacred Slackware Base System:** Official Slackware desktop environments (KDE Plasma, XFCE) and native system libraries remain **100% untouched and functional**. Hyprland packages are deployed cleanly through isolated packages in `/opt/underpants/` and native Slackware `.txz` packages registered in `/var/log/packages/`.
 * **⚡ Speed:** Hardware-accelerated direct scanout with `immediate = true` tearing support for gaming; blazing 200ms bezier animations.
 * **🛋️ Comfort:** Complete out-of-the-box Mac-like desktop with floating dock, spotlight launcher, volume/brightness overlays, and status notifier tray integration.
-* **🛡️ Safety:** Automated PipeWire `setcap -r` privilege normalization preventing DBus session drops; non-destructive user configuration model where updates never overwrite `~/.config/hypr/`.
+* **🛡️ Safety:** Slackware's own PipeWire and WirePlumber files are never altered; non-destructive user configuration model where updates never overwrite `~/.config/hypr/`.
 * **🎨 UI Design:** Frosted glass aesthetics, rounded window corners, tasteful icon sets, and smooth fluid animations.
 * **🤝 Ease of Use:** 1-Click GUI configuration through HyprMod (`hyprmod`), visual multi-monitor management via `nwg-displays`, and universal `(ESC)` navigation across all menus.
 
@@ -64,29 +64,29 @@ Slacky-Update offers two distinct Hyprland deployment choices:
 │  Desktop Shell              │ Noctalia Shell (Bar + Dock) │ None (Bring OW) │
 │  Spotlight Launcher         │ Built-in Noctalia Launcher  │ None (Rofi/Wofi)│
 │  Control Center / Systray   │ Integrated Quick Toggles    │ None            │
-│  Config Architecture        │ Modular Lua (`modules/*.lua`)│ Stock / Custom  │
-│  Visual Settings Editor     │ HyprMod (GTK4/Libadwaita)   │ Manual editing  │
-│  Display Management         │ nwg-displays + ddcui        │ wlr-randr / CLI │
-│  Hardware Color Modes       │ Auto (8-bit default, 10-bit)│ User-configured │
-│  Audio / Screen Sharing     │ Automated PipeWire Shield   │ User-configured │
+│  Config Architecture        │ Modular Lua (`modules/*.lua`)│ Same Lua layout │
+│  Visual Settings Editor     │ HyprMod (`--hyprmod`, extra)│ HyprMod (extra) │
+│  Display Management         │ nwg-displays + ddcui        │ Same            │
+│  Hardware Color Modes       │ Auto + HDR suggestions      │ Auto + HDR sugg.│
+│  Audio / Screen Sharing     │ PipeWire autostart (once)   │ Same            │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Flavor 1: `hyprland-noctalia` (Curated Mac-like Desktop Suite)
 * **Command:** `slacky-update --hyprland-noctalia` (or `slacky-update --hyprland`)
 * **What's Included:**
-  * **Compositor & Graphics:** `hyprland`, `aquamarine`, `hyprlang`, `hyprcursor`, `hyprgraphics`, `hyprutils`, `hyprwire`, `hyprtoolkit`.
+  * **Compositor & Graphics:** `hyprland`, `aquamarine`, `hyprlang`, `hyprcursor`, `hyprgraphics`, `hyprutils`, `hyprwire`, `hyprtoolkit`, `hyprland-guiutils`.
   * **Noctalia Shell Suite:** Modern topbar, floating dock, spotlight application launcher, control center with brightness/volume sliders, and StatusNotifierItem system tray integration.
   * **Desktop Portals & Authentication:** `xdg-desktop-portal-hyprland`, `hyprpolkitagent`, `sdbus-cpp`.
   * **Locking & Power Management:** `hyprlock` (screen locker with PAM integration), `hypridle` (3-minute OLED burn-in standby and DPMS sleep), `hyprpaper` (wallpaper daemon).
   * **Color & Display Utilities:** `hyprpicker` (Wayland eyedropper & magnifier), `ddcui` (DDC/CI hardware monitor control), `nwg-displays` (graphical multi-monitor layout), `wlr-randr`.
-  * **Visual Configuration:** `hyprmod` (native GTK4/Libadwaita visual settings and rules editor).
+  * **Visual Configuration (separate install):** `hyprmod` (native GTK4/Libadwaita visual settings and rules editor) is not part of the suite; install it with `slacky-update --hyprmod`.
 
 ### Flavor 2: `hyprland-core` (DIY Minimalist Compositor)
 * **Command:** `slacky-update --hyprland-core`
 * **What's Included:**
-  * Clean, unopinionated Hyprland compositor with core Wayland portals (`xdg-desktop-portal-hyprland`), `hyprlock`, `hypridle`, and display CLI tools.
-  * No shell, no dock, no pre-defined theme.
+  * Clean, unopinionated Hyprland compositor with core Wayland portals (`xdg-desktop-portal-hyprland`), `hyprlock`, `hypridle`, `hyprpaper`, `hyprpicker`, `hyprpolkitagent` and the display tools (`nwg-displays`, `ddcui`, `wlr-randr`).
+  * No shell, no dock (no Noctalia). It gets the same modular Lua starter files, without the Noctalia entries.
   * Ideal for power users who want to build custom environments using Waybar, Eww, Rofi-Wayland, SwayNC, or custom Hyprland configs from scratch.
 
 ---
@@ -96,7 +96,7 @@ Slacky-Update offers two distinct Hyprland deployment choices:
 ### Zero Configuration Overwrite Guarantee
 When you update Hyprland via Slacky-Update, the engine guarantees that **your personal customizations in `~/.config/hypr/` will NEVER be overwritten or deleted**.
 
-* If upstream defaults change, new templates are deposited alongside your files as non-invasive `.example` files (e.g., `hyprland.lua.example` or `modules/keybinds.lua.example`).
+* The curated entry point is also kept as `hyprland.lua.example` (written when it or `hyprland.lua` is missing); every other file is only created when missing, never replaced.
 * Your active `~/.config/hypr/modules/*.lua` and custom `hyprland-gui.lua` files remain 100% untouched.
 
 ### Curated Hyprland Fallback & Reinstall
@@ -110,7 +110,7 @@ mv ~/.config/hypr ~/.config/hypr.broken.backup
 slacky-update --hyprland
 ```
 
-Because Slacky-Update protects existing user files with `[ ! -f ]` guards, moving the damaged directory aside allows the installer to provision a clean factory modular Lua layout, re-probe host GPU acceleration (NVIDIA vs AMD vs Intel vs PRIME), reset PipeWire capabilities, and recreate all desktop rules.
+Because Slacky-Update protects existing user files with `[ ! -f ]` guards, moving the damaged directory aside allows the installer to provision a clean factory modular Lua layout, re-probe host GPU acceleration (NVIDIA vs AMD vs Intel vs PRIME), and recreate all desktop rules.
 
 ---
 
@@ -121,41 +121,46 @@ Traditional Hyprland setups use a single, monolithic 1,500-line `hyprland.conf` 
 
 1. **Procedural Logic & Hardware Branching:** Lua scripts can query host hardware (e.g., detecting if an NVIDIA GPU, OLED display, or laptop battery is present) and dynamically configure settings at startup.
 2. **Clean Separation of Concerns:** Keybindings, window rules, monitor layouts, and startup daemons live in dedicated, readable files.
-3. **Safe GUI Overrides:** The HyprMod visual settings editor writes directly to `modules/hyprland-gui.lua`, cleanly overriding defaults without corrupting your hand-crafted scripts.
+3. **Safe GUI Overrides:** HyprMod settings live in `~/.config/hypr/hyprland-gui.lua` (loaded last by `hyprland.lua`), cleanly overriding defaults without corrupting your hand-crafted scripts.
 
 ### Directory Structure & Module Breakdown
 
 ```
 ~/.config/hypr/
 ├── hyprland.lua            # 🚀 Master Entry Point (loads all modules)
-├── hyprland.env            # 🌐 Global environment variable overrides
+├── hyprland.lua.example    # 📄 Fresh copy of the curated entry point
+├── hyprland-gui.lua        # 🎛️ HyprMod managed settings (loaded last)
+├── hyprland.conf           # 📜 Classic (non-Lua) curated config, written when missing
+├── hyprland.env            # 🌐 Environment variables (slacky-update keeps its lines in a marked block)
+├── hypridle.conf           # 💤 Screen-off after 3 min, lock after 10 min
+├── hyprlock.conf           # 🔒 Lock screen (copied when Hyprlock ships one)
 └── modules/
     ├── env.lua             # 🎮 Hardware GPU detection & renderer flags
     ├── monitors.lua        # 🖥️ Monitor resolutions, refresh rates & scaling
+    ├── general.lua         # ✨ Input, gaps, borders, rounded corners, blur, cursor & XWayland
     ├── keybinds.lua        # ⌨️ Keyboard shortcuts & application launchers
     ├── rules.lua           # 🪟 Window rules, floating dialogs & tearing
-    ├── autostart.lua       # 🚀 Background daemons (Noctalia, Polkit, Systray)
-    ├── decorations.lua     # ✨ Window borders, rounded corners & shadows
+    ├── autostart.lua       # 🚀 Background daemons (Noctalia, Polkit, PipeWire, tray)
     ├── animations.lua      # 🏎️ 200–250ms smooth bezier animation curves
-    └── hyprland-gui.lua    # 🎛️ Auto-generated overrides from HyprMod GUI
+    └── hdr.lua.suggestions # 🌈 HDR lines for your HDR-capable monitors (copy into monitors.lua)
 ```
 
 #### Module Descriptions
 * **`modules/env.lua`:** Dynamically sets GPU environment variables based on probed hardware:
-  * **NVIDIA:** `LIBVA_DRIVER_NAME=nvidia`, `__GLX_VENDOR_LIBRARY_NAME=nvidia`, `NVD_BACKEND=direct`, `ELECTRON_OZONE_PLATFORM_HINT=auto`.
+  * **NVIDIA:** `LIBVA_DRIVER_NAME=nvidia`, `__GLX_VENDOR_LIBRARY_NAME=nvidia` (only when a live check says it is needed), `NVD_BACKEND=direct`, `ELECTRON_OZONE_PLATFORM_HINT=auto`. A card on `nouveau` gets no NVIDIA variables.
   * **AMD:** `LIBVA_DRIVER_NAME=radeonsi`, `VDPAU_DRIVER=radeonsi`.
-  * **Intel:** `LIBVA_DRIVER_NAME=iHD`.
-  * **Hybrid Laptops (PRIME):** Configures non-intrusive render offload routing without locking the compositor to discrete GPU memory.
-* **`modules/monitors.lua`:** Configures display outputs, color depth (auto by default, optional 10-bit for HDR/OLED), refresh rates, and position matrices.
-* **`modules/rules.lua`:** Manages window behavior (forcing Steam dialogs to float, Picture-in-Picture pin) and provisions `immediate = true` tearing rules for low-latency gaming under Wine/Proton.
-* **`modules/autostart.lua`:** Spawns Noctalia Shell, `hyprpolkitagent`, `hypridle`, `slacky-update-tray`, and `easyeffects`.
+  * **Intel:** No variable is set; libva picks `iHD` or `i965` by itself.
+  * **Hybrid Laptops (PRIME):** No NVIDIA variables session-wide; the built-in GPU drives the screen and a program runs on the NVIDIA card with `slacky-prime-run <program>` (Steam: `slacky-prime-run %command%`).
+* **`modules/monitors.lua`:** Configures display outputs (preferred mode, auto position, scale 1.0 by default), refresh rates and positions. HDR / 10-bit lines for your monitors are suggested in `modules/hdr.lua.suggestions`.
+* **`modules/rules.lua`:** Manages window behavior (Battle.net, Faugus, ddcui, nwg-displays and GOverlay float; Steam games and Gamescope open fullscreen) and provisions `immediate = true` tearing rules for low-latency gaming (Steam games, Wine/Proton, World of Warcraft).
+* **`modules/autostart.lua`:** Spawns `hyprpolkitagent`, PipeWire / `pipewire-pulse` / WirePlumber (only when not already running), `hypridle`, and in the curated suite Noctalia Shell and `slacky-update-tray`.
 
 ---
 
 ## 6. GUI Configuration with HyprMod & nwg-displays
 
 ### HyprMod: GTK4 & Libadwaita Visual Editor
-**HyprMod** (`underpants-hyprmod`) provides a native graphical settings interface for Hyprland:
+**HyprMod** (`underpants-hyprmod`, installed separately with `sudo slacky-update --hyprmod`) provides a native graphical settings interface for Hyprland:
 
 ```bash
 # Launch HyprMod from terminal or spotlight launcher
@@ -169,7 +174,7 @@ hyprmod
 * **Window Rules:** Easily add application rules (e.g., force Discord to open on Workspace 4, or force Steam to float).
 
 > [!TIP]
-> All changes made in HyprMod are saved atomically to `~/.config/hypr/modules/hyprland-gui.lua`. If you ever want to reset visual settings, simply delete `hyprland-gui.lua` and Hyprland will instantly reload default module settings.
+> HyprMod settings belong in `~/.config/hypr/hyprland-gui.lua`. If you ever want to reset visual settings, empty that file (keep the file itself: `hyprland.lua` loads it) and Hyprland reloads the default module settings.
 
 ### nwg-displays: Graphical Multi-Monitor Management
 For complex multi-monitor setups (e.g., triple monitors with mixed DPI, vertical side monitors, or TV mirrors):
@@ -191,20 +196,15 @@ If you prefer editing files directly in your favorite text editor (`nano`, `vim`
 Open `~/.config/hypr/modules/keybinds.lua`:
 ```lua
 -- Add a custom shortcut to launch Spotify
-bind = {
-    {"SUPER", "S", "exec", "spotify"},
-    {"SUPER SHIFT", "F", "exec", "firefox"},
-}
+hl.bind(mainMod .. " + S",         hl.dsp.exec_cmd("spotify"))
+hl.bind(mainMod .. " + SHIFT + F", hl.dsp.exec_cmd("firefox"))
 ```
 
 ### How to Add a Low-Latency Gaming Rule
 Open `~/.config/hypr/modules/rules.lua`:
 ```lua
 -- Enable immediate scanout (tearing) for low input latency
-windowrulev2 = {
-    {"immediate, class:^(cs2)$"},
-    {"immediate, class:^(steam_app_.*)$"},
-}
+hl.window_rule({ name = "cs2-tearing", match = { class = "^(cs2)$" }, immediate = true })
 ```
 
 ### How to Change Wallpapers
@@ -222,19 +222,19 @@ wallpaper = ,/usr/share/wallpapers/my_wallpaper.png
 * **Cause:** NVIDIA DRM modesetting is not enabled in kernel boot arguments, or `GBM_BACKEND` is misconfigured.
 * **Fix:**
   1. Open `slacky-update --cmdline` and verify that Toggle `[2]` (**NVIDIA GPU Modeset & VRAM**) is enabled (`[x]`).
-  2. Verify that `/etc/hypr/hyprland.env` contains `LIBVA_DRIVER_NAME=nvidia` and `__GLX_VENDOR_LIBRARY_NAME=nvidia`.
+  2. Verify that `~/.config/hypr/hyprland.env` (or `~/.config/hypr/modules/env.lua`) contains `LIBVA_DRIVER_NAME=nvidia` (and `__GLX_VENDOR_LIBRARY_NAME=nvidia` when your card needs it). On a hybrid laptop these are deliberately absent.
   3. Ensure `GBM_BACKEND=nvidia-drm` is **purged** (it is deprecated in modern Hyprland).
 
 ### 2. PipeWire Audio or Screen Sharing Fails under Wayland
-* **Cause:** Linux file capabilities on `pipewire` binaries cause `AT_SECURE` security restrictions that break session DBus communication.
-* **Fix:** Slacky-Update automatically strips these capabilities. Run:
+* **Cause:** A second PipeWire or WirePlumber instance fights the first, or the session bus environment was not passed on.
+* **Fix:** Slacky-Update no longer removes the file capabilities of Slackware's `pipewire` / `wireplumber` (they reach the session bus with them). The curated `autostart.lua` runs `dbus-update-activation-environment --all` and starts each audio daemon only when it is not already running. Check that each runs once:
   ```bash
-  sudo setcap -r /usr/bin/pipewire 2>/dev/null || true
-  sudo setcap -r /usr/bin/wireplumber 2>/dev/null || true
+  pgrep -a pipewire
+  pgrep -a wireplumber
   ```
 
 ### 3. Screen Goes to Sleep Too Fast (OLED 3-Minute Standby)
-* **Cause:** By default, `hypridle` activates DPMS monitor standby after 3 minutes of inactivity to protect OLED displays from burn-in.
+* **Cause:** By default, `hypridle` activates DPMS monitor standby after 3 minutes of inactivity to protect OLED displays from burn-in (and, when Hyprlock is set up, locks the screen after 10 minutes).
 * **Fix:** Edit `~/.config/hypr/hypridle.conf` and adjust the `timeout` values (e.g., from `180` to `600` for 10 minutes).
 
 ---
@@ -247,25 +247,26 @@ The `hyprland-noctalia` curated suite comes pre-configured with intuitive keyboa
 
 | Keybinding | Action | Description |
 |---|---|---|
-| `SUPER + Return` | Open Terminal | Launches default terminal (Konsole / Foot) |
+| `SUPER + Return` | Open Terminal | Launches default terminal (Konsole / Xfce Terminal / Kitty / Foot / Alacritty) |
+| `SUPER + Q` | Open Terminal | Same as `SUPER + Return` |
 | `SUPER + Space` | Spotlight Launcher | Opens Noctalia search & app launcher |
+| `SUPER + C` | Control Center | Opens the Noctalia control center |
+| `SUPER + I` | Shell Settings | Opens the Noctalia settings |
 | `SUPER + E` | File Manager | Opens Dolphin / Thunar file manager |
-| `SUPER + B` | Web Browser | Launches default web browser (Firefox / Chrome) |
-| `SUPER + P` | Color Picker | Activates Hyprpicker eyedropper with hex clipboard copy |
-| `SUPER + L` | Lock Screen | Immediately locks workstation via `hyprlock` |
-| `SUPER + Shift + K` | Force Kill Window | Interactively terminates stubborn or frozen windows |
+| `SUPER + U` | Slacky-Update | Opens Slacky-Update in a terminal |
+| `SUPER + P` / `SUPER + Shift + C` | Color Picker | Activates Hyprpicker eyedropper with hex clipboard copy |
 
 ### 🪟 Window & Layout Management
 
 | Keybinding | Action | Description |
 |---|---|---|
-| `SUPER + Q` | Close Window | Closes currently focused window |
+| `SUPER + W` / `SUPER + Shift + K` | Close Window | Closes currently focused window |
 | `SUPER + V` | Toggle Floating | Toggles focused window between tiling and floating mode |
 | `SUPER + F` | Fullscreen | Toggles true fullscreen mode |
-| `SUPER + M` | Monocle / Maximize | Expands focused window to fill tile workspace |
-| `SUPER + Left / Right` | Focus Window | Moves focus to left/right adjacent window |
-| `SUPER + Up / Down` | Focus Window | Moves focus to upper/lower window |
-| `SUPER + Shift + Arrows` | Move Window | Swaps position of focused window in tile tree |
+| `SUPER + M` | Exit Hyprland | Ends the session (`hyprshutdown` when installed) |
+| `ALT + Arrows` | Focus Window | Moves focus to the adjacent window |
+| `SUPER + Ctrl + Arrows` | Resize Window | Resizes the focused window in 30 px steps |
+| `SUPER + Left / Right Mouse Drag` | Move / Resize | Drags or resizes a window with the mouse |
 
 ### 🧭 Workspaces & Navigation
 
@@ -273,20 +274,16 @@ The `hyprland-noctalia` curated suite comes pre-configured with intuitive keyboa
 |---|---|---|
 | `SUPER + 1 ... 9` | Switch Workspace | Switches directly to workspace 1 through 9 |
 | `SUPER + Shift + 1 ... 9` | Move to Workspace | Moves active window to specified workspace |
-| `SUPER + Tab` | Next Workspace | Cycles forward through active workspaces |
-| `SUPER + Shift + Tab` | Previous Workspace | Cycles backward through active workspaces |
 
-### 🔊 Multimedia, Volume & Brightness
+### 🔊 Multimedia, Volume & Screenshots
 
 | Keybinding | Action | Description |
 |---|---|---|
-| `XF86AudioRaiseVolume` | Volume Up (+5%) | Increases system audio volume |
+| `XF86AudioRaiseVolume` | Volume Up (+5%) | Increases system audio volume (up to 150%) |
 | `XF86AudioLowerVolume` | Volume Down (-5%) | Decreases system audio volume |
 | `XF86AudioMute` | Mute Audio | Toggles audio output mute state |
-| `XF86MonBrightnessUp` | Brightness Up | Increases display backlight brightness |
-| `XF86MonBrightnessDown` | Brightness Down | Decreases display backlight brightness |
-| `Print` | Screenshot Region | Captures selected screen area to clipboard |
-| `Shift + Print` | Full Screenshot | Captures entire multi-monitor desktop |
+| `XF86AudioPlay / Next / Prev` | Media Control | Play/pause, next and previous track (`playerctl`) |
+| `Print` / `SUPER + Shift + S` | Screenshot | Noctalia screenshot with annotation |
 
 ---
 

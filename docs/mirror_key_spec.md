@@ -1,8 +1,9 @@
 # Mirror and key sentinel: shared spec (MS1)
 
 Shared by `slacky-update-rs` and the legacy `slacky-update`. Only formats, thresholds and sentences are shared, never code.
-Design background: `docs/spidersense_mirrors/research.md`. Status: key rules (section 3, 4) implemented in Rust (MS2,
-`src/packages/key_store.rs`); mirror rules (section 1, 2, 5) are the spec for MS3-MS7.
+Status: key rules (section 3, 4) implemented in Rust (MS2,
+`src/packages/key_store.rs`); mirror rules (section 1, 2, 5) are the spec for MS3-MS7. Legacy: key rules in
+`lib/gnomes_trust.py`, mirror rules and alerts in `lib/slacky_sentinel.py`.
 
 ## 0. Cadences (owner decision 2026-10-15)
 | What | When |

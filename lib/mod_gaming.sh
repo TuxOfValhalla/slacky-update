@@ -8046,6 +8046,8 @@ DKMS_DOUNINST_EOF
     gaming_symver_gate "${pkg_id}" "${ver}" "${staging_root}" || _symver_rc=$?
     if [ "${_symver_rc}" -ne 0 ]; then
         rm -rf "${staging_base}" 2>/dev/null || true
+        # 6A-377: counted as waiting (not installed, nothing failed) for the batch summary
+        GAMING_WAITING_PIDS+=("${pkg_id}")
         return 0
     fi
 
@@ -9079,6 +9081,7 @@ deploy_gaming_packages_batch() {
     validate_privileges
     local current_idx=1
     local success_count=0
+    GAMING_WAITING_PIDS=()
 
     for entry in "${valid_entries[@]}"; do
         IFS='|' read -r pid ver main_url lib32_url extra_url <<< "${entry}"
@@ -9102,7 +9105,14 @@ deploy_gaming_packages_batch() {
         log_error "${#failed_pids[@]} of ${#target_pkg_ids[@]} packages failed (${failed_pids[*]:-unknown}); their installed versions were kept."
         return 1
     fi
-    log_success "Batch deployment complete! ${success_count}/${total_pkgs} packages successfully installed!"
+    # 6A-377: a package that waits for a newer system library is not counted as installed
+    local waiting_count=${#GAMING_WAITING_PIDS[@]}
+    local installed_count=$((success_count - waiting_count))
+    if [ "${waiting_count}" -gt 0 ]; then
+        log_success "Batch deployment complete! ${installed_count}/${total_pkgs} packages installed, ${waiting_count} waiting for a newer system library (${GAMING_WAITING_PIDS[*]})."
+    else
+        log_success "Batch deployment complete! ${success_count}/${total_pkgs} packages successfully installed!"
+    fi
 }
 
 uninstall_cachyos_gaming_pkg() {

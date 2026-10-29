@@ -66,7 +66,7 @@ Every feature, routine, and interface in Slacky-Update is continuously measured 
 
 ### How the Engine Works
 The System Synchronization Engine manages Slackware core updates in a single, resilient pipeline:
-1. **Parallel Pre-fetch:** Spawns 10 concurrent download streams (`SLACKY_PREFETCH_JOBS=10`) using Python and `curl` to pre-cache all needed `.txz` packages and `.asc` GPG signatures into `/var/cache/slacky-update/packages/` before package operations begin.
+1. **Parallel Pre-fetch:** Spawns 10 concurrent download streams (`SLACKY_PREFETCH_JOBS=10`) using Python and `curl` to pre-cache all needed `.txz` packages and `.asc` GPG signatures into slackpkg's own cache (`/var/cache/packages/`) before package operations begin.
 2. **Dynamic TUI, Mouse Navigation & Shift-Drag Copying:** Automatically calculates terminal geometry, dynamically budgets vertical screen height, and presents available packages in a 2/3-column responsive grid with full mouse click selection. To copy text directly to your clipboard (for LLMs or debugging), hold **`Shift`** while dragging (`Shift + Drag`) to bypass application mouse tracking in all modern terminal emulators.
 3. **In-Flight Transaction Armor:** Shields running package installations with atomic signal locks (`trap '' INT QUIT TSTP`). Once package upgrades or kernel builds commence, accidental keystrokes cannot abort transactions midway, safeguarding system package logs from partial states.
 4. **Slackpkg Integration & Stream Normalization:** Invokes `slackpkg update`, `slackpkg install-new`, and `slackpkg upgrade-all` through a real-time VT100/CSI/DEC stream normalizer. The normalizer converts `\r` and DEC Restore Cursor (`\x1b8`, `\x1b[u`) to `\n`, strips terminal cursor jumps, silences `wget` background redirect logs, and executes from temporary sandbox directories to prevent `wget-log.*` pollution in `$HOME`.
@@ -84,21 +84,22 @@ The System Synchronization Engine manages Slackware core updates in a single, re
   * *Fix:* Switch mirror in `/etc/slackpkg/mirrors` to an active mirror (e.g., `https://mirrors.ircam.fr/slackware/slackware64-current/`) or retry in 5 minutes.
 * **Symptom:** Terminal screen shows duplicate or skipped text during updates.
   * *Cause:* Running an older version of Slacky-Update without the VT100 stream normalizer.
-  * *Fix:* Update Slacky-Update to the latest version (`cd slackbuild && ./slacky-update.SlackBuild && sudo upgradepkg --install-new --reinstall /tmp/slacky-update-*.txz`).
+  * *Fix:* Update Slacky-Update to the latest version (from the source folder: `bash slackbuild/slacky-update.SlackBuild && sudo upgradepkg --reinstall --install-new "$(ls -t ../slacky-updates_releases/slacky-update-[0-9]*.txz | head -n 1)"`).
 
 ---
 
 ## 3. CachyOS Kernels (And all the flavors) {#cachyos-kernels-and-all-the-flavors}
 
 * **Engine:** `lib/mod_kernel.sh`
-* **Trigger:** Menu Option `[2]` (*CachyOS Kernel Management*), CLI: `slacky-update --kernel`, `slacky-update -k`
+* **Trigger:** Menu Option `[2]` (*CachyOS Kernel Management*: Upgrade Installed Kernels, Kernel Picker with 11 flavors, Manage System Kernels, Rebuild Active Kernel Initramfs & NVIDIA Modules)
 
 ### How the Engine Works
 The Kernel Engine provides automated microarchitecture targeting, scheduling selection, DKMS building, and retention safeguards:
-1. **Microarchitecture Auto-Detection:** Inspects `/proc/cpuinfo` flags (`avx512f`, `avx2`, `bmi2`) to target optimal instruction sets:
-   * `x86_64_v4` / `znver4`: AMD Zen 4/5, Intel 12th–15th+ Gen Core.
-   * `x86_64_v3`: Intel Haswell+ / AMD Excavator+.
-   * `x86_64_v2`: Legacy 64-bit CPUs (Nehalem / Bulldozer).
+1. **Microarchitecture Auto-Detection:** Inspects `/proc/cpuinfo` flags (`avx512f`, `avx2`, `fma`, `bmi2`) to target optimal instruction sets:
+   * `znver4`: AMD CPUs with AVX-512 (Zen 4/5).
+   * `x86_64_v4`: Other CPUs with AVX-512.
+   * `x86_64_v3`: Intel Haswell+ / AMD Excavator+ (AVX2, FMA, BMI1/2).
+   * Generic `x86_64`: Older 64-bit CPUs.
 2. **Kernel Flavors & Schedulers:**
    * `bore` (`linux-cachyos-bore`): Burst-Oriented Response Enhancer — optimal desktop and gaming latency.
    * `standard` (`linux-cachyos`): Default high-performance CachyOS kernel with BCFS/EEVDF tuning.
@@ -117,7 +118,7 @@ The Kernel Engine provides automated microarchitecture targeting, scheduling sel
 
 3. **Multi-Kernel DKMS Driver Pipeline:** Automatically builds out-of-tree hardware modules (`nvidia-open-dkms`, `zenpower3`, `v4l2loopback`, `r8125`, Wi-Fi drivers) across all installed kernels.
 4. **Dracut & Secure Boot Signing:** Generates lightweight Dracut initramfs images (`/boot/initramfs-<version>.img`) with 64-bit library shielding, and automatically signs kernels and initramfs with `sbctl` when UEFI Secure Boot is active.
-5. **Retention Safeguards:** Automatically preserves the **2 newest standard/BORE kernels**, the **1 newest RC kernel**, and **strictly protects the active running kernel** plus stock fallback kernels.
+5. **Retention Safeguards:** Automatically preserves the **2 newest kernels of each flavor**, the **1 newest RC kernel**, and **strictly protects the active running kernel** plus the newest stock fallback kernel.
 
 > [!NOTE]
 > ### 🧒 ELI5
@@ -129,22 +130,22 @@ The Kernel Engine provides automated microarchitecture targeting, scheduling sel
   * *Fix:* In Limine bootloader menu, select your previous working kernel, boot into desktop, and run `slacky-update --sync-nvidia` (or `slacky-update --sync-boot`).
 * **Symptom:** `/boot` partition is full.
   * *Cause:* Too many old kernels or initramfs images accumulated.
-  * *Fix:* Run `slacky-update --clean` (Option `[5]`) to purge obsolete kernel images and maintain the dual-kernel retention standard.
+  * *Fix:* Run `slacky-update --clean` (Main Menu Option `[5]`, *System Maintenance*) to purge obsolete kernel images and maintain the dual-kernel retention standard.
 
 ---
 
 ## 4. Graphics Stack & NVIDIA Driver Orchestration {#graphics-stack--nvidia-driver-orchestration}
 
 * **Engine:** `lib/mod_nvidia.sh`, `lib/mod_rocm.sh`
-* **Trigger:** Menu Option `[3]` (*NVIDIA & ROCm Graphics Hub*), CLI: `slacky-update --sync-nvidia`
+* **Trigger:** Menu Option `[3]` (*NVIDIA Driver Management* on NVIDIA systems; *AMD ROCm/HIP Creator Toolkit* on AMD systems), CLI: `slacky-update --sync-nvidia`
 
 ### How the Engine Works
 Slacky-Update orchestrates both kernel-space driver modules and user-space graphics stacks:
 
 #### A. Kernel-Space NVIDIA Modules
-* **CachyOS Kernels:** Deploys official pre-compiled binary open modules (`linux-cachyos-nvidia-open`, `cachyos-nvidia-open-modules`) matching the exact kernel version and microarchitecture.
+* **CachyOS Kernels:** Deploys official pre-compiled binary open modules (`linux-cachyos-<flavor>-nvidia-open`, e.g. `linux-cachyos-bore-nvidia-open`) matching the exact kernel version and microarchitecture.
 * **Slackware & Arch Kernels:** Deploys `nvidia-open-dkms` (or `nvidia-580xx-dkms` for legacy Pascal architecture), building modules dynamically against the kernel headers.
-* **Custom / Legacy `.run` Fallback:** The official NVIDIA `.run` installer is fully supported for users who require custom, beta, or specific legacy driver branches not covered by distribution packages.
+* **Custom / Legacy `.run` Fallback:** The official NVIDIA `.run` installer is fully supported for users who require custom, beta, or specific legacy driver branches not covered by distribution packages (NVIDIA menu option `[3]`: branches 595, 570, 535, 470, 390).
 
 #### B. User-Space Graphics Stack & Wayland Bridge
 * **`cachyos-nvidia-utils` & `egl-gbm`:** Automatically packages 64-bit userspace libraries (`/usr/lib64/libnvidia-*.so`, `libcuda.so`, `libEGL_nvidia.so`), Xorg OutputClass configuration (`10-nvidia-drm-outputclass.conf`), and GLX symlinks.
@@ -171,23 +172,26 @@ Slacky-Update orchestrates both kernel-space driver modules and user-space graph
 ## 5. Limine Bootloader & UEFI Secure Boot Matrix {#limine-bootloader--uefi-secure-boot-matrix}
 
 * **Engine:** `lib/mod_limine.sh`, `lib/mod_secureboot.sh`
-* **Trigger:** Menu Option `[6]` (*Limine & Secure Boot Armor*), CLI: `slacky-update --limine`, `slacky-update --cmdline`
+* **Trigger:** Menu Option `[6]` (*Limine Bootloader & Secure Boot Matrix*), Menu Option `[7]` (*Secure Boot MOK Configuration*), CLI: `slacky-update --limine`, `slacky-update --cmdline`, `slacky-update --sb`
 
 ### How the Engine Works
 1. **Two-Zone `limine.conf` Architecture:**
    * **Zone A (User Styling):** Preserves custom background wallpaper, timeouts, color palettes, and graphical resolutions untouched.
    * **Zone B (Kernel Registry):** Atomically regenerates boot entries for all detected kernels (CachyOS, Arch, Slackware huge/generic) and calculates cryptographic hashes.
-2. **Cryptographic BLAKE2B Anti-Tamper Sealing:** Pure-memory Python `hashlib.blake2b` engine computes cryptographic checksums for all kernel and initramfs binaries, embedding them into `limine.conf` (`kernel_hash:` and `module_hash:`). Any unauthorized modification to boot files is trapped before execution.
+2. **Cryptographic BLAKE2B Anti-Tamper Sealing:** Pure-memory Python `hashlib.blake2b` engine computes cryptographic checksums for all kernel and initramfs binaries, embedding them into `limine.conf` as a `#<hash>` suffix on each `path:` and `module_path:` line. Any unauthorized modification to boot files is trapped before execution.
 3. **Interactive Kernel CMDLINE Hub:** Instant interactive toggles for:
-   * Quiet & Splash Boot (`quiet splash loglevel=3`)
+   * Quiet & Splash Boot (`quiet splash loglevel=3 rd.udev.log_priority=3`)
    * NVIDIA Modeset & VRAM (`nvidia_drm.modeset=1 nvidia_drm.fbdev=1 NVreg_PreserveVideoMemoryAllocations=1`)
    * AMD GPU Overclocking (`amdgpu.ppfeaturemask=0xffffffff`)
    * Disable Watchdog (`nowatchdog`)
    * Disable USB Autosuspend (`usbcore.autosuspend=-1`)
    * ZSWAP RAM Compression (`zswap.enabled=1 zswap.compressor=zstd zswap.max_pool_percent=25`)
+   * Hypervisor / VM UMIP Fix (`clearcpuid=umip`)
+   * IOMMU / VFIO Passthrough (`intel_iommu=on iommu=pt` or `amd_iommu=on iommu=pt`)
+   * Skip Initramfs FSCK (`fsck.mode=skip`)
    * Universal Split Lock Protection (`split_lock_mitigate=0 split_lock_detect=off`)
-4. **UEFI Secure Boot & MOK Management:** Keeps UEFI Secure Boot enabled in motherboard BIOS. Features a guided, streamlined setup for Machine Owner Key (MOK) generation and certificate enrollment—operating fully automatically on all subsequent kernel and initramfs builds once enrolled.
-5. **Btrfs Snapper Snapshot Boot Integration:** Scans Btrfs root snapshots and automatically generates boot entries for the 5 newest snapshots, enabling 1-click rollback directly from the bootloader menu.
+4. **UEFI Secure Boot & MOK Management (Main Menu `[7]`):** Keeps UEFI Secure Boot enabled in motherboard BIOS. Features a guided, streamlined setup for Machine Owner Key (MOK) generation and certificate enrollment—operating fully automatically on all subsequent kernel and initramfs builds once enrolled.
+5. **Btrfs Snapper Snapshot Boot Integration:** Scans Btrfs root snapshots and automatically generates boot entries for up to 5 snapshots by default (3, 5, 7 or 10, chosen in the Snapper menu), enabling 1-click rollback directly from the bootloader menu.
 
 > [!NOTE]
 > ### 🧒 ELI5
@@ -196,17 +200,17 @@ Slacky-Update orchestrates both kernel-space driver modules and user-space graph
 ### 🔍 Troubleshooting: Bootloader Matrix
 * **Symptom:** Limine reports `Hash mismatch for kernel binary`.
   * *Cause:* Kernel binary was updated or modified outside of Slacky-Update without updating `limine.conf`.
-  * *Fix:* Boot into system via fallback entry or live-USB and run `slacky-update --sync-boot` (or `hash-check`) to re-enroll BLAKE2B hashes.
+  * *Fix:* Boot into system via fallback entry or live-USB and run `slacky-update --sync-boot` to re-enroll BLAKE2B hashes (then confirm with `slacky-update --hash-check`).
 * **Symptom:** Windows 11 fails to boot due to Secure Boot violation after dual-boot setup.
   * *Cause:* Microsoft certificates were not included during Secure Boot key generation.
-  * *Fix:* In `slacky-update --limine`, re-enroll keys with Microsoft certificates enabled (`sbctl enroll-keys -m`).
+  * *Fix:* Open Main Menu `[7]` (*Secure Boot MOK Configuration*, or `slacky-update --sb`) and run option `[2]` (*1-Click sbctl Key Enrollment Wizard*), which enrolls keys with Microsoft certificates (`sbctl enroll-keys -m`).
 
 ---
 
 ## 6. System Performance & Gaming Tweaks {#system-performance--gaming-tweaks}
 
 * **Engine:** `lib/mod_tweaks.sh`, `lib/mod_armor.sh`
-* **Trigger:** Menu Option `[7]` (*System Performance Tweaks*), CLI: `slacky-update --tweaks`
+* **Trigger:** CLI: `slacky-update --tweaks`, `slacky-update -t`
 
 ### How the Engine Works
 Deploys proven kernel, memory, network, and hardware tweaks in `/etc/sysctl.d/`, `/etc/security/limits.d/`, and `/etc/udev/rules.d/` with 100% symmetric granular reversibility:
@@ -215,7 +219,7 @@ Deploys proven kernel, memory, network, and hardware tweaks in `/etc/sysctl.d/`,
 3. **TCP BBR Congestion Control:** Activates Google BBR congestion control (`net.ipv4.tcp_congestion_control=bbr`) and FQ queue discipline (`net.core.default_qdisc=fq`) for minimum download bufferbloat.
 4. **NTSYNC Synchronization:** Provisions `/dev/ntsync` (0666 permissions) for fast in-kernel Windows NT synchronization primitives in Wine/Proton.
 5. **Universal Controller Forcefield:** Deploys udev hardware rules across 27+ vendor categories, disabling USB autosuspend on gaming peripherals (`ATTR{power/control}="on"`).
-6. **Turbo Boot & Fast Shutdown:** Disables legacy 16-bit PCMCIA routines, skips inactive NFS server pauses, enforces NetworkManager interface sovereignty, mounts `/tmp` as RAM-backed `tmpfs`, and reduces SysVinit shutdown sleeps from 5s to 0.5s.
+6. **Turbo Boot & Fast Shutdown:** Disables legacy 16-bit PCMCIA routines, skips inactive NFS server pauses, enforces NetworkManager interface sovereignty, mounts `/tmp` as RAM-backed `tmpfs`, and reduces SysVinit shutdown sleeps from 5s to 2s.
 7. **Storage & NVMe Direct I/O Scheduler:** Configures hardware bypass (`none`) on NVMe PCIe Gen 4/5 SSDs to eliminate kernel I/O queue lock overhead, with `mq-deadline` for SATA SSDs and `bfq` for HDDs.
 8. **NVIDIA & Mesa 10GB Global Shader Disk Cache:** Permanent shader retention (`__GL_SHADER_DISK_CACHE_SIZE=10737418240`, `MESA_SHADER_CACHE_MAX_SIZE=10G`) eliminating micro-stutters from ongoing shader recompilation.
 9. **PipeWire Low-Latency Audio:** Drop-in PipeWire quantum configuration locked to 256 samples (5.33ms) paired with RT95 audio priority limits for zero-xrun audio production and gaming communication.
@@ -233,7 +237,7 @@ Deploys proven kernel, memory, network, and hardware tweaks in `/etc/sysctl.d/`,
 
 ### How the Engine Works
 * **Automatic Branch Routing:** On Slackware `-current`, build recipes are automatically routed to Ponce's Git repository; on Slackware `15.0`, recipes route to standard SlackBuilds.org.
-* **26 Curated Build Recipes:** Pre-configured builds for Blender, FreeCAD, Unreal Engine 5, Plasticity 3D, Storyboarder, Serif Affinity Suite, SoftMaker FreeOffice, Opera, LACT, OpenRGB, and 3Dconnexion SpaceMouse.
+* **7 Curated Build Recipes:** Pre-configured builds for DaVinci Resolve Studio, Unreal Engine 5, SoftMaker FreeOffice 2024, Wine Staging, Winetricks, GRUB-Btrfs, and Snapper. (Blender, FreeCAD, Bambu Studio, LACT, OpenRGB and the 3Dconnexion SpaceMouse driver are now in the Curated Software grid, section 8.)
 
 ---
 
@@ -242,6 +246,7 @@ Deploys proven kernel, memory, network, and hardware tweaks in `/etc/sysctl.d/`,
 
 * **Engine:** `lib/mod_gaming.sh`
 * **Trigger:** Menu Option `[4]` (*CachyOS Gaming Software*), CLI: `slacky-update --gaming`, `slacky-update -g`
+* **Interface:** The *Slacky Curated Software* grid: 70 apps in 12 categories, with checkboxes and batch actions (`O`, `U`, `D`). Apps can also be installed by name with `slacky-update --gaming-deploy <app...>` and removed with `slacky-update --gaming-uninstall <app>`.
 
 ### How the Engine Works
 1. **Isolated App-Bundles in `/opt/<app>/`:** Complex applications requiring specialized runtimes (`obs-studio`, `lutris`, `pear-desktop`, `bambu-studio`, `openghub`) are packaged into private application directories in `/opt/`. Their private libraries never touch `/usr/lib64/`, ensuring that running `removepkg` on one app will never break or remove shared system libraries for another.
@@ -253,7 +258,7 @@ Deploys proven kernel, memory, network, and hardware tweaks in `/etc/sysctl.d/`,
 ## 9. Underpants Gnomes Sidecar Engine (Experimental) {#underpants-gnomes-sidecar-engine-experimental}
 
 * **Engine:** `lib/mod_gnomes_engine.sh`, `lib/gnomes_pacman.py`, `/usr/bin/gnomes`
-* **Trigger:** CLI: `gnomes`, `slacky-update --gnomes`
+* **Trigger:** CLI: `gnomes`, `slacky-update -P` (or `--gnomes-pacman`)
 
 > [!WARNING]
 > ### ⚠️ EXPERIMENTAL STATUS & SAFETY ARCHITECTURE
@@ -284,7 +289,7 @@ gnomes runtime status
 | `gnomes -S <pkg>` | Install Package | Transmutes and installs upstream package into `/opt/underpants/pkgs/` |
 | `gnomes -Ss <query>` | Search Repositories | Searches Arch Linux and CachyOS mirrors for package names/descriptions |
 | `gnomes -R <pkg>` | Remove Package | Uninstalls Gnomes package and removes desktop launcher |
-| `gnomes -Syu` | Synchronize & Update | Updates package databases and upgrades all installed Gnomes packages |
+| `gnomes -Syu` | Synchronize & Update | Updates package databases and upgrades all installed Gnomes packages (asks first) |
 | `gnomes -Si <pkg>` | Package Information | Displays upstream package metadata, size, version, and dependencies |
 | `gnomes -Q` | Query Installed | Lists all installed Underpants Gnomes packages and versions |
 | `gnomes runtime install all` | Install Runtimes | Deploys complete GTK4, Qt6, Python 3.14, and multimedia runtime libraries |
@@ -299,10 +304,10 @@ gnomes runtime status
 ## 10. Hyprland Desktop Suite Overview {#hyprland-desktop-suite-overview}
 
 * **Engine:** `lib/mod_gaming.sh`
-* **Trigger:** CLI: `slacky-update --hyprland`, `slacky-update --hyprland-noctalia`, `slacky-update --hyprland-core`
+* **Trigger:** CLI: `slacky-update --hyprland` (or `--hyprland-noctalia`), `slacky-update --hyprland-core`, `slacky-update --hyprmod`
 
 Slacky-Update provides two distinct Hyprland desktop options:
-1. **`hyprland-noctalia` (Curated Mac-like Wayland Suite):** Turnkey desktop featuring Noctalia Shell (topbar, dock, spotlight launcher, control center), modular Lua architecture (`~/.config/hypr/hyprland.lua`), PipeWire AT_SECURE protection, and HyprMod GTK4 visual settings editor.
+1. **`hyprland-noctalia` (Curated Mac-like Wayland Suite):** Turnkey desktop featuring Noctalia Shell (topbar, dock, spotlight launcher, control center), modular Lua architecture (`~/.config/hypr/hyprland.lua`), and HyprMod GTK4 visual settings editor.
 2. **`hyprland-core` (DIY Minimalist Compositor):** Clean, unopinionated compositor for power users who want to build their own custom waybar, rofi, and swaylock environment.
 
 👉 **For the complete, in-depth manual on Lua configurations, HyprMod GUI management, keybindings, and multi-monitor setups, consult the dedicated [Oh My Hyprland Guide](OH_MY_HYPRLAND_GUIDE.md).**
@@ -315,7 +320,7 @@ Slacky-Update provides two distinct Hyprland desktop options:
 * **Engine:** `lib/slacky_update_i18n.py`, `locales/*.json`
 * **Trigger:** CLI: `slacky-update --lang <code>`, `slacky-update --list-langs`
 
-Slacky-Update features 100% internationalization parity across **24 global languages** (244 keys each):
+Slacky-Update is translated into **24 global languages**; any line not yet translated falls back to English:
 * **Standard Locales:** English (`en`), Norwegian Bokmål (`nb`), Norwegian Nynorsk (`nn`), Danish (`da`), Swedish (`sv`), Finnish (`fi`), Icelandic (`is`), Sami (`se`), German (`de`), French (`fr`), Spanish (`es`), Italian (`it`), Portuguese (`pt`), Dutch (`nl`), Polish (`pl`), Russian (`ru`), Arabic (`ar`), Hindi (`hi`), Chinese (`zh`), Japanese (`ja`), Korean (`ko`), Canadian English (`en-ca`).
 * **Radical 90s Pop-Culture Editions:** `en-radical` and `nb-radical` featuring authentic 90s slang (*Bill & Ted*, *TMNT*, *Wayne's World*, *Austin Powers*) and pulsing lightning bolt indicators (`⚡`/`✨`).
 
