@@ -799,7 +799,11 @@ check_cachyos_gaming_background() {
         if [ -n "${raw_g_updates}" ]; then
             while IFS='|' read -r pid name cur_ver latest_ver; do
                 [ -n "${pid}" ] || continue
-                GAMING_UPDATES+=("${name} ${latest_ver} (Installed: ${cur_ver})")
+                if [ "${cur_ver}" = "${latest_ver}" ]; then
+                    GAMING_UPDATES+=("${name} ${cur_ver} needs a repair (Installed: ${cur_ver})")   # 10AB
+                else
+                    GAMING_UPDATES+=("${name} ${latest_ver} (Installed: ${cur_ver})")
+                fi
             done <<< "${raw_g_updates}"
         fi
         printf "%s\n" "${GAMING_UPDATES[@]:-}" > "${TMP_DIR}/gaming_updates"

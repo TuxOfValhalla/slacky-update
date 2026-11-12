@@ -1,6 +1,6 @@
 # 🚨 Slacky-Update Disaster Recovery & Troubleshooting Guide
 ### *The Symptom-Based Field Catalog for Emergency Recovery, Kernel Glitches, NVRAM Resets & Secure Boot Armor*
-#### `v1.0 LTS` — *"Dark Star"* (Official Long-Term Support Release)
+#### `v26.11.1` — *"Touch of Grey"* (hotfix of the v1.0 LTS line)
 
 ---
 

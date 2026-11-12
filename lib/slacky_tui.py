@@ -53,7 +53,7 @@ except Exception:
 
 # --- [ VERSION & CODENAME ] ---
 CURRENT_VERSION = os.environ.get("CURRENT_VERSION", "1.0 LTS")
-RELEASE_CODENAME = os.environ.get("RELEASE_CODENAME", "Dark Star")
+RELEASE_CODENAME = os.environ.get("RELEASE_CODENAME", "Touch of Grey")
 
 # --- [ ANSI COLOR & STYLING DEFINITIONS ] ---
 RESET = "\033[0m"

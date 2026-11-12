@@ -825,7 +825,7 @@ def render_terminal_report(data: dict, ascii_only: bool = False) -> str:
 
     # Header Card
     lines.append(f"{BOLD_BLUE}Slacky-Update Doctor (System Health & Diagnostic Audit){RESET}")
-    lines.append(f"{BLUE}High-Performance Slackware Workstation Health Check ('Dark Star'){RESET}")
+    lines.append(f"{BLUE}High-Performance Slackware Workstation Health Check ('Touch of Grey'){RESET}")
     lines.append(f"  {DIM_WHITE}Audit completed in {data.get('duration', 0.05)}s on {data['hostname']}{RESET}")
     lines.append("")
 

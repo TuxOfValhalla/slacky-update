@@ -92,8 +92,8 @@ sbctl|sbctl (Secure Boot Key Manager & Signer)|bootloader|sbctl-[0-9][a-zA-Z0-9_
 limine|Limine Bootloader (>= 12.x EFI & Tools)|bootloader|limine-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos
 limine-entry-tool|Limine Entry Tool (Config & Enrollment Generator)|bootloader|limine-entry-tool-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos
 limine-snapper-sync|Limine Snapper Sync (Btrfs Snapshot Integrator)|bootloader|limine-snapper-sync-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos
-hyprland-noctalia|Hyprland Mac-like Desktop Suite (Noctalia Shell, Portals & Display Tools)|desktop|hyprland-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||noctalia-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,xdg-desktop-portal-hyprland-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprlock-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hypridle-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpaper-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpicker-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprland-guiutils-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,aquamarine-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprlang-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprcursor-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprgraphics-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprutils-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpolkitagent-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprwire-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprtoolkit-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,sdbus-cpp-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,tomlplusplus-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,muparser-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,re2-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,md4c-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,lua-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libical-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,ddcui-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,wlr-randr-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,nwg-displays-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,python-i3ipc-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libjpeg-turbo-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos-extra-v3,cachyos-v3,cachyos,arch-extra,chaotic-aur
-hyprland-core|Hyprland Minimal Core Compositor (+ Wayland Portals, Lock & Display Tools)|desktop|hyprland-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||xdg-desktop-portal-hyprland-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprlock-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hypridle-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpaper-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpicker-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprland-guiutils-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,aquamarine-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprlang-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprcursor-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprgraphics-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprutils-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpolkitagent-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprwire-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprtoolkit-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,sdbus-cpp-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,tomlplusplus-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,muparser-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,re2-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,lua-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,ddcui-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,wlr-randr-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,nwg-displays-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,python-i3ipc-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libjpeg-turbo-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos-extra-v3,cachyos-v3,cachyos,arch-extra
+hyprland-noctalia|Hyprland Mac-like Desktop Suite (Noctalia Shell, Portals & Display Tools)|desktop|hyprland-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||noctalia-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,xdg-desktop-portal-hyprland-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprlock-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hypridle-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpaper-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpicker-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprland-guiutils-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,aquamarine-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprlang-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprcursor-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprgraphics-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprutils-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpolkitagent-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprwire-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprtoolkit-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,sdbus-cpp-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,tomlplusplus-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,muparser-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,re2-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,md4c-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,lua-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libical-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,ddcui-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,wlr-randr-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,nwg-displays-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,python-i3ipc-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libjpeg-turbo-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libjxl-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos-extra-v3,cachyos-v3,cachyos,arch-extra,chaotic-aur
+hyprland-core|Hyprland Minimal Core Compositor (+ Wayland Portals, Lock & Display Tools)|desktop|hyprland-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst||xdg-desktop-portal-hyprland-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprlock-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hypridle-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpaper-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpicker-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprland-guiutils-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,aquamarine-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprlang-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprcursor-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprgraphics-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprutils-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprpolkitagent-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprwire-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,hyprtoolkit-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,sdbus-cpp-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,tomlplusplus-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,muparser-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,re2-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,lua-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,ddcui-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,wlr-randr-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,nwg-displays-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,python-i3ipc-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libjpeg-turbo-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst,libjxl-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|cachyos-extra-v3,cachyos-v3,cachyos,arch-extra
 hyprpicker|Hyprpicker (Wayland Eyedropper & Color Picker)|desktop|hyprpicker-[0-9][a-zA-Z0-9_\.-]*\.pkg\.tar\.zst|||cachyos-extra-v3,cachyos-v3,cachyos,arch-extra
 hyprmod|HyprMod (GTK4/Libadwaita Hyprland Visual Settings & Rules Editor)|desktop||||aur,github
 mactahoe-icons|Mac Tahoe Icon Theme (27 macOS Tahoe Variants for KDE/GTK)|ricing||||aur,github
@@ -714,7 +714,57 @@ print("NONE")
 PYPKGVERCHECK
 }
 
+# 10AB (26.11.1, mirror of Rust I78): the Hyprland suites are installed straight into /usr and use Slackware's own libraries.
+# Slackware -current moved libjxl 0.12 -> 0.13 on 2026-11-12 and every Hyprland program lost its library: the running desktop
+# kept working, the next login would not have started. An installed suite whose programs or libraries miss a library is listed
+# like an update with the same version twice ("... needs a repair"), so the normal update rebuilds it (now with Arch's libjxl).
+# Read only, no network, no sudo. Prints one raw line per suite that needs it.
+gaming_host_tree_repair_lines() {
+    local pid name pkgf ver f miss
+    for pid in hyprland-noctalia hyprland-core; do
+        pkgf=""
+        for f in /var/log/packages/underpants-"${pid}"-[0-9]*; do
+            [ -f "${f}" ] || continue
+            case "${f}" in *_gnomes) continue ;; esac
+            pkgf="${f}"
+        done
+        [ -n "${pkgf}" ] || continue
+        ver=$(basename "${pkgf}" | sed -E "s/^underpants-${pid}-(.+)-[^-]+-[^-]+$/\1/")
+        [ -n "${ver}" ] || continue
+        miss=""
+        while IFS= read -r f; do
+            case "${f}" in usr/bin/*|usr/lib64/*.so*) ;; *) continue ;; esac
+            [ -f "/${f}" ] && [ ! -L "/${f}" ] || continue
+            if env -u LD_LIBRARY_PATH ldd "/${f}" 2>/dev/null | grep -q "=> not found"; then
+                miss="${f}"
+                break
+            fi
+        done < <(sed -n '/^FILE LIST:/,$p' "${pkgf}" | tail -n +2)
+        [ -n "${miss}" ] || continue
+        case "${pid}" in
+            hyprland-noctalia) name="Hyprland Mac-like Desktop Suite" ;;
+            *) name="Hyprland Minimal Core Compositor" ;;
+        esac
+        printf '%s|%s|%s|%s\n' "${pid}" "${name}" "${ver}" "${ver}"
+    done
+}
+
 check_all_installed_gaming_updates_fast() {
+    local out rc=0 rep line pid
+    out=$(_check_all_installed_gaming_updates_core) || rc=$?
+    [ "${rc}" -eq 1 ] && [ -z "${out}" ] && return 1   # nothing could be checked: stay a plain failure
+    [ -z "${out}" ] || printf '%s\n' "${out}"
+    rep=$(gaming_host_tree_repair_lines 2>/dev/null) || rep=""
+    while IFS= read -r line; do
+        [ -n "${line}" ] || continue
+        pid="${line%%|*}"
+        # a real update of the same suite rebuilds it anyway
+        printf '%s\n' "${out}" | grep -q "^${pid}|" || printf '%s\n' "${line}"
+    done <<< "${rep}"
+    return "${rc}"
+}
+
+_check_all_installed_gaming_updates_core() {
     local catalog_raw
     catalog_raw=$(get_gaming_catalog 2>/dev/null || echo "")
     SLACKY_LIB_DIR="$(slacky_mirrors_lib_dir)" python3 - "${catalog_raw}" << 'PYFASTCHECK'
@@ -1791,6 +1841,7 @@ catalog = {
     "sbctl": (r'href=[\'\"]?(?:\./)?(sbctl-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
     "hyprland-noctalia": (r'href=[\'\"]?(?:\./)?(hyprland-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
         r'href=[\'\"]?(?:\./)?(libjpeg-turbo-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',  # 6A-13: libjpeg.so.8 for libhyprgraphics
+        r'href=[\'\"]?(?:\./)?(libjxl-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',  # 10AB: libjxl.so.0.12 for libhyprgraphics (Slackware moved to 0.13 on 2026-11-12)
         r'href=[\'\"]?(?:\./)?(noctalia(?:-shell)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(?:\./)?(xdg-desktop-portal-hyprland-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(?:\./)?(hyprlock-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
@@ -1820,6 +1871,7 @@ catalog = {
     ], ["cachyos-extra-v3", "cachyos-v3", "cachyos", "arch-extra", "chaotic-aur"], []),
     "hyprland-core": (r'href=[\'\"]?(?:\./)?(hyprland-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
         r'href=[\'\"]?(?:\./)?(libjpeg-turbo-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',  # 6A-13: libjpeg.so.8 for libhyprgraphics
+        r'href=[\'\"]?(?:\./)?(libjxl-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',  # 10AB: libjxl.so.0.12 for libhyprgraphics (Slackware moved to 0.13 on 2026-11-12)
         r'href=[\'\"]?(?:\./)?(xdg-desktop-portal-hyprland-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(?:\./)?(hyprlock-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(?:\./)?(hypridle-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
@@ -2521,6 +2573,7 @@ catalog = {
     "sbctl": (r'href=[\'\"]?(?:\./)?(sbctl-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, None, ["arch-extra", "cachyos"], []),
     "hyprland-noctalia": (r'href=[\'\"]?(?:\./)?(hyprland-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
         r'href=[\'\"]?(?:\./)?(libjpeg-turbo-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',  # 6A-13: libjpeg.so.8 for libhyprgraphics
+        r'href=[\'\"]?(?:\./)?(libjxl-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',  # 10AB: libjxl.so.0.12 for libhyprgraphics (Slackware moved to 0.13 on 2026-11-12)
         r'href=[\'\"]?(?:\./)?(noctalia(?:-shell)?-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(?:\./)?(xdg-desktop-portal-hyprland-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(?:\./)?(hyprlock-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
@@ -2550,6 +2603,7 @@ catalog = {
     ], ["cachyos-extra-v3", "cachyos-v3", "cachyos", "arch-extra", "chaotic-aur"], []),
     "hyprland-core": (r'href=[\'\"]?(?:\./)?(hyprland-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?', None, [
         r'href=[\'\"]?(?:\./)?(libjpeg-turbo-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',  # 6A-13: libjpeg.so.8 for libhyprgraphics
+        r'href=[\'\"]?(?:\./)?(libjxl-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',  # 10AB: libjxl.so.0.12 for libhyprgraphics (Slackware moved to 0.13 on 2026-11-12)
         r'href=[\'\"]?(?:\./)?(xdg-desktop-portal-hyprland-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(?:\./)?(hyprlock-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
         r'href=[\'\"]?(?:\./)?(hypridle-([0-9][a-zA-Z0-9_\.%:-]*)\.pkg\.tar\.zst)[\'\"]?',
@@ -9257,7 +9311,12 @@ for line in (best or {}).get('cachyos_gaming_updates_raw', []):
                 log_info "$(gaming_pkg_other_engine_sentence "${name:-${pid}}")"
                 continue
             fi
-            log_info "Upgrade available for ${name}: v${cur_ver} -> v${latest_ver}"
+            if [ "${cur_ver}" = "${latest_ver}" ]; then
+                # 10AB: the same version twice = installed but a library it needs is gone; the deploy below rebuilds it
+                log_info "${name:-${pid}} ${cur_ver} cannot start on this system, so it is rebuilt now."
+            else
+                log_info "Upgrade available for ${name}: v${cur_ver} -> v${latest_ver}"
+            fi
             outdated_pids+=("${pid}")
         done <<< "${fast_results}"
     fi
